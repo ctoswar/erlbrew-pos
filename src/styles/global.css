@@ -1,0 +1,229 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap');
+
+/* ── Reset & Base ────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Lato', sans-serif;
+  background: #0d0600;
+  color: #e8c99a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: #0d0600; }
+::-webkit-scrollbar-thumb { background: #3a1f0d; border-radius: 4px; }
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
+@keyframes rfidPulse {
+  0%   { transform: translate(-50%, -50%) scale(0.7); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes successPop {
+  0%   { transform: scale(0.8); opacity: 0; }
+  70%  { transform: scale(1.06); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.animate-fadeInUp    { animation: fadeInUp    0.3s ease forwards; }
+.animate-successPop  { animation: successPop  0.5s ease forwards; }
+.animate-slideInRight{ animation: slideInRight 0.3s ease forwards; }
+.animate-pulse       { animation: pulse       2s ease-in-out infinite; }
+
+/* ── Typography ──────────────────────────────────────────────────────────── */
+.font-display { font-family: 'Playfair Display', serif; }
+.font-sans    { font-family: 'Lato', sans-serif; }
+
+/* ── Erlbrew Color Tokens ────────────────────────────────────────────────── */
+:root {
+  --bg-base:     #0d0600;
+  --bg-surface:  #1e0e06;
+  --bg-elevated: #2a1508;
+  --bg-sidebar:  #080400;
+
+  --border-subtle:  #1a0a04;
+  --border-default: #2a1508;
+  --border-medium:  #3a1f0d;
+  --border-strong:  #5a3318;
+
+  --gold:        #C9873A;
+  --gold-light:  #d9974a;
+  --gold-dim:    #7a5535;
+  --gold-muted:  #4a2a12;
+  --gold-faint:  #2a1508;
+
+  --text-primary:   #e8c99a;
+  --text-secondary: #9a6b3a;
+  --text-muted:     #5a3318;
+  --text-faint:     #3a1f0d;
+  --text-disabled:  #1a0a04;
+
+  --success:        #7ac97a;
+  --success-bg:     #0f1f0f;
+  --success-border: #1a3a1a;
+
+  --danger:         #c97a7a;
+  --danger-bg:      #1f0f0f;
+  --danger-border:  #3a1a1a;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn {
+  font-family: 'Lato', sans-serif;
+  cursor: pointer;
+  transition: all 0.18s;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  border: none;
+  outline: none;
+}
+.btn:active { transform: scale(0.97); }
+
+.btn-gold {
+  background: var(--gold);
+  color: var(--bg-sidebar);
+  border-radius: 9px;
+  padding: 11px 18px;
+  font-size: 11px;
+}
+.btn-gold:hover:not(:disabled) { background: var(--gold-light); }
+.btn-gold:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-outline {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 10px;
+}
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+.btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 9px;
+}
+.btn-danger:hover { background: var(--danger-bg); }
+
+.btn-success {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+  border-radius: 7px;
+  padding: 7px 12px;
+  font-size: 9px;
+}
+
+/* ── Form Controls ───────────────────────────────────────────────────────── */
+input[type="text"],
+input[type="number"],
+textarea {
+  font-family: 'Lato', sans-serif;
+  background: var(--bg-base);
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  color: var(--text-primary);
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+input:focus, textarea:focus { border-color: var(--gold); }
+input::placeholder, textarea::placeholder { color: var(--text-disabled); }
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+}
+.card-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+}
+
+/* ── Divider ─────────────────────────────────────────────────────────────── */
+.divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+/* ── Badge ───────────────────────────────────────────────────────────────── */
+.badge {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+/* ── Pill ────────────────────────────────────────────────────────────────── */
+.pill {
+  display: inline-block;
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.pill-gold    { background: var(--bg-elevated); color: var(--gold); }
+.pill-success { background: var(--success-bg);  color: var(--success); border: 1px solid var(--success-border); }
+.pill-danger  { background: var(--danger-bg);   color: var(--danger);  border: 1px solid var(--danger-border); }
+.pill-muted   { background: var(--border-subtle); color: var(--text-muted); }
+
+/* ── Scrollable areas ────────────────────────────────────────────────────── */
+.scroll-area {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Tab active indicator ────────────────────────────────────────────────── */
+.tab { transition: all 0.2s ease; }
+.tab.active {
+  background: var(--gold) !important;
+  border-color: var(--gold) !important;
+  color: var(--bg-sidebar) !important;
+}
+.tab.active-subtle {
+  background: var(--bg-elevated) !important;
+  border-color: var(--gold) !important;
+  color: var(--gold) !important;
+}

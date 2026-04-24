@@ -1,8 +1,26 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { CartItem, MenuItem } from "../types";
 
 export function useCart() {
   const [cart, setCart] = useState<CartItem[]>([]);
+  // Hydrate from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("erlbrew_cart");
+      if (raw) setCart(JSON.parse(raw));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Persist cart to localStorage on changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("erlbrew_cart", JSON.stringify(cart));
+    } catch {
+      // ignore
+    }
+  }, [cart]);
 
   const addItem = useCallback((item: MenuItem) => {
     setCart((prev) => {

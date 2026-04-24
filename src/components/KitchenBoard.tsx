@@ -1,71 +1,169 @@
-import React from "react";
-import { Order, OrderStatus } from "../types";
+import React, { useState } from "react";
+import { Order, OrderStatus, Role } from "../types";
 import { formatTime, formatCurrency } from "../utils";
 
 interface Props {
   orders: Order[];
   onUpdateStatus: (id: string, status: OrderStatus) => void;
+  staffRole: Role;
+  onVoidOrder: (id: string) => void;
 }
 
 const COLUMNS: { status: OrderStatus; label: string; color: string; accent: string }[] = [
-  { status: "preparing", label: "Preparing",      color: "var(--gold)",    accent: "var(--border-default)" },
-  { status: "ready",     label: "Ready to Serve", color: "var(--success)", accent: "var(--success-border)" },
-  { status: "completed", label: "Completed",      color: "var(--text-faint)", accent: "var(--border-subtle)" },
+  { status: "preparing", label: "Preparing", color: "var(--gold)", accent: "var(--border-default)" },
+  { status: "ready", label: "Ready to Serve", color: "var(--success)", accent: "var(--success-border)" },
+  { status: "completed", label: "Completed", color: "var(--text-faint)", accent: "var(--border-subtle)" },
 ];
 
-export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus }) => (
-  <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: "1.2rem", gap: 10 }}>
-    {COLUMNS.map((col) => {
-      const colOrders = orders.filter((o) => o.status === col.status);
-      return (
-        <div key={col.status} style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          {/* Column header */}
-          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10, flexShrink: 0 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: col.color }} />
-            <div style={{ fontSize: 9, color: col.color, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700 }}>
-              {col.label}
-            </div>
-            <div style={{ fontSize: 9, color: "var(--text-disabled)", marginLeft: "auto" }}>
-              {colOrders.length}
-            </div>
-          </div>
+// Roles that can void orders
+const VOID_ROLES: Role[] = ["Manager", "Shift Supervisor"];
 
-          {/* Orders */}
-          <div className="scroll-area" style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-            {colOrders.length === 0 && (
-              <div style={{ textAlign: "center", padding: "2.5rem 0", color: "var(--text-disabled)", fontSize: 10, letterSpacing: 1 }}>
-                Empty
+export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, staffRole, onVoidOrder }) => {
+  const [confirmVoid, setConfirmVoid] = useState<string | null>(null);
+
+  const handleVoid = (id: string) => {
+    onVoidOrder(id);
+    setConfirmVoid(null);
+  };
+
+  return (
+    <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: "1.2rem", gap: 10 }}>
+      {COLUMNS.map((col) => {
+        const colOrders = orders.filter((o) => o.status === col.status);
+        return (
+          <div key={col.status} style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            {/* Column header */}
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10, flexShrink: 0 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: col.color }} />
+              <div style={{ fontSize: 9, color: col.color, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700 }}>
+                {col.label}
               </div>
-            )}
-            {colOrders.map((order) => (
-              <KitchenCard key={order.id} order={order} accentColor={col.accent} onUpdateStatus={onUpdateStatus} />
-            ))}
+              <div style={{ fontSize: 9, color: "var(--text-disabled)", marginLeft: "auto" }}>
+                {colOrders.length}
+              </div>
+            </div>
+
+            {/* Orders */}
+            <div className="scroll-area" style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+              {colOrders.length === 0 && (
+                <div style={{ textAlign: "center", padding: "2.5rem 0", color: "var(--text-disabled)", fontSize: 10, letterSpacing: 1 }}>
+                  Empty
+                </div>
+              )}
+              {colOrders.map((order) => (
+                <KitchenCard
+                  key={order.id}
+                  order={order}
+                  accentColor={col.accent}
+                  onUpdateStatus={onUpdateStatus}
+                  canVoid={VOID_ROLES.includes(staffRole)}
+                  isVoidConfirm={confirmVoid === order.id}
+                  onRequestVoid={() => setConfirmVoid(order.id)}
+                  onCancelVoid={() => setConfirmVoid(null)}
+                  onConfirmVoid={() => handleVoid(order.id)}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      );
-    })}
-  </div>
-);
+        );
+      })}
+    </div>
+  );
+};
 
 interface KitchenCardProps {
   order: Order;
   accentColor: string;
   onUpdateStatus: (id: string, status: OrderStatus) => void;
+  canVoid: boolean;
+  isVoidConfirm: boolean;
+  onRequestVoid: () => void;
+  onCancelVoid: () => void;
+  onConfirmVoid: () => void;
 }
 
-const KitchenCard: React.FC<KitchenCardProps> = ({ order, accentColor, onUpdateStatus }) => {
+const KitchenCard: React.FC<KitchenCardProps> = ({
+  order, accentColor, onUpdateStatus,
+  canVoid, isVoidConfirm, onRequestVoid, onCancelVoid, onConfirmVoid,
+}) => {
   const elapsed = Math.floor((Date.now() - order.createdAt.getTime()) / 60000);
   const isLate = order.status === "preparing" && elapsed >= 10;
 
+  if (isVoidConfirm) {
+    // ── Void confirmation overlay ──
+    return (
+      <div style={{
+        background: "var(--bg-elevated)",
+        border: "1.5px solid var(--danger)",
+        borderRadius: 10,
+        padding: 14,
+      }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
+          Void this order?
+        </div>
+        <div style={{ fontSize: 10, color: "var(--danger)", marginBottom: 12 }}>
+          This will permanently remove it from the kitchen board.
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button
+            onClick={onCancelVoid}
+            style={{
+              flex: 1,
+              padding: "9px 0",
+              borderRadius: 8,
+              border: "1px solid var(--border-default)",
+              background: "var(--bg-base)",
+              color: "var(--text-secondary)",
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: 1,
+              cursor: "pointer",
+              textTransform: "uppercase" as const,
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirmVoid}
+            style={{
+              flex: 1,
+              padding: "9px 0",
+              borderRadius: 8,
+              border: "none",
+              background: "var(--danger)",
+              color: "#fff",
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: 1,
+              cursor: "pointer",
+              textTransform: "uppercase" as const,
+            }}
+          >
+            Void Order
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="animate-slideInRight" style={{ background: "var(--bg-surface)", border: `1px solid ${accentColor}`, borderRadius: 10, padding: 12 }}>
+    <div className="animate-slideInRight" style={{
+      background: "var(--bg-surface)",
+      border: `1px solid ${accentColor}`,
+      borderRadius: 10,
+      padding: 12,
+    }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{order.id}</div>
+        <div className="font-display" style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+          {order.id.slice(0, 8).toUpperCase()}
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {isLate && (
             <span className="pill pill-danger animate-pulse">Late</span>
           )}
-          <div style={{ fontSize: 8, color: "var(--text-disabled)", letterSpacing: 1 }}>{formatTime(order.createdAt)}</div>
+          <div style={{ fontSize: 8, color: "var(--text-disabled)", letterSpacing: 1 }}>
+            {formatTime(order.createdAt)}
+          </div>
         </div>
       </div>
 
@@ -88,9 +186,30 @@ const KitchenCard: React.FC<KitchenCardProps> = ({ order, accentColor, onUpdateS
       {/* Actions */}
       <div style={{ marginTop: 10, display: "flex", gap: 5 }}>
         {order.status === "preparing" && (
-          <button className="btn btn-success" onClick={() => onUpdateStatus(order.id, "ready")} style={{ flex: 1, padding: "8px 0", fontSize: 8 }}>
-            Mark Ready ✓
-          </button>
+          <>
+            <button className="btn btn-success" onClick={() => onUpdateStatus(order.id, "ready")} style={{ flex: 1, padding: "8px 0", fontSize: 8 }}>
+              Mark Ready ✓
+            </button>
+            {canVoid && (
+              <button
+                onClick={onRequestVoid}
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  border: "1px solid var(--danger-border)",
+                  background: "transparent",
+                  color: "var(--danger)",
+                  fontSize: 8,
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                  cursor: "pointer",
+                  textTransform: "uppercase" as const,
+                }}
+              >
+                ✕ Void
+              </button>
+            )}
+          </>
         )}
         {order.status === "ready" && (
           <button className="btn btn-gold" onClick={() => onUpdateStatus(order.id, "completed")} style={{ flex: 1, padding: "8px 0", fontSize: 8 }}>

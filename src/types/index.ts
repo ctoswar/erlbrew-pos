@@ -7,6 +7,7 @@ export type OrderType = "dine-in" | "takeout";
 export type PayMethod = "cash" | "card" | "ewallet";
 
 export interface Staff {
+  id?: number;
   rfid: string;
   pin: string;
   name: string;

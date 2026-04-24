@@ -25,37 +25,99 @@ export const CartPanel: React.FC<Props> = ({
   const isEmpty = cart.length === 0;
 
   return (
-    <aside style={{ width: 320, background: "var(--bg-sidebar)", borderLeft: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", flexShrink: 0 }}>
-      {/* Header */}
-      <div style={{ padding: "1rem 1.1rem", borderBottom: "1px solid var(--border-subtle)", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 11 }}>
-          <div className="font-display" style={{ fontSize: 15, color: "var(--text-primary)" }}>Current Order</div>
+    <aside style={{
+      width: "100%",
+      background: "var(--bg-sidebar)",
+      display: "flex",
+      flexDirection: "column",
+      height: "100%",
+    }}>
+      {/* ── Header ── */}
+      <div style={{
+        padding: "1rem 1.2rem 0.9rem",
+        borderBottom: "1px solid var(--border-default)",
+        flexShrink: 0,
+      }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 12,
+        }}>
+          <span className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
+            Current Order
+          </span>
           {!isEmpty && (
-            <button className="btn btn-danger" onClick={onClearCart} style={{ fontSize: 8, padding: "5px 10px" }}>
-              Clear All
+            <button
+              onClick={onClearCart}
+              style={{
+                background: "transparent",
+                border: "1px solid var(--danger-border)",
+                borderRadius: 8,
+                color: "var(--danger)",
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: 1,
+                padding: "5px 12px",
+                cursor: "pointer",
+                textTransform: "uppercase" as const,
+              }}
+            >
+              Clear
             </button>
           )}
         </div>
 
-        {/* Order Type */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 9 }}>
+        {/* Order Type Tabs */}
+        <div style={{ display: "flex", gap: 8, marginBottom: orderType === "dine-in" ? 10 : 0 }}>
           {(["dine-in", "takeout"] as OrderType[]).map((t) => (
-            <button key={t} className={`btn tab ${orderType === t ? "active-subtle" : ""}`}
+            <button
+              key={t}
               onClick={() => onOrderTypeChange(t)}
-              style={{ flex: 1, padding: "7px 0", borderRadius: 7, fontSize: 8, background: "transparent", border: "1px solid var(--border-subtle)", color: "var(--text-disabled)" }}>
+              style={{
+                flex: 1,
+                padding: "8px 0",
+                borderRadius: 9,
+                border: `1.5px solid ${orderType === t ? "var(--gold)" : "var(--border-default)"}`,
+                background: orderType === t ? "rgba(201,135,58,0.12)" : "transparent",
+                color: orderType === t ? "var(--gold)" : "var(--text-secondary)",
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: 1,
+                textTransform: "uppercase" as const,
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
               {t === "dine-in" ? "Dine In" : "Takeout"}
             </button>
           ))}
         </div>
 
-        {/* Table Picker */}
+        {/* Table Picker — only for dine-in */}
         {orderType === "dine-in" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <span style={{ fontSize: 10, color: "var(--gold-muted)", letterSpacing: 1 }}>Table:</span>
-            <div style={{ display: "flex", gap: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: 1.5, fontWeight: 700, textTransform: "uppercase" as const }}>
+              Table
+            </span>
+            <div style={{ display: "flex", gap: 6 }}>
               {TABLES.map((t) => (
-                <button key={t} className="btn" onClick={() => onTableChange(t)}
-                  style={{ width: 28, height: 28, borderRadius: 6, fontSize: 10, background: table === t ? "var(--gold)" : "transparent", border: `1px solid ${table === t ? "var(--gold)" : "var(--border-subtle)"}`, color: table === t ? "var(--bg-sidebar)" : "var(--text-faint)" }}>
+                <button
+                  key={t}
+                  onClick={() => onTableChange(t)}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    background: table === t ? "var(--gold)" : "var(--bg-elevated)",
+                    border: `1.5px solid ${table === t ? "var(--gold)" : "var(--border-default)"}`,
+                    color: table === t ? "var(--bg-sidebar)" : "var(--text-secondary)",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
                   {t}
                 </button>
               ))}
@@ -64,46 +126,72 @@ export const CartPanel: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Items */}
-      <div className="scroll-area" style={{ flex: 1, padding: "0.7rem 1.1rem" }}>
+      {/* ── Items List ── */}
+      <div className="scroll-area" style={{ flex: 1, padding: "0.5rem 0" }}>
         {isEmpty ? (
-          <div style={{ textAlign: "center", padding: "3rem 0", color: "var(--text-disabled)", fontSize: 11, letterSpacing: 1 }}>
-            No items yet
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "3rem 1rem",
+            gap: 10,
+          }}>
+            <span style={{ fontSize: 32 }}>🛒</span>
+            <span style={{ fontSize: 11, color: "var(--text-disabled)", letterSpacing: 1 }}>
+              No items yet
+            </span>
+            <span style={{ fontSize: 10, color: "var(--text-faint)", letterSpacing: 0.5, textAlign: "center" }}>
+              Tap menu items to add them here
+            </span>
           </div>
         ) : (
           cart.map((ci) => (
-            <div key={ci.item.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "1px solid var(--border-subtle)" }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11, color: "var(--text-primary)", fontWeight: 700, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {ci.item.name}
-                </div>
-                <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{formatCurrency(ci.item.price)}</div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <QtyButton onClick={() => onUpdateQty(ci.item.id, -1)} label="−" color="var(--text-secondary)" />
-                <span style={{ fontSize: 12, color: "var(--text-primary)", fontWeight: 700, minWidth: 16, textAlign: "center" }}>{ci.qty}</span>
-                <QtyButton onClick={() => onUpdateQty(ci.item.id, 1)} label="+" color="var(--gold)" />
-              </div>
-              <div style={{ fontSize: 12, color: "var(--gold)", fontWeight: 700, minWidth: 44, textAlign: "right" }}>
-                {formatCurrency(ci.item.price * ci.qty)}
-              </div>
-            </div>
+            <CartItemRow
+              key={ci.item.id}
+              item={ci.item}
+              qty={ci.qty}
+              onUpdateQty={(delta) => onUpdateQty(ci.item.id, delta)}
+            />
           ))
         )}
       </div>
 
-      {/* Footer */}
-      <div style={{ padding: "1rem 1.1rem", borderTop: "1px solid var(--border-subtle)", flexShrink: 0 }}>
-        <div style={{ marginBottom: 10 }}>
-          <TotalRow label="Subtotal"  value={formatCurrency(subtotal)} />
+      {/* ── Footer — Totals + Checkout ── */}
+      <div style={{
+        padding: "0.9rem 1.2rem 1rem",
+        borderTop: "1.5px solid var(--border-default)",
+        flexShrink: 0,
+        background: "var(--bg-surface)",
+      }}>
+        <div style={{ marginBottom: 12 }}>
+          <TotalRow label="Subtotal" value={formatCurrency(subtotal)} />
           <TotalRow label="VAT (12%)" value={formatCurrency(tax)} />
-          <div className="divider" style={{ margin: "8px 0" }} />
+          <div style={{ height: 1, background: "var(--border-default)", margin: "10px 0" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <span style={{ fontSize: 10, color: "var(--text-secondary)", letterSpacing: 1, textTransform: "uppercase" }}>Total</span>
-            <span className="font-display" style={{ fontSize: 22, fontWeight: 700, color: "var(--gold)" }}>{formatCurrency(grand)}</span>
+            <span style={{ fontSize: 10, color: "var(--text-secondary)", letterSpacing: 1.5, fontWeight: 700, textTransform: "uppercase" as const }}>
+              Total
+            </span>
+            <span className="font-display" style={{ fontSize: 24, fontWeight: 700, color: "var(--gold)" }}>
+              {formatCurrency(grand)}
+            </span>
           </div>
         </div>
-        <button className="btn btn-gold" onClick={onCheckout} disabled={isEmpty} style={{ width: "100%", fontSize: 10, padding: 13, borderRadius: 10 }}>
+
+        <button
+          className="btn btn-gold"
+          onClick={onCheckout}
+          disabled={isEmpty}
+          style={{
+            width: "100%",
+            fontSize: 10.5,
+            padding: "14px 0",
+            borderRadius: 12,
+            letterSpacing: 1.5,
+            fontWeight: 700,
+            opacity: isEmpty ? 0.3 : 1,
+          }}
+        >
           Proceed to Payment →
         </button>
       </div>
@@ -111,15 +199,122 @@ export const CartPanel: React.FC<Props> = ({
   );
 };
 
-const QtyButton: React.FC<{ onClick: () => void; label: string; color: string }> = ({ onClick, label, color }) => (
-  <button className="btn" onClick={onClick}
-    style={{ width: 24, height: 24, borderRadius: 6, background: "var(--bg-base)", border: "1px solid var(--border-default)", color, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>
-    {label}
-  </button>
-);
+// ── Cart Item Row ─────────────────────────────────────────────────────────────
+
+interface CartItemRowProps {
+  item: CartItem["item"];
+  qty: number;
+  onUpdateQty: (delta: number) => void;
+}
+
+const CartItemRow: React.FC<CartItemRowProps> = ({ item, qty, onUpdateQty }) => {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      padding: "9px 1.2rem",
+      borderBottom: "1px solid var(--border-subtle)",
+      transition: "background 0.1s",
+    }}>
+      {/* Emoji */}
+      <span style={{ fontSize: 20, flexShrink: 0 }}>{item.emoji}</span>
+
+      {/* Name + price */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 11.5,
+          fontWeight: 700,
+          color: "var(--text-primary)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap" as const,
+          marginBottom: 2,
+        }}>
+          {item.name}
+        </div>
+        <div style={{ fontSize: 10, color: "var(--gold-muted)" }}>
+          {formatCurrency(item.price)} each
+        </div>
+      </div>
+
+      {/* Qty controls */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <button
+          onClick={() => onUpdateQty(-1)}
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 8,
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border-default)",
+            color: "var(--text-secondary)",
+            fontSize: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            transition: "all 0.12s",
+          }}
+        >
+          −
+        </button>
+        <span style={{
+          fontSize: 13,
+          fontWeight: 700,
+          color: "var(--text-primary)",
+          minWidth: 18,
+          textAlign: "center",
+        }}>
+          {qty}
+        </span>
+        <button
+          onClick={() => onUpdateQty(1)}
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 8,
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border-default)",
+            color: "var(--gold)",
+            fontSize: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            transition: "all 0.12s",
+          }}
+        >
+          +
+        </button>
+      </div>
+
+      {/* Line total */}
+      <div style={{
+        fontSize: 12,
+        fontWeight: 700,
+        color: "var(--gold)",
+        minWidth: 52,
+        textAlign: "right",
+      }}>
+        {formatCurrency(item.price * qty)}
+      </div>
+    </div>
+  );
+};
+
+// ── Total Row ─────────────────────────────────────────────────────────────────
 
 const TotalRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--gold-muted)", marginBottom: 5 }}>
-    <span>{label}</span><span>{value}</span>
+  <div style={{
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: 11,
+    color: "var(--gold-dim)",
+    marginBottom: 5,
+    letterSpacing: 0.5,
+  }}>
+    <span>{label}</span>
+    <span>{value}</span>
   </div>
 );

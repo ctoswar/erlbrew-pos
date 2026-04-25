@@ -74,19 +74,20 @@ const err = validate(req, res, {
   });
 
   // Delete item (admin only)
-  router.delete('/:id', authMiddleware, async (req, res) => {
-    const { id } = req.params;
-    const err = validate(req, res, {
-      id: { required: true, type: 'string', maxLen: 64 },
-    });
-    if (err) return err;
-    try {
-      await pool.query('DELETE FROM menu_items WHERE id = ?', [id]);
-      res.json({ ok: true });
-    } catch (e) {
-      res.status(500).json({ error: 'DB error' });
-    }
-  });
+router.delete('/:id', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  if (!id || typeof id !== 'string' || id.length > 64) {
+    return res.status(400).json({ error: 'id is required and must be a string' });
+  }
+  try {
+    // Delete child order_items first, then the menu item
+    await pool.query('DELETE FROM order_items WHERE menu_item_id = ?', [id]);
+    await pool.query('DELETE FROM menu_items WHERE id = ?', [id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'DB error' });
+  }
+});
 
   return router;
 }

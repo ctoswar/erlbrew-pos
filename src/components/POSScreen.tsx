@@ -10,6 +10,7 @@ import { PaymentScreen } from "./PaymentScreen";
 import { SuccessScreen } from "./SuccessScreen";
 import { KitchenBoard } from "./KitchenBoard";
 import { Dashboard } from "./Dashboard";
+import { AdminMenu } from "./AdminMenu";
 
 interface Props {
   staff: Staff;
@@ -189,9 +190,11 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
         return lastOrder ? <SuccessScreen order={lastOrder} onDone={handleOrderDone} /> : null;
       case "kitchen":
         return <KitchenBoard orders={orders} onUpdateStatus={updateStatus} staffRole={staff.role} onVoidOrder={voidOrder} />;
-      case "dashboard":
-        return <Dashboard orders={orders} staffName={staff.name} />;
-      default:
+case "dashboard":
+  return <Dashboard orders={orders} staffName={staff.name} />;
+case "admin":
+  return <AdminMenu />;
+default:
         return null;
     }
   };

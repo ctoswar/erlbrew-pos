@@ -1,7 +1,7 @@
 export type Role = "Barista" | "Senior Barista" | "Shift Supervisor" | "Manager";
 export type Category = "Signature Brews" | "Espresso" | "Pastries" | "Cold Drinks";
 export type OrderStatus = "pending" | "preparing" | "ready" | "completed";
-export type Screen = "login" | "pos" | "kitchen" | "checkout" | "payment" | "success" | "dashboard";
+export type Screen = "login" | "pos" | "kitchen" | "checkout" | "payment" | "success" | "dashboard" | "admin";
 export type LoginMode = "rfid" | "pin";
 export type OrderType = "dine-in" | "takeout";
 export type PayMethod = "cash" | "card" | "ewallet";

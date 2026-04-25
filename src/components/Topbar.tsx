@@ -14,11 +14,14 @@ interface Props {
 export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNavigate, onLogout }) => {
   const time = useClock();
 
-  const navItems: { screen: Screen; label: string; badge?: number }[] = [
-    { screen: "pos",       label: "ORDER" },
-    { screen: "kitchen",   label: "KITCHEN", badge: activeOrderCount },
+const navItems: { screen: Screen; label: string; badge?: number; adminOnly?: boolean }[] = [
+    { screen: "pos", label: "ORDER" },
+    { screen: "kitchen", label: "KITCHEN", badge: activeOrderCount },
     { screen: "dashboard", label: "DASHBOARD" },
+    { screen: "admin", label: "ADMIN", adminOnly: true },
   ];
+
+  const visibleNavItems = navItems.filter((n) => !n.adminOnly || staff.role === "Manager");
 
   const isOrderRelated = screen === "pos" || screen === "checkout" || screen === "payment" || screen === "success";
 
@@ -30,7 +33,7 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
       </div>
 
       {/* Nav */}
-      {navItems.map(({ screen: s, label, badge }) => {
+      {visibleNavItems.map(({ screen: s, label, badge }) => {
         const isActive = s === "pos" ? isOrderRelated : screen === s;
         return (
           <button key={s} className={`btn tab ${isActive ? "active-subtle" : ""}`}

@@ -1,40 +1,86 @@
 import { google } from 'googleapis';
 
-export function googleSheetsClientInit(){
+// Cached tab name (resolved on first append)
+let cachedTabName = null;
+
+async function resolveTabName(sheets, spreadsheetId) {
+  if (cachedTabName) return cachedTabName;
+  const res = await sheets.spreadsheets.get({ spreadsheetId });
+  const sheetsList = res.data.sheets || [];
+  const ordersTab = sheetsList.find((s) => s.properties.title === 'Orders');
+  cachedTabName = ordersTab ? 'Orders' : (sheetsList[0]?.properties.title || 'Sheet1');
+  return cachedTabName;
+}
+
+// In-memory cache of menu item names: { id -> name }
+let menuItemCache = {};
+let cacheLoaded = false;
+
+async function loadMenuItemNames(pool) {
+  if (cacheLoaded) return;
+  try {
+    const [rows] = await pool.query('SELECT id, name FROM menu_items');
+    menuItemCache = {};
+    for (const row of rows) {
+      menuItemCache[row.id] = row.name;
+    }
+    cacheLoaded = true;
+  } catch (e) {
+    console.error('Failed to load menu item names for Sheets:', e.message);
+  }
+}
+
+export function googleSheetsClientInit(pool) {
   const keyEnv = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   let keyObj = null;
   try {
     keyObj = typeof keyEnv === 'string' ? JSON.parse(keyEnv) : keyEnv;
-  } catch(e){ keyObj = null; }
+  } catch (e) { keyObj = null; }
   if (!keyObj || !process.env.GOOGLE_SHEETS_ID) return null;
+
   const jwtClient = new google.auth.JWT({
     email: keyObj.client_email,
     key: keyObj.private_key,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
   const sheets = google.sheets({ version: 'v4', auth: jwtClient });
+
   return {
     jwtClient,
     sheets,
-    async appendOrder({ orderId, staffName, items, subtotal, tax, total, payMethod, status }){
+    async appendOrder({ orderId, staffName, items, subtotal, tax, total, payMethod, status }) {
+      // Refresh menu item names from DB before each append
+      await loadMenuItemNames(pool);
+
       const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+      const tabName = await resolveTabName(sheets, spreadsheetId);
+
+// Build readable item list — guard against undefined/null items
+    const itemList = items && Array.isArray(items) && items.length > 0
+      ? items.map((it) => {
+          const name = menuItemCache[it.id] || it.id || '(unknown)';
+          return `${it.qty}× ${name}`;
+        }).join(' | ')
+      : '(no items)';
+
       const values = [
-        new Date().toISOString(),
+        new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }),
         orderId,
         staffName,
-        items.map(i => i.name).join(', '),
-        subtotal,
-        tax,
-        total,
+        itemList,
+        `₱${Number(subtotal).toFixed(2)}`,
+        `₱${Number(tax).toFixed(2)}`,
+        `₱${Number(total).toFixed(2)}`,
         payMethod,
-        status
+        status,
       ];
+
       await sheets.spreadsheets.values.append({
         spreadsheetId,
-        range: 'Orders!A1',
+        range: `${tabName}!A1`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [values] }
+        resource: { values: [values] },
       });
-    }
+    },
   };
 }

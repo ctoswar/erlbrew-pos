@@ -21,11 +21,12 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // 3: Restrict CORS origins via env var
-const corsOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000').split(',').map(s => s.trim());
+const corsOrigins = (process.env.CORS_ORIGINS || '*').split(',').map(s => s.trim());
 app.use(cors({
   origin(origin, callback) {
     // Allow non-origin requests (curl, mobile apps) and same-origin
     if (!origin) return callback(null, true);
+    if (corsOrigins.includes('*')) return callback(null, true);
     if (corsOrigins.includes(origin)) return callback(null, true);
     callback(new Error('CORS not allowed'));
   },
@@ -100,7 +101,7 @@ async function initDb() {
 initDb();
 
 // Initialize Google Sheets client (on demand)
-const gs = googleSheetsClientInit();
+const gs = googleSheetsClientInit(pool);
 
 // Routes
 app.use('/api/staff', staffRoutes(pool));

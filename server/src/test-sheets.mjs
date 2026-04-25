@@ -1,0 +1,10 @@
+﻿import 'dotenv/config';
+import { google } from 'googleapis';
+import { JWT } from 'google-auth-library';
+const key = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+const auth = new JWT({ email: key.client_email, key: key.private_key, scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+const sheets = google.sheets({ version: 'v4', auth });
+const res = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.GOOGLE_SHEETS_ID, range: 'Sheet1!A1:J20' });
+const rows = res.data.values || [];
+console.log('Total rows:', rows.length);
+rows.slice(-3).forEach((row, i) => console.log('Row ' + (rows.length - 2 + i) + ':', JSON.stringify(row)));

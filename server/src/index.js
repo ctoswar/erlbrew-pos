@@ -5,6 +5,7 @@ import mysql from 'mysql2/promise';
 import staffRoutes from './routes/staff.js';
 import menuRoutes from './routes/menu.js';
 import ordersRoutes from './routes/orders.js';
+import inventoryRoutes from './routes/inventory.js';
 import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
@@ -109,6 +110,8 @@ app.use('/api/staff', staffRoutes(pool));
 app.use('/api/menu', menuRoutes(pool));
 // Orders: public creates and reads, admin status updates (auth applied inline)
 app.use('/api/orders', ordersRoutes(pool, gs));
+// Inventory: admin only
+app.use('/api/inventory', inventoryRoutes(pool));
 
 const server = app.listen(PORT, () => {
   console.log(`API server listening on port ${PORT}`);

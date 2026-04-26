@@ -1,0 +1,358 @@
+import React, { useState, useEffect } from "react";
+import { InventoryItem } from "../types";
+import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete } from "../utils/api";
+
+const CATEGORIES = ["Cups", "Lids", "Supplies", "Milk", "Coffee", "Syrups", "Powders", "Tea", "Other"];
+const UNITS = ["pcs", "kg", "g", "L", "ml", "boxes", "packs"];
+
+const EMPTY_FORM = {
+  id: "",
+  name: "",
+  category: "Cups",
+  unit: "pcs",
+  stock: "",
+  low_stock_threshold: "10",
+};
+
+export const AdminInventory: React.FC = () => {
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string>("All");
+
+  const loadItems = () => {
+    setLoading(true);
+    apiAdminGet<InventoryItem[]>("/inventory")
+      .then(setItems)
+      .catch(() => setError("Failed to load inventory"))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { loadItems(); }, []);
+
+  const categories = ["All", ...CATEGORIES];
+  const filtered = activeCategory === "All" ? items : items.filter((i) => i.category === activeCategory);
+
+  const getStockStatus = (item: InventoryItem) => {
+    if (item.stock <= 0) return "out";
+    if (item.stock <= (item.low_stock_threshold || 10)) return "low";
+    return "ok";
+  };
+
+  const stockStatusColor = (status: string) => {
+    if (status === "out") return "var(--danger)";
+    if (status === "low") return "#e8a020";
+    return "var(--success)";
+  };
+
+  // ── Form ─────────────────────────────────────────────────────────────────────
+
+  const openAddForm = () => {
+    setForm({ ...EMPTY_FORM });
+    setEditingId(null);
+    setShowForm(true);
+    setError("");
+  };
+
+  const openEditForm = (item: InventoryItem) => {
+    setForm({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      unit: item.unit,
+      stock: String(item.stock),
+      low_stock_threshold: String(item.low_stock_threshold),
+    });
+    setEditingId(item.id);
+    setShowForm(true);
+    setError("");
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setForm({ ...EMPTY_FORM });
+    setError("");
+  };
+
+  const handleSave = async () => {
+    if (!form.id.trim() || !form.name.trim()) {
+      setError("ID and name are required");
+      return;
+    }
+    const stock = parseFloat(form.stock);
+    if (isNaN(stock) || stock < 0) {
+      setError("Stock must be 0 or higher");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    const payload = {
+      id: form.id.trim(),
+      name: form.name.trim(),
+      category: form.category,
+      unit: form.unit,
+      stock,
+      low_stock_threshold: parseFloat(form.low_stock_threshold) || 10,
+    };
+
+    try {
+      if (editingId) {
+        await apiAdminPut(`/inventory/${editingId}`, payload);
+      } else {
+        await apiAdminPost("/inventory", payload);
+      }
+      closeForm();
+      loadItems();
+    } catch (e: any) {
+      setError(e.message || "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await apiAdminDelete(`/inventory/${id}`);
+      setDeleteConfirm(null);
+      loadItems();
+    } catch (e) {
+      setError("Failed to delete");
+    }
+  };
+
+  const handleAdjustStock = async (item: InventoryItem, delta: number) => {
+    const newStock = Math.max(0, item.stock + delta);
+    try {
+      await apiAdminPut(`/inventory/${item.id}`, { stock: newStock });
+      loadItems();
+    } catch (e) {
+      setError("Failed to update stock");
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+      {/* Header */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "0.9rem 1rem",
+        borderBottom: "1px solid var(--border-default)",
+        flexShrink: 0,
+      }}>
+        <div style={{ fontSize: 9, color: "var(--gold)", letterSpacing: 2, textTransform: "uppercase", fontWeight: 700 }}>
+          Inventory ({items.length} items)
+        </div>
+        <button onClick={openAddForm} style={{
+          background: "var(--gold)", color: "var(--bg-sidebar)", border: "none",
+          borderRadius: 9, padding: "8px 16px", fontSize: 9, fontWeight: 700,
+          letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const,
+        }}>
+          + Add Item
+        </button>
+      </div>
+
+      {/* Category filter tabs */}
+      <div style={{ display: "flex", gap: 6, padding: "0.7rem 1rem", overflowX: "auto", flexShrink: 0, scrollbarWidth: "none" }}>
+        {categories.map((cat) => {
+          const count = cat === "All" ? items.length : items.filter((i) => i.category === cat).length;
+          const isActive = activeCategory === cat;
+          return (
+            <button key={cat} onClick={() => setActiveCategory(cat)} style={{
+              padding: "5px 14px", borderRadius: 20, flexShrink: 0,
+              border: `1.5px solid ${isActive ? "var(--gold)" : "var(--border-default)"}`,
+              background: isActive ? "var(--gold)" : "transparent",
+              color: isActive ? "var(--bg-sidebar)" : "var(--text-secondary)",
+              fontSize: 9, fontWeight: 700, letterSpacing: 1, cursor: "pointer",
+              textTransform: "uppercase" as const,
+            }}>
+              {cat} <span style={{ opacity: 0.7 }}>({count})</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Items grid */}
+      <div className="scroll-area" style={{ flex: 1, padding: "0.5rem 1rem" }}>
+        {loading ? (
+          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>Loading...</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem", fontSize: 11 }}>
+            No inventory items in this category
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
+            {filtered.map((item) => (
+              <InventoryCard
+                key={item.id}
+                item={item}
+                onEdit={() => openEditForm(item)}
+                onDelete={() => setDeleteConfirm(item.id)}
+                onAdjustStock={(delta) => handleAdjustStock(item, delta)}
+                deleteConfirm={deleteConfirm === item.id}
+                onConfirmDelete={() => handleDelete(item.id)}
+                onCancelDelete={() => setDeleteConfirm(null)}
+                stockStatus={getStockStatus(item)}
+                stockStatusColor={stockStatusColor(getStockStatus(item))}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Add/Edit Modal */}
+      {showForm && (
+        <>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998, animation: "fadeInOverlay 0.2s ease" }} onClick={closeForm} />
+          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
+            <div style={{
+              background: "var(--bg-elevated)", border: "1.5px solid var(--border-medium)",
+              borderRadius: 16, padding: "1.5rem", width: "100%", maxWidth: 400,
+              maxHeight: "90vh", overflowY: "auto", animation: "fadeInUp 0.2s ease",
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 16, fontFamily: "'Playfair Display', serif" }}>
+                {editingId ? "Edit Inventory Item" : "Add Inventory Item"}
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <FormField label="Item ID" hint="Short code, e.g. cup-s">
+                  <input value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))}
+                    placeholder="cup-s" disabled={!!editingId}
+                    style={{ opacity: editingId ? 0.5 : 1, cursor: editingId ? "not-allowed" : "text" }} />
+                </FormField>
+                <FormField label="Name">
+                  <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="Medium Cup (12oz)" />
+                </FormField>
+                <FormField label="Category">
+                  <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                    style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }}>
+                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Unit">
+                  <select value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
+                    style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }}>
+                    {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </FormField>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <FormField label="Current Stock">
+                    <input type="number" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
+                      placeholder="0" min="0" step="1"
+                      style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }} />
+                  </FormField>
+                  <FormField label="Low Stock Alert">
+                    <input type="number" value={form.low_stock_threshold} onChange={(e) => setForm((f) => ({ ...f, low_stock_threshold: e.target.value }))}
+                      placeholder="10" min="0"
+                      style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }} />
+                  </FormField>
+                </div>
+              </div>
+
+              {error && (
+                <div style={{ marginTop: 12, padding: "9px 12px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", borderRadius: 8, fontSize: 11, color: "var(--danger)" }}>
+                  {error}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+                <button onClick={closeForm} style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "1px solid var(--border-default)", background: "transparent", color: "var(--text-secondary)", fontSize: 10, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const }}>
+                  Cancel
+                </button>
+                <button onClick={handleSave} disabled={saving} style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "none", background: "var(--gold)", color: "var(--bg-sidebar)", fontSize: 10, fontWeight: 700, letterSpacing: 1, cursor: saving ? "not-allowed" : "pointer", textTransform: "uppercase" as const, opacity: saving ? 0.6 : 1 }}>
+                  {saving ? "Saving..." : editingId ? "Update Item" : "Add Item"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// ── Inventory Card ─────────────────────────────────────────────────────────────
+
+interface InventoryCardProps {
+  item: InventoryItem;
+  onEdit: () => void;
+  onDelete: () => void;
+  onAdjustStock: (delta: number) => void;
+  deleteConfirm: boolean;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+  stockStatus: string;
+  stockStatusColor: string;
+}
+
+const InventoryCard: React.FC<InventoryCardProps> = ({
+  item, onEdit, onDelete, onAdjustStock,
+  deleteConfirm, onConfirmDelete, onCancelDelete,
+  stockStatus, stockStatusColor,
+}) => (
+  <div style={{
+    background: "var(--bg-surface)", border: "1px solid var(--border-subtle)",
+    borderRadius: 12, padding: "12px 12px 10px", display: "flex", flexDirection: "column", gap: 6,
+  }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3, flex: 1, marginRight: 8 }}>{item.name}</div>
+      <span style={{ fontSize: 7, fontWeight: 700, color: stockStatusColor, background: "rgba(0,0,0,0.3)", padding: "2px 6px", borderRadius: 4, letterSpacing: 1, textTransform: "uppercase" as const, flexShrink: 0 }}>
+        {stockStatus === "out" ? "OUT" : stockStatus === "low" ? "LOW" : "OK"}
+      </span>
+    </div>
+
+    <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 0.5 }}>{item.category}</div>
+
+    {/* Stock row with quick +/- buttons */}
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+      <button onClick={() => onAdjustStock(-1)} style={{ width: 26, height: 26, borderRadius: 7, background: "var(--bg-base)", border: "1px solid var(--border-default)", color: "var(--text-secondary)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+      <div style={{ flex: 1, textAlign: "center" }}>
+        <span style={{ fontSize: 18, fontWeight: 700, color: stockStatusColor }}>{item.stock}</span>
+        <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: 3 }}>{item.unit}</span>
+      </div>
+      <button onClick={() => onAdjustStock(1)} style={{ width: 26, height: 26, borderRadius: 7, background: "var(--bg-base)", border: "1px solid var(--border-default)", color: "var(--gold)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+    </div>
+
+    <div style={{ fontSize: 9, color: "var(--text-faint)" }}>Alert below: {item.low_stock_threshold} {item.unit}</div>
+
+    {deleteConfirm ? (
+      <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 4 }}>
+        <div style={{ fontSize: 9, color: "var(--danger)", textAlign: "center" }}>Delete this item?</div>
+        <div style={{ display: "flex", gap: 5 }}>
+          <button onClick={onCancelDelete} style={{ flex: 1, padding: "6px 0", borderRadius: 7, border: "1px solid var(--border-default)", background: "transparent", color: "var(--text-secondary)", fontSize: 8, fontWeight: 700, cursor: "pointer" }}>No</button>
+          <button onClick={onConfirmDelete} style={{ flex: 1, padding: "6px 0", borderRadius: 7, border: "none", background: "var(--danger)", color: "#fff", fontSize: 8, fontWeight: 700, cursor: "pointer" }}>Yes, Delete</button>
+        </div>
+      </div>
+    ) : (
+      <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
+        <button onClick={onEdit} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid var(--border-medium)", background: "transparent", color: "var(--text-secondary)", fontSize: 8, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const }}>
+          Edit
+        </button>
+        <button onClick={onDelete} style={{ padding: "7px 10px", borderRadius: 8, border: "1px solid var(--danger-border)", background: "transparent", color: "var(--danger)", fontSize: 8, fontWeight: 700, cursor: "pointer", letterSpacing: 1 }}>
+          ✕
+        </button>
+      </div>
+    )}
+  </div>
+);
+
+// ── Form Field ─────────────────────────────────────────────────────────────────
+
+const FormField: React.FC<{ label: string; hint?: string; children: React.ReactNode }> = ({ label, hint, children }) => (
+  <div>
+    <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1.5, marginBottom: 5, textTransform: "uppercase" as const, fontWeight: 700 }}>
+      {label}
+      {hint && <span style={{ fontWeight: 400, color: "var(--text-faint)", textTransform: "none" as const, marginLeft: 4 }}>{hint}</span>}
+    </div>
+    {children}
+  </div>
+);

@@ -48,6 +48,16 @@ export interface Order {
   payMethod: PayMethod;
 }
 
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  unit: string;
+  stock: number;
+  low_stock_threshold: number;
+  created_at?: string;
+}
+
 export interface DailySummary {
   date: string;
   totalRevenue: number;

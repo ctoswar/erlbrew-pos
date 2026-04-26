@@ -10,7 +10,7 @@ import { PaymentScreen } from "./PaymentScreen";
 import { SuccessScreen } from "./SuccessScreen";
 import { KitchenBoard } from "./KitchenBoard";
 import { Dashboard } from "./Dashboard";
-import { AdminMenu } from "./AdminMenu";
+import { AdminScreen } from "./AdminScreen";
 
 interface Props {
   staff: Staff;
@@ -193,7 +193,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
 case "dashboard":
   return <Dashboard orders={orders} staffName={staff.name} />;
 case "admin":
-  return <AdminMenu />;
+  return <AdminScreen />;
 default:
         return null;
     }

@@ -1,6 +1,6 @@
 import { CartItem, Order, DailySummary, PayMethod, Category } from "../types";
 
-export const formatCurrency = (n: number | string): string => `$${Number(n).toFixed(2)}`;
+export const formatCurrency = (n: number | string): string => `₱${Number(n).toFixed(2)}`;
 
 export const formatTime = (d: Date): string =>
   d.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" });

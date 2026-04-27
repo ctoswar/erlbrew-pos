@@ -35,6 +35,15 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   }, []);
 
   const { cart, addItem, updateQty, clearCart } = useCart();
+
+  // Sync cart meta to localStorage for CustomerDisplay (second monitor)
+  useEffect(() => {
+    try {
+      localStorage.setItem("erlbrew_cart_meta", JSON.stringify({ orderType, table }));
+      const v = String(Date.now());
+      localStorage.setItem("erlbrew_cart_version", v);
+    } catch {}
+  }, [orderType, table, cart]);
   const { orders, placeOrder, updateStatus, voidOrder, activeOrders } = useOrders();
 
   const handleNavigate = useCallback((s: Screen) => {

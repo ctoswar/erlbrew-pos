@@ -1,6 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useState } from "react";
 import { Order } from "../types";
 import { formatCurrency } from "../utils";
+import { ReceiptPreview } from "./ReceiptPreview";
 
 interface Props {
   order: Order;
@@ -8,10 +9,7 @@ interface Props {
 }
 
 export const SuccessScreen: React.FC<Props> = ({ order, onDone }) => {
-  useEffect(() => {
-    const t = setTimeout(onDone, 3000);
-    return () => clearTimeout(t);
-  }, [onDone]);
+  const [showPreview, setShowPreview] = useState(false);
 
   return (
     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-base)" }}>
@@ -25,10 +23,24 @@ export const SuccessScreen: React.FC<Props> = ({ order, onDone }) => {
           {order.type === "dine-in" ? order.table : "Takeout"} · {formatCurrency(order.total)}
         </div>
         <div style={{ fontSize: 11, color: "var(--text-disabled)", letterSpacing: 2 }}>Sent to kitchen…</div>
-        <button className="btn btn-outline" onClick={onDone} style={{ marginTop: 24, fontSize: 10, padding: "9px 20px" }}>
-          New Order
-        </button>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 24 }}>
+          <button
+            className="btn btn-gold"
+            onClick={() => setShowPreview(true)}
+            style={{ fontSize: 10, padding: "9px 20px" }}
+          >
+            🖨 Print Receipt
+          </button>
+          <button className="btn btn-outline" onClick={onDone} style={{ fontSize: 10, padding: "9px 20px" }}>
+            New Order
+          </button>
+        </div>
       </div>
+
+      {showPreview && (
+        <ReceiptPreview order={order} onClose={() => setShowPreview(false)} />
+      )}
     </div>
   );
 };

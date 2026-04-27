@@ -49,15 +49,26 @@ body {
   to   { opacity: 1; transform: translateX(0); }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.5; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes pulseScale {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 8px var(--gold); }
+  50% { transform: scale(1.1); box-shadow: 0 0 16px var(--gold); }
 }
 
 .animate-fadeInUp    { animation: fadeInUp    0.3s ease forwards; }
 .animate-successPop  { animation: successPop  0.5s ease forwards; }
 .animate-slideInRight{ animation: slideInRight 0.3s ease forwards; }
-.animate-pulse       { animation: pulse       2s ease-in-out infinite; }
+.animate-pulse { animation: pulse 2s ease-in-out infinite; }
+.animate-fadeIn { animation: fadeIn 0.4s ease forwards; }
 
 /* ── Typography ──────────────────────────────────────────────────────────── */
 .font-display { font-family: 'Playfair Display', serif; }

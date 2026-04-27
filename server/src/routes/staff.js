@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import express from 'express';
+import { authMiddleware } from '../middleware/auth.js';
 
 // Simple input-validation helper (shared-style per task spec)
 function validate(req, res, rules){
@@ -38,8 +39,8 @@ export default function staffRouter(pool){
     }
   });
 
-  // Create staff (admin only, token required)
-  router.post('/', async (req, res) => {
+// Create staff (admin only, token required)
+router.post('/', authMiddleware, async (req, res) => {
     const { rfid, pin, name, role, initials, color } = req.body;
     // Validation: required fields and constraints per FIX 5
     const err = validate(req, res, {
@@ -102,14 +103,10 @@ export default function staffRouter(pool){
           // Has password hash - verify with bcrypt
           const ok = await bcrypt.compare(password, user.password_hash);
           if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
-        } else {
-          // No password hash - accept admin123 or matching PIN
-          if (password !== 'admin123' && password !== user.pin) return res.status(401).json({ error: 'Invalid credentials' });
-          if (password === 'admin123') {
-            const hash = await bcrypt.hash(password, 10);
-            await pool.query('UPDATE staff SET password_hash = ? WHERE id = ?', [hash, user.id]);
-          }
-        }
+} else {
+      // No password hash - accept PIN only (no hardcoded fallback)
+      if (password !== user.pin) return res.status(401).json({ error: 'Invalid credentials' });
+    }
         const token = jwt.sign({ sub: user.id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
         return res.json({ token });
       }

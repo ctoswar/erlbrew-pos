@@ -142,15 +142,65 @@ export default function ordersRouter(pool, googleSheets) {
         await pool.query('INSERT INTO order_items (order_id, menu_item_id, qty, notes, price) VALUES (?, ?, ?, ?, ?)', [id, it.id, it.qty, it.notes || '', it.price]);
       }
 
-      if (googleSheets) {
-        try {
-          await googleSheets.appendOrder({ orderId: id, staffName: staff_name || '', items: itemsOut, subtotal, tax, total, payMethod: pay_method, status: 'preparing' });
-        } catch (e) {
-          console.error('Sheets write failed', e);
-        }
+if (googleSheets) {
+      try {
+        await googleSheets.appendOrder({ orderId: id, staffName: staff_name || '', items: itemsOut, subtotal, tax, total, payMethod: pay_method, status: 'preparing' });
+      } catch (e) {
+        console.error('Sheets write failed', e);
       }
+    }
 
-      res.json({ id, subtotal, tax, total, status: 'preparing' });
+    // ── Auto-deduct inventory based on recipes ───────────────────────────────
+    try {
+      const conn = await pool.getConnection();
+      await conn.beginTransaction();
+      try {
+        // Collect all menu_item_ids and their ordered quantities
+        const itemQtyMap = {};
+        for (const it of itemsOut) { itemQtyMap[it.id] = (itemQtyMap[it.id] || 0) + (Number(it.qty) || 0); }
+        const menuItemIds = Object.keys(itemQtyMap);
+
+        if (menuItemIds.length > 0) {
+          // Fetch all recipes for ordered menu items in one query
+          const [recipes] = await conn.query(
+            `SELECT r.menu_item_id, r.inventory_item_id, r.quantity,
+                    i.stock, i.low_stock_threshold
+             FROM recipes r
+             JOIN inventory i ON i.id = r.inventory_item_id
+             WHERE r.menu_item_id IN (?)`,
+            [menuItemIds]
+          );
+
+          // Deduct stock — skip if not enough stock (log warning, don't fail order)
+          for (const recipe of recipes) {
+            const qtyOrdered = itemQtyMap[recipe.menu_item_id] || 0;
+            const deduction = recipe.quantity * qtyOrdered;
+            if (deduction > 0) {
+              const newStock = Number(recipe.stock) - deduction;
+              await conn.query(
+                "UPDATE inventory SET stock = ? WHERE id = ? AND stock >= ?",
+                [newStock, recipe.inventory_item_id, deduction]
+              );
+              // If stock went below threshold, log it (could notify via webhook later)
+              if (newStock <= Number(recipe.low_stock_threshold)) {
+                console.warn(`[LOW STOCK] ${recipe.inventory_item_id}: ${newStock} remaining`);
+              }
+            }
+          }
+        }
+        await conn.commit();
+      } catch (e) {
+        await conn.rollback();
+        console.error('Inventory deduction failed (order still placed):', e);
+      } finally {
+        conn.release();
+      }
+    } catch (e) {
+      // Never fail the order if inventory deduction fails
+      console.error('Inventory deduction error:', e);
+    }
+
+    res.json({ id, subtotal, tax, total, status: 'preparing' });
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });

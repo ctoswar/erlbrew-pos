@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authMiddleware } from '../middleware/auth.js';
 
 export default function inventoryRouter(pool) {
   const router = Router();
@@ -35,8 +36,8 @@ export default function inventoryRouter(pool) {
     }
   });
 
-  // POST create inventory item
-  router.post('/', async (req, res) => {
+// POST create inventory item (admin only)
+router.post('/', authMiddleware, async (req, res) => {
     const { id, name, category, unit, stock, low_stock_threshold } = req.body;
     const err = validate(req, res, {
       id: { required: true, type: 'string', maxLen: 32 },
@@ -61,8 +62,8 @@ export default function inventoryRouter(pool) {
     }
   });
 
-  // PUT update inventory item (including stock adjustment)
-  router.put('/:id', async (req, res) => {
+// PUT update inventory item (including stock adjustment) (admin only)
+router.put('/:id', authMiddleware, async (req, res) => {
     const { id } = req.params;
     const { name, category, unit, stock, low_stock_threshold } = req.body;
     if (!id || typeof id !== 'string' || id.length > 32) {
@@ -90,8 +91,8 @@ export default function inventoryRouter(pool) {
     }
   });
 
-  // DELETE inventory item
-  router.delete('/:id', async (req, res) => {
+// DELETE inventory item (admin only)
+router.delete('/:id', authMiddleware, async (req, res) => {
     const { id } = req.params;
     if (!id || typeof id !== 'string' || id.length > 32) {
       return res.status(400).json({ error: 'Invalid id' });

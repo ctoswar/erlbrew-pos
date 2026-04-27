@@ -49,6 +49,19 @@ CREATE TABLE IF NOT EXISTS order_items (
   FOREIGN KEY (menu_item_id) REFERENCES menu_items(id)
 );
 
+CREATE TABLE IF NOT EXISTS time_records (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  staff_id INT NOT NULL,
+  rfid VARCHAR(64),
+  clock_in DATETIME NOT NULL,
+  clock_out DATETIME DEFAULT NULL,
+  total_hours DECIMAL(5,2) DEFAULT NULL,
+  date DATE GENERATED ALWAYS AS (DATE(clock_in)) STORED,
+  FOREIGN KEY (staff_id) REFERENCES staff(id),
+  INDEX idx_date (date),
+  INDEX idx_staff_date (staff_id, date)
+);
+
 CREATE TABLE IF NOT EXISTS recipes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   menu_item_id VARCHAR(64) NOT NULL,

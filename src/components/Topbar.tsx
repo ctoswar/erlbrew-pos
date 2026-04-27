@@ -16,6 +16,7 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
 
 const navItems: { screen: Screen; label: string; badge?: number; adminOnly?: boolean }[] = [
     { screen: "pos", label: "ORDER" },
+    { screen: "time", label: "TIME" },
     { screen: "kitchen", label: "KITCHEN", badge: activeOrderCount },
     { screen: "dashboard", label: "DASHBOARD" },
     { screen: "admin", label: "ADMIN", adminOnly: true },

@@ -23,15 +23,50 @@ function validate(req, res, rules){
       return res.status(400).json({ error: `${field} must be one of: ${check.enum.join(', ')}` });
     }
   }
-  return null;
-}
+return null;
+  }
+
+  // Helpers for Asia/Taipei time (UTC+8)
+  function taipeiNow() { return new Date(Date.now() + 8 * 60 * 60 * 1000); }
+  function toMysqlDatetime(d) { return d.toISOString().slice(0, 19).replace('T', ' '); }
 
 export default function staffRouter(pool){
+  // Auto clock-in when staff logs in with RFID
+  async function autoClockIn(staffId, rfid) {
+    const now = taipeiNow();
+    const today = now.toISOString().slice(0, 10);
+    const clockInTime = toMysqlDatetime(now);
+    const [open] = await pool.query(
+      'SELECT id FROM time_records WHERE staff_id = ? AND DATE(clock_in) = ? AND clock_out IS NULL LIMIT 1',
+      [staffId, today]
+    );
+    if (open.length) {
+      await pool.query(
+        'UPDATE time_records SET clock_out = ?, total_hours = TIMESTAMPDIFF(MINUTE, clock_in, ?) / 60.0 WHERE id = ?',
+        [clockInTime, clockInTime, open[0].id]
+      );
+      return 'clock_out';
+    } else {
+      await pool.query(
+        'INSERT INTO time_records (staff_id, rfid, clock_in) VALUES (?, ?, ?)',
+        [staffId, rfid, clockInTime]
+      );
+      return 'clock_in';
+    }
+  }
   const router = express.Router();
 
-  // GET all staff
+  // GET all staff (optional ?rfid= filter for card-lookup on login screen)
   router.get('/', async (req, res) => {
     try {
+      const { rfid } = req.query;
+      if (rfid) {
+        const [rows] = await pool.query(
+          'SELECT id, rfid, name, role, initials, color, created_at FROM staff WHERE rfid = ?',
+          [rfid]
+        );
+        return res.json(rows[0] || null);
+      }
       const [rows] = await pool.query('SELECT id, rfid, name, role, initials, color, created_at FROM staff');
       res.json(rows);
     } catch (e) {
@@ -64,17 +99,40 @@ router.post('/', authMiddleware, async (req, res) => {
     }
   });
 
-  // GET staff by id
-  router.get('/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-      const [rows] = await pool.query('SELECT id, rfid, name, role, initials, color FROM staff WHERE id = ?', [id]);
-      if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
-      res.json(rows[0]);
-    } catch (e) {
-      res.status(500).json({ error: 'DB error' });
-    }
-  });
+// GET staff by id
+router.get('/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await pool.query('SELECT id, rfid, name, role, initials, color FROM staff WHERE id = ?', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    res.json(rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// PUT update staff (auth required)
+router.put('/:id', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { rfid, name, role, initials, color } = req.body;
+  try {
+    const fields = [];
+    const values = [];
+    if (rfid !== undefined) { fields.push('rfid = ?'); values.push(rfid || null); }
+    if (name !== undefined) { fields.push('name = ?'); values.push(name); }
+    if (role !== undefined) { fields.push('role = ?'); values.push(role); }
+    if (initials !== undefined) { fields.push('initials = ?'); values.push(initials); }
+    if (color !== undefined) { fields.push('color = ?'); values.push(color); }
+    if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
+    values.push(id);
+    await pool.query(`UPDATE staff SET ${fields.join(', ')} WHERE id = ?`, values);
+    const [rows] = await pool.query('SELECT id, rfid, name, role, initials, color FROM staff WHERE id = ?', [id]);
+    res.json(rows[0]);
+  } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'RFID already assigned to another staff member' });
+    res.status(500).json({ error: 'DB error' });
+  }
+});
 
 // LOGIN (PIN-only for POS staff - bcrypt hashed PINs)
 router.post('/login', async (req, res) => {
@@ -89,13 +147,18 @@ router.post('/login', async (req, res) => {
       const [rows] = await pool.query('SELECT id, name, role, pin FROM staff WHERE rfid = ?', [rfid]);
       if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' });
       const user = rows[0];
-      // Verify PIN against bcrypt hash stored in pin column
-      const ok = await bcrypt.compare(pin, user.pin);
-      if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
-      const token = jwt.sign({ sub: user.id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
-      return res.json({ token });
-    }
-    // Username + Password login (admin with password hash OR PIN login)
+// Verify PIN against bcrypt hash stored in pin column
+    const ok = await bcrypt.compare(pin, user.pin);
+    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+
+    // Auto clock-in / clock-out on login
+    let clockAction = null;
+    try { clockAction = await autoClockIn(user.id, rfid); } catch (e) { console.error('Auto clock-in failed:', e); }
+
+    const token = jwt.sign({ sub: user.id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    return res.json({ token, clockAction });
+  }
+  // Username + Password login (admin with password hash OR PIN login)
     if (username) {
       const [rows] = await pool.query('SELECT id, name, role, pin, password_hash FROM staff WHERE name = ?', [username]);
       if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' });

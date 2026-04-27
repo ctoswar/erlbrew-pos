@@ -7,6 +7,7 @@ import menuRoutes from './routes/menu.js';
 import ordersRoutes from './routes/orders.js';
 import inventoryRoutes from './routes/inventory.js';
 import recipesRouter from './routes/recipes.js';
+import clockRouter from './routes/clock.js';
 import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
@@ -56,9 +57,11 @@ app.use('/api/staff/login', loginLimiter);
 // Apply a general API rate limiter for all /api/ routes
 app.use('/api/', apiLimiter);
 
-// DB pool (single pool for app)
+// DB pool (single pool for app) — force Asia/Taipei timezone for all queries
 const pool = mysql.createPool({
   uri: process.env.DATABASE_URL,
+  timezone: '+08:00',
+  dateStrings: false,
 });
 const MENU_SEED = [
   ['m1','Smoked Sea Salt Mocha','Signature Brews',6.75,'SIGNATURE','Single-origin dark chocolate, espresso, steamed oat milk, topped with house-smoked Maldon sea salt.','☕',1],
@@ -114,6 +117,7 @@ app.use('/api/orders', ordersRoutes(pool, gs));
 // Inventory: admin only
 app.use('/api/inventory', inventoryRoutes(pool));
 app.use('/api/recipes', recipesRouter(pool));
+app.use('/api/clock', clockRouter(pool));
 
 const server = app.listen(PORT, () => {
   console.log(`API server listening on port ${PORT}`);

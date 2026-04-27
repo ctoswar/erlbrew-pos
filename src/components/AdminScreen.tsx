@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { AdminMenu } from "./AdminMenu";
 import { AdminInventory } from "./AdminInventory";
+import { AdminStaff } from "./AdminStaff";
 
-type AdminTab = "menu" | "inventory";
+type AdminTab = "menu" | "inventory" | "staff";
 
 export const AdminScreen: React.FC = () => {
   const [tab, setTab] = useState<AdminTab>("menu");
@@ -27,22 +28,33 @@ export const AdminScreen: React.FC = () => {
         }}>
           Menu Items
         </button>
-        <button onClick={() => setTab("inventory")} style={{
-          padding: "7px 20px", borderRadius: 9,
-          border: `1.5px solid ${tab === "inventory" ? "var(--gold)" : "var(--border-default)"}`,
-          background: tab === "inventory" ? "rgba(201,135,58,0.15)" : "transparent",
-          color: tab === "inventory" ? "var(--gold)" : "var(--text-secondary)",
-          fontSize: 9, fontWeight: 700, letterSpacing: 1.5, cursor: "pointer",
-          textTransform: "uppercase" as const,
-        }}>
-          Inventory
-        </button>
+<button onClick={() => setTab("inventory")} style={{
+        padding: "7px 20px", borderRadius: 9,
+        border: `1.5px solid ${tab === "inventory" ? "var(--gold)" : "var(--border-default)"}`,
+        background: tab === "inventory" ? "rgba(201,135,58,0.15)" : "transparent",
+        color: tab === "inventory" ? "var(--gold)" : "var(--text-secondary)",
+        fontSize: 9, fontWeight: 700, letterSpacing: 1.5, cursor: "pointer",
+        textTransform: "uppercase" as const,
+      }}>
+        Inventory
+      </button>
+      <button onClick={() => setTab("staff")} style={{
+        padding: "7px 20px", borderRadius: 9,
+        border: `1.5px solid ${tab === "staff" ? "var(--gold)" : "var(--border-default)"}`,
+        background: tab === "staff" ? "rgba(201,135,58,0.15)" : "transparent",
+        color: tab === "staff" ? "var(--gold)" : "var(--text-secondary)",
+        fontSize: 9, fontWeight: 700, letterSpacing: 1.5, cursor: "pointer",
+        textTransform: "uppercase" as const,
+      }}>
+        Staff
+      </button>
       </div>
 
       {/* Tab content */}
       <div style={{ flex: 1, overflow: "hidden" }}>
-        {tab === "menu" && <AdminMenu />}
-        {tab === "inventory" && <AdminInventory />}
+{tab === "menu" && <AdminMenu />}
+      {tab === "inventory" && <AdminInventory />}
+      {tab === "staff" && <AdminStaff />}
       </div>
     </div>
   );

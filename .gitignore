@@ -4,11 +4,12 @@ node_modules/
 # Build output
 dist/
 
-# Environment files (NEVER commit these)
+# Environment files (NEVER commit these — keep real values local only)
 .env
 .env.local
 .env.production
 server/.env
+.env.*.local
 
 # IDE
 .vscode/
@@ -27,7 +28,4 @@ server/server.err
 
 # Misc
 *.tgz
-docker-compose.yml
-Dockerfile
-nginx.conf
-server/src/db/init.sql
+server/src/migrate-pins.mjs

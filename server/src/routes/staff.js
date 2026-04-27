@@ -76,46 +76,48 @@ router.post('/', authMiddleware, async (req, res) => {
     }
   });
 
-  // LOGIN (PIN-only for POS staff - simple check)
-  router.post('/login', async (req, res) => {
-    const { username, password, rfid, pin } = req.body;
-    // Basic validation per FIX 5
-    if (!((rfid && pin) || username)) {
-      return res.status(400).json({ error: 'Either RFID+PIN or username must be provided' });
+// LOGIN (PIN-only for POS staff - bcrypt hashed PINs)
+router.post('/login', async (req, res) => {
+  const { username, password, rfid, pin } = req.body;
+  // Basic validation per FIX 5
+  if (!((rfid && pin) || username)) {
+    return res.status(400).json({ error: 'Either RFID+PIN or username must be provided' });
+  }
+  try {
+    // RFID + PIN login (from card scan)
+    if (rfid && pin) {
+      const [rows] = await pool.query('SELECT id, name, role, pin FROM staff WHERE rfid = ?', [rfid]);
+      if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' });
+      const user = rows[0];
+      // Verify PIN against bcrypt hash stored in pin column
+      const ok = await bcrypt.compare(pin, user.pin);
+      if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+      const token = jwt.sign({ sub: user.id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+      return res.json({ token });
     }
-    try {
-      // RFID + PIN login (from card scan)
-      if (rfid && pin) {
-        const [rows] = await pool.query('SELECT id, name, role, pin, password_hash FROM staff WHERE rfid = ?', [rfid]);
-        if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' });
-        const user = rows[0];
-        // Check PIN
-        if (pin !== user.pin) return res.status(401).json({ error: 'Invalid credentials' });
-        const token = jwt.sign({ sub: user.id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
-        return res.json({ token });
+    // Username + Password login (admin with password hash OR PIN login)
+    if (username) {
+      const [rows] = await pool.query('SELECT id, name, role, pin, password_hash FROM staff WHERE name = ?', [username]);
+      if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' });
+      const user = rows[0];
+      if (user.password_hash) {
+        // Admin has a separate password hash — verify with bcrypt
+        const ok = await bcrypt.compare(password, user.password_hash);
+        if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+      } else {
+        // No separate password — verify against bcrypt-hashed PIN in pin column
+        const ok = await bcrypt.compare(password, user.pin);
+        if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
       }
-      // Username + Password login (admin or PIN fallback)
-      if (username) {
-        const [rows] = await pool.query('SELECT id, name, role, pin, password_hash FROM staff WHERE name = ?', [username]);
-        if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' });
-        const user = rows[0];
-        if (user.password_hash) {
-          // Has password hash - verify with bcrypt
-          const ok = await bcrypt.compare(password, user.password_hash);
-          if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
-} else {
-      // No password hash - accept PIN only (no hardcoded fallback)
-      if (password !== user.pin) return res.status(401).json({ error: 'Invalid credentials' });
+      const token = jwt.sign({ sub: user.id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+      return res.json({ token });
     }
-        const token = jwt.sign({ sub: user.id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
-        return res.json({ token });
-      }
-      res.status(400).json({ error: 'Invalid login payload' });
-    } catch (e) {
-      console.error('Login error:', e);
-      res.status(500).json({ error: 'DB error' });
-    }
-  });
+    res.status(400).json({ error: 'Invalid login payload' });
+  } catch (e) {
+    console.error('Login error:', e);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
 
   return router;
 }

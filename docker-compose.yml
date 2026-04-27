@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  erlbw-api:
+    build: ./server
+    container_name: erlbw-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./server/.env
+    environment:
+      PORT: 3001
+
+  erlbrew-pos:
+    build: .
+    container_name: erlbrew-pos
+    restart: unless-stopped
+    ports:
+      - "3004:80"
+    depends_on:
+      - erlbw-api

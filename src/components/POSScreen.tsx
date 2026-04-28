@@ -191,7 +191,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
       case "payment":
         return (
           <PaymentScreen
-            total={cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0) * 1.12}
+            total={cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0)}
             onBack={handleBack}
             onConfirm={handleConfirmPayment}
           />

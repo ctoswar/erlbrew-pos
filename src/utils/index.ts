@@ -17,9 +17,9 @@ export const generateOrderId = (): string =>
 export const calcSubtotal = (cart: CartItem[]): number =>
   cart.reduce((sum, ci) => sum + ci.item.price * ci.qty, 0);
 
-export const calcTax = (subtotal: number): number => subtotal * 0.12;
+export const calcTax = (_subtotal: number): number => 0;
 
-export const calcGrand = (subtotal: number): number => subtotal + calcTax(subtotal);
+export const calcGrand = (subtotal: number): number => subtotal;
 
 export const getQuickCashAmounts = (total: number): number[] => {
   const amounts = [

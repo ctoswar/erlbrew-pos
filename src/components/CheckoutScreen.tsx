@@ -1,6 +1,6 @@
 import React from "react";
 import { CartItem, OrderType } from "../types";
-import { formatCurrency, calcSubtotal, calcTax, calcGrand } from "../utils";
+import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
 
 interface Props {
   cart: CartItem[];
@@ -15,7 +15,6 @@ export const CheckoutScreen: React.FC<Props> = ({
   cart, orderType, table, staffName, onBack, onContinue,
 }) => {
   const subtotal = calcSubtotal(cart);
-  const tax = calcTax(subtotal);
   const grand = calcGrand(subtotal);
 
   return (
@@ -46,13 +45,10 @@ export const CheckoutScreen: React.FC<Props> = ({
 
         {/* Totals */}
         <div style={{ background: "var(--bg-base)", borderRadius: 10, padding: 14, marginBottom: 20 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--gold-muted)", marginBottom: 6 }}>
-            <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--gold-muted)", marginBottom: 10 }}>
-            <span>VAT 12%</span><span>{formatCurrency(tax)}</span>
-          </div>
-          <div className="divider" style={{ marginBottom: 10 }} />
+<div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--gold-muted)", marginBottom: 6 }}>
+          <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
+        </div>
+        <div className="divider" style={{ marginBottom: 10 }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <span style={{ fontSize: 11, color: "var(--text-secondary)", letterSpacing: 1, textTransform: "uppercase" }}>Grand Total</span>
             <span className="font-display" style={{ fontSize: 28, fontWeight: 700, color: "var(--gold)" }}>{formatCurrency(grand)}</span>

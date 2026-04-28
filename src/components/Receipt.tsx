@@ -37,7 +37,6 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
 
   const items = order.items;
   const subtotal = order.subtotal;
-  const tax = order.tax;
   const total = order.total;
   
 
@@ -79,7 +78,6 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
 
   // ── Totals ────────────────────────────────────────────────────────────────
   lines.push(`${padRight("Subtotal:", 22)}${padLeft(formatCurrency(subtotal).replace("₱","").trim(), 9)}`);
-  lines.push(`${padRight("VAT (12%):", 22)}${padLeft(formatCurrency(tax).replace("₱","").trim(), 9)}`);
   lines.push("=".repeat(32));
   lines.push(`${padRight("TOTAL:", 22)}${padLeft(formatCurrency(total).replace("₱","").trim(), 9)}`);
   lines.push("=".repeat(32));

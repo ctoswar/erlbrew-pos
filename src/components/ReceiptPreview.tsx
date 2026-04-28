@@ -122,13 +122,10 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
             </div>
 
             <div style={{ borderTop: "1px dashed #aaa", paddingTop: 5, marginBottom: 5 }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Subtotal</span><span>{formatCurrency(order.subtotal)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>VAT (12%)</span><span>{formatCurrency(order.tax)}</span>
-              </div>
-            </div>
+<div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>Subtotal</span><span>{formatCurrency(order.subtotal)}</span>
+          </div>
+        </div>
 
             <div style={{ borderTop: "2px solid #222", borderBottom: "2px solid #222", padding: "5px 0", marginBottom: 6 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 13 }}>

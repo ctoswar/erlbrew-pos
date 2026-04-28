@@ -188,7 +188,6 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
               <div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{selectedStaff.name}</div>
                 <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{selectedStaff.role}</div>
-                <div style={{ fontSize: 9, color: "var(--gold)", marginTop: 2, fontFamily: "monospace" }}>Card: {selectedStaff.rfid}</div>
               </div>
             </div>
 

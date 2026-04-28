@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { CartItem, OrderType } from "../types";
-import { formatCurrency, calcSubtotal, calcTax, calcGrand } from "../utils";
+import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
 
 const CART_KEY = "erlbrew_cart";
 const POLL_INTERVAL = 3000;
@@ -51,7 +51,6 @@ const handler = (e: StorageEvent) => {
 
   const { items, orderType, table } = cart;
   const subtotal = calcSubtotal(items);
-  const tax = calcTax(subtotal);
   const grand = calcGrand(subtotal);
   const isEmpty = items.length === 0;
 
@@ -194,15 +193,11 @@ const handler = (e: StorageEvent) => {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "rgba(245,230,208,0.6)" }}>
-                  <span>Subtotal</span>
-                  <span>{formatCurrency(subtotal)}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "rgba(245,230,208,0.6)" }}>
-                  <span>VAT (12%)</span>
-                  <span>{formatCurrency(tax)}</span>
-                </div>
-                <div style={{ height: 1, background: "rgba(201,135,58,0.2)", margin: "4px 0" }} />
+<div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "rgba(245,230,208,0.6)" }}>
+            <span>Subtotal</span>
+            <span>{formatCurrency(subtotal)}</span>
+          </div>
+          <div style={{ height: 1, background: "rgba(201,135,58,0.2)", margin: "4px 0" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'Playfair Display', serif", fontSize: 28, fontWeight: 700, color: "#C9873A" }}>
                   <span>Total</span>
                   <span>{formatCurrency(grand)}</span>

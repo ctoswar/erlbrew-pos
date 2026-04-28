@@ -15,7 +15,7 @@ function taipeiToday() {
   return toDateOnly(taipeiNow());
 }
 
-export default function clockRouter(pool) {
+export default function clockRouter(pool, googleSheets) {
   const router = Router();
 
   // POST /api/clock — RFID scan → clock in or clock out
@@ -44,19 +44,35 @@ export default function clockRouter(pool) {
       );
 
 if (open.length) {
-      // Clock OUT — close the open record, compute hours
-      const clockOutTime = toMysqlDatetime(taipeiNow());
-      await pool.query(
-        'UPDATE time_records SET clock_out = ?, total_hours = TIMESTAMPDIFF(MINUTE, clock_in, ?) / 60.0 WHERE id = ?',
-        [clockOutTime, clockOutTime, open[0].id]
-      );
+// Clock OUT — close the open record, compute hours
+    const clockOutTime = toMysqlDatetime(taipeiNow());
+    await pool.query(
+      'UPDATE time_records SET clock_out = ?, total_hours = TIMESTAMPDIFF(MINUTE, clock_in, ?) / 60.0 WHERE id = ?',
+      [clockOutTime, clockOutTime, open[0].id]
+    );
 
-      // Fetch updated record
-      const [records] = await pool.query(
-        'SELECT id, clock_in, clock_out, total_hours FROM time_records WHERE id = ?',
-        [open[0].id]
-      );
-      return res.json({
+    // Fetch updated record
+    const [records] = await pool.query(
+      'SELECT id, clock_in, clock_out, total_hours FROM time_records WHERE id = ?',
+      [open[0].id]
+    );
+
+    // Log to Google Sheets (best-effort — don't fail the clock-out if sheets errors)
+    const rec = records[0];
+    if (googleSheets) {
+      try {
+        await googleSheets.appendTimeRecord({
+          staffName: name,
+          role,
+          action: 'Clock Out',
+          clockIn: rec.clock_in,
+          clockOut: rec.clock_out,
+          totalHours: rec.total_hours,
+        });
+      } catch (e) { console.error('Sheets clock-out failed:', e.message); }
+    }
+
+    return res.json({
         action: 'clock_out',
         staff: { staff_id, name, role, initials, color },
         record: records[0],
@@ -73,8 +89,24 @@ const [records] = await pool.query(
       'SELECT id, clock_in, clock_out, total_hours FROM time_records WHERE id = ?',
       [insert.insertId]
     );
-        return res.json({
-          action: 'clock_in',
+
+    // Log to Google Sheets (best-effort)
+    const recIn = records[0];
+    if (googleSheets) {
+      try {
+        await googleSheets.appendTimeRecord({
+          staffName: name,
+          role,
+          action: 'Clock In',
+          clockIn: recIn.clock_in,
+          clockOut: null,
+          totalHours: null,
+        });
+      } catch (e) { console.error('Sheets clock-in failed:', e.message); }
+    }
+
+    return res.json({
+      action: 'clock_in',
           staff: { staff_id, name, role, initials, color },
           record: records[0],
         });

@@ -117,7 +117,7 @@ app.use('/api/orders', ordersRoutes(pool, gs));
 // Inventory: admin only
 app.use('/api/inventory', inventoryRoutes(pool));
 app.use('/api/recipes', recipesRouter(pool));
-app.use('/api/clock', clockRouter(pool));
+app.use('/api/clock', clockRouter(pool, gs));
 
 const server = app.listen(PORT, () => {
   console.log(`API server listening on port ${PORT}`);

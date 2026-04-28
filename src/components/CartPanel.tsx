@@ -1,6 +1,6 @@
 import React from "react";
 import { CartItem, OrderType } from "../types";
-import { formatCurrency, calcSubtotal, calcTax, calcGrand } from "../utils";
+import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
 
 interface Props {
   cart: CartItem[];
@@ -20,7 +20,6 @@ export const CartPanel: React.FC<Props> = ({
   onUpdateQty, onClearCart, onOrderTypeChange, onTableChange, onCheckout,
 }) => {
   const subtotal = calcSubtotal(cart);
-  const tax = calcTax(subtotal);
   const grand = calcGrand(subtotal);
   const isEmpty = cart.length === 0;
 
@@ -166,7 +165,6 @@ export const CartPanel: React.FC<Props> = ({
       }}>
         <div style={{ marginBottom: 12 }}>
           <TotalRow label="Subtotal" value={formatCurrency(subtotal)} />
-          <TotalRow label="VAT (12%)" value={formatCurrency(tax)} />
           <div style={{ height: 1, background: "var(--border-default)", margin: "10px 0" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <span style={{ fontSize: 10, color: "var(--text-secondary)", letterSpacing: 1.5, fontWeight: 700, textTransform: "uppercase" as const }}>

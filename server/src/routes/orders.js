@@ -123,8 +123,8 @@ export default function ordersRouter(pool, googleSheets) {
       let subtotal = 0;
       const itemsOut = items || [];
       for (const it of itemsOut) subtotal += (Number(it.price) || 0) * (Number(it.qty) || 0);
-      const tax = subtotal * 0.12;
-      const total = subtotal + tax;
+const tax = 0;
+    const total = subtotal;
       const id = uuidv4();
 
       // Look up staff id from rfid if provided

@@ -12,6 +12,18 @@ async function resolveTabName(sheets, spreadsheetId) {
   return cachedTabName;
 }
 
+// ── TimeClock tab resolver (separate cache) ─────────────────────────────────
+let cachedClockTabName = null;
+
+async function resolveClockTabName(sheets, spreadsheetId) {
+  if (cachedClockTabName) return cachedClockTabName;
+  const res = await sheets.spreadsheets.get({ spreadsheetId });
+  const sheetsList = res.data.sheets || [];
+  const clockTab = sheetsList.find((s) => s.properties.title === 'TimeClock');
+  cachedClockTabName = clockTab ? 'TimeClock' : (sheetsList[0]?.properties.title || 'Sheet1');
+  return cachedClockTabName;
+}
+
 // In-memory cache of menu item names: { id -> name }
 let menuItemCache = {};
 let cacheLoaded = false;
@@ -48,6 +60,24 @@ export function googleSheetsClientInit(pool) {
   return {
     jwtClient,
     sheets,
+    async appendTimeRecord({ staffName, role, action, clockIn, clockOut, totalHours }) {
+      const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+      const tabName = await resolveClockTabName(sheets, spreadsheetId);
+
+      const ts = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
+      const clockInStr = clockIn ? new Date(clockIn).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) : '—';
+      const clockOutStr = clockOut ? new Date(clockOut).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) : '—';
+      const hoursStr = totalHours != null ? `${Number(totalHours).toFixed(2)} hrs` : '—';
+
+      const values = [ts, staffName, role, action, clockInStr, clockOutStr, hoursStr];
+
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `${tabName}!A1`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [values] },
+      });
+    },
     async appendOrder({ orderId, staffName, items, subtotal, tax, total, payMethod, status }) {
       // Refresh menu item names from DB before each append
       await loadMenuItemNames(pool);

@@ -306,3 +306,41 @@ input::placeholder, textarea::placeholder { color: var(--text-disabled); }
   from { transform: translateY(-100%); }
   to { transform: translateY(0); }
 }
+
+/* ── Print Mode: Only show .receipt-print-target ─────────────────────────── */
+@media print {
+  /* Hide the entire app shell */
+  body > * { visibility: hidden !important; }
+
+  /* Un-hide ONLY the receipt-print-target (the actual paper) */
+  .receipt-print-target,
+  .receipt-print-target * {
+    visibility: visible !important;
+  }
+
+  /* Make receipt a standalone white page */
+  .receipt-print-target {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 8mm 6mm;
+    box-sizing: border-box;
+    background: #fff !important;
+    color: #000 !important;
+    /* Override any inherited dark styles from parent */
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Ensure all text inside receipt is black */
+  .receipt-print-target div,
+  .receipt-print-target span,
+  .receipt-print-target strong {
+    background: #fff !important;
+    color: #000 !important;
+    text-shadow: none !important;
+  }
+}

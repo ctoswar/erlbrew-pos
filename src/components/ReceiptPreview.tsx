@@ -32,6 +32,8 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
 
   const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : "E-WALLET";
 
+  const handlePrint = () => { window.print(); onClose(); };
+
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 1000,
@@ -65,11 +67,14 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
           flex: 1, overflowY: "auto", padding: "20px 20px 16px",
           display: "flex", justifyContent: "center", background: "#e8e4df",
         }}>
-          <div style={{
-            background: "#fff", width: 280, padding: "20px 16px",
-            boxShadow: "0 2px 16px rgba(0,0,0,0.15)", borderRadius: 2,
-            fontFamily: mono, fontSize: 11, lineHeight: 1.5, color: "#111",
-          }}>
+          <div
+            className="receipt-print-target"
+            style={{
+              background: "#fff", width: 280, padding: "20px 16px",
+              boxShadow: "0 2px 16px rgba(0,0,0,0.15)", borderRadius: 2,
+              fontFamily: mono, fontSize: 11, lineHeight: 1.5, color: "#111",
+            }}
+          >
 
             {/* ── 1. Store Header ───────────────────────────────────── */}
             <div style={{ textAlign: "center", marginBottom: 8 }}>
@@ -201,7 +206,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
           </button>
           <button
             className="btn btn-gold"
-            onClick={() => { window.print(); onClose(); }}
+            onClick={handlePrint}
             style={{ fontSize: 10, padding: "8px 18px" }}
           >
             🖨 Print

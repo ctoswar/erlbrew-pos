@@ -1,21 +1,55 @@
-version: '3.8'
 services:
+  # ── Backend API ─────────────────────────────────────────────────────────────
   erlbw-api:
     build: ./server
     container_name: erlbw-api
     restart: unless-stopped
+    expose:
+      - "3001"                     # Internal port (not published to host)
     ports:
-      - "3001:3001"
+      - "3001:3001"                # Still accessible on host for dev/debug
     env_file:
       - ./server/.env
     environment:
       PORT: 3001
+      # CORS: allow the frontend container by Docker DNS name
+      # Also allow by IP range for direct tablet access on LAN
+      CORS_ORIGINS: http://erlbrew-pos,http://localhost,http://192.168.75.101:3004
+      # MySQL is on the Docker host bridge — reachable via host IP
+      DATABASE_URL: mysql://root:gameclub11@192.168.75.101:3306/erlbrew_pos
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/menu"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - erlbrew-net
 
+  # ── Frontend (React → nginx) ────────────────────────────────────────────────
   erlbrew-pos:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # VITE_API_URL empty → nginx proxies /api to backend (see nginx.conf)
+        VITE_API_URL: ""
     container_name: erlbrew-pos
     restart: unless-stopped
     ports:
-      - "3004:80"
+      - "3004:80"                   # Host:container — tablets browse to this
     depends_on:
-      - erlbw-api
+      erlbw-api:
+        condition: service_healthy  # Don't start frontend until API is up
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - erlbrew-net
+
+networks:
+  erlbrew-net:
+    driver: bridge

@@ -1,15 +1,26 @@
-# Node.js 20 Alpine image
+# ── Erlbrew POS Backend Dockerfile ──────────────────────────────────────────
 FROM node:20-alpine
 
-# Set working directory
 WORKDIR /app
 
-# Install dependencies
-COPY package*.json ./
-RUN npm ci --silent
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
 
-# Copy app code
+# Copy package files first for layer caching
+COPY package*.json ./
+
+# Clean install — bcryptjs is pure JS, no native compilation needed
+RUN npm install --no-package-lock && npm cache clean --force
+
+# Copy application code
 COPY . .
 
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && adduser -S nodeapp -u 1001
+USER nodeapp
+
 EXPOSE 3001
+
+# Use dumb-init as PID 1 to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "src/index.js"]

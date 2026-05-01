@@ -1,0 +1,12 @@
+# ── Erlbrew POS .dockerignore ─────────────────────────────────────────────────
+# NEVER include .env in Docker image — pass via env_file in docker-compose
+server/.env
+server/node_modules
+node_modules
+dist
+.git
+*.log
+*.err
+*.md
+.env*
+.github

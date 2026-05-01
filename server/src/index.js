@@ -23,14 +23,21 @@ if (!process.env.JWT_SECRET) {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// 3: Restrict CORS origins via env var
-const corsOrigins = (process.env.CORS_ORIGINS || '*').split(',').map(s => s.trim());
+// 3: Restrict CORS origins via env var — MUST be set in production
+const rawCors = process.env.CORS_ORIGINS || '';
+if (!rawCors) {
+  console.warn('WARNING: CORS_ORIGINS not set — defaulting to same-origin only. Set CORS_ORIGINS=https://yourdomain.com in production!');
+}
+const corsOrigins = rawCors ? rawCors.split(',').map(s => s.trim()) : [];
 app.use(cors({
   origin(origin, callback) {
-    // Allow non-origin requests (curl, mobile apps) and same-origin
+    // Allow no-origin requests (curl, Postman, mobile apps)
     if (!origin) return callback(null, true);
-    if (corsOrigins.includes('*')) return callback(null, true);
-    if (corsOrigins.includes(origin)) return callback(null, true);
+    // In dev / local file:// access, allow everything
+    if (process.env.NODE_ENV !== 'production') return callback(null, true);
+    // In production, never allow wildcard when origins are explicitly set
+    if (corsOrigins.includes('*')) return callback(new Error('CORS wildcard (*) is not allowed in production — set CORS_ORIGINS=https://yourdomain.com'));
+    if (corsOrigins.length > 0 && corsOrigins.includes(origin)) return callback(null, true);
     callback(new Error('CORS not allowed'));
   },
   credentials: true,

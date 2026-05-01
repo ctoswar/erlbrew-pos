@@ -55,8 +55,8 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     if (cart.length > 0) setScreen("checkout");
   };
 
-  const handleConfirmPayment = (method: PayMethod) => {
-    const order = placeOrder(cart, staff, orderType, table, method);
+  const handleConfirmPayment = (method: PayMethod, cashTendered?: number) => {
+    const order = placeOrder(cart, staff, orderType, table, method, cashTendered);
     setLastOrder(order);
     clearCart();
     setMobileCartOpen(false);

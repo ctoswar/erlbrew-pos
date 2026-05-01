@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Order, CartItem, Staff, OrderStatus, OrderType, PayMethod, MenuItem } from "../types";
+import { Order, CartItem, Staff, OrderStatus, OrderType, PayMethod, MenuItem, Role } from "../types";
 import { calcSubtotal, calcTax, calcGrand, generateOrderId } from "../utils";
 import { apiGet, apiPost, apiAdminPost, apiAdminPut, apiAdminDelete, getAuthToken } from "../utils/api";
 
@@ -29,7 +29,7 @@ function serverOrderToOrder(o: any): Order {
       rfid: o.staff_rfid || '',
       pin: '',
       name: o.staff_name || 'Unknown',
-      role: (o.staff_role || 'Barista') as any,
+      role: (o.staff_role || 'Barista') as Role,
       initials: o.staff_initials || '??',
       color: o.staff_color || '#666',
     },
@@ -89,7 +89,7 @@ export function useOrders() {
   }, []);
 
   const placeOrder = useCallback(
-    (cart: CartItem[], staff: Staff, type: OrderType, table: string | undefined, payMethod: PayMethod): Order => {
+    (cart: CartItem[], staff: Staff, type: OrderType, table: string | undefined, payMethod: PayMethod, cashTendered?: number): Order => {
       const subtotal = calcSubtotal(cart);
       const tax = calcTax(subtotal);
       const total = calcGrand(subtotal);
@@ -122,6 +122,7 @@ export function useOrders() {
         table: type === "dine-in" ? `Table ${table}` : undefined,
         type,
         payMethod,
+        cashTendered,
       };
 
       setOrders((prev) => [localOrder, ...prev]);

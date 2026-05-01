@@ -5,7 +5,8 @@ import { formatCurrency, getQuickCashAmounts } from "../utils";
 interface Props {
   total: number;
   onBack: () => void;
-  onConfirm: (method: PayMethod) => void;
+  /** Passes back (method, cashTendered) so parent can store in Order.cashTendered */
+  onConfirm: (method: PayMethod, cashTendered?: number) => void;
 }
 
 export const PaymentScreen: React.FC<Props> = ({ total, onBack, onConfirm }) => {
@@ -94,7 +95,7 @@ export const PaymentScreen: React.FC<Props> = ({ total, onBack, onConfirm }) => 
           </div>
         )}
 
-        <button className="btn btn-gold" onClick={() => canConfirm && onConfirm(method)}
+        <button className="btn btn-gold" onClick={() => canConfirm && onConfirm(method, method === 'cash' ? cash : undefined)}
           disabled={!canConfirm}
           style={{ width: "100%", fontSize: 11, padding: 13, borderRadius: 10 }}>
           Confirm & Place Order ✓

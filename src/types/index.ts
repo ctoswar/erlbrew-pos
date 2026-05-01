@@ -46,6 +46,8 @@ export interface Order {
   table?: string;
   type: OrderType;
   payMethod: PayMethod;
+  /** Cash amount tendered — needed to compute change on cash orders */
+  cashTendered?: number;
 }
 
 export interface InventoryItem {

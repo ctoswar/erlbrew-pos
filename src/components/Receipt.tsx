@@ -112,8 +112,8 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   // ── 6. Payment ─────────────────────────────────────────────────────────────
   const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : "E-WALLET";
   lines.push(`Payment : ${payLabel}`);
-  if (order.payMethod === "cash" && (order as any).cashTendered) {
-    const tendered = (order as any).cashTendered;
+  if (order.payMethod === "cash" && order.cashTendered) {
+    const tendered = order.cashTendered;
     lines.push(`${padRight("Tendered:", 22)}${padLeft(formatCurrency(tendered).replace("₱","").trim(), 9)}`);
     lines.push(`${padRight("Change:", 22)}${padLeft(formatCurrency(tendered - total).replace("₱","").trim(), 9)}`);
   }

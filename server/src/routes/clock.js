@@ -59,8 +59,10 @@ if (open.length) {
 
     // Log to Google Sheets (best-effort — don't fail the clock-out if sheets errors)
     const rec = records[0];
+    console.log('[Clock] googleSheets available:', !!googleSheets);
     if (googleSheets) {
       try {
+        console.log('[Clock] Appending Clock Out for', name, '| clockIn:', rec.clock_in, '| clockOut:', rec.clock_out);
         await googleSheets.appendTimeRecord({
           staffName: name,
           role,
@@ -69,7 +71,10 @@ if (open.length) {
           clockOut: rec.clock_out,
           totalHours: rec.total_hours,
         });
-      } catch (e) { console.error('Sheets clock-out failed:', e.message); }
+        console.log('[Clock] Sheets appendTimeRecord SUCCESS');
+      } catch (e) { console.error('[Clock] Sheets clock-out failed:', e.message, e.stack || ''); }
+    } else {
+      console.warn('[Clock] googleSheets is NULL — is GOOGLE_SERVICE_ACCOUNT_KEY or GOOGLE_SHEETS_ID set?');
     }
 
     return res.json({
@@ -92,8 +97,10 @@ const [records] = await pool.query(
 
     // Log to Google Sheets (best-effort)
     const recIn = records[0];
+    console.log('[Clock] googleSheets available:', !!googleSheets);
     if (googleSheets) {
       try {
+        console.log('[Clock] Appending Clock In for', name, '| clockIn:', recIn.clock_in);
         await googleSheets.appendTimeRecord({
           staffName: name,
           role,
@@ -102,7 +109,10 @@ const [records] = await pool.query(
           clockOut: null,
           totalHours: null,
         });
-      } catch (e) { console.error('Sheets clock-in failed:', e.message); }
+        console.log('[Clock] Sheets appendTimeRecord SUCCESS');
+      } catch (e) { console.error('[Clock] Sheets clock-in failed:', e.message, e.stack || ''); }
+    } else {
+      console.warn('[Clock] googleSheets is NULL — is GOOGLE_SERVICE_ACCOUNT_KEY or GOOGLE_SHEETS_ID set?');
     }
 
     return res.json({

@@ -19,8 +19,8 @@ async function resolveClockTabName(sheets, spreadsheetId) {
   if (cachedClockTabName) return cachedClockTabName;
   const res = await sheets.spreadsheets.get({ spreadsheetId });
   const sheetsList = res.data.sheets || [];
-  const clockTab = sheetsList.find((s) => s.properties.title === 'TimeClock');
-  cachedClockTabName = clockTab ? 'TimeClock' : (sheetsList[0]?.properties.title || 'Sheet1');
+  const clockTab = sheetsList.find((s) => s.properties.title === 'Sheet2');
+  cachedClockTabName = clockTab ? 'Sheet2' : (sheetsList[0]?.properties.title || 'Sheet1');
   return cachedClockTabName;
 }
 

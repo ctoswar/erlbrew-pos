@@ -112,20 +112,27 @@ router.get('/:id', async (req, res) => {
 });
 
 // PUT update staff (auth required)
-router.put('/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  const { rfid, name, role, initials, color } = req.body;
-  try {
-    const fields = [];
-    const values = [];
-    if (rfid !== undefined) { fields.push('rfid = ?'); values.push(rfid || null); }
-    if (name !== undefined) { fields.push('name = ?'); values.push(name); }
-    if (role !== undefined) { fields.push('role = ?'); values.push(role); }
-    if (initials !== undefined) { fields.push('initials = ?'); values.push(initials); }
-    if (color !== undefined) { fields.push('color = ?'); values.push(color); }
-    if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
-    values.push(id);
-    await pool.query(`UPDATE staff SET ${fields.join(', ')} WHERE id = ?`, values);
+  router.put('/:id', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const { rfid, name, role, initials, color, password } = req.body;
+    try {
+      const fields = [];
+      const values = [];
+      if (rfid !== undefined) { fields.push('rfid = ?'); values.push(rfid || null); }
+      if (name !== undefined) { fields.push('name = ?'); values.push(name); }
+      if (role !== undefined) { fields.push('role = ?'); values.push(role); }
+      if (initials !== undefined) { fields.push('initials = ?'); values.push(initials); }
+      if (color !== undefined) { fields.push('color = ?'); values.push(color); }
+      if (password !== undefined) {
+        const pw = String(password);
+        if (pw.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
+        const hash = await bcrypt.hash(pw, 10);
+        fields.push('pin = ?');
+        values.push(hash);
+      }
+      if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
+      values.push(id);
+      await pool.query(`UPDATE staff SET ${fields.join(', ')} WHERE id = ?`, values);
     const [rows] = await pool.query('SELECT id, rfid, name, role, initials, color FROM staff WHERE id = ?', [id]);
     res.json(rows[0]);
   } catch (e) {

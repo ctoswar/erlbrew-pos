@@ -7,98 +7,138 @@ interface Props {
   onPrint?: () => void;
 }
 
-const PAPER_MM = 80; // 80mm thermal printer
+const PAPER_MM = 80;
 const FONT = "'Courier New', 'Lucida Console', monospace";
 const FONT_SIZE = 11;
+const W = 32;
 
-function padCenter(text: string, width = 32): string {
+// ── BIR-required store details ──────────────────────────────────────────────
+const STORE = {
+  name: "ERLBREW CAFE",
+  addr1: "Unit 1, Ground Floor",
+  addr2: "123 Main St, BGC, Taguig",
+  tel: "(02) 8888-8888",
+  tin: "000-000-000-000",
+  birCorNo: "COR-2024-00-00000",
+  atpNo: "ATP-2024-00-00000",
+  atpDate: "Jan 01, 2024",
+  serial: "ERL-2024-00001",
+  ptuNo: "PTU-2024-00-00000",
+  machineNo: "POS-01",
+  posAccNo: "ACC-2024-0001",
+};
+
+function padCenter(text: string, width = W): string {
   const s = text.length <= width ? text : text.substring(0, width - 2) + "..";
   const spaces = Math.max(0, Math.floor((width - s.length) / 2));
   return " ".repeat(spaces) + s;
 }
-
-function padRight(text: string, width = 32): string {
+function padRight(text: string, width = W): string {
   const s = text.length <= width ? text : text.substring(0, width - 1) + "…";
   return s.padEnd(width);
 }
-
-function padLeft(text: string, width = 32): string {
+function padLeft(text: string, width = W): string {
   return text.padStart(width);
 }
-
-
+function ln(char = "-") { return char.repeat(W); }
 
 export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   const printRef = useRef<HTMLDivElement>(null);
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-PH", { month: "short", day: "2-digit", year: "numeric" });
-  const timeStr = now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" });
+  const timeStr = now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
   const items = order.items;
   const subtotal = order.subtotal;
   const total = order.total;
-  
+  const slipNo = order.id || "0000";
 
   const lines: string[] = [];
 
-  // ── Header ──────────────────────────────────────────────────────────────
-  lines.push(padCenter("ERLBREW CAFE", 32));
-  lines.push(padCenter("Unit 1, Ground Floor", 32));
-  lines.push(padCenter("123 Main Street, BGC, Taguig", 32));
-  lines.push(padCenter("Tel: (02) 8888-8888", 32));
-  lines.push(padCenter("VAT Reg: TIN-000-000-000", 32));
-  lines.push("=".repeat(32));
-  lines.push(padCenter("OFFICIAL RECEIPT", 32));
-  lines.push("=".repeat(32));
+  // ── 1. Store Header ────────────────────────────────────────────────────────
+  lines.push(padCenter(STORE.name));
+  lines.push(padCenter(STORE.addr1));
+  lines.push(padCenter(STORE.addr2));
+  lines.push(padCenter(`Tel: ${STORE.tel}`));
+  lines.push(padCenter(`TIN: ${STORE.tin}`));
+  lines.push(ln("="));
 
-  // ── Order info ────────────────────────────────────────────────────────────
-  lines.push(`Date: ${dateStr}   ${timeStr}`);
-  lines.push(`Slip No: ${order.id}`);
-  lines.push(`Server: ${order.staff.name}`);
-  lines.push(`Type:   ${order.type === "dine-in" ? `DINE-IN  ${order.table ? `Table ${order.table}` : ""}`.trim() : "TAKEOUT"}`);
-  lines.push("-".repeat(32));
+  // ── 2. BIR Accreditations ──────────────────────────────────────────────────
+  lines.push(padCenter("OFFICIAL RECEIPT"));
+  lines.push(ln("="));
+  lines.push(`ATP No  : ${STORE.atpNo}`);
+  lines.push(`ATP Date: ${STORE.atpDate}`);
+  lines.push(`COR No  : ${STORE.birCorNo}`);
+  lines.push(`Serial  : ${STORE.serial}`);
+  lines.push(`PTU No  : ${STORE.ptuNo}`);
+  lines.push(`Machine : ${STORE.machineNo}`);
+  lines.push(`Accr No : ${STORE.posAccNo}`);
+  lines.push(ln("-"));
 
-  // ── Items ─────────────────────────────────────────────────────────────────
-  lines.push("QTY   ITEM                 AMOUNT");
-  lines.push("-".repeat(32));
+  // ── 3. Transaction Info ────────────────────────────────────────────────────
+  lines.push(`Date: ${dateStr}`);
+  lines.push(`Time: ${timeStr}`);
+  lines.push(`Slip No: ${slipNo}`);
+  lines.push(`Server : ${order.staff.name}`);
+  lines.push(`Type   : ${order.type === "dine-in" ? `DINE-IN${order.table ? ` / Tbl ${order.table}` : ""}` : "TAKEOUT"}`);
+  lines.push(ln("-"));
 
+  // ── 4. Line Items ──────────────────────────────────────────────────────────
+  lines.push("QTY  ITEM              AMOUNT");
+  lines.push(ln("-"));
   items.forEach((ci) => {
     const qtyStr = String(ci.qty).padStart(3);
-    const priceStr = formatCurrency(ci.item.price * ci.qty).replace("₱", "").trim();
-    const name = ci.item.name.length > 18 ? ci.item.name.substring(0, 17) + "…" : ci.item.name;
-    const line1 = `${qtyStr}   ${padRight(name, 18)} ${padLeft(priceStr, 7)}`;
-    lines.push(line1);
+    const amtStr = formatCurrency(ci.item.price * ci.qty).replace("₱", "").trim();
+    const name = ci.item.name.length > 17 ? ci.item.name.substring(0, 16) + "…" : ci.item.name;
+    lines.push(`${qtyStr}  ${padRight(name, 17)} ${padLeft(amtStr, 8)}`);
+    if (ci.qty > 1) {
+      lines.push(`     @ ${formatCurrency(ci.item.price).replace("₱","").trim()} ea`);
+    }
     if (ci.notes) {
       lines.push(`     > ${ci.notes}`);
     }
   });
+  lines.push(ln("-"));
 
-  lines.push("-".repeat(32));
-
-  // ── Totals ────────────────────────────────────────────────────────────────
+  // ── 5. Totals (0% VAT) ─────────────────────────────────────────────────────
   lines.push(`${padRight("Subtotal:", 22)}${padLeft(formatCurrency(subtotal).replace("₱","").trim(), 9)}`);
-  lines.push("=".repeat(32));
-  lines.push(`${padRight("TOTAL:", 22)}${padLeft(formatCurrency(total).replace("₱","").trim(), 9)}`);
-  lines.push("=".repeat(32));
+  lines.push(`${padRight("VAT-Exempt Sale:", 22)}${padLeft(formatCurrency(subtotal).replace("₱","").trim(), 9)}`);
+  lines.push(`${padRight("VAT (0%):", 22)}${padLeft("0.00", 9)}`);
+  lines.push(ln("="));
+  lines.push(`${padRight("TOTAL DUE:", 22)}${padLeft(formatCurrency(total).replace("₱","").trim(), 9)}`);
+  lines.push(ln("="));
 
-  // ── Payment ───────────────────────────────────────────────────────────────
-  lines.push(`Payment: ${order.payMethod === "cash" ? "CASH" : order.payMethod.toUpperCase()}`);
+  // ── 6. Payment ─────────────────────────────────────────────────────────────
+  const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : "E-WALLET";
+  lines.push(`Payment : ${payLabel}`);
+  if (order.payMethod === "cash" && (order as any).cashTendered) {
+    const tendered = (order as any).cashTendered;
+    lines.push(`${padRight("Tendered:", 22)}${padLeft(formatCurrency(tendered).replace("₱","").trim(), 9)}`);
+    lines.push(`${padRight("Change:", 22)}${padLeft(formatCurrency(tendered - total).replace("₱","").trim(), 9)}`);
+  }
 
-  // ── Footer ────────────────────────────────────────────────────────────────
-  lines.push("-".repeat(32));
-  lines.push(padCenter("Thank you for dining with us!", 32));
-  lines.push(padCenter("Please come again!", 32));
-  lines.push(" ".repeat(32));
-  lines.push(padCenter(" BIR-Approved", 32));
-  lines.push(padCenter("Serial: ERL-2024-0001", 32));
-  lines.push(" ".repeat(32));
-  lines.push(" ".repeat(32));
+  // ── 7. BIR Footer ──────────────────────────────────────────────────────────
+  lines.push(ln("-"));
+  lines.push(padCenter("NON-VAT REGISTERED"));
+  lines.push(padCenter("VAT-Exempt under"));
+  lines.push(padCenter("Sec. 109(A), NIRC as amended"));
+  lines.push(ln("-"));
+  lines.push(padCenter("THIS SERVES AS AN"));
+  lines.push(padCenter("OFFICIAL RECEIPT"));
+  lines.push(ln("-"));
+  lines.push(padCenter("Thank you for dining with us!"));
+  lines.push(padCenter("Please come again!"));
+  lines.push(" ");
+  lines.push(padCenter("** CUSTOMER COPY **"));
+  lines.push(" ");
+  lines.push(padCenter(`Min. Wage Dist.: ${formatCurrency(0)}`));
+  lines.push(" ");
+  lines.push(" ");
 
-  // Print on mount
   useEffect(() => {
     if (!printRef.current || !onPrint) return;
-    const win = window.open("", "_blank", "width=400,height=600");
+    const win = window.open("", "_blank", "width=400,height=700");
     if (!win) return;
     const doc = win.document;
     doc.write("<!DOCTYPE html><html><head>");
@@ -106,23 +146,13 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
     doc.write(`<style>
       @page { margin: 0; size: ${PAPER_MM}mm auto; }
       body {
-        font-family: ${FONT};
-        font-size: ${FONT_SIZE}px;
-        line-height: 1.4;
-        width: ${PAPER_MM}mm;
-        margin: 0;
-        padding: 8px 6px;
-        box-sizing: border-box;
-        color: #000;
-        background: #fff;
+        font-family: ${FONT}; font-size: ${FONT_SIZE}px; line-height: 1.4;
+        width: ${PAPER_MM}mm; margin: 0; padding: 8px 6px;
+        box-sizing: border-box; color: #000; background: #fff;
       }
       pre {
-        font-family: ${FONT};
-        font-size: ${FONT_SIZE}px;
-        line-height: 1.45;
-        margin: 0;
-        white-space: pre-wrap;
-        word-break: keep-all;
+        font-family: ${FONT}; font-size: ${FONT_SIZE}px; line-height: 1.45;
+        margin: 0; white-space: pre-wrap; word-break: keep-all;
       }
     </style>`);
     doc.write("</head><body>");
@@ -133,7 +163,5 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
     if (onPrint) onPrint();
   }, []); // eslint-disable-line
 
-  return (
-    <div ref={printRef} style={{ display: "none" }} />
-  );
+  return <div ref={printRef} style={{ display: "none" }} />;
 };

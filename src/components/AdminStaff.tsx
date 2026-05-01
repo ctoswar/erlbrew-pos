@@ -13,10 +13,21 @@ interface StaffMember {
 export const AdminStaff: React.FC = () => {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editRfid, setEditRfid] = useState("");
-  const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  // Edit name state
+  const [editingNameId, setEditingNameId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+
+  // Edit RFID state
+  const [editingRfidId, setEditingRfidId] = useState<number | null>(null);
+  const [editRfid, setEditRfid] = useState("");
+
+  // Change password state
+  const [changingPwId, setChangingPwId] = useState<number | null>(null);
+  const [editPw, setEditPw] = useState("");
+
+  const [saving, setSaving] = useState(false);
 
   const loadStaff = () => {
     setLoading(true);
@@ -28,32 +39,81 @@ export const AdminStaff: React.FC = () => {
 
   useEffect(() => { loadStaff(); }, []);
 
-  const startEdit = (s: StaffMember) => {
-    setEditingId(s.id);
+  const showMsg = (text: string, ok: boolean) => {
+    setMsg({ text, ok });
+    setTimeout(() => setMsg(null), 2500);
+  };
+
+  // ── Save name ──────────────────────────────────────────────────────────────
+  const saveName = async (id: number) => {
+    if (!editName.trim()) { showMsg("Name cannot be empty", false); return; }
+    setSaving(true);
+    try {
+      await apiAdminPut(`/staff/${id}`, { name: editName.trim() });
+      setEditingNameId(null);
+      showMsg("Name updated", true);
+      loadStaff();
+    } catch (e: any) {
+      showMsg(e.message || "Failed to save", false);
+    } finally { setSaving(false); }
+  };
+
+  // ── Save RFID ──────────────────────────────────────────────────────────────
+  const saveRfid = async (id: number) => {
+    setSaving(true);
+    try {
+      await apiAdminPut(`/staff/${id}`, { rfid: editRfid.trim() || null });
+      setEditingRfidId(null);
+      showMsg("RFID saved", true);
+      loadStaff();
+    } catch (e: any) {
+      showMsg(e.message || "Failed to save", false);
+    } finally { setSaving(false); }
+  };
+
+  // ── Save password ──────────────────────────────────────────────────────────
+  const savePassword = async (id: number) => {
+    if (editPw.length < 4) { showMsg("Password must be at least 4 characters", false); return; }
+    setSaving(true);
+    try {
+      await apiAdminPut(`/staff/${id}`, { password: editPw });
+      setChangingPwId(null);
+      setEditPw("");
+      showMsg("Password updated", true);
+    } catch (e: any) {
+      showMsg(e.message || "Failed to save", false);
+    } finally { setSaving(false); }
+  };
+
+  const startEditName = (s: StaffMember) => {
+    setEditingNameId(s.id);
+    setEditName(s.name);
+    setChangingPwId(null);
+    setEditPw("");
+    setMsg(null);
+  };
+
+  const startEditRfid = (s: StaffMember) => {
+    setEditingRfidId(s.id);
     setEditRfid(s.rfid || "");
     setMsg(null);
   };
 
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditRfid("");
+  const startChangePw = (s: StaffMember) => {
+    setChangingPwId(s.id);
+    setEditPw("");
+    setEditingNameId(null);
+    setEditingRfidId(null);
     setMsg(null);
   };
 
-  const saveRfid = async (staffId: number) => {
-    setSaving(true);
-    setMsg(null);
-    try {
-      await apiAdminPut(`/staff/${staffId}`, { rfid: editRfid.trim() || null });
-      setEditingId(null);
-      setEditRfid("");
-      setMsg({ text: "RFID saved", ok: true });
-      loadStaff();
-    } catch (e: any) {
-      setMsg({ text: e.message || "Failed to save", ok: false });
-    } finally {
-      setSaving(false);
-    }
+  const cancelAll = () => {
+    setEditingNameId(null);
+    setEditingRfidId(null);
+    setChangingPwId(null);
+    setEditName("");
+    setEditRfid("");
+    setEditPw("");
   };
 
   return (
@@ -64,10 +124,10 @@ export const AdminStaff: React.FC = () => {
         padding: "0.9rem 1rem", borderBottom: "1px solid var(--border-default)", flexShrink: 0,
       }}>
         <div style={{ fontSize: 9, color: "var(--gold)", letterSpacing: 2, textTransform: "uppercase", fontWeight: 700 }}>
-          Staff & RFID Management
+          Staff Management
         </div>
         <div style={{ fontSize: 9, color: "var(--text-faint)" }}>
-          Tap card to register RFID
+          RFID · Name · Password
         </div>
       </div>
 
@@ -81,83 +141,165 @@ export const AdminStaff: React.FC = () => {
               <div key={s.id} style={{
                 background: "var(--bg-surface)", border: "1px solid var(--border-subtle)",
                 borderRadius: 14, padding: "16px 18px",
-                display: "flex", alignItems: "center", gap: 14,
               }}>
-                {/* Avatar */}
-                <div style={{
-                  width: 44, height: 44, borderRadius: "50%",
-                  background: s.color || "#555",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 14, fontWeight: 700, color: "#fff", flexShrink: 0,
-                }}>
-                  {s.initials}
-                </div>
+                {/* ── Row 1: Avatar + Name (editable) + Role ── */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: "50%",
+                    background: s.color || "#555",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 14, fontWeight: 700, color: "#fff", flexShrink: 0,
+                  }}>
+                    {s.initials}
+                  </div>
 
-                {/* Info */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{s.name}</div>
-                  <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>{s.role}</div>
-                </div>
-
-                {/* RFID field */}
-                <div>
-                  {editingId === s.id ? (
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  {editingNameId === s.id ? (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", flex: 1 }}>
                       <input
-                        value={editRfid}
-                        onChange={(e) => setEditRfid(e.target.value)}
-                        placeholder="Tap card or type RFID…"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && saveName(s.id)}
                         autoFocus
                         style={{
-                          background: "var(--bg-base)", border: "1px solid var(--border-medium)",
+                          flex: 1, background: "var(--bg-base)", border: "1px solid var(--border-medium)",
                           borderRadius: 8, color: "var(--text-primary)", padding: "7px 12px",
-                          fontSize: 11, width: 180, outline: "none",
+                          fontSize: 13, fontWeight: 700, outline: "none",
                         }}
                       />
-                      <button
-                        onClick={() => saveRfid(s.id)}
-                        disabled={saving}
-                        style={{
-                          background: "var(--gold)", color: "var(--bg-sidebar)", border: "none",
-                          borderRadius: 8, padding: "7px 14px", fontSize: 9, fontWeight: 700,
-                          cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1,
-                        }}
-                      >
+                      <button onClick={() => saveName(s.id)} disabled={saving}
+                        style={{ background: "var(--gold)", color: "var(--bg-sidebar)", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: 9, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
                         Save
                       </button>
-                      <button
-                        onClick={cancelEdit}
-                        style={{
-                          background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border-default)",
-                          borderRadius: 8, padding: "7px 12px", fontSize: 9, fontWeight: 700, cursor: "pointer",
-                        }}
-                      >
+                      <button onClick={cancelAll}
+                        style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border-default)", borderRadius: 8, padding: "7px 10px", fontSize: 9, cursor: "pointer" }}>
                         ✕
                       </button>
                     </div>
                   ) : (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", cursor: "pointer" }}
+                          onClick={() => startEditName(s)} title="Click to edit name">
+                          {s.name} <span style={{ fontSize: 10, color: "var(--gold)", opacity: 0.6 }}>✎</span>
+                        </div>
+                        <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>{s.role}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Row 2: RFID ── */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                  <div style={{ fontSize: 9, color: "var(--text-faint)", width: 70, flexShrink: 0, letterSpacing: 1 }}>RFID</div>
+                  {editingRfidId === s.id ? (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", flex: 1 }}>
+                      <input
+                        value={editRfid}
+                        onChange={(e) => setEditRfid(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === "Enter" && saveRfid(s.id)}
+                        placeholder="Tap card or type…"
+                        autoFocus
+                        style={{
+                          flex: 1, background: "var(--bg-base)", border: "1px solid var(--border-medium)",
+                          borderRadius: 8, color: "var(--text-primary)", padding: "7px 12px",
+                          fontSize: 11, fontFamily: "monospace", outline: "none",
+                        }}
+                      />
+                      <button onClick={() => saveRfid(s.id)} disabled={saving}
+                        style={{ background: "var(--gold)", color: "var(--bg-sidebar)", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: 9, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+                        Save
+                      </button>
+                      <button onClick={() => setEditingRfidId(null)}
+                        style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border-default)", borderRadius: 8, padding: "7px 10px", fontSize: 9, cursor: "pointer" }}>
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{
                         background: s.rfid ? "rgba(201,135,58,0.12)" : "var(--bg-base)",
                         border: `1px solid ${s.rfid ? "var(--gold-dim)" : "var(--border-default)"}`,
-                        borderRadius: 8, padding: "7px 14px",
+                        borderRadius: 8, padding: "6px 14px",
                         fontFamily: "monospace", fontSize: 11,
                         color: s.rfid ? "var(--gold)" : "var(--text-faint)",
                         minWidth: 120, textAlign: "center" as const,
                       }}>
                         {s.rfid || "Not set"}
                       </div>
-                      <button
-                        onClick={() => startEdit(s)}
+                      <button onClick={() => startEditRfid(s)}
                         style={{
-                          background: "transparent", color: "var(--gold)", border: "1px solid var(--gold-dim)",
-                          borderRadius: 8, padding: "7px 14px", fontSize: 9, fontWeight: 700,
-                          cursor: "pointer", letterSpacing: 1,
-                        }}
-                      >
+                          background: "transparent", color: "var(--gold)",
+                          border: "1px solid var(--gold-dim)", borderRadius: 8,
+                          padding: "6px 12px", fontSize: 9, fontWeight: 700, cursor: "pointer",
+                        }}>
                         {s.rfid ? "Change RFID" : "Assign RFID"}
                       </button>
                     </div>
+                  )}
+                </div>
+
+                {/* ── Row 3: PIN ── */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ fontSize: 9, color: "var(--text-faint)", width: 70, flexShrink: 0, letterSpacing: 1 }}>PIN</div>
+                  {changingPwId === s.id ? (
+                    <div style={{ flex: 1 }}>
+                      {/* PIN dots */}
+                      <div style={{ display: "flex", gap: 8, marginBottom: 10, justifyContent: "flex-start" }}>
+                        {[0,1,2,3].map((i) => (
+                          <div key={i} style={{
+                            width: 36, height: 36, borderRadius: 8,
+                            background: "var(--bg-base)",
+                            border: `1.5px solid ${i < editPw.length ? "var(--gold)" : "var(--border-default)"}`,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 18, color: "var(--gold)", transition: "all 0.12s",
+                          }}>
+                            {i < editPw.length ? "●" : ""}
+                          </div>
+                        ))}
+                      </div>
+                      {/* Keypad */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 5, maxWidth: 200 }}>
+                        {(["1","2","3","4","5","6","7","8","9","CLR","0","⌫"] as string[]).map((k) => (
+                          <button
+                            key={k}
+                            onClick={() => {
+                              if (k === "CLR") { setEditPw(""); return; }
+                              if (k === "⌫") { setEditPw((p) => p.slice(0,-1)); return; }
+                              if (editPw.length < 4) setEditPw((p) => p + k);
+                            }}
+                            style={{
+                              background: k === "CLR" || k === "⌫" ? "var(--bg-base)" : "var(--card-bg)",
+                              border: "1px solid var(--border-default)", borderRadius: 8,
+                              color: k === "CLR" || k === "⌫" ? "var(--text-muted)" : "var(--text-primary)",
+                              fontSize: 14, padding: "8px 0", cursor: "pointer",
+                              fontFamily: "'Lato', sans-serif",
+                            }}
+                          >
+                            {k}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                        <button onClick={() => savePassword(s.id)} disabled={saving || editPw.length !== 4}
+                          style={{ background: "var(--gold)", color: "var(--bg-sidebar)", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 9, fontWeight: 700, cursor: (saving || editPw.length !== 4) ? "not-allowed" : "pointer", opacity: (saving || editPw.length !== 4) ? 0.5 : 1 }}>
+                          Save
+                        </button>
+                        <button onClick={cancelAll}
+                          style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border-default)", borderRadius: 8, padding: "7px 12px", fontSize: 9, cursor: "pointer" }}>
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => startChangePw(s)}
+                      style={{
+                        background: "transparent", color: "var(--text-muted)",
+                        border: "1px solid var(--border-default)", borderRadius: 8,
+                        padding: "6px 14px", fontSize: 9, fontWeight: 700, cursor: "pointer",
+                        letterSpacing: 0.5,
+                      }}>
+                      Change PIN
+                    </button>
                   )}
                 </div>
               </div>
@@ -170,10 +312,9 @@ export const AdminStaff: React.FC = () => {
       {msg && (
         <div style={{
           position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)",
-          background: msg.ok ? "var(--success)" : "var(--danger)",
-          color: "#fff", padding: "10px 20px", borderRadius: 10,
-          fontSize: 11, fontWeight: 700, zIndex: 9999,
-          animation: "fadeInUp 0.2s ease",
+          background: msg.ok ? "var(--success)" : "var(--danger)", color: "#fff",
+          padding: "10px 20px", borderRadius: 10, fontSize: 11, fontWeight: 700,
+          zIndex: 9999, animation: "fadeInUp 0.2s ease",
         }}>
           {msg.text}
         </div>

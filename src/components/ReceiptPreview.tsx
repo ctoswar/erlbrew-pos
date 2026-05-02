@@ -10,7 +10,7 @@ interface Props {
 }
 
 export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
-  const [settings] = useState<PrintSettings>(loadPrintSettings);
+  const [settings] = useState<PrintSettings>(loadPrintSettings());
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-PH", { month: "short", day: "2-digit", year: "numeric" });
@@ -25,7 +25,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
         onClose();
       } catch (e: any) {
         const msg = e?.message || e?.reason?.message || String(e);
-        alert(`Print failed:\n${msg}\n\nMake sure the print server is running on the Pi (http://192.168.75.101:9100).`);
+        alert(`Print failed:\n${msg}\n\nMake sure the print server is running.`);
       }
     } else {
       openPrintWindow(order, settings);

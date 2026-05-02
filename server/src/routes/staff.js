@@ -41,9 +41,10 @@ export default function staffRouter(pool){
       [staffId, today]
     );
     if (open.length) {
+      const clockOutTime = toMysqlDatetime(taipeiNow());
       await pool.query(
         'UPDATE time_records SET clock_out = ?, total_hours = TIMESTAMPDIFF(MINUTE, clock_in, ?) / 60.0 WHERE id = ?',
-        [clockInTime, clockInTime, open[0].id]
+        [clockOutTime, clockOutTime, open[0].id]
       );
       return 'clock_out';
     } else {

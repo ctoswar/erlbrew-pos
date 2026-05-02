@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 export const authMiddleware = (req, res, next) => {
-  // Public routes are login; assume '/api/staff/login' open
-  if (req.path === '/login' || req.path === '/' || req.url.startsWith('/login')) return next();
+  // Public route: only /api/staff/login is open
+  if (req.path === '/login' || req.url === '/api/staff/login') return next();
   const authHeader = req.headers['authorization'];
   if (!authHeader) return res.status(401).json({ error: 'Missing token' });
   const token = authHeader.split(' ')[1];

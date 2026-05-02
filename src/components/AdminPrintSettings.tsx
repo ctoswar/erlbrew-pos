@@ -7,6 +7,8 @@ export interface PrintSettings {
   showCustomerCopy: boolean;
   showQRCode: boolean;
   printCopies: number;
+  /** Where to send print jobs: browser opens OS print dialog; bluetooth calls print-server.py on the Pi */
+  printVia: "browser" | "bluetooth";
 }
 
 const DEFAULT_SETTINGS: PrintSettings = {
@@ -16,6 +18,7 @@ const DEFAULT_SETTINGS: PrintSettings = {
   showCustomerCopy: true,
   showQRCode: false,
   printCopies: 1,
+  printVia: "browser",
 };
 
 const STORAGE_KEY = "erlbrew_print_settings";
@@ -131,6 +134,41 @@ export const AdminPrintSettings: React.FC = () => {
           >+</button>
         </div>
       </div>
+
+      {/* ── Print Via ────────────────────────────────────────── */}
+      <div style={rowStyle}>
+        <div>
+          <div style={labelStyle}>Print Method</div>
+          <div style={subStyle}>Browser opens OS dialog; Bluetooth calls print-server.py</div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {(["browser", "bluetooth"] as const).map((method) => (
+            <button
+              key={method}
+              onClick={() => update({ printVia: method })}
+              style={{
+                padding: "6px 14px", borderRadius: 8,
+                border: `1.5px solid ${settings.printVia === method ? "var(--gold)" : "var(--border-default)"}`,
+                background: settings.printVia === method ? "rgba(201,135,58,0.15)" : "transparent",
+                color: settings.printVia === method ? "var(--gold)" : "var(--text-muted)",
+                fontSize: 9, fontWeight: 700, cursor: "pointer", letterSpacing: 1,
+              }}
+            >
+              {method === "browser" ? "🖥 Browser" : "📡 Bluetooth"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Bluetooth Print Server URL ───────────────────────── */}
+      {settings.printVia === "bluetooth" && (
+        <div style={rowStyle}>
+          <div>
+            <div style={labelStyle}>Print Server URL</div>
+            <div style={subStyle}>Running on your Pi — e.g. http://192.168.75.101:9100</div>
+          </div>
+        </div>
+      )}
 
       {/* ── Toggle rows ─────────────────────────────────────── */}
       {([

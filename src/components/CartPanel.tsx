@@ -190,7 +190,7 @@ export const CartPanel: React.FC<Props> = ({
             opacity: isEmpty ? 0.3 : 1,
           }}
         >
-          Proceed to Payment →
+          Proceed to Checkout →
         </button>
       </div>
     </aside>

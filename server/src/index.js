@@ -126,6 +126,43 @@ app.use('/api/inventory', inventoryRoutes(pool));
 app.use('/api/recipes', recipesRouter(pool));
 app.use('/api/clock', clockRouter(pool, gs));
 
+// ── Print proxy: browser → backend → Pi Bluetooth print server ─────────────────
+// Solves Chrome's Private Network Access CORS block (tablet can't call Pi directly)
+const PRINT_SERVER = process.env.PRINT_SERVER_URL || 'http://192.168.75.101:9100';
+
+app.post('/api/print', async (req, res) => {
+  const { lines, paperSize } = req.body || {};
+  if (!lines || !Array.isArray(lines)) {
+    return res.status(400).json({ error: 'lines array required' });
+  }
+  try {
+    const br = await fetch(`${PRINT_SERVER}/print`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lines, paperSize: paperSize || '80mm' }),
+    });
+    const data = await br.json();
+    res.status(br.ok ? 200 : 502).json(data);
+  } catch (e) {
+    console.error('Print proxy error:', e.message);
+    res.status(502).json({ error: `Print server unreachable: ${e.message}` });
+  }
+});
+
+app.post('/api/open-drawer', async (req, res) => {
+  try {
+    const br = await fetch(`${PRINT_SERVER}/open-drawer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await br.json();
+    res.status(br.ok ? 200 : 502).json(data);
+  } catch (e) {
+    console.error('Open drawer proxy error:', e.message);
+    res.status(502).json({ error: `Print server unreachable: ${e.message}` });
+  }
+});
+
 const server = app.listen(PORT, () => {
   console.log(`API server listening on port ${PORT}`);
 });

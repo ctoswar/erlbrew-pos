@@ -20,7 +20,7 @@ export const PaymentScreen: React.FC<Props> = ({ total, onBack, onConfirm }) => 
 
   return (
     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-base)" }}>
-      <div className="animate-fadeInUp card-elevated" style={{ padding: "2.5rem", width: 440 }}>
+      <div className="animate-fadeInUp card-elevated" style={{ padding: "2rem 1.5rem", width: "100%", maxWidth: 440 }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <button className="btn btn-outline" onClick={onBack} style={{ fontSize: 11, padding: "7px 12px" }}>← Back</button>
@@ -97,9 +97,16 @@ export const PaymentScreen: React.FC<Props> = ({ total, onBack, onConfirm }) => 
 
         <button className="btn btn-gold" onClick={() => canConfirm && onConfirm(method, method === 'cash' ? cash : undefined)}
           disabled={!canConfirm}
-          style={{ width: "100%", fontSize: 11, padding: 13, borderRadius: 10 }}>
+          style={{ width: "100%", fontSize: 11, padding: 13, borderRadius: 10, marginBottom: 6 }}>
           Confirm & Place Order ✓
         </button>
+        <div style={{ textAlign: "center" }}>
+          <span style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 1 }}>
+            {method === "cash"
+              ? `Change: ${formatCurrency(change)} — keep the receipt`
+              : `${method === "card" ? "Present card" : "Scan QR"} to pay`}
+          </span>
+        </div>
       </div>
     </div>
   );

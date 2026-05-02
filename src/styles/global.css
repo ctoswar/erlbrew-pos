@@ -248,50 +248,41 @@ input::placeholder, textarea::placeholder { color: var(--text-disabled); }
   color: var(--gold) !important;
 }
 
-/* ── Responsive: Tablet (768px-1023px) ──────────────────────────────────── */
-@media (max-width: 1023px) {
-  .hide-tablet { display: none !important; }
-  .menu-grid-root { grid-template-columns: repeat(3, 1fr) !important; }
-}
-
-/* ── Responsive: Mobile (<768px) ────────────────────────────────────────── */
-@media (max-width: 767px) {
-  .hide-mobile { display: none !important; }
-  .menu-grid-root { grid-template-columns: repeat(2, 1fr) !important; }
-
-  /* Bottom sheet cart overlay */
-  .cart-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.65);
-    z-index: 998;
-    animation: fadeInOverlay 0.2s ease;
-  }
-
-  .cart-bottomsheet {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    max-height: 82vh;
-    background: var(--bg-sidebar);
-    border-top: 1.5px solid var(--gold);
-    border-radius: 18px 18px 0 0;
-    z-index: 999;
-    display: flex;
-    flex-direction: column;
-    animation: slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1);
-    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.7);
-  }
-}
-
-/* ── Responsive: Desktop (1024px+) ──────────────────────────────────────── */
-@media (min-width: 1024px) {
+/* ── Responsive breakpoints for MenuGrid and layout ─────────────────────────── */
+/*
+  - Mobile: < 768px -> 2-column grid for MenuGrid
+  - Tablet: 768px - 1199px -> 3-column grid
+  - Desktop: 1200px+ -> 4-column grid
+*/
+@media (min-width: 1200px) {
   .hide-desktop { display: none !important; }
   .menu-grid-root { grid-template-columns: repeat(4, 1fr) !important; }
 }
 
-/* ── Animations ──────────────────────────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .menu-grid-root { grid-template-columns: repeat(3, 1fr) !important; }
+}
+
+@media (max-width: 767px) {
+  .hide-mobile { display: none !important; }
+  .menu-grid-root { grid-template-columns: repeat(2, 1fr) !important; }
+
+  .cart-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.65); z-index: 998;
+    animation: fadeInOverlay 0.2s ease;
+  }
+
+  .cart-bottomsheet {
+    position: fixed; bottom: 0; left: 0; right: 0; max-height: 82vh;
+    background: var(--bg-sidebar); border-top: 1.5px solid var(--gold);
+    border-radius: 18px 18px 0 0; z-index: 999; display: flex;
+    flex-direction: column; animation: slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* ── Animations & other tokens (unchanged) ───────────────────────────────── */
 @keyframes fadeInOverlay {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -350,4 +341,9 @@ input::placeholder, textarea::placeholder { color: var(--text-disabled); }
     text-shadow: none !important;
     border-color: #222 !important;
   }
+}
+
+/* Mobile: hide RFID login sidebar for compact tablet/phone layouts */
+@media (max-width: 767px) {
+  .login-sidebar { display: none !important; }
 }

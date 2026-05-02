@@ -70,7 +70,6 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
           </button>
         ))}
       </div>
-
       {/* Grid */}
       <div className="scroll-area" style={{ flex: 1, padding: "0.9rem 1rem" }}>
         {loading ? (
@@ -85,7 +84,7 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
           <div className="menu-grid-root"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
+              gridTemplateColumns: "repeat(2, 1fr)",
               gap: 10,
             }}
           >

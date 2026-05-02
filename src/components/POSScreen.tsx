@@ -12,6 +12,7 @@ import { KitchenBoard } from "./KitchenBoard";
 import { Dashboard } from "./Dashboard";
 import { AdminScreen } from "./AdminScreen";
 import { TimeKeeping } from "./TimeKeeping";
+import { openCashDrawer } from "../utils/receiptUtils";
 
 interface Props {
   staff: Staff;
@@ -34,6 +35,10 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Cart visible on tablet+ throughout order flow
+  const isOrderFlow = screen === "pos" || screen === "checkout" || screen === "payment";
+  const showDesktopCart = !isMobile && isOrderFlow;
 
   const { cart, addItem, updateQty, clearCart } = useCart();
 
@@ -60,6 +65,10 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     setLastOrder(order);
     clearCart();
     setMobileCartOpen(false);
+
+    // Open cash drawer via Pi Bluetooth print server (fire-and-forget)
+    openCashDrawer().catch(() => {});
+
     setScreen("success");
   };
 
@@ -158,7 +167,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
 
   // ── Desktop cart panel (always visible on right) ────────────────────────────
   const renderDesktopCart = () => (
-    <div className="hide-tablet" style={{ width: 300, flexShrink: 0 }}>
+    <div style={{ width: 300, flexShrink: 0, display: "flex", flexDirection: "column", height: "100%" }}>
       <CartPanel
         cart={cart}
         orderType={orderType}
@@ -237,13 +246,11 @@ case "admin":
         </div>
       </div>
 
-      {/* ── Desktop cart panel (non-mobile) ── */}
-      {!isMobile && screen === "pos" && (
-        renderDesktopCart()
-      )}
+      {/* ── Desktop cart panel (tablet+) — visible throughout order flow ── */}
+      {showDesktopCart && renderDesktopCart()}
 
-      {/* ── Mobile floating cart button (only on pos screen, when not in checkout flow) ── */}
-      {isMobile && screen === "pos" && cart.length > 0 && !mobileCartOpen && (
+      {/* ── Mobile floating cart button ── */}
+      {isMobile && cart.length > 0 && !mobileCartOpen && (
         renderMobileCartButton()
       )}
 

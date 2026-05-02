@@ -19,7 +19,7 @@ export const CheckoutScreen: React.FC<Props> = ({
 
   return (
     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-base)" }}>
-      <div className="animate-fadeInUp card-elevated" style={{ padding: "2.5rem", width: 480 }}>
+      <div className="animate-fadeInUp card-elevated" style={{ padding: "2rem 1.5rem", width: "100%", maxWidth: 480 }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <button className="btn btn-outline" onClick={onBack} style={{ fontSize: 11, padding: "7px 12px" }}>← Back</button>
@@ -66,6 +66,12 @@ export const CheckoutScreen: React.FC<Props> = ({
         <button className="btn btn-gold" onClick={onContinue} style={{ width: "100%", fontSize: 11, padding: 13, borderRadius: 10 }}>
           Select Payment Method →
         </button>
+        {/* Secondary: also show cart items count for awareness */}
+        <div style={{ textAlign: "center", marginTop: 8 }}>
+          <span style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 1 }}>
+            {cart.length} item{cart.length !== 1 ? "s" : ""} · review cart on the right →
+          </span>
+        </div>
       </div>
     </div>
   );

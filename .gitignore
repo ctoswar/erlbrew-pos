@@ -26,6 +26,19 @@ Thumbs.db
 server/server.log
 server/server.err
 
+# TLS certificates and keys (NEVER commit — contain private keys)
+server.pfx
+server.pem
+server.key
+server.cer
+
+# Scripts with hardcoded secrets
+convert-cert.ps1
+gen-cert.ps1
+
+# Print server (keep on Pi, not in repo)
+print-server.py
+
 # Misc
 *.tgz
 server/src/migrate-pins.mjs

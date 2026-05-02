@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Order } from "../types";
 import { formatCurrency } from "../utils";
 import { loadPrintSettings, PrintSettings } from "./AdminPrintSettings";
-import { openPrintWindow } from "../utils/receiptUtils";
+import { openPrintWindow, printViaBluetooth } from "../utils/receiptUtils";
 
 interface Props {
   order: Order;
@@ -18,9 +18,19 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
 
   const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : "E-WALLET";
 
-  const handlePrint = () => {
-    openPrintWindow(order, settings);
-    onClose();
+  const handlePrint = async () => {
+    if (settings.printVia === "bluetooth") {
+      try {
+        await printViaBluetooth(order, settings);
+        onClose();
+      } catch (e: any) {
+        const msg = e?.message || e?.reason?.message || String(e);
+        alert(`Print failed:\n${msg}\n\nMake sure the print server is running on the Pi (http://192.168.75.101:9100).`);
+      }
+    } else {
+      openPrintWindow(order, settings);
+      onClose();
+    }
   };
 
   const PAPER_WIDTH = settings.paperSize === "58mm" ? 240 : 280;

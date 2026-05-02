@@ -34,12 +34,10 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
   }, [step, selectedStaff]);
 
   // Handle RFID scan (Enter key or button)
-  // Sends rfid to server to look up which staff member this card belongs to
   const handleRfidSubmit = async (rfidValue: string) => {
     const trimmed = rfidValue.trim().toUpperCase();
     if (!trimmed) return;
     try {
-      // Ask server which staff has this RFID (no auth needed for this lookup)
       const res = await fetch(`/api/staff?rfid=${encodeURIComponent(trimmed)}`);
       if (!res.ok) throw new Error();
       const staff = await res.json();
@@ -124,7 +122,7 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
       </aside>
 
       {/* ── Main ── */}
-      <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
+      <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem", overflowY: "auto" }}>
 
         {/* ── Step 1: Scan RFID ── */}
         {step === "rfid" && (

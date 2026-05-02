@@ -33,8 +33,19 @@ const navItems: { screen: Screen; label: string; badge?: number; adminOnly?: boo
         ERLBREW
       </div>
 
-      {/* Nav */}
-      {visibleNavItems.map(({ screen: s, label, badge }) => {
+      {/* Nav - wrap in a horizontally scrollable container to prevent wrapping on tablet/narrow screens */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          overflowX: "auto",
+          whiteSpace: "nowrap",
+          maxWidth: "60rem",
+          padding: "0 6px",
+        }}
+      >
+        {visibleNavItems.map(({ screen: s, label, badge }) => {
         const isActive = s === "pos" ? isOrderRelated : screen === s;
         return (
           <button key={s} className={`btn tab ${isActive ? "active-subtle" : ""}`}
@@ -49,7 +60,8 @@ const navItems: { screen: Screen; label: string; badge?: number; adminOnly?: boo
           </button>
         );
       })}
-
+      </div>
+      
       <div style={{ width: 1, height: 22, background: "var(--border-default)" }} />
 
       {/* Staff avatar */}

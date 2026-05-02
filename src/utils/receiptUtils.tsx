@@ -188,3 +188,35 @@ export function renderReceiptLines(order: Order, settings: PrintSettings): React
     );
   });
 }
+
+// ── Print via Bluetooth server on the Pi ──────────────────────────────────────
+const PRINT_SERVER_DEFAULT = "http://localhost:9100";
+
+export async function printViaBluetooth(order: Order, settings: PrintSettings): Promise<void> {
+  const serverUrl = (import.meta.env.VITE_PRINT_SERVER_URL as string) || PRINT_SERVER_DEFAULT;
+  const lines = buildReceiptLines(order, settings);
+
+  // Repeat lines for multi-copy
+  const allLines = Array(settings.printCopies).fill(lines).flat();
+
+  const res = await fetch(`${serverUrl}/print`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lines: allLines, paperSize: settings.paperSize }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || `Print server error ${res.status}`);
+  }
+}
+
+// ── Open cash drawer via Pi print server ─────────────────────────────────────
+export async function openCashDrawer(): Promise<void> {
+  const serverUrl = (import.meta.env.VITE_PRINT_SERVER_URL as string) || PRINT_SERVER_DEFAULT;
+  const res = await fetch(`${serverUrl}/open-drawer`, { method: "POST" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || `Drawer error ${res.status}`);
+  }
+}

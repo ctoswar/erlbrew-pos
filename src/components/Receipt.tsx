@@ -61,7 +61,6 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   lines.push(padCenter(STORE.addr1));
   lines.push(padCenter(STORE.addr2));
   lines.push(padCenter(`Tel: ${STORE.tel}`));
-  lines.push(padCenter(`TIN: ${STORE.tin}`));
   lines.push(ln("="));
 
   // ── 2. BIR Accreditations ──────────────────────────────────────────────────
@@ -101,10 +100,8 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   });
   lines.push(ln("-"));
 
-  // ── 5. Totals (0% VAT) ─────────────────────────────────────────────────────
+  // ── 5. Totals ─────────────────────────────────────────────────────────────
   lines.push(`${padRight("Subtotal:", 22)}${padLeft(formatCurrency(subtotal).replace("₱","").trim(), 9)}`);
-  lines.push(`${padRight("VAT-Exempt Sale:", 22)}${padLeft(formatCurrency(subtotal).replace("₱","").trim(), 9)}`);
-  lines.push(`${padRight("VAT (0%):", 22)}${padLeft("0.00", 9)}`);
   lines.push(ln("="));
   lines.push(`${padRight("TOTAL DUE:", 22)}${padLeft(formatCurrency(total).replace("₱","").trim(), 9)}`);
   lines.push(ln("="));
@@ -118,21 +115,12 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
     lines.push(`${padRight("Change:", 22)}${padLeft(formatCurrency(tendered - total).replace("₱","").trim(), 9)}`);
   }
 
-  // ── 7. BIR Footer ──────────────────────────────────────────────────────────
-  lines.push(ln("-"));
-  lines.push(padCenter("NON-VAT REGISTERED"));
-  lines.push(padCenter("VAT-Exempt under"));
-  lines.push(padCenter("Sec. 109(A), NIRC as amended"));
-  lines.push(ln("-"));
-  lines.push(padCenter("THIS SERVES AS AN"));
-  lines.push(padCenter("OFFICIAL RECEIPT"));
+  // ── 7. Footer ──────────────────────────────────────────────────────────────
   lines.push(ln("-"));
   lines.push(padCenter("Thank you for dining with us!"));
   lines.push(padCenter("Please come again!"));
   lines.push(" ");
   lines.push(padCenter("** CUSTOMER COPY **"));
-  lines.push(" ");
-  lines.push(padCenter(`Min. Wage Dist.: ${formatCurrency(0)}`));
   lines.push(" ");
   lines.push(" ");
 

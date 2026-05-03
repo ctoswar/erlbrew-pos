@@ -93,7 +93,6 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
                 <div style={{ fontSize: 9, marginTop: 3, color: "#555" }}>Unit 1, Ground Floor</div>
                 <div style={{ fontSize: 9, color: "#555" }}>123 Main St, BGC, Taguig</div>
                 <div style={{ fontSize: 9, color: "#555" }}>Tel: (02) 8888-8888</div>
-                <div style={{ fontSize: 9, color: "#555" }}>TIN: 000-000-000-000</div>
               </div>
             )}
 
@@ -167,12 +166,6 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>Subtotal:</span><span>{formatCurrency(order.subtotal)}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>VAT-Exempt Sale:</span><span>{formatCurrency(order.subtotal)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>VAT (0%):</span><span>₱0.00</span>
-              </div>
             </div>
 
             <div style={{ borderTop: "2px solid #222", borderBottom: "2px solid #222", padding: "5px 0", marginBottom: 6 }}>
@@ -203,29 +196,14 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
               </>
             )}
 
-            {/* 8. BIR Footer */}
-            <div style={{ borderTop: "1px dashed #aaa", paddingTop: 8, textAlign: "center", fontSize: 10 }}>
-              <div style={{ fontWeight: 700, marginBottom: 2 }}>NON-VAT REGISTERED</div>
-              <div style={{ fontSize: 9, color: "#555", marginBottom: 1 }}>VAT-Exempt under</div>
-              <div style={{ fontSize: 9, color: "#555", marginBottom: 6 }}>Sec. 109(A), NIRC as amended</div>
-
-              <div style={{ borderTop: "1px dashed #aaa", paddingTop: 6, marginBottom: 6 }}>
-                <div style={{ fontWeight: 700 }}>THIS SERVES AS AN</div>
-                <div style={{ fontWeight: 700 }}>OFFICIAL RECEIPT</div>
+            {/* 8. Footer */}
+            {settings.showCustomerCopy && (
+              <div style={{ borderTop: "1px dashed #aaa", paddingTop: 8, textAlign: "center", fontSize: 10 }}>
+                <div style={{ marginBottom: 2 }}>Thank you for dining with us!</div>
+                <div style={{ marginBottom: 8 }}>Please come again!</div>
+                <div style={{ fontSize: 8, color: "#aaa", marginBottom: 2 }}>** CUSTOMER COPY **</div>
               </div>
-
-              {settings.showCustomerCopy && (
-                <>
-                  <div style={{ borderTop: "1px dashed #aaa", paddingTop: 6, marginBottom: 6 }}>
-                    <div style={{ marginBottom: 2 }}>Thank you for dining with us!</div>
-                    <div style={{ marginBottom: 8 }}>Please come again!</div>
-                  </div>
-
-                  <div style={{ fontSize: 8, color: "#aaa", marginBottom: 2 }}>** CUSTOMER COPY **</div>
-                  <div style={{ fontSize: 8, color: "#aaa" }}>Min. Wage Dist.: {formatCurrency(0)}</div>
-                </>
-              )}
-            </div>
+            )}
           </div>
         </div>
 

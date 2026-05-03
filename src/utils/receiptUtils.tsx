@@ -47,7 +47,6 @@ export function buildReceiptLines(order: Order, settings: PrintSettings): string
     lines.push(padCenter(STORE.addr1));
     lines.push(padCenter(STORE.addr2));
     lines.push(padCenter(`Tel: ${STORE.tel}`));
-    lines.push(padCenter(`TIN: ${STORE.tin}`));
     lines.push(ln("="));
   }
 
@@ -88,8 +87,6 @@ export function buildReceiptLines(order: Order, settings: PrintSettings): string
 
   // 5. Totals
   lines.push(`${padRight("Subtotal:", W - 9)}${padLeft(formatCurrency(order.subtotal).replace("₱", "").trim(), 9)}`);
-  lines.push(`${padRight("VAT-Exempt Sale:", W - 9)}${padLeft(formatCurrency(order.subtotal).replace("₱", "").trim(), 9)}`);
-  lines.push(`${padRight("VAT (0%):", W - 9)}${padLeft("0.00", 9)}`);
   lines.push(ln("="));
   lines.push(`${padRight("TOTAL DUE:", W - 9)}${padLeft(formatCurrency(order.total).replace("₱", "").trim(), 9)}`);
   lines.push(ln("="));
@@ -106,15 +103,6 @@ export function buildReceiptLines(order: Order, settings: PrintSettings): string
     lines.push(padCenter("[ QR CODE ]"));
     lines.push(padCenter("Scan to Pay"));
   }
-
-  // 7. BIR Footer
-  lines.push(ln("-"));
-  lines.push(padCenter("NON-VAT REGISTERED"));
-  lines.push(padCenter("VAT-Exempt under"));
-  lines.push(padCenter("Sec. 109(A), NIRC as amended"));
-  lines.push(ln("-"));
-  lines.push(padCenter("THIS SERVES AS AN"));
-  lines.push(padCenter("OFFICIAL RECEIPT"));
 
   if (settings.showCustomerCopy) {
     lines.push(ln("-"));

@@ -43,3 +43,4 @@ print-server.py
 *.tgz
 server/src/migrate-pins.mjs
 server/src/create-time.mjs
+server/src/migrate-costing.mjs

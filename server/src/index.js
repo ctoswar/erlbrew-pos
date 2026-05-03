@@ -12,6 +12,9 @@ import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
 
+// Allow self-signed certs for print server connections (Pi uses self-signed HTTPS)
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 dotenv.config();
 
 // Security hardening: ensure JWT secret is set
@@ -128,7 +131,7 @@ app.use('/api/clock', clockRouter(pool, gs));
 
 // ── Print proxy: browser → backend → Pi Bluetooth print server ─────────────────
 // Solves Chrome's Private Network Access CORS block (tablet can't call Pi directly)
-const PRINT_SERVER = process.env.PRINT_SERVER_URL || 'http://192.168.75.101:9100';
+const PRINT_SERVER = process.env.PRINT_SERVER_URL || 'https://192.168.75.101:9100';
 
 app.post('/api/print', async (req, res) => {
   const { lines, paperSize } = req.body || {};
@@ -144,7 +147,7 @@ app.post('/api/print', async (req, res) => {
     const data = await br.json();
     res.status(br.ok ? 200 : 502).json(data);
   } catch (e) {
-    console.error('Print proxy error:', e.message);
+    console.error(`[print-proxy] Error: ${e.message}`, e.cause);
     res.status(502).json({ error: `Print server unreachable: ${e.message}` });
   }
 });
@@ -158,7 +161,7 @@ app.post('/api/open-drawer', async (req, res) => {
     const data = await br.json();
     res.status(br.ok ? 200 : 502).json(data);
   } catch (e) {
-    console.error('Open drawer proxy error:', e.message);
+    console.error(`[drawer-proxy] Error: ${e.message}`, e.cause);
     res.status(502).json({ error: `Print server unreachable: ${e.message}` });
   }
 });

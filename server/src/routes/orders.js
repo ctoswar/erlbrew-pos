@@ -241,5 +241,89 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+  // New: Cost of Goods Sold (COGS) endpoint
+  router.get('/cogs', async (req, res) => {
+    try {
+      const { start, end } = req.query;
+      const today = new Date();
+      const toDate = (d) => {
+        const dt = d ? new Date(d) : today;
+        dt.setHours(0, 0, 0, 0);
+        return dt.toISOString().slice(0, 10);
+      };
+      const startStr = toDate(start);
+      const endStr = toDate(end);
+
+      // Check if purchase_cost column exists in inventory table
+      let costColumnsExist = false;
+      try {
+        const [cols] = await pool.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'inventory'
+            AND COLUMN_NAME IN ('purchase_cost', 'unit_cost')
+        `);
+        costColumnsExist = Array.isArray(cols) && cols.length >= 2;
+      } catch (_) {
+        costColumnsExist = false;
+      }
+
+      // If migration not yet applied, return zeros instead of crashing
+      if (!costColumnsExist) {
+        return res.json({
+          cogs: 0,
+          orderCount: 0,
+          start: startStr,
+          end: endStr,
+          details: [],
+          warning: 'Cost columns not yet migrated. Run the init.sql migration to enable COGS.',
+        });
+      }
+
+      // 1) Total COGS in range
+      const sqlCogs = `SELECT COALESCE(SUM(oi.qty * r.quantity * i.purchase_cost), 0) AS cogs
+        FROM orders o
+        JOIN order_items oi ON o.id = oi.order_id
+        JOIN recipes r ON oi.menu_item_id = r.menu_item_id
+        JOIN inventory i ON r.inventory_item_id = i.id
+        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)`;
+      const [tot] = await pool.query(sqlCogs, [startStr, endStr]);
+      const cogs = Number((tot && tot[0] && tot[0].cogs) || 0);
+
+      // 2) Count of orders in range
+      const sqlCount = `SELECT COUNT(*) AS count
+        FROM orders o
+        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)`;
+      const [cnt] = await pool.query(sqlCount, [startStr, endStr]);
+      const orderCount = Number((cnt && cnt[0] && cnt[0].count) || 0);
+
+      // 3) Per-order breakdown (total, cogs, profit)
+      const sqlDetails = `SELECT o.id AS order_id, o.total AS total,
+        SUM(oi.qty * r.quantity * i.purchase_cost) AS cogs
+        FROM orders o
+        JOIN order_items oi ON o.id = oi.order_id
+        JOIN recipes r ON oi.menu_item_id = r.menu_item_id
+        JOIN inventory i ON r.inventory_item_id = i.id
+        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)
+        GROUP BY o.id`;
+      const [detailsRows] = await pool.query(sqlDetails, [startStr, endStr]);
+      const details = (detailsRows || []).map(r => {
+        const total = Number(r.total) || 0;
+        const c = Number(r.cogs) || 0;
+        return {
+          order_id: r.order_id,
+          total,
+          cogs: c,
+          profit: total - c,
+        };
+      });
+
+      res.json({ cogs, orderCount, start: startStr, end: endStr, details });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   return router;
 }

@@ -37,14 +37,22 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
 // Token storage for admin auth
 let authToken: string | null = null;
 
-export function setAuthToken(token: string) {
-  authToken = token;
-  localStorage.setItem('erlbrew_token', token);
+export function setAuthToken(token: string | null | undefined) {
+  authToken = token ?? null;
+  if (token) {
+    localStorage.setItem('erlbrew_token', token);
+  } else {
+    localStorage.removeItem('erlbrew_token');
+  }
 }
 
 export function getAuthToken(): string | null {
-  if (!authToken) {
-    authToken = localStorage.getItem('erlbrew_token');
+  // Always re-read from localStorage to catch changes in other tabs
+  const stored = localStorage.getItem('erlbrew_token');
+  if (stored && stored !== 'null' && stored !== 'undefined' && stored.trim().length > 0) {
+    authToken = stored;
+  } else {
+    authToken = null;
   }
   return authToken;
 }

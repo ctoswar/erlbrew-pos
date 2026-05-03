@@ -20,6 +20,7 @@ interface Props {
 }
 
 const MOBILE_BREAKPOINT = 768;
+const TABLET_BREAKPOINT = 1024;
 
 export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const [screen, setScreen] = useState<Screen>("pos");
@@ -27,11 +28,15 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const [table, setTable] = useState("1");
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
+  const [isTablet, setIsTablet] = useState(() => window.innerWidth >= MOBILE_BREAKPOINT && window.innerWidth < TABLET_BREAKPOINT);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
 
   // Track viewport width for responsive layout
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+      setIsTablet(window.innerWidth >= MOBILE_BREAKPOINT && window.innerWidth < TABLET_BREAKPOINT);
+    };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -100,14 +105,13 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {cart.length > 0 && (
-              <button
-                className="btn btn-danger"
-                onClick={() => { clearCart(); setMobileCartOpen(false); }}
-                style={{ fontSize: 8, padding: "5px 10px" }}
-              >
-                Clear All
-              </button>
-            )}
+                  <button
+                    className="btn btn-danger"
+                    onClick={() => { clearCart(); setMobileCartOpen(false); }}
+                  >
+                    Clear All
+                  </button>
+                )}
             <button
               onClick={() => setMobileCartOpen(false)}
               style={{ background: "none", border: "none", color: "var(--text-secondary)", fontSize: 20, cursor: "pointer", padding: "0 4px" }}
@@ -166,20 +170,24 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   );
 
   // ── Desktop cart panel (always visible on right) ────────────────────────────
-  const renderDesktopCart = () => (
-    <div style={{ width: 300, flexShrink: 0, display: "flex", flexDirection: "column", height: "100%" }}>
-      <CartPanel
-        cart={cart}
-        orderType={orderType}
-        table={table}
-        onUpdateQty={updateQty}
-        onClearCart={clearCart}
-        onOrderTypeChange={setOrderType}
-        onTableChange={setTable}
-        onCheckout={handleCheckout}
-      />
-    </div>
-  );
+  const renderDesktopCart = () => {
+    // Tablet: compact width; desktop: full width
+    const cartWidth = isTablet ? 260 : 320;
+    return (
+      <div style={{ width: cartWidth, flexShrink: 0, display: "flex", flexDirection: "column", height: "100%" }}>
+        <CartPanel
+          cart={cart}
+          orderType={orderType}
+          table={table}
+          onUpdateQty={updateQty}
+          onClearCart={clearCart}
+          onOrderTypeChange={setOrderType}
+          onTableChange={setTable}
+          onCheckout={handleCheckout}
+        />
+      </div>
+    );
+  };
 
   // ── Main screen router ──────────────────────────────────────────────────────
   const renderMainScreen = () => {

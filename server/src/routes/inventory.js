@@ -27,18 +27,32 @@ export default function inventoryRouter(pool) {
   // GET all inventory
   router.get('/', async (req, res) => {
     try {
-      const [rows] = await pool.query(
-        'SELECT id, name, category, unit, stock, low_stock_threshold, created_at FROM inventory ORDER BY category, name'
-      );
+      // Check if cost columns exist before selecting them (graceful if migration not applied)
+      let hasCost = false;
+      try {
+        const [cols] = await pool.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory'
+            AND COLUMN_NAME IN ('purchase_cost', 'unit_cost')
+        `);
+        hasCost = Array.isArray(cols) && cols.length >= 2;
+      } catch (_) { hasCost = false; }
+
+      const baseCols = 'id, name, category, unit, stock, low_stock_threshold, created_at';
+      const sql = hasCost
+        ? `SELECT ${baseCols}, purchase_cost, unit_cost FROM inventory ORDER BY category, name`
+        : `SELECT ${baseCols} FROM inventory ORDER BY category, name`;
+      const [rows] = await pool.query(sql);
       res.json(rows);
     } catch (e) {
+      console.error(e);
       res.status(500).json({ error: 'DB error' });
     }
   });
 
 // POST create inventory item (admin only)
 router.post('/', authMiddleware, async (req, res) => {
-    const { id, name, category, unit, stock, low_stock_threshold } = req.body;
+    const { id, name, category, unit, stock, low_stock_threshold, purchase_cost, unit_cost } = req.body;
     const err = validate(req, res, {
       id: { required: true, type: 'string', maxLen: 32 },
       name: { required: true, type: 'string', maxLen: 128 },
@@ -46,18 +60,38 @@ router.post('/', authMiddleware, async (req, res) => {
       unit: { type: 'string', maxLen: 32 },
       stock: { type: 'number', min: 0 },
       low_stock_threshold: { type: 'number', min: 0 },
+      purchase_cost: { type: 'number', min: 0 },
+      unit_cost: { type: 'number', min: 0 },
     });
     if (err) return err;
     try {
-      await pool.query(
-        'INSERT INTO inventory (id, name, category, unit, stock, low_stock_threshold) VALUES (?, ?, ?, ?, ?, ?)',
-        [id, name, category, unit || 'pcs', stock ?? 0, low_stock_threshold ?? 10]
-      );
+      // Only insert cost columns if they exist in the DB (migration may not be applied yet)
+      const baseCols = '(id, name, category, unit, stock, low_stock_threshold)';
+      const baseVals = [id, name, category, unit || 'pcs', stock ?? 0, low_stock_threshold ?? 10];
+      let sql = `INSERT INTO inventory ${baseCols}`;
+      let vals = baseVals;
+
+      try {
+        const [cols] = await pool.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory'
+            AND COLUMN_NAME IN ('purchase_cost', 'unit_cost')
+        `);
+        // cols is [{ COLUMN_NAME: 'purchase_cost' }, { COLUMN_NAME: 'unit_cost' }]
+        const hasCost = Array.isArray(cols) && cols.length >= 2;
+        if (hasCost) {
+          sql = `INSERT INTO inventory ${baseCols.replace(')', ', purchase_cost, unit_cost)')}`;
+          vals = [...baseVals, purchase_cost ?? 0, unit_cost ?? 0];
+        }
+      } catch (_) { /* migration not applied — skip cost columns */ }
+
+      await pool.query(sql, vals);
       res.json({ ok: true });
     } catch (e) {
       if (e.code === 'ER_DUP_ENTRY') {
         return res.status(409).json({ error: 'Item with this ID already exists' });
       }
+      console.error(e);
       res.status(500).json({ error: 'DB error' });
     }
   });
@@ -65,7 +99,7 @@ router.post('/', authMiddleware, async (req, res) => {
 // PUT update inventory item (including stock adjustment) (admin only)
 router.put('/:id', authMiddleware, async (req, res) => {
     const { id } = req.params;
-    const { name, category, unit, stock, low_stock_threshold } = req.body;
+    const { name, category, unit, stock, low_stock_threshold, purchase_cost, unit_cost } = req.body;
     if (!id || typeof id !== 'string' || id.length > 32) {
       return res.status(400).json({ error: 'Invalid id' });
     }
@@ -81,12 +115,29 @@ router.put('/:id', authMiddleware, async (req, res) => {
       if (stock !== undefined) { fields.push('stock = ?'); values.push(Number(stock)); }
       if (low_stock_threshold !== undefined) { fields.push('low_stock_threshold = ?'); values.push(Number(low_stock_threshold)); }
 
+      // Only update cost columns if they exist in the DB (migration may not be applied yet)
+      let costFieldsExist = false;
+      try {
+        const [cols] = await pool.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory'
+            AND COLUMN_NAME IN ('purchase_cost', 'unit_cost')
+        `);
+        costFieldsExist = Array.isArray(cols) && cols.length >= 2;
+      } catch (_) { costFieldsExist = false; }
+
+      if (costFieldsExist) {
+        if (purchase_cost !== undefined) { fields.push('purchase_cost = ?'); values.push(Number(purchase_cost)); }
+        if (unit_cost !== undefined) { fields.push('unit_cost = ?'); values.push(Number(unit_cost)); }
+      }
+
       if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
 
       values.push(id);
       await pool.query(`UPDATE inventory SET ${fields.join(', ')} WHERE id = ?`, values);
       res.json({ ok: true });
     } catch (e) {
+      console.error(e);
       res.status(500).json({ error: 'DB error' });
     }
   });

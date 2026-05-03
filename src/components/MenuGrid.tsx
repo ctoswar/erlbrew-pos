@@ -40,8 +40,8 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
       {/* Category Tabs — horizontally scrollable on mobile */}
       <div style={{
         display: "flex",
-        gap: 8,
-        padding: "0.85rem 1rem 0",
+        gap: 10,
+        padding: "1rem 1.2rem 0",
         flexShrink: 0,
         overflowX: "auto",
         scrollbarWidth: "none" as const,
@@ -51,12 +51,12 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
             key={cat}
             onClick={() => setActiveCategory(cat)}
             style={{
-              padding: "7px 16px",
-              borderRadius: 20,
+              padding: "9px 20px",
+              borderRadius: 22,
               border: `1.5px solid ${activeCategory === cat ? "var(--gold)" : "var(--border-default)"}`,
               background: activeCategory === cat ? "var(--gold)" : "transparent",
               color: activeCategory === cat ? "var(--bg-sidebar)" : "var(--text-secondary)",
-              fontSize: 9.5,
+              fontSize: 11,
               fontWeight: 700,
               letterSpacing: 1.2,
               textTransform: "uppercase" as const,
@@ -71,7 +71,7 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
         ))}
       </div>
       {/* Grid */}
-      <div className="scroll-area" style={{ flex: 1, padding: "0.9rem 1rem" }}>
+      <div className="scroll-area" style={{ flex: 1, padding: "1.2rem 1.2rem" }}>
         {loading ? (
           <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>
             Loading menu...
@@ -85,7 +85,7 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(2, 1fr)",
-              gap: 10,
+              gap: 12,
             }}
           >
             {items.map((item) => (
@@ -134,7 +134,7 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd }) => {
     >
       {/* Top row: emoji + optional badge */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 28, lineHeight: 1 }}>{item.emoji}</span>
+        <span style={{ fontSize: 32, lineHeight: 1 }}>{item.emoji}</span>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
           {item.popular && (
             <span style={{
@@ -169,7 +169,7 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd }) => {
 
       {/* Name */}
       <div style={{
-        fontSize: 12.5,
+        fontSize: 14,
         fontWeight: 700,
         color: "var(--text-primary)",
         lineHeight: 1.3,
@@ -180,7 +180,7 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd }) => {
 
       {/* Description — clamped to 2 lines */}
       <div style={{
-        fontSize: 9.5,
+        fontSize: 11,
         color: "var(--text-secondary)",
         lineHeight: 1.5,
         display: "-webkit-box",
@@ -193,7 +193,7 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd }) => {
 
       {/* Bottom: price + qty badge */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: 4 }}>
-        <span className="font-display" style={{ fontSize: 15, fontWeight: 700, color: "var(--gold)" }}>
+        <span className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "var(--gold)" }}>
           {formatCurrency(item.price)}
         </span>
         {cartItem && (
@@ -201,12 +201,12 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd }) => {
             background: "var(--gold)",
             color: "var(--bg-sidebar)",
             borderRadius: "50%",
-            width: 22,
-            height: 22,
+            width: 26,
+            height: 26,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 700,
           }}>
             {cartItem.qty}

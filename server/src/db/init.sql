@@ -83,6 +83,11 @@ CREATE TABLE IF NOT EXISTS inventory (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Costing fields added for COGS calculations (non-destructive migration)
+ALTER TABLE inventory 
+  ADD COLUMN purchase_cost DECIMAL(10,2) DEFAULT 0,
+  ADD COLUMN unit_cost DECIMAL(10,2) DEFAULT 0;
+
 -- Seed inventory items
 INSERT INTO inventory (id, name, category, unit, stock, low_stock_threshold) VALUES
 ('cup-s',    'Small Cup (8oz)',   'Cups',     'pcs', 500, 50),

@@ -12,6 +12,8 @@ const EMPTY_FORM = {
   unit: "pcs",
   stock: "",
   low_stock_threshold: "10",
+  purchase_cost: "",
+  unit_cost: "",
 };
 
 export const AdminInventory: React.FC = () => {
@@ -67,6 +69,8 @@ export const AdminInventory: React.FC = () => {
       unit: item.unit,
       stock: String(item.stock),
       low_stock_threshold: String(item.low_stock_threshold),
+      purchase_cost: item.purchase_cost != null ? String(item.purchase_cost) : "",
+      unit_cost: item.unit_cost != null ? String(item.unit_cost) : "",
     });
     setEditingId(item.id);
     setShowForm(true);
@@ -90,10 +94,18 @@ export const AdminInventory: React.FC = () => {
       setError("Stock must be 0 or higher");
       return;
     }
+    if (form.purchase_cost && isNaN(parseFloat(form.purchase_cost))) {
+      setError("Purchase cost must be a number");
+      return;
+    }
+    if (form.unit_cost && isNaN(parseFloat(form.unit_cost))) {
+      setError("Unit cost must be a number");
+      return;
+    }
 
     setSaving(true);
     setError("");
-    const payload = {
+    const payload: Record<string, unknown> = {
       id: form.id.trim(),
       name: form.name.trim(),
       category: form.category,
@@ -101,6 +113,8 @@ export const AdminInventory: React.FC = () => {
       stock,
       low_stock_threshold: parseFloat(form.low_stock_threshold) || 10,
     };
+    if (form.purchase_cost) payload.purchase_cost = parseFloat(form.purchase_cost);
+    if (form.unit_cost) payload.unit_cost = parseFloat(form.unit_cost);
 
     try {
       if (editingId) {
@@ -111,7 +125,12 @@ export const AdminInventory: React.FC = () => {
       closeForm();
       loadItems();
     } catch (e: any) {
-      setError(e.message || "Failed to save");
+      const msg = e.message || "";
+      if (msg.includes("401") || msg.includes("NO_TOKEN") || msg.includes("INVALID_TOKEN") || msg.includes("TOKEN_EXPIRED")) {
+        setError("Session expired — please log out and log in again.");
+      } else {
+        setError(e.message || "Failed to save");
+      }
     } finally {
       setSaving(false);
     }
@@ -256,6 +275,18 @@ export const AdminInventory: React.FC = () => {
                       style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }} />
                   </FormField>
                 </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <FormField label="Purchase Cost" hint="₱ per unit">
+                    <input type="number" value={form.purchase_cost} onChange={(e) => setForm((f) => ({ ...f, purchase_cost: e.target.value }))}
+                      placeholder="0.00" min="0" step="0.01"
+                      style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }} />
+                  </FormField>
+                  <FormField label="Unit Cost" hint="₱ per serving">
+                    <input type="number" value={form.unit_cost} onChange={(e) => setForm((f) => ({ ...f, unit_cost: e.target.value }))}
+                      placeholder="0.00" min="0" step="0.01"
+                      style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }} />
+                  </FormField>
+                </div>
               </div>
 
               {error && (
@@ -323,6 +354,21 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
     </div>
 
     <div style={{ fontSize: 9, color: "var(--text-faint)" }}>Alert below: {item.low_stock_threshold} {item.unit}</div>
+
+    {(item.purchase_cost != null || item.unit_cost != null) && (
+      <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+        {item.purchase_cost != null && (
+          <div style={{ fontSize: 9, color: "var(--text-muted)" }}>
+            Cost: <span style={{ color: "var(--text-secondary)" }}>₱{Number(item.purchase_cost).toFixed(2)}</span>
+          </div>
+        )}
+        {item.unit_cost != null && (
+          <div style={{ fontSize: 9, color: "var(--text-muted)" }}>
+            Unit: <span style={{ color: "var(--text-secondary)" }}>₱{Number(item.unit_cost).toFixed(2)}</span>
+          </div>
+        )}
+      </div>
+    )}
 
     {deleteConfirm ? (
       <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 4 }}>

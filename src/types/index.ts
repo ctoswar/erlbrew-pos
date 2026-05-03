@@ -57,6 +57,8 @@ export interface InventoryItem {
   unit: string;
   stock: number;
   low_stock_threshold: number;
+  purchase_cost?: number;
+  unit_cost?: number;
   created_at?: string;
 }
 
@@ -68,4 +70,8 @@ export interface DailySummary {
   topItems: { name: string; qty: number }[];
   byCategory: { category: Category; revenue: number; count: number }[];
   byPayMethod: { method: PayMethod; count: number; total: number }[];
+  totalCOGS?: number;
+  grossProfit?: number;
+  profitMargin?: number;
+  cogsDetails?: { order_id: string; total: number; cogs: number; profit: number }[];
 }

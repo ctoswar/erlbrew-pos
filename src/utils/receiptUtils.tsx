@@ -189,17 +189,17 @@ export function renderReceiptLines(order: Order, settings: PrintSettings): React
   });
 }
 
-// ── Print via Bluetooth server on the Pi ──────────────────────────────────────
-const PRINT_SERVER_DEFAULT = "http://localhost:9100";
+// ── Print via backend proxy (same-origin → no CORS issues) ─────────────────
+// Backend proxies to Pi at http://192.168.75.101:9100 via /api/print and /api/open-drawer
 
 export async function printViaBluetooth(order: Order, settings: PrintSettings): Promise<void> {
-  const serverUrl = (import.meta.env.VITE_PRINT_SERVER_URL as string) || PRINT_SERVER_DEFAULT;
+  const baseUrl = (import.meta.env.VITE_API_URL as string) || '';
   const lines = buildReceiptLines(order, settings);
 
   // Repeat lines for multi-copy
   const allLines = Array(settings.printCopies).fill(lines).flat();
 
-  const res = await fetch(`${serverUrl}/print`, {
+  const res = await fetch(`${baseUrl}/api/print`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ lines: allLines, paperSize: settings.paperSize }),
@@ -211,10 +211,13 @@ export async function printViaBluetooth(order: Order, settings: PrintSettings): 
   }
 }
 
-// ── Open cash drawer via Pi print server ─────────────────────────────────────
+// ── Open cash drawer via backend proxy ─────────────────────────────────────
 export async function openCashDrawer(): Promise<void> {
-  const serverUrl = (import.meta.env.VITE_PRINT_SERVER_URL as string) || PRINT_SERVER_DEFAULT;
-  const res = await fetch(`${serverUrl}/open-drawer`, { method: "POST" });
+  const baseUrl = (import.meta.env.VITE_API_URL as string) || '';
+  const res = await fetch(`${baseUrl}/api/open-drawer`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { error?: string }).error || `Drawer error ${res.status}`);

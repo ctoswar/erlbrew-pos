@@ -31,11 +31,15 @@ export const getQuickCashAmounts = (total: number): number[] => {
   return [...new Set(amounts)].slice(0, 4);
 };
 
-export const buildDailySummary = (orders: Order[]): DailySummary => {
+export const buildDailySummary = (orders: Order[], cogsData?: { cogs: number; details: { order_id: string; total: number; cogs: number; profit: number }[] }): DailySummary => {
   const completed = orders.filter((o) => o.status === "completed");
   const totalRevenue = completed.reduce((s, o) => s + o.total, 0);
   const totalOrders = completed.length;
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+  const totalCOGS = cogsData?.cogs ?? 0;
+  const grossProfit = totalRevenue - totalCOGS;
+  const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
 
   // Top items
   const itemMap: Record<string, number> = {};
@@ -85,5 +89,9 @@ export const buildDailySummary = (orders: Order[]): DailySummary => {
     topItems,
     byCategory,
     byPayMethod,
+    totalCOGS,
+    grossProfit,
+    profitMargin,
+    cogsDetails: cogsData?.details ?? [],
   };
 };

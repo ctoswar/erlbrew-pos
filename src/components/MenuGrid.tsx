@@ -36,7 +36,7 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
   const items = menuItems.filter((m) => m.category === activeCategory);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
       {/* Category Tabs — horizontally scrollable on mobile */}
       <div style={{
         display: "flex",
@@ -71,7 +71,7 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
         ))}
       </div>
       {/* Grid */}
-      <div className="scroll-area" style={{ flex: 1, padding: "1.2rem 1.2rem" }}>
+      <div className="scroll-area" style={{ flex: 1, padding: "1.2rem 1.2rem", overflowY: "auto", minHeight: 0 }}>
         {loading ? (
           <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>
             Loading menu...

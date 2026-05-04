@@ -37,7 +37,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
     : "var(--danger)";
 
   return (
-    <div className="scroll-area" style={{ flex: 1, padding: "1.2rem 1.4rem", display: "flex", flexDirection: "column", gap: 14 }}>
+    <div className="scroll-area" style={{ flex: 1, padding: "1.2rem 1.4rem", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", minHeight: 0 }}>
       {/* Page header */}
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
         <div>

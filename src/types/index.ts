@@ -1,6 +1,14 @@
 export type Role = "Barista" | "Senior Barista" | "Shift Supervisor" | "Manager";
 export type Category = "Signature Brews" | "Espresso" | "Pastries" | "Cold Drinks";
 export type OrderStatus = "pending" | "preparing" | "ready" | "completed";
+export type DiscountType = "pwd" | "senior" | "custom_pct" | "custom_fixed" | null;
+
+export interface Discount {
+  type: DiscountType;
+  label: string;          // "PWD Discount", "Senior Discount", "Event Promo", etc.
+  value: number;          // percentage (e.g. 20) or fixed peso amount
+  amount: number;         // computed peso discount (e.g. subtotal * 0.20)
+}
 export type Screen = "login" | "pos" | "kitchen" | "checkout" | "payment" | "success" | "dashboard" | "admin" | "time";
 export type LoginMode = "rfid" | "pin";
 export type OrderType = "dine-in" | "takeout";
@@ -48,6 +56,8 @@ export interface Order {
   payMethod: PayMethod;
   /** Cash amount tendered — needed to compute change on cash orders */
   cashTendered?: number;
+  /** Applied discount (if any) */
+  discount?: Discount;
 }
 
 export interface InventoryItem {

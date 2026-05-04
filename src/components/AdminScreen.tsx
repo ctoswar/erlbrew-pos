@@ -10,7 +10,7 @@ export const AdminScreen: React.FC = () => {
   const [tab, setTab] = useState<AdminTab>("menu");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
       {/* Sub-tab bar */}
       <div style={{
         display: "flex",
@@ -62,7 +62,7 @@ export const AdminScreen: React.FC = () => {
       </div>
 
       {/* Tab content */}
-      <div style={{ flex: 1, overflow: "hidden" }}>
+      <div style={{ flex: 1, overflow: "hidden", minHeight: 0 }}>
         {tab === "menu" && <AdminMenu />}
         {tab === "inventory" && <AdminInventory />}
         {tab === "staff" && <AdminStaff />}

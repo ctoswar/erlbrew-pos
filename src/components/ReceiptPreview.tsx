@@ -19,16 +19,18 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
   const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : "E-WALLET";
 
   const handlePrint = async () => {
+    const discountAmount = order.discount?.amount;
+    const discountLabel = order.discount?.label;
     if (settings.printVia === "bluetooth") {
       try {
-        await printViaBluetooth(order, settings);
+        await printViaBluetooth(order, settings, discountAmount, discountLabel);
         onClose();
       } catch (e: any) {
         const msg = e?.message || e?.reason?.message || String(e);
         alert(`Print failed:\n${msg}\n\nMake sure the print server is running.`);
       }
     } else {
-      openPrintWindow(order, settings);
+      openPrintWindow(order, settings, discountAmount, discountLabel);
       onClose();
     }
   };

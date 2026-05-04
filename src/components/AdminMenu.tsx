@@ -130,7 +130,7 @@ export const AdminMenu: React.FC = () => {
   const EMOJIS = ["☕", "🍵", "🌼", "🧊", "🫖", "🥐", "🍞", "🧁", "🥧", "🌺", "🍋", "🥤", "💧"];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
       {/* Ingredient editor modal */}
       {ingredientItem && (
         <IngredientEditor menuItem={ingredientItem} onClose={() => setIngredientItem(null)} />
@@ -154,7 +154,7 @@ export const AdminMenu: React.FC = () => {
       </div>
 
       {/* Grid */}
-      <div className="scroll-area" style={{ flex: 1, padding: "0.8rem 1rem" }}>
+      <div className="scroll-area" style={{ flex: 1, padding: "0.8rem 1rem", overflowY: "auto", minHeight: 0 }}>
         {loading ? (
           <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>Loading...</div>
         ) : items.length === 0 ? (

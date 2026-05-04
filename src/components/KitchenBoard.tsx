@@ -27,11 +27,11 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, staffRol
   };
 
   return (
-    <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: "1.2rem", gap: 10 }}>
+    <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: "1.2rem", gap: 10, minHeight: 0 }}>
       {COLUMNS.map((col) => {
         const colOrders = orders.filter((o) => o.status === col.status);
         return (
-          <div key={col.status} style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div key={col.status} style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
             {/* Column header */}
             <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10, flexShrink: 0 }}>
               <div style={{ width: 8, height: 8, borderRadius: "50%", background: col.color }} />
@@ -44,7 +44,7 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, staffRol
             </div>
 
             {/* Orders */}
-            <div className="scroll-area" style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="scroll-area" style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, overflowY: "auto", minHeight: 0 }}>
               {colOrders.length === 0 && (
                 <div style={{ textAlign: "center", padding: "2.5rem 0", color: "var(--text-disabled)", fontSize: 10, letterSpacing: 1 }}>
                   Empty

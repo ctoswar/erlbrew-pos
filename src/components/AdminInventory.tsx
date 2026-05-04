@@ -157,7 +157,7 @@ export const AdminInventory: React.FC = () => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
       {/* Header */}
       <div style={{
         display: "flex",
@@ -200,7 +200,7 @@ export const AdminInventory: React.FC = () => {
       </div>
 
       {/* Items grid */}
-      <div className="scroll-area" style={{ flex: 1, padding: "0.5rem 1rem" }}>
+      <div className="scroll-area" style={{ flex: 1, padding: "0.5rem 1rem", overflowY: "auto", minHeight: 0 }}>
         {loading ? (
           <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>Loading...</div>
         ) : filtered.length === 0 ? (

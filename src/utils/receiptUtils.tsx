@@ -20,7 +20,7 @@ export const STORE = {
 const MONO = "'Courier New', 'Lucida Console', monospace";
 
 // ── Build receipt lines array (shared by preview and print window) ──────────────
-export function buildReceiptLines(order: Order, settings: PrintSettings): string[] {
+export function buildReceiptLines(order: Order, settings: PrintSettings, discountAmount?: number, discountLabel?: string): string[] {
   const W = settings.paperSize === "58mm" ? 26 : 32;
 
   function padCenter(text: string, width = W): string {
@@ -87,6 +87,9 @@ export function buildReceiptLines(order: Order, settings: PrintSettings): string
 
   // 5. Totals
   lines.push(`${padRight("Subtotal:", W - 9)}${padLeft(formatCurrency(order.subtotal).replace("₱", "").trim(), 9)}`);
+  if (discountAmount && discountAmount > 0) {
+    lines.push(`${padRight(`${discountLabel || "Discount"}:`, W - 9)}${padLeft("-" + formatCurrency(discountAmount).replace("₱", "").trim(), 9)}`);
+  }
   lines.push(ln("="));
   lines.push(`${padRight("TOTAL DUE:", W - 9)}${padLeft(formatCurrency(order.total).replace("₱", "").trim(), 9)}`);
   lines.push(ln("="));
@@ -120,8 +123,8 @@ export function buildReceiptLines(order: Order, settings: PrintSettings): string
 }
 
 // ── Open a clean print window with the receipt ──────────────────────────────────
-export function openPrintWindow(order: Order, settings: PrintSettings): void {
-  const lines = buildReceiptLines(order, settings);
+export function openPrintWindow(order: Order, settings: PrintSettings, discountAmount?: number, discountLabel?: string): void {
+  const lines = buildReceiptLines(order, settings, discountAmount, discountLabel);
   const W_PX = settings.paperSize === "58mm" ? 226 : 302;
 
   const win = window.open("", "_blank", "width=440,height=700");
@@ -180,9 +183,9 @@ export function renderReceiptLines(order: Order, settings: PrintSettings): React
 // ── Print via backend proxy (same-origin → no CORS issues) ─────────────────
 // Backend proxies to Pi at http://192.168.75.101:9100 via /api/print and /api/open-drawer
 
-export async function printViaBluetooth(order: Order, settings: PrintSettings): Promise<void> {
+export async function printViaBluetooth(order: Order, settings: PrintSettings, discountAmount?: number, discountLabel?: string): Promise<void> {
   const baseUrl = (import.meta.env.VITE_API_URL as string) || '';
-  const lines = buildReceiptLines(order, settings);
+  const lines = buildReceiptLines(order, settings, discountAmount, discountLabel);
 
   // Repeat lines for multi-copy
   const allLines = Array(settings.printCopies).fill(lines).flat();

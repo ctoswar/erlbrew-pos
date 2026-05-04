@@ -1,9 +1,10 @@
 import React from "react";
-import { CartItem, OrderType } from "../types";
+import { CartItem, OrderType, Discount } from "../types";
 import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
 
 interface Props {
   cart: CartItem[];
+  discount: Discount | null;
   orderType: OrderType;
   table: string;
   onUpdateQty: (id: string, delta: number) => void;
@@ -11,16 +12,19 @@ interface Props {
   onOrderTypeChange: (t: OrderType) => void;
   onTableChange: (t: string) => void;
   onCheckout: () => void;
+  onOpenDiscount: () => void;
+  onRemoveDiscount: () => void;
 }
 
 const TABLES = ["1", "2", "3", "4", "5", "6"];
 
 export const CartPanel: React.FC<Props> = ({
-  cart, orderType, table,
+  cart, discount, orderType, table,
   onUpdateQty, onClearCart, onOrderTypeChange, onTableChange, onCheckout,
+  onOpenDiscount, onRemoveDiscount,
 }) => {
   const subtotal = calcSubtotal(cart);
-  const grand = calcGrand(subtotal);
+  const grand = calcGrand(subtotal, discount);
   const isEmpty = cart.length === 0;
 
   return (
@@ -126,7 +130,7 @@ export const CartPanel: React.FC<Props> = ({
       </div>
 
       {/* ── Items List ── */}
-      <div className="scroll-area" style={{ flex: 1, padding: "0.5rem 0" }}>
+      <div className="scroll-area" style={{ flex: 1, padding: "0.5rem 0", overflowY: "auto", minHeight: 0 }}>
         {isEmpty ? (
           <div style={{
             display: "flex",
@@ -163,9 +167,17 @@ export const CartPanel: React.FC<Props> = ({
         flexShrink: 0,
         background: "var(--bg-surface)",
       }}>
-        <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: 10 }}>
           <TotalRow label="Subtotal" value={formatCurrency(subtotal)} />
-          <div style={{ height: 1, background: "var(--border-default)", margin: "10px 0" }} />
+          {discount && (
+            <TotalRow
+              label={discount.label}
+              value={`−${formatCurrency(discount.amount)}`}
+              valueColor="var(--success)"
+              onRemove={onRemoveDiscount}
+            />
+          )}
+          <div style={{ height: 1, background: "var(--border-default)", margin: "8px 0" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <span style={{ fontSize: 10, color: "var(--text-secondary)", letterSpacing: 1.5, fontWeight: 700, textTransform: "uppercase" as const }}>
               Total
@@ -175,6 +187,22 @@ export const CartPanel: React.FC<Props> = ({
             </span>
           </div>
         </div>
+
+        {/* Discount button */}
+        <button
+          onClick={onOpenDiscount}
+          style={{
+            width: "100%", marginBottom: 8,
+            padding: "8px 0", borderRadius: 9,
+            background: discount ? "rgba(122,201,122,0.1)" : "rgba(201,135,58,0.1)",
+            border: `1.5px solid ${discount ? "var(--success)" : "var(--border-default)"}`,
+            color: discount ? "var(--success)" : "var(--text-muted)",
+            fontSize: 9, fontWeight: 700, letterSpacing: 1,
+            cursor: "pointer", textTransform: "uppercase" as const,
+          }}
+        >
+          {discount ? `✓ ${discount.label}` : "+ Add Discount"}
+        </button>
 
         <button
           className="btn btn-gold"
@@ -303,7 +331,7 @@ const CartItemRow: React.FC<CartItemRowProps> = ({ item, qty, onUpdateQty }) => 
 
 // ── Total Row ─────────────────────────────────────────────────────────────────
 
-const TotalRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+const TotalRow: React.FC<{ label: string; value: string; valueColor?: string; onRemove?: () => void }> = ({ label, value, valueColor, onRemove }) => (
   <div style={{
     display: "flex",
     justifyContent: "space-between",
@@ -311,8 +339,14 @@ const TotalRow: React.FC<{ label: string; value: string }> = ({ label, value }) 
     color: "var(--gold-dim)",
     marginBottom: 5,
     letterSpacing: 0.5,
+    alignItems: "center",
   }}>
     <span>{label}</span>
-    <span>{value}</span>
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <span style={{ color: valueColor || "inherit" }}>{value}</span>
+      {onRemove && (
+        <button onClick={onRemove} style={{ background: "none", border: "none", color: "var(--danger)", fontSize: 10, cursor: "pointer", padding: "0 2px", lineHeight: 1 }}>✕</button>
+      )}
+    </div>
   </div>
 );

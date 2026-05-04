@@ -12,7 +12,9 @@ import { KitchenBoard } from "./KitchenBoard";
 import { Dashboard } from "./Dashboard";
 import { AdminScreen } from "./AdminScreen";
 import { TimeKeeping } from "./TimeKeeping";
+import { DiscountModal } from "./DiscountModal";
 import { openCashDrawer } from "../utils/receiptUtils";
+import { calcGrand } from "../utils";
 
 interface Props {
   staff: Staff;
@@ -24,6 +26,7 @@ const TABLET_BREAKPOINT = 1024;
 
 export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const [screen, setScreen] = useState<Screen>("pos");
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>("dine-in");
   const [table, setTable] = useState("1");
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
@@ -45,7 +48,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const isOrderFlow = screen === "pos" || screen === "checkout" || screen === "payment";
   const showDesktopCart = !isMobile && isOrderFlow;
 
-  const { cart, addItem, updateQty, clearCart } = useCart();
+  const { cart, discount, addItem, updateQty, clearCart, applyDiscount, removeDiscount } = useCart();
 
   // Sync cart meta to localStorage for CustomerDisplay (second monitor)
   useEffect(() => {
@@ -66,7 +69,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   };
 
   const handleConfirmPayment = (method: PayMethod, cashTendered?: number) => {
-    const order = placeOrder(cart, staff, orderType, table, method, cashTendered);
+    const order = placeOrder(cart, staff, orderType, table, method, cashTendered, discount);
     setLastOrder(order);
     clearCart();
     setMobileCartOpen(false);
@@ -121,9 +124,10 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
           </div>
         </div>
         {/* Cart panel content (scrollable) */}
-        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", minHeight: 0 }}>
           <CartPanel
             cart={cart}
+            discount={discount}
             orderType={orderType}
             table={table}
             onUpdateQty={updateQty}
@@ -131,6 +135,8 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
             onOrderTypeChange={setOrderType}
             onTableChange={setTable}
             onCheckout={() => { setMobileCartOpen(false); handleCheckout(); }}
+            onOpenDiscount={() => setShowDiscountModal(true)}
+            onRemoveDiscount={removeDiscount}
           />
         </div>
       </div>
@@ -177,6 +183,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
       <div style={{ width: cartWidth, flexShrink: 0, display: "flex", flexDirection: "column", height: "100%" }}>
         <CartPanel
           cart={cart}
+          discount={discount}
           orderType={orderType}
           table={table}
           onUpdateQty={updateQty}
@@ -184,6 +191,8 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
           onOrderTypeChange={setOrderType}
           onTableChange={setTable}
           onCheckout={handleCheckout}
+          onOpenDiscount={() => setShowDiscountModal(true)}
+          onRemoveDiscount={removeDiscount}
         />
       </div>
     );
@@ -198,6 +207,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
         return (
           <CheckoutScreen
             cart={cart}
+            discount={discount}
             orderType={orderType}
             table={table}
             staffName={staff.name}
@@ -208,7 +218,9 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
       case "payment":
         return (
           <PaymentScreen
-            total={cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0)}
+            total={calcGrand(cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0), discount)}
+            discountLabel={discount?.label}
+            discountAmount={discount?.amount}
             onBack={handleBack}
             onConfirm={handleConfirmPayment}
           />
@@ -249,7 +261,7 @@ case "admin":
         />
 
         {/* Screen router */}
-        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
           {renderMainScreen()}
         </div>
       </div>
@@ -262,10 +274,25 @@ case "admin":
         renderMobileCartButton()
       )}
 
-      {/* ── Mobile cart bottom sheet ── */}
+{/* ── Mobile cart bottom sheet ── */}
       {isMobile && mobileCartOpen && (
         renderMobileCartSheet()
       )}
+
+      {/* ── Discount modal ── */}
+      {showDiscountModal && (
+        <DiscountModal
+          subtotal={cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0)}
+          currentDiscount={discount}
+          onApply={(type, label, value) => {
+            const sub = cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0);
+            applyDiscount(type, label, value, sub);
+          }}
+          onRemove={removeDiscount}
+          onClose={() => setShowDiscountModal(false)}
+        />
+      )}
+
     </div>
   );
 };

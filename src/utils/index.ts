@@ -1,4 +1,4 @@
-import { CartItem, Order, DailySummary, PayMethod, Category } from "../types";
+import { CartItem, Order, DailySummary, PayMethod, Category, Discount } from "../types";
 
 export const formatCurrency = (n: number | string): string => `₱${Number(n).toFixed(2)}`;
 
@@ -19,7 +19,10 @@ export const calcSubtotal = (cart: CartItem[]): number =>
 
 export const calcTax = (_subtotal: number): number => 0;
 
-export const calcGrand = (subtotal: number): number => subtotal;
+export const calcGrand = (subtotal: number, discount?: Discount | null): number => {
+  if (!discount) return subtotal;
+  return Math.max(0, subtotal - discount.amount);
+};
 
 export const getQuickCashAmounts = (total: number): number[] => {
   const amounts = [

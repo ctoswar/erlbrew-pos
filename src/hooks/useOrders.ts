@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Order, CartItem, Staff, OrderStatus, OrderType, PayMethod, MenuItem, Role } from "../types";
+import { Order, CartItem, Staff, OrderStatus, OrderType, PayMethod, MenuItem, Role, Discount } from "../types";
 import { calcSubtotal, calcTax, calcGrand, generateOrderId } from "../utils";
 import { apiGet, apiPost, apiAdminPost, apiAdminPut, apiAdminDelete, getAuthToken } from "../utils/api";
 
@@ -89,10 +89,10 @@ export function useOrders() {
   }, []);
 
   const placeOrder = useCallback(
-    (cart: CartItem[], staff: Staff, type: OrderType, table: string | undefined, payMethod: PayMethod, cashTendered?: number): Order => {
+    (cart: CartItem[], staff: Staff, type: OrderType, table: string | undefined, payMethod: PayMethod, cashTendered?: number, discount?: Discount | null): Order => {
       const subtotal = calcSubtotal(cart);
       const tax = calcTax(subtotal);
-      const total = calcGrand(subtotal);
+      const total = calcGrand(subtotal, discount);
 
       const items = cart.map((ci) => ({
         id: ci.item.id,
@@ -100,7 +100,7 @@ export function useOrders() {
         price: ci.item.price,
         notes: ci.notes,
       }));
-      const payload = {
+      const payload: Record<string, unknown> = {
         staff_id: staff ? staff.rfid : undefined,
         staff_name: staff?.name,
         type,
@@ -108,6 +108,14 @@ export function useOrders() {
         pay_method: payMethod,
         items,
       };
+      if (discount) {
+        payload.discount_type = discount.type;
+        payload.discount_label = discount.label;
+        payload.discount_value = discount.value;
+        payload.discount_amount = discount.amount;
+        payload.subtotal = subtotal;
+        payload.total = total;
+      }
 
       // Optimistic local order
       const localOrder: Order = {
@@ -123,6 +131,7 @@ export function useOrders() {
         type,
         payMethod,
         cashTendered,
+        discount: discount ?? undefined,
       };
 
       setOrders((prev) => [localOrder, ...prev]);
@@ -134,7 +143,6 @@ export function useOrders() {
           setOrders((prev) =>
             prev.map((o) => {
               if (o.id !== localOrder.id) return o;
-              // Replace with server-confirmed order (keeps server ID)
               return {
                 ...o,
                 id: data.id || o.id,

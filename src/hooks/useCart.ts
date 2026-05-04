@@ -1,26 +1,33 @@
 import { useState, useCallback, useEffect } from "react";
-import { CartItem, MenuItem } from "../types";
+import { CartItem, MenuItem, Discount, DiscountType } from "../types";
 
 export function useCart() {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [discount, setDiscount] = useState<Discount | null>(null);
+
   // Hydrate from localStorage on mount
   useEffect(() => {
     try {
       const raw = localStorage.getItem("erlbrew_cart");
       if (raw) setCart(JSON.parse(raw));
+      const disc = localStorage.getItem("erlbrew_discount");
+      if (disc) setDiscount(JSON.parse(disc));
     } catch {
       // ignore
     }
   }, []);
 
-  // Persist cart to localStorage on changes
+  // Persist cart and discount to localStorage
+  useEffect(() => {
+    try { localStorage.setItem("erlbrew_cart", JSON.stringify(cart)); } catch { /* ignore */ }
+  }, [cart]);
+
   useEffect(() => {
     try {
-      localStorage.setItem("erlbrew_cart", JSON.stringify(cart));
-    } catch {
-      // ignore
-    }
-  }, [cart]);
+      if (discount) localStorage.setItem("erlbrew_discount", JSON.stringify(discount));
+      else localStorage.removeItem("erlbrew_discount");
+    } catch { /* ignore */ }
+  }, [discount]);
 
   const addItem = useCallback((item: MenuItem) => {
     setCart((prev) => {
@@ -46,7 +53,10 @@ export function useCart() {
     setCart((prev) => prev.filter((ci) => ci.item.id !== id));
   }, []);
 
-  const clearCart = useCallback(() => setCart([]), []);
+  const clearCart = useCallback(() => {
+    setCart([]);
+    setDiscount(null);
+  }, []);
 
   const addNote = useCallback((id: string, notes: string) => {
     setCart((prev) =>
@@ -54,5 +64,16 @@ export function useCart() {
     );
   }, []);
 
-  return { cart, addItem, updateQty, removeItem, clearCart, addNote };
+  /** Apply a named discount. Pass null to remove. */
+  const applyDiscount = useCallback((type: DiscountType, label: string, value: number, subtotal: number) => {
+    if (!type || !value) { setDiscount(null); return; }
+    const amount = type === "custom_fixed"
+      ? Math.min(value, subtotal)                        // fixed amount, don't exceed subtotal
+      : subtotal * (value / 100);                         // percentage
+    setDiscount({ type, label, value, amount: Math.round(amount * 100) / 100 });
+  }, []);
+
+  const removeDiscount = useCallback(() => setDiscount(null), []);
+
+  return { cart, discount, addItem, updateQty, removeItem, clearCart, addNote, applyDiscount, removeDiscount };
 }

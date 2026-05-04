@@ -117,7 +117,7 @@ export const AdminStaff: React.FC = () => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
       {/* Header */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -132,7 +132,7 @@ export const AdminStaff: React.FC = () => {
       </div>
 
       {/* Body */}
-      <div className="scroll-area" style={{ flex: 1, padding: "1rem", overflowY: "auto" }}>
+      <div className="scroll-area" style={{ flex: 1, padding: "1rem", overflowY: "auto", minHeight: 0 }}>
         {loading ? (
           <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>Loading...</div>
         ) : (

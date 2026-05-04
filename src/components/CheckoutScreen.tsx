@@ -1,9 +1,10 @@
 import React from "react";
-import { CartItem, OrderType } from "../types";
+import { CartItem, OrderType, Discount } from "../types";
 import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
 
 interface Props {
   cart: CartItem[];
+  discount: Discount | null;
   orderType: OrderType;
   table: string;
   staffName: string;
@@ -12,10 +13,11 @@ interface Props {
 }
 
 export const CheckoutScreen: React.FC<Props> = ({
-  cart, orderType, table, staffName, onBack, onContinue,
+  cart, discount, orderType, table, staffName, onBack, onContinue,
 }) => {
   const subtotal = calcSubtotal(cart);
-  const grand = calcGrand(subtotal);
+  const grand = calcGrand(subtotal, discount);
+  const discountAmount = discount?.amount ?? 0;
 
   return (
     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-base)" }}>
@@ -45,10 +47,15 @@ export const CheckoutScreen: React.FC<Props> = ({
 
         {/* Totals */}
         <div style={{ background: "var(--bg-base)", borderRadius: 10, padding: 14, marginBottom: 20 }}>
-<div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--gold-muted)", marginBottom: 6 }}>
-          <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
-        </div>
-        <div className="divider" style={{ marginBottom: 10 }} />
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--gold-muted)", marginBottom: 6 }}>
+            <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
+          </div>
+          {discount && (
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--success)", marginBottom: 6 }}>
+              <span>{discount.label}</span><span>−{formatCurrency(discountAmount)}</span>
+            </div>
+          )}
+          <div className="divider" style={{ marginBottom: 10 }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <span style={{ fontSize: 11, color: "var(--text-secondary)", letterSpacing: 1, textTransform: "uppercase" }}>Grand Total</span>
             <span className="font-display" style={{ fontSize: 28, fontWeight: 700, color: "var(--gold)" }}>{formatCurrency(grand)}</span>

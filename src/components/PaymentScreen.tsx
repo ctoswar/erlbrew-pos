@@ -4,12 +4,14 @@ import { formatCurrency, getQuickCashAmounts } from "../utils";
 
 interface Props {
   total: number;
+  discountLabel?: string;
+  discountAmount?: number;
   onBack: () => void;
   /** Passes back (method, cashTendered) so parent can store in Order.cashTendered */
   onConfirm: (method: PayMethod, cashTendered?: number) => void;
 }
 
-export const PaymentScreen: React.FC<Props> = ({ total, onBack, onConfirm }) => {
+export const PaymentScreen: React.FC<Props> = ({ total, discountLabel, discountAmount, onBack, onConfirm }) => {
   const [method, setMethod] = useState<PayMethod>("cash");
   const [cashGiven, setCashGiven] = useState("");
 
@@ -31,6 +33,11 @@ export const PaymentScreen: React.FC<Props> = ({ total, onBack, onConfirm }) => 
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <div style={{ fontSize: 10, color: "var(--gold-muted)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Amount Due</div>
           <div className="font-display" style={{ fontSize: 40, fontWeight: 700, color: "var(--gold)" }}>{formatCurrency(total)}</div>
+          {discountLabel && discountAmount && (
+            <div style={{ fontSize: 10, color: "var(--success)", marginTop: 4 }}>
+              {discountLabel} (−{formatCurrency(discountAmount)})
+            </div>
+          )}
         </div>
 
         {/* Method Tabs */}

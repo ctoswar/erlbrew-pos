@@ -66,7 +66,7 @@ export const TimeKeeping: React.FC = () => {
   const dateStr = now.toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
       {/* Header */}
       <div style={{
         padding: "0.9rem 1rem",
@@ -81,7 +81,7 @@ export const TimeKeeping: React.FC = () => {
       </div>
 
       {/* Body */}
-      <div className="scroll-area" style={{ flex: 1, padding: "1rem", display: "flex", flexDirection: "column", gap: 20, overflowY: "auto" }}>
+      <div className="scroll-area" style={{ flex: 1, padding: "1rem", display: "flex", flexDirection: "column", gap: 20, overflowY: "auto", minHeight: 0 }}>
 
         {/* ── Last tap feedback ── */}
         {lastTap && (

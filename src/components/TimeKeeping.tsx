@@ -31,7 +31,7 @@ export const TimeKeeping: React.FC = () => {
   const loadToday = useCallback(() => {
     apiGet<TimeRecord[]>("/clock")
       .then(setRecords)
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load clock records:", err))
       .finally(() => setLoading(false));
   }, []);
 
@@ -49,7 +49,7 @@ export const TimeKeeping: React.FC = () => {
       const data = await apiPost<ClockResponse>("/clock", { rfid });
       setLastTap(data);
       loadToday();
-    } catch {}
+    } catch (err) { console.error("RFID tap handler error:", err); }
   }, [loadToday]);
 
   // Auto-poll every 30s to keep status fresh

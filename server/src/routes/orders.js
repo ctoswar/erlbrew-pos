@@ -242,7 +242,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
   // New: Cost of Goods Sold (COGS) endpoint
-  router.get('/cogs', async (req, res) => {
+  router.get('/cogs', authMiddleware, async (req, res) => {
     try {
       const { start, end } = req.query;
       const today = new Date();

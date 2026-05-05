@@ -59,6 +59,7 @@ if (open.length) {
 
     // Log to Google Sheets (best-effort — don't fail the clock-out if sheets errors)
     const rec = records[0];
+    if (!rec) return res.status(404).json({ error: 'Clock record not found after insert' });
     if (googleSheets) {
       try {
         await googleSheets.appendTimeRecord({

@@ -18,14 +18,32 @@ interface Props {
 
 export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
   const [cogsData, setCogsData] = useState<CogsData | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'ok' | 'error'>('idle');
 
   useEffect(() => {
     const today = new Date();
     const fmt = (d: Date) => d.toISOString().split("T")[0];
     apiAdminGet<CogsData>(`/orders/cogs?start=${fmt(today)}&end=${fmt(today)}`)
       .then(setCogsData)
-      .catch(() => {});
+      .catch((err) => console.error("Failed to fetch COGS data:", err));
   }, []);
+
+  // Sync to Google Sheet3 when orders change (debounced)
+  useEffect(() => {
+    if (!orders.length) return;
+    const timer = setTimeout(async () => {
+      setSyncStatus('syncing');
+      try {
+        const res = await fetch('/api/sheets/sync-dashboard', { method: 'POST' });
+        setSyncStatus(res.ok ? 'ok' : 'error');
+      } catch {
+        setSyncStatus('error');
+      }
+      // Reset label after 3s
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }, 2000); // 2s debounce to avoid hammering on rapid changes
+    return () => clearTimeout(timer);
+  }, [orders.length]);
 
   const summary = buildDailySummary(orders, cogsData ?? undefined);
   const recentOrders = [...orders].slice(0, 8);
@@ -45,6 +63,30 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
           <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{summary.date}</div>
         </div>
         <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Viewing as <strong style={{ color: "var(--gold)" }}>{staffName}</strong></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {syncStatus === 'syncing' && (
+            <span style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: 1 }}>⟳ Syncing Sheet3…</span>
+          )}
+          {syncStatus === 'ok' && (
+            <span style={{ fontSize: 9, color: 'var(--success)', letterSpacing: 1 }}>✓ Sheet3 synced</span>
+          )}
+          {syncStatus === 'error' && (
+            <span style={{ fontSize: 9, color: 'var(--danger)', letterSpacing: 1 }}>✗ Sheet3 failed</span>
+          )}
+          {syncStatus === 'idle' && (
+            <span
+              style={{ fontSize: 9, color: 'var(--text-disabled)', letterSpacing: 1, cursor: 'pointer' }}
+              onClick={async () => {
+                setSyncStatus('syncing');
+                try {
+                  const r = await fetch('/api/sheets/sync-dashboard', { method: 'POST' });
+                  setSyncStatus(r.ok ? 'ok' : 'error');
+                } catch { setSyncStatus('error'); }
+                setTimeout(() => setSyncStatus('idle'), 3000);
+              }}
+            >⇌ Sync Sheet3</span>
+          )}
+        </div>
       </div>
 
       {/* KPI Cards */}

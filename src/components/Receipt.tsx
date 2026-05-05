@@ -102,6 +102,9 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
 
   // ── 5. Totals ─────────────────────────────────────────────────────────────
   lines.push(`${padRight("Subtotal:", 22)}${padLeft(formatCurrency(subtotal).replace("₱","").trim(), 9)}`);
+  if (order.discount && order.discount.amount > 0) {
+    lines.push(`${padRight(order.discount.label + ":", 22)}${padLeft("-" + formatCurrency(order.discount.amount).replace("₱","").trim(), 9)}`);
+  }
   lines.push(ln("="));
   lines.push(`${padRight("TOTAL DUE:", 22)}${padLeft(formatCurrency(total).replace("₱","").trim(), 9)}`);
   lines.push(ln("="));

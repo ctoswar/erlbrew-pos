@@ -75,7 +75,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     setMobileCartOpen(false);
 
     // Open cash drawer via Pi Bluetooth print server (fire-and-forget)
-    openCashDrawer().catch(() => {});
+    openCashDrawer().catch((err) => console.error("Failed to open cash drawer:", err));
 
     setScreen("success");
   };

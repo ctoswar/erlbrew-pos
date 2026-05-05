@@ -57,17 +57,22 @@ export default function staffRouter(pool){
   }
   const router = express.Router();
 
-  // GET all staff (optional ?rfid= filter for card-lookup on login screen)
-  router.get('/', async (req, res) => {
+  // GET /staff/rfid/:rfid — public, used by LoginScreen for card-lookup
+  router.get('/rfid/:rfid', async (req, res) => {
     try {
-      const { rfid } = req.query;
-      if (rfid) {
-        const [rows] = await pool.query(
-          'SELECT id, rfid, name, role, initials, color, created_at FROM staff WHERE rfid = ?',
-          [rfid]
-        );
-        return res.json(rows[0] || null);
-      }
+      const [rows] = await pool.query(
+        'SELECT id, rfid, name, role, initials, color, created_at FROM staff WHERE rfid = ?',
+        [req.params.rfid]
+      );
+      return res.json(rows[0] || null);
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // GET all staff (protected)
+  router.get('/', authMiddleware, async (req, res) => {
+    try {
       const [rows] = await pool.query('SELECT id, rfid, name, role, initials, color, created_at FROM staff');
       res.json(rows);
     } catch (e) {
@@ -101,7 +106,7 @@ router.post('/', authMiddleware, async (req, res) => {
   });
 
 // GET staff by id
-router.get('/:id', async (req, res) => {
+router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
     const [rows] = await pool.query('SELECT id, rfid, name, role, initials, color FROM staff WHERE id = ?', [id]);

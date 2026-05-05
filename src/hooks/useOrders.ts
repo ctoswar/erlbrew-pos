@@ -75,7 +75,7 @@ export function useOrders() {
               : prev;
           });
         }
-      }).catch(() => {});
+      }).catch((err) => console.error("Failed to sync today's orders:", err));
     };
 
     syncFromServer();
@@ -152,7 +152,8 @@ export function useOrders() {
               };
             })
           );
-        }).catch(() => {
+        }).catch((err) => {
+          console.error("Failed to persist order to server (admin):", err);
           // Order already added locally, just keep it
         });
       } else {
@@ -170,7 +171,7 @@ export function useOrders() {
               };
             })
           );
-        }).catch(() => {});
+        }).catch((err) => console.error("Failed to persist order to server (fallback):", err));
       }
 
       return localOrder;
@@ -189,7 +190,7 @@ export function useOrders() {
     // Sync to server using PUT with auth
     const token = getAuthToken();
     if (token) {
-      apiAdminPut(`/orders/${id}/status`, { status }).catch(() => {});
+      apiAdminPut(`/orders/${id}/status`, { status }).catch((err) => console.error("Failed to sync status to server:", err));
     }
   }, []);
 
@@ -202,7 +203,7 @@ export function useOrders() {
     // Delete from server
     const token = getAuthToken();
     if (token) {
-      apiAdminDelete(`/orders/${id}`).catch(() => {});
+      apiAdminDelete(`/orders/${id}`).catch((err) => console.error("Failed to delete order from server:", err));
     }
   }, []);
 

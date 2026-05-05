@@ -10,9 +10,10 @@ interface Props {
 }
 
 const COLUMNS: { status: OrderStatus; label: string; color: string; accent: string }[] = [
-  { status: "preparing", label: "Preparing", color: "var(--gold)", accent: "var(--border-default)" },
-  { status: "ready", label: "Ready to Serve", color: "var(--success)", accent: "var(--success-border)" },
-  { status: "completed", label: "Completed", color: "var(--text-faint)", accent: "var(--border-subtle)" },
+  { status: "pending", label: "Pending", color: "#888", accent: "rgba(255,255,255,0.12)" },
+  { status: "preparing", label: "Preparing", color: "#e8a020", accent: "rgba(232,160,32,0.12)" },
+  { status: "ready", label: "Ready to Serve", color: "var(--success)", accent: "rgba(122,201,122,0.12)" },
+  { status: "completed", label: "Completed", color: "var(--gold)", accent: "rgba(201,135,58,0.12)" },
 ];
 
 // Roles that can void orders

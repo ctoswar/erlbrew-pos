@@ -93,7 +93,6 @@ export const DiscountModal: React.FC<Props> = ({ subtotal, currentDiscount, onAp
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: "var(--success)" }}>−₱{savings.toFixed(2)}</div>
-                    <div style={{ fontSize: 9, color: "var(--text-faint)" }}>saves ₱{savings.toFixed(2)}</div>
                   </div>
                 </button>
               );

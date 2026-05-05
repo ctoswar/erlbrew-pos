@@ -12,21 +12,21 @@ export function useCart() {
       if (raw) setCart(JSON.parse(raw));
       const disc = localStorage.getItem("erlbrew_discount");
       if (disc) setDiscount(JSON.parse(disc));
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error("Failed to hydrate cart from localStorage:", err);
     }
   }, []);
 
   // Persist cart and discount to localStorage
   useEffect(() => {
-    try { localStorage.setItem("erlbrew_cart", JSON.stringify(cart)); } catch { /* ignore */ }
+    try { localStorage.setItem("erlbrew_cart", JSON.stringify(cart)); } catch (err) { console.error("Failed to persist cart:", err); }
   }, [cart]);
 
   useEffect(() => {
     try {
       if (discount) localStorage.setItem("erlbrew_discount", JSON.stringify(discount));
       else localStorage.removeItem("erlbrew_discount");
-    } catch { /* ignore */ }
+    } catch (err) { console.error("Failed to persist discount:", err); }
   }, [discount]);
 
   const addItem = useCallback((item: MenuItem) => {

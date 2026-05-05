@@ -38,7 +38,7 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
     const trimmed = rfidValue.trim().toUpperCase();
     if (!trimmed) return;
     try {
-      const res = await fetch(`/api/staff?rfid=${encodeURIComponent(trimmed)}`);
+      const res = await fetch(`/api/staff/rfid/${encodeURIComponent(trimmed)}`);
       if (!res.ok) throw new Error();
       const staff = await res.json();
       if (!staff || !staff.id) {

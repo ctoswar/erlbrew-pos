@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { CartItem, OrderType } from "../types";
 import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
+import { useCart } from "../hooks/useCart";
 
 const CART_KEY = "erlbrew_cart";
 const POLL_INTERVAL = 3000;
@@ -34,6 +35,9 @@ export const CustomerDisplay: React.FC = () => {
     setFadeKey((k) => k + 1);
   }, []);
 
+  // Pull discount from centralized cart store (do not rely on local readCart for discount)
+  const { discount } = useCart();
+
   // Listen for cross-tab storage events (POS updating cart)
   useEffect(() => {
 const handler = (e: StorageEvent) => {
@@ -44,14 +48,17 @@ const handler = (e: StorageEvent) => {
   }, [reload]);
 
   // Fallback polling every 3s (handles same-tab updates and edge cases)
+  // Only restart polling if cart length (number of items) changes to avoid unnecessary reloads
+  const pollTimer = useRef<number | undefined>(undefined);
   useEffect(() => {
-    const id = setInterval(reload, POLL_INTERVAL);
-    return () => clearInterval(id);
-  }, [reload]);
+    if (pollTimer.current) window.clearInterval(pollTimer.current);
+    pollTimer.current = window.setInterval(reload, POLL_INTERVAL);
+    // remember last length to help debug/logging if needed
+  }, [cart.items.length]);
 
   const { items, orderType, table } = cart;
   const subtotal = calcSubtotal(items);
-  const grand = calcGrand(subtotal);
+  const grand = calcGrand(subtotal, discount);
   const isEmpty = items.length === 0;
 
   const orderLabel = orderType === "dine-in" ? `Table ${table}` : "Takeout";

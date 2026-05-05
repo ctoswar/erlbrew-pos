@@ -1,3 +1,7 @@
+// Allow self-signed certs for print server only (Pi uses self-signed HTTPS)
+// Set before any modules load so it's in effect for all HTTPS calls in this process
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -12,8 +16,9 @@ import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
 
-// Allow self-signed certs for print server connections (Pi uses self-signed HTTPS)
+// Allow self-signed certs for print server only (Pi uses self-signed HTTPS) — scoped to prevent global TLS bypass
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+const PRINT_SERVER = process.env.PRINT_SERVER_URL || 'https://192.168.75.101:9100';
 
 dotenv.config();
 
@@ -129,10 +134,104 @@ app.use('/api/inventory', inventoryRoutes(pool));
 app.use('/api/recipes', recipesRouter(pool));
 app.use('/api/clock', clockRouter(pool, gs));
 
-// ── Print proxy: browser → backend → Pi Bluetooth print server ─────────────────
-// Solves Chrome's Private Network Access CORS block (tablet can't call Pi directly)
-const PRINT_SERVER = process.env.PRINT_SERVER_URL || 'https://192.168.75.101:9100';
+// ── Google Sheets sync: write Dashboard to Sheet3 ──────────────────────────
+app.post('/api/sheets/sync-dashboard', async (req, res) => {
+  if (!gs) return res.status(503).json({ error: 'Sheets not configured' });
+  try {
+    // Fetch today's orders (same as GET /orders/today)
+    const today = new Date().toISOString().slice(0, 10);
+    const [orderRows] = await pool.query(`
+      SELECT o.id, o.status, o.subtotal, o.tax, o.total,
+             o.table_name, o.type, o.pay_method,
+             o.created_at, o.completed_at,
+             s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
+      FROM orders o
+      LEFT JOIN staff s ON o.staff_id = s.id
+      WHERE DATE(o.created_at) = CURDATE()
+      ORDER BY o.created_at DESC
+    `);
 
+    // Fetch order items
+    const ids = orderRows.map((r) => r.id);
+    let orderItems = [];
+    if (ids.length > 0) {
+      const [itemRows] = await pool.query(
+        `SELECT oi.order_id, oi.menu_item_id, oi.qty, oi.price, oi.notes,
+                m.name AS item_name, m.category
+         FROM order_items oi
+         JOIN menu_items m ON oi.menu_item_id = m.id
+         WHERE oi.order_id IN (${ids.map(() => '?').join(',')})`,
+        ids
+      );
+      const itemMap = {};
+      (itemRows || []).forEach((it) => {
+        if (!itemMap[it.order_id]) itemMap[it.order_id] = [];
+        itemMap[it.order_id].push({
+          id: it.menu_item_id,
+          qty: it.qty,
+          price: it.price,
+          notes: it.notes,
+          item: { name: it.item_name, category: it.category, price: it.price },
+        });
+      });
+      orderItems = itemMap;
+    }
+
+    // Attach items + shape like frontend Order type
+    const orders = orderRows.map((o) => ({
+      id: o.id, status: o.status,
+      subtotal: o.subtotal, tax: o.tax, total: o.total,
+      type: o.type, payMethod: o.pay_method,
+      table: o.table_name,
+      createdAt: o.created_at, completedAt: o.completed_at,
+      staff: { name: o.staff_name || '—', initials: o.staff_initials || '?', rfid: o.staff_rfid || '', role: o.staff_role || 'Barista', color: o.staff_color || '#888' },
+      items: orderItems[o.id] || [],
+    }));
+
+    // Fetch today's COGS
+    let cogsData = { cogs: 0, details: [] };
+    try {
+      const [tot] = await pool.query(`
+        SELECT COALESCE(SUM(oi.qty * r.quantity * i.purchase_cost), 0) AS cogs
+        FROM orders o
+        JOIN order_items oi ON o.id = oi.order_id
+        JOIN recipes r ON oi.menu_item_id = r.menu_item_id
+        JOIN inventory i ON r.inventory_item_id = i.id
+        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)`,
+        [today, today]
+      );
+      const cogs = Number((tot && tot[0] && tot[0].cogs) || 0);
+      const [detailsRows] = await pool.query(`
+        SELECT o.id AS order_id, o.total AS total,
+          SUM(oi.qty * r.quantity * i.purchase_cost) AS cogs
+        FROM orders o
+        JOIN order_items oi ON o.id = oi.order_id
+        JOIN recipes r ON oi.menu_item_id = r.menu_item_id
+        JOIN inventory i ON r.inventory_item_id = i.id
+        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)
+        GROUP BY o.id`,
+        [today, today]
+      );
+      cogsData = {
+        cogs,
+        details: (detailsRows || []).map((r) => ({
+          order_id: r.order_id,
+          total: Number(r.total) || 0,
+          cogs: Number(r.cogs) || 0,
+          profit: (Number(r.total) || 0) - (Number(r.cogs) || 0),
+        })),
+      };
+    } catch (_) { /* COGS not available */ }
+
+    await gs.appendDashboard({ orders, cogsData });
+    res.json({ ok: true, rowsWritten: orders.length });
+  } catch (e) {
+    console.error('Sheet sync error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Print proxy: browser → backend → Pi Bluetooth print server ─────────────────
 app.post('/api/print', async (req, res) => {
   const { lines, paperSize } = req.body || {};
   if (!lines || !Array.isArray(lines)) {

@@ -45,7 +45,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
         r.forEach((rec) => { init[rec.inventory_item_id] = String(rec.quantity); });
         setSelected(init);
       })
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load recipe/inventory:", err))
       .finally(() => setLoading(false));
   }, [menuItem.id]);
 
@@ -76,7 +76,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
 
       await apiAdminPut(`/recipes/${menuItem.id}`, { items });
       onClose();
-    } catch {}
+    } catch (err) { console.error("Failed to save ingredients:", err); }
     finally { setSaving(false); }
   };
 

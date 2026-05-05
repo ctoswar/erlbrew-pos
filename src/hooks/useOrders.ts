@@ -89,7 +89,7 @@ export function useOrders() {
   }, []);
 
   const placeOrder = useCallback(
-    (cart: CartItem[], staff: Staff, type: OrderType, table: string | undefined, payMethod: PayMethod, cashTendered?: number, discount?: Discount | null): Order => {
+    (cart: CartItem[], staff: Staff, type: OrderType, table: string | undefined, payMethod: PayMethod, cashTendered?: number, discount?: Discount | null, referenceNumber?: string): Order => {
       const subtotal = calcSubtotal(cart);
       const tax = calcTax(subtotal);
       const total = calcGrand(subtotal, discount);
@@ -132,6 +132,7 @@ export function useOrders() {
         payMethod,
         cashTendered,
         discount: discount ?? undefined,
+        referenceNumber,
       };
 
       setOrders((prev) => [localOrder, ...prev]);

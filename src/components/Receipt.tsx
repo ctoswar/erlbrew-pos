@@ -112,6 +112,9 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   // ── 6. Payment ─────────────────────────────────────────────────────────────
   const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : "E-WALLET";
   lines.push(`Payment : ${payLabel}`);
+  if (order.payMethod === "ewallet" && order.referenceNumber) {
+    lines.push(`Ref No  : ${order.referenceNumber}`);
+  }
   if (order.payMethod === "cash" && order.cashTendered) {
     const tendered = order.cashTendered;
     lines.push(`${padRight("Tendered:", 22)}${padLeft(formatCurrency(tendered).replace("₱","").trim(), 9)}`);

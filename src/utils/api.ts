@@ -72,7 +72,13 @@ export async function apiAdminGet<T>(path: string): Promise<T> {
     credentials: 'include',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    if (res.status === 401 && token) {
+      // Token exists but is invalid/expired - clear it locally
+      clearAuthToken();
+    }
+    throw new Error(`API ${path} failed: ${res.status}`);
+  }
   return res.json();
 }
 
@@ -87,7 +93,12 @@ export async function apiAdminPost<T>(path: string, body: unknown): Promise<T> {
     credentials: 'include',
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    if (res.status === 401 && token) {
+      clearAuthToken();
+    }
+    throw new Error(`API ${path} failed: ${res.status}`);
+  }
   return res.json();
 }
 
@@ -102,7 +113,12 @@ export async function apiAdminPut<T>(path: string, body: unknown): Promise<T> {
     credentials: 'include',
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    if (res.status === 401 && token) {
+      clearAuthToken();
+    }
+    throw new Error(`API ${path} failed: ${res.status}`);
+  }
   return res.json();
 }
 
@@ -113,6 +129,11 @@ export async function apiAdminDelete<T>(path: string): Promise<T> {
     credentials: 'include',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    if (res.status === 401 && token) {
+      clearAuthToken();
+    }
+    throw new Error(`API ${path} failed: ${res.status}`);
+  }
   return res.json();
 }

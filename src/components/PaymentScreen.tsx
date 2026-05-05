@@ -1,24 +1,28 @@
 import React, { useState } from "react";
 import { PayMethod } from "../types";
 import { formatCurrency, getQuickCashAmounts } from "../utils";
+import { loadPrintSettings } from "./AdminPrintSettings";
 
 interface Props {
   total: number;
   discountLabel?: string;
   discountAmount?: number;
   onBack: () => void;
-  /** Passes back (method, cashTendered) so parent can store in Order.cashTendered */
-  onConfirm: (method: PayMethod, cashTendered?: number) => void;
+  /** Passes back (method, cashTendered, referenceNumber) so parent can store in Order */
+  onConfirm: (method: PayMethod, cashTendered?: number, referenceNumber?: string) => void;
 }
 
 export const PaymentScreen: React.FC<Props> = ({ total, discountLabel, discountAmount, onBack, onConfirm }) => {
   const [method, setMethod] = useState<PayMethod>("cash");
   const [cashGiven, setCashGiven] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const printSettings = loadPrintSettings();
 
   const cash = parseFloat(cashGiven) || 0;
   const change = cash - total;
   const quickAmounts = getQuickCashAmounts(total);
   const canConfirm = method !== "cash" || (cashGiven !== "" && cash >= total);
+  const canConfirmEwallet = method === "ewallet" && referenceNumber.trim() !== "";
 
   return (
     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-base)" }}>
@@ -102,7 +106,7 @@ export const PaymentScreen: React.FC<Props> = ({ total, discountLabel, discountA
                 borderRadius: 10, padding: "12px 20px", marginBottom: 12,
               }}>
                 <span style={{ fontSize: 28, fontWeight: 700, color: "var(--gold)", letterSpacing: 3, fontFamily: "'Lato', sans-serif" }}>
-                  0917-123-4567
+                  {printSettings.gcashNumber || "0917-123-4567"}
                 </span>
                 <button
                   onClick={() => navigator.clipboard.writeText("09171234567")}
@@ -112,12 +116,32 @@ export const PaymentScreen: React.FC<Props> = ({ total, discountLabel, discountA
                   📋
                 </button>
               </div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.6 }}>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.6, marginBottom: 12 }}>
                 Open your GCash app →<br />
                 <strong style={{ color: "var(--text-primary)" }}>Pay Bills → Search "Erlbrew"</strong><br />
-                Reference: <strong style={{ color: "var(--gold)" }}>#{String(Math.floor(Math.random() * 900000 + 100000))}</strong><br />
                 <span style={{ fontSize: 10 }}>Enter amount: {formatCurrency(total)}</span>
               </div>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+                Customer's Reference Number
+              </div>
+              <input
+                type="text"
+                value={referenceNumber}
+                onChange={(e) => setReferenceNumber(e.target.value)}
+                placeholder="e.g. REF-123456789"
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-base)",
+                  color: "var(--text-primary)",
+                  fontSize: 13,
+                  fontFamily: "'Lato', sans-serif",
+                }}
+              />
             </div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center" }}>
               Tap <strong style={{ color: "var(--gold)" }}>Confirm & Place Order</strong> once payment is sent
@@ -125,8 +149,8 @@ export const PaymentScreen: React.FC<Props> = ({ total, discountLabel, discountA
           </div>
         )}
 
-        <button className="btn btn-gold" onClick={() => canConfirm && onConfirm(method, method === 'cash' ? cash : undefined)}
-          disabled={!canConfirm}
+        <button className="btn btn-gold" onClick={() => canConfirm && onConfirm(method, method === 'cash' ? cash : undefined, method === 'ewallet' ? referenceNumber : undefined)}
+          disabled={!canConfirm || (method === 'ewallet' && !canConfirmEwallet)}
           style={{ width: "100%", fontSize: 11, padding: 13, borderRadius: 10, marginBottom: 6 }}>
           Confirm & Place Order ✓
         </button>

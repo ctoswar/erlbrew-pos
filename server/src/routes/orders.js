@@ -65,7 +65,7 @@ export default function ordersRouter(pool, googleSheets) {
     try {
       const [rows] = await pool.query(`
         SELECT o.id, o.status, o.subtotal, o.tax, o.total,
-               o.table_name, o.type, o.pay_method,
+               o.table_name, o.type, o.pay_method, o.reference_number,
                o.created_at, o.completed_at,
                s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
         FROM orders o
@@ -86,7 +86,7 @@ export default function ordersRouter(pool, googleSheets) {
     try {
       const [rows] = await pool.query(`
         SELECT o.id, o.status, o.subtotal, o.tax, o.total,
-               o.table_name, o.type, o.pay_method,
+               o.table_name, o.type, o.pay_method, o.reference_number,
                o.created_at, o.completed_at,
                s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
         FROM orders o
@@ -105,7 +105,7 @@ export default function ordersRouter(pool, googleSheets) {
 
   // Create order and append to Google Sheets (public) -> now protected by auth
   router.post('/', authMiddleware, async (req, res) => {
-    const { staff_id, staff_name, items, type, table_name, pay_method } = req.body;
+    const { staff_id, staff_name, items, type, table_name, pay_method, reference_number } = req.body;
     // Validation per FIX 5
     const err = validate(req, res, {
       items: { required: true, type: 'object', array: true },
@@ -135,8 +135,8 @@ const tax = 0;
       }
 
       await pool.query(
-        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, table_name, type, pay_method) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, staffDbId, 'preparing', subtotal, tax, total, table_name || null, type || 'dine-in', pay_method || 'cash']
+        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, table_name, type, pay_method, reference_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, staffDbId, 'preparing', subtotal, tax, total, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null]
       );
       for (const it of itemsOut) {
         await pool.query('INSERT INTO order_items (order_id, menu_item_id, qty, notes, price) VALUES (?, ?, ?, ?, ?)', [id, it.id, it.qty, it.notes || '', it.price]);

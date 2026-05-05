@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS orders (
   table_name VARCHAR(32),
   type VARCHAR(16),
   pay_method VARCHAR(16),
+  reference_number VARCHAR(128),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   completed_at TIMESTAMP NULL,
   FOREIGN KEY (staff_id) REFERENCES staff(id)
@@ -84,9 +85,13 @@ CREATE TABLE IF NOT EXISTS inventory (
 );
 
 -- Costing fields added for COGS calculations (non-destructive migration)
-ALTER TABLE inventory 
+ALTER TABLE inventory
   ADD COLUMN purchase_cost DECIMAL(10,2) DEFAULT 0,
   ADD COLUMN unit_cost DECIMAL(10,2) DEFAULT 0;
+
+-- Reference number field for E-Wallet payments (non-destructive migration)
+ALTER TABLE orders
+  ADD COLUMN reference_number VARCHAR(128) DEFAULT NULL;
 
 -- Seed inventory items
 INSERT INTO inventory (id, name, category, unit, stock, low_stock_threshold) VALUES

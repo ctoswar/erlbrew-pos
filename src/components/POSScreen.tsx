@@ -51,6 +51,8 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const { cart, discount, addItem, updateQty, clearCart, applyDiscount, removeDiscount } = useCart();
 
   // Sync cart meta to localStorage for CustomerDisplay (second monitor)
+  // Note: cart is in deps because useCart returns a new object reference on every render.
+  // This is intentional - we want to sync orderType/table changes immediately.
   useEffect(() => {
     try {
       localStorage.setItem("erlbrew_cart_meta", JSON.stringify({ orderType, table }));
@@ -68,8 +70,8 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     if (cart.length > 0) setScreen("checkout");
   };
 
-  const handleConfirmPayment = (method: PayMethod, cashTendered?: number) => {
-    const order = placeOrder(cart, staff, orderType, table, method, cashTendered, discount);
+  const handleConfirmPayment = (method: PayMethod, cashTendered?: number, referenceNumber?: string) => {
+    const order = placeOrder(cart, staff, orderType, table, method, cashTendered, discount, referenceNumber);
     setLastOrder(order);
     clearCart();
     setMobileCartOpen(false);

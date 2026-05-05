@@ -58,6 +58,8 @@ export interface Order {
   cashTendered?: number;
   /** Applied discount (if any) */
   discount?: Discount;
+  /** Reference number for E-Wallet payments (e.g., GCash reference) */
+  referenceNumber?: string;
 }
 
 export interface InventoryItem {

@@ -179,6 +179,9 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
             {/* 6. Payment */}
             <div style={{ fontSize: 10, marginBottom: 6 }}>
               <div>Payment : {payLabel}</div>
+              {order.payMethod === "ewallet" && order.referenceNumber && (
+                <div>Ref No  : {order.referenceNumber}</div>
+              )}
               {order.payMethod === "cash" && order.cashTendered && (
                 <>
                   <div>Tendered: {formatCurrency(order.cashTendered)}</div>

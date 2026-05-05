@@ -9,6 +9,8 @@ export interface PrintSettings {
   printCopies: number;
   /** Where to send print jobs: browser opens OS print dialog; bluetooth calls print-server.py on the Pi */
   printVia: "browser" | "bluetooth";
+  /** GCash reference number for e-wallet payments */
+  gcashNumber: string;
 }
 
 const DEFAULT_SETTINGS: PrintSettings = {
@@ -19,6 +21,7 @@ const DEFAULT_SETTINGS: PrintSettings = {
   showQRCode: false,
   printCopies: 1,
   printVia: "browser",
+  gcashNumber: "",
 };
 
 const STORAGE_KEY = "erlbrew_print_settings";
@@ -169,6 +172,29 @@ export const AdminPrintSettings: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ── GCash Reference Number ─────────────────────────────────── */}
+      <div style={rowStyle}>
+        <div>
+          <div style={labelStyle}>GCash Reference Number</div>
+          <div style={subStyle}>Shown on E-Wallet payment screen</div>
+        </div>
+        <input
+          type="text"
+          value={settings.gcashNumber}
+          onChange={(e) => update({ gcashNumber: e.target.value })}
+          placeholder="e.g. 0917-123-4567"
+          style={{
+            flex: 1,
+            padding: "8px 12px",
+            borderRadius: 8,
+            border: "1px solid var(--border-subtle)",
+            background: "var(--bg-base)",
+            color: "var(--text-primary)",
+            fontSize: 11,
+          }}
+        />
+      </div>
 
       {/* ── Toggle rows ─────────────────────────────────────── */}
       {([

@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+
 export const authMiddleware = (req, res, next) => {
   // Public routes: staff login and root
   if (req.path === '/login' || req.url === '/api/staff/login') return next();
@@ -15,4 +16,12 @@ export const authMiddleware = (req, res, next) => {
     if (e instanceof jwt.JsonWebTokenError) return res.status(401).json({ error: 'Invalid token', code: 'INVALID_TOKEN' });
     res.status(401).json({ error: 'Unauthorized', code: 'AUTH_FAILED' });
   }
+};
+
+// Middleware to restrict routes to Manager role only
+export const adminMiddleware = (req, res, next) => {
+  if (!req.user || req.user.role !== 'Manager') {
+    return res.status(403).json({ error: 'Admin access only', code: 'FORBIDDEN' });
+  }
+  next();
 };

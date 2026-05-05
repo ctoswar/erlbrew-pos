@@ -3,6 +3,7 @@ import { Staff } from "./types";
 import { LoginScreen } from "./components/LoginScreen";
 import { POSScreen } from "./components/POSScreen";
 import { CustomerDisplay } from "./components/CustomerDisplay";
+import { AdminDashboard } from "./components/AdminDashboard";
 import "./styles/global.css";
 
 const AUTH_KEY = 'erlbrew_staff';
@@ -27,6 +28,16 @@ const App: React.FC = () => {
 
   if (!staff) {
     return <LoginScreen onLogin={setStaff} />;
+  }
+
+  // Manager role goes to Admin Dashboard, others go to POS
+  if (staff.role === 'Manager') {
+    return (
+      <AdminDashboard
+        staff={staff}
+        onLogout={() => setStaff(null)}
+      />
+    );
   }
 
   return (

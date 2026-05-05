@@ -308,8 +308,8 @@ export function googleSheetsClientInit(pool) {
         const hourEnd     = rows.length - 1; // last row before order detail
 
         const charts = [
-          // Bar chart: Top Items (Item | Qty Sold)
-          {
+          // Bar chart: Top Items (only if there's data)
+          topItems.length > 0 ? {
             spec: {
               title: 'Top Selling Items',
               basicChart: {
@@ -319,43 +319,57 @@ export function googleSheetsClientInit(pool) {
                   { position: 'LEFT_AXIS', title: 'Qty Sold' },
                   { position: 'BOTTOM_AXIS', title: 'Item' },
                 ],
-                domains: [{ domain: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: topStart, endRowIndex: topEnd, startColumnIndex: 0, endColumnIndex: 2 }] } } }], // BOTTOM_AXIS = item names (col A) used as domain? 
-                series: [{ series: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: topStart, endRowIndex: topEnd, startColumnIndex: 1, endColumnIndex: 2 }] } }, targetAxis: 'LEFT_AXIS' }], // col B = qty
+                // Domain: single column (item names in col A, skip header)
+                domains: [{ domain: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: topStart + 1, endRowIndex: topEnd, startColumnIndex: 0, endColumnIndex: 1 }] } } }],
+                // Series: single column (quantities in col B, skip header)
+                series: [{ series: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: topStart + 1, endRowIndex: topEnd, startColumnIndex: 1, endColumnIndex: 2 }] } }, targetAxis: 'LEFT_AXIS' }],
                 headerCount: 1,
               },
             },
             position: { overlayPosition: { anchorCell: { sheetId: 0, rowIndex: 0, columnIndex: 11 } } },
-          },
-          // Pie chart: Revenue by Category (col A = category, col B = revenue)
-          {
+          } : null,
+          // Pie chart: Revenue by Category (only if there's data)
+          byCategory.length > 0 ? {
             spec: {
               title: 'Revenue by Category',
-              basicChart: {
-                chartType: 'PIE',
+              pieChart: {
                 legendPosition: 'RIGHT_LEGEND',
-                series: [{ series: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: catStart, endRowIndex: catEnd, startColumnIndex: 1, endColumnIndex: 2 }] } } }], // revenue col
-                domains: [{ domain: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: catStart, endRowIndex: catEnd, startColumnIndex: 0, endColumnIndex: 1 }] } } }], // category names
-                headerCount: 1,
+                series: {
+                  sourceRange: {
+                    sources: [{ sheetId: 0, startRowIndex: catStart + 1, endRowIndex: catEnd, startColumnIndex: 1, endColumnIndex: 2 }],
+                  },
+                },
+                domain: {
+                  sourceRange: {
+                    sources: [{ sheetId: 0, startRowIndex: catStart + 1, endRowIndex: catEnd, startColumnIndex: 0, endColumnIndex: 1 }],
+                  },
+                },
               },
             },
             position: { overlayPosition: { anchorCell: { sheetId: 0, rowIndex: 12, columnIndex: 11 } } },
-          },
-          // Pie chart: Payment Methods
-          {
+          } : null,
+          // Pie chart: Payment Methods (only if there's data)
+          byPayMethod.length > 0 ? {
             spec: {
               title: 'Payment Methods',
-              basicChart: {
-                chartType: 'PIE',
+              pieChart: {
                 legendPosition: 'RIGHT_LEGEND',
-                series: [{ series: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: payStart, endRowIndex: payEnd, startColumnIndex: 1, endColumnIndex: 2 }] } } }], // total col
-                domains: [{ domain: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: payStart, endRowIndex: payEnd, startColumnIndex: 0, endColumnIndex: 1 }] } } }], // method names
-                headerCount: 1,
+                series: {
+                  sourceRange: {
+                    sources: [{ sheetId: 0, startRowIndex: payStart + 1, endRowIndex: payEnd, startColumnIndex: 1, endColumnIndex: 2 }],
+                  },
+                },
+                domain: {
+                  sourceRange: {
+                    sources: [{ sheetId: 0, startRowIndex: payStart + 1, endRowIndex: payEnd, startColumnIndex: 0, endColumnIndex: 1 }],
+                  },
+                },
               },
             },
             position: { overlayPosition: { anchorCell: { sheetId: 0, rowIndex: 24, columnIndex: 11 } } },
-          },
-          // Line chart: Hourly orders + revenue
-          {
+          } : null,
+          // Line chart: Hourly orders + revenue (only if there's data)
+          hourEnd > hourStart + 1 ? {
             spec: {
               title: 'Hourly Orders & Revenue',
               basicChart: {
@@ -366,16 +380,16 @@ export function googleSheetsClientInit(pool) {
                   { position: 'BOTTOM_AXIS', title: 'Hour' },
                 ],
                 series: [
-                  { series: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: hourStart, endRowIndex: hourEnd, startColumnIndex: 1, endColumnIndex: 2 }] } }, targetAxis: 'LEFT_AXIS', color: '#C9873A' }, // orders
-                  { series: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: hourStart, endRowIndex: hourEnd, startColumnIndex: 2, endColumnIndex: 3 }] } }, targetAxis: 'LEFT_AXIS', color: '#4CAF50' }, // revenue
+                  { series: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: hourStart + 1, endRowIndex: hourEnd, startColumnIndex: 1, endColumnIndex: 2 }] } }, targetAxis: 'LEFT_AXIS', color: { red: 0.79, green: 0.53, blue: 0.23 } },
+                  { series: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: hourStart + 1, endRowIndex: hourEnd, startColumnIndex: 2, endColumnIndex: 3 }] } }, targetAxis: 'LEFT_AXIS', color: { red: 0.30, green: 0.69, blue: 0.31 } },
                 ],
-                domains: [{ domain: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: hourStart, endRowIndex: hourEnd, startColumnIndex: 0, endColumnIndex: 1 }] } } }], // hour labels
+                domains: [{ domain: { sourceRange: { sources: [{ sheetId: 0, startRowIndex: hourStart + 1, endRowIndex: hourEnd, startColumnIndex: 0, endColumnIndex: 1 }] } } }],
                 headerCount: 1,
               },
             },
             position: { overlayPosition: { anchorCell: { sheetId: 0, rowIndex: 0, columnIndex: 22 } } },
-          },
-        ];
+          } : null,
+        ].filter(Boolean);
 
         await sheets.spreadsheets.batchUpdate({
           spreadsheetId,

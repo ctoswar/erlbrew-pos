@@ -137,3 +137,40 @@ export async function apiAdminDelete<T>(path: string): Promise<T> {
   }
   return res.json();
 }
+
+// Reset COGS data (set totals = subtotals for selected range or all)
+export async function resetCogs(start?: string, end?: string, resetAll?: boolean): Promise<{ ok: boolean; message: string }> {
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl('/orders/cogs/reset'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify({ start, end, resetAll }),
+  });
+  if (!res.ok) {
+    if (res.status === 403) throw new Error('Admin access required');
+    throw new Error(`API /orders/cogs/reset failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+// Reset all inventory costs to 0
+export async function resetInventoryCosts(): Promise<{ ok: boolean; message: string }> {
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl('/inventory/reset-costs'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    if (res.status === 403) throw new Error('Admin access required');
+    throw new Error(`API /inventory/reset-costs failed: ${res.status}`);
+  }
+  return res.json();
+}

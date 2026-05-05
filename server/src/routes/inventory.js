@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 
 export default function inventoryRouter(pool) {
   const router = Router();
@@ -143,7 +143,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
   });
 
 // DELETE inventory item (admin only)
-router.delete('/:id', authMiddleware, async (req, res) => {
+  router.delete('/:id', authMiddleware, async (req, res) => {
     const { id } = req.params;
     if (!id || typeof id !== 'string' || id.length > 32) {
       return res.status(400).json({ error: 'Invalid id' });
@@ -152,6 +152,32 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       await pool.query('DELETE FROM inventory WHERE id = ?', [id]);
       res.json({ ok: true });
     } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // Reset all inventory costs to 0
+  router.post('/reset-costs', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      // Check if cost columns exist
+      let costFieldsExist = false;
+      try {
+        const [cols] = await pool.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory'
+            AND COLUMN_NAME IN ('purchase_cost', 'unit_cost')
+        `);
+        costFieldsExist = Array.isArray(cols) && cols.length >= 2;
+      } catch (_) { costFieldsExist = false; }
+
+      if (!costFieldsExist) {
+        return res.status(400).json({ error: 'Cost columns not migrated yet' });
+      }
+
+      await pool.query('UPDATE inventory SET purchase_cost = 0, unit_cost = 0');
+      res.json({ ok: true, message: 'All inventory costs reset to 0' });
+    } catch (e) {
+      console.error(e);
       res.status(500).json({ error: 'DB error' });
     }
   });

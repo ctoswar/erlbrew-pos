@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Order } from "../types";
 import { buildDailySummary, formatCurrency, formatTime } from "../utils";
-import { apiAdminGet } from "../utils/api";
+import { apiAdminGet, resetCogs, resetInventoryCosts } from "../utils/api";
 
 interface CogsData {
   cogs: number;
@@ -19,14 +19,111 @@ interface Props {
 export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
   const [cogsData, setCogsData] = useState<CogsData | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'ok' | 'error'>('idle');
+  const [dateRange, setDateRange] = useState<'today' | 'this_week' | 'last_week' | 'this_month' | 'last_2_weeks' | 'custom'>('today');
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    return d.toISOString().split("T")[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const d = new Date();
+    return d.toISOString().split("T")[0];
+  });
+  const [resetMsg, setResetMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  useEffect(() => {
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+  const getDateRange = (): { start: string; end: string } => {
     const today = new Date();
-    const fmt = (d: Date) => d.toISOString().split("T")[0];
-    apiAdminGet<CogsData>(`/orders/cogs?start=${fmt(today)}&end=${fmt(today)}`)
+    const d = (offset: number) => {
+      const x = new Date(today);
+      x.setDate(x.getDate() + offset);
+      return x;
+    };
+
+    switch (dateRange) {
+      case 'today':
+        return { start: fmt(today), end: fmt(today) };
+      case 'this_week': {
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        return { start: fmt(startOfWeek), end: fmt(today) };
+      }
+      case 'last_week': {
+        const startOfLastWeek = new Date(today);
+        startOfLastWeek.setDate(today.getDate() - today.getDay() - 7);
+        const endOfLastWeek = new Date(startOfLastWeek);
+        endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
+        return { start: fmt(startOfLastWeek), end: fmt(endOfLastWeek) };
+      }
+      case 'this_month': {
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        return { start: fmt(startOfMonth), end: fmt(today) };
+      }
+      case 'last_2_weeks': {
+        const twoWeeksAgo = d(-14);
+        return { start: fmt(twoWeeksAgo), end: fmt(today) };
+      }
+      case 'custom':
+        return { start: startDate, end: endDate };
+      default:
+        return { start: fmt(today), end: fmt(today) };
+    }
+  };
+
+  const fetchCogs = () => {
+    const { start, end } = getDateRange();
+    apiAdminGet<CogsData>(`/orders/cogs?start=${start}&end=${end}`)
       .then(setCogsData)
       .catch((err) => console.error("Failed to fetch COGS data:", err));
-  }, []);
+  };
+
+  const handleResetCOGSRange = async () => {
+    if (!confirm(`Reset COGS data for ${startDate} to ${endDate}? This will set totals = subtotals (effectively 0 COGS) for orders in this range.`)) return;
+    try {
+      const result = await resetCogs(startDate, endDate);
+      setResetMsg({ text: result.message, type: 'success' });
+      fetchCogs();
+    } catch (e: any) {
+      setResetMsg({ text: e.message || 'Reset failed', type: 'error' });
+    }
+    setTimeout(() => setResetMsg(null), 3000);
+  };
+
+  const handleResetCOGSAll = async () => {
+    if (!confirm('Reset ALL COGS data? This will set totals = subtotals for ALL orders. This cannot be undone.')) return;
+    try {
+      const result = await resetCogs(undefined, undefined, true);
+      setResetMsg({ text: result.message, type: 'success' });
+      fetchCogs();
+    } catch (e: any) {
+      setResetMsg({ text: e.message || 'Reset failed', type: 'error' });
+    }
+    setTimeout(() => setResetMsg(null), 3000);
+  };
+
+  const handleResetInventoryCosts = async () => {
+    if (!confirm('Reset ALL inventory costs to 0? This will set all purchase_cost and unit_cost to 0. This cannot be undone.')) return;
+    try {
+      const result = await resetInventoryCosts();
+      setResetMsg({ text: result.message, type: 'success' });
+    } catch (e: any) {
+      setResetMsg({ text: e.message || 'Reset failed', type: 'error' });
+    }
+    setTimeout(() => setResetMsg(null), 3000);
+  };
+
+  useEffect(() => {
+    fetchCogs();
+  }, [dateRange, startDate, endDate]);
+
+  // Also re-fetch when switching presets
+  useEffect(() => {
+    if (dateRange !== 'custom') {
+      const { start, end } = getDateRange();
+      setStartDate(start);
+      setEndDate(end);
+    }
+  }, [dateRange]);
 
   // Sync to Google Sheet3 when orders change (debounced)
   useEffect(() => {
@@ -85,6 +182,155 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
                 setTimeout(() => setSyncStatus('idle'), 3000);
               }}
             >⇌ Sync Sheet3</span>
+          )}
+        </div>
+      </div>
+
+      {/* Date Range Selector */}
+      <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: "12px 14px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase" }}>Analysis Period</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {([
+              ["Today", "today"],
+              ["This Week", "this_week"],
+              ["Last Week", "last_week"],
+              ["This Month", "this_month"],
+              ["Last 2 Weeks", "last_2_weeks"],
+              ["Custom", "custom"],
+            ] as const).map(([label, value]) => (
+              <button
+                key={value}
+                onClick={() => setDateRange(value)}
+                style={{
+                  padding: "5px 10px",
+                  fontSize: 9,
+                  borderRadius: 6,
+                  border: "1px solid",
+                  borderColor: dateRange === value ? "var(--gold)" : "var(--border-subtle)",
+                  background: dateRange === value ? "rgba(201,135,58,0.15)" : "transparent",
+                  color: dateRange === value ? "var(--gold)" : "var(--text-muted)",
+                  cursor: "pointer",
+                  fontWeight: dateRange === value ? 700 : 400,
+                  letterSpacing: 0.5,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {dateRange === 'custom' && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => { setStartDate(e.target.value); setDateRange('custom'); }}
+                style={{
+                  padding: "4px 8px",
+                  fontSize: 10,
+                  borderRadius: 6,
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-base)",
+                  color: "var(--text-primary)",
+                }}
+              />
+              <span style={{ color: "var(--text-muted)", fontSize: 10 }}>to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => { setEndDate(e.target.value); setDateRange('custom'); }}
+                style={{
+                  padding: "4px 8px",
+                  fontSize: 10,
+                  borderRadius: 6,
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-base)",
+                  color: "var(--text-primary)",
+                }}
+              />
+              <button
+                onClick={fetchCogs}
+                style={{
+                  padding: "4px 10px",
+                  fontSize: 9,
+                  borderRadius: 6,
+                  border: "1px solid var(--gold)",
+                  background: "var(--gold)",
+                  color: "var(--bg-base)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                }}
+              >
+                Apply
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Reset Options */}
+      <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: "12px 14px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase" }}>Reset Data</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              onClick={handleResetCOGSRange}
+              style={{
+                padding: "6px 12px",
+                fontSize: 9,
+                borderRadius: 6,
+                border: "1px solid var(--danger)",
+                background: "transparent",
+                color: "var(--danger)",
+                cursor: "pointer",
+                fontWeight: 500,
+              }}
+              title={`Reset COGS for ${startDate} to ${endDate}`}
+            >
+              Reset COGS (Selected Dates)
+            </button>
+            <button
+              onClick={handleResetCOGSAll}
+              style={{
+                padding: "6px 12px",
+                fontSize: 9,
+                borderRadius: 6,
+                border: "1px solid var(--danger)",
+                background: "transparent",
+                color: "var(--danger)",
+                cursor: "pointer",
+                fontWeight: 500,
+              }}
+              title="Reset ALL COGS data"
+            >
+              Reset COGS (All Time)
+            </button>
+            <button
+              onClick={handleResetInventoryCosts}
+              style={{
+                padding: "6px 12px",
+                fontSize: 9,
+                borderRadius: 6,
+                border: "1px solid var(--danger)",
+                background: "transparent",
+                color: "var(--danger)",
+                cursor: "pointer",
+                fontWeight: 500,
+              }}
+              title="Reset all inventory costs to 0"
+            >
+              Reset Inventory Costs
+            </button>
+          </div>
+          {resetMsg && (
+            <div style={{
+              fontSize: 9,
+              color: resetMsg.type === 'success' ? 'var(--success)' : 'var(--danger)',
+              fontWeight: 600,
+              letterSpacing: 0.5,
+            }}>
+              {resetMsg.text}
+            </div>
           )}
         </div>
       </div>

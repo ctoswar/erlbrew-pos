@@ -1,6 +1,6 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 
 export default function ordersRouter(pool, googleSheets) {
   const router = express.Router();
@@ -319,6 +319,53 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       });
 
       res.json({ cogs, orderCount, start: startStr, end: endStr, details });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // Reset COGS data - sets totals = subtotals AND resets inventory costs to 0
+  router.post('/cogs/reset', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const { start, end, resetAll } = req.body;
+
+      // First, reset all inventory costs to 0 (this makes all future COGS calculations = 0)
+      try {
+        const [cols] = await pool.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory'
+            AND COLUMN_NAME IN ('purchase_cost', 'unit_cost')
+        `);
+        const costFieldsExist = Array.isArray(cols) && cols.length >= 2;
+        if (costFieldsExist) {
+          await pool.query('UPDATE inventory SET purchase_cost = 0, unit_cost = 0');
+        }
+      } catch (e) {
+        console.error('Failed to reset inventory costs:', e);
+      }
+
+      // Then set all order totals = subtotals (makes profit = 0 for past orders)
+      if (resetAll) {
+        await pool.query(`
+          UPDATE orders
+          SET total = subtotal
+          WHERE subtotal IS NOT NULL AND subtotal > 0
+        `);
+        return res.json({ ok: true, message: 'All COGS and inventory costs reset' });
+      }
+
+      if (start && end) {
+        await pool.query(`
+          UPDATE orders
+          SET total = subtotal
+          WHERE subtotal IS NOT NULL AND subtotal > 0
+            AND DATE(created_at) >= ? AND DATE(created_at) <= ?
+        `, [start, end]);
+        return res.json({ ok: true, message: `COGS and costs reset for ${start} to ${end}` });
+      }
+
+      res.status(400).json({ error: 'Provide start/end dates or resetAll=true' });
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });

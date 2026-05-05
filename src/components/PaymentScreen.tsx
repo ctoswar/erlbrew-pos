@@ -93,12 +93,35 @@ export const PaymentScreen: React.FC<Props> = ({ total, discountLabel, discountA
 
         {/* E-Wallet Panel */}
         {method === "ewallet" && (
-          <div style={{ textAlign: "center", marginBottom: 16 }}>
-            <div style={{ background: "var(--bg-base)", borderRadius: 12, padding: "1.5rem", marginBottom: 10 }}>
-              <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Scan QR Code</div>
-              <div style={{ fontSize: 64, lineHeight: 1 }}>▣</div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ background: "var(--bg-base)", borderRadius: 12, padding: "1.5rem", marginBottom: 10, textAlign: "center" }}>
+              <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>GCash Reference</div>
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 10,
+                background: "rgba(201,135,58,0.1)", border: "1px dashed var(--gold)",
+                borderRadius: 10, padding: "12px 20px", marginBottom: 12,
+              }}>
+                <span style={{ fontSize: 28, fontWeight: 700, color: "var(--gold)", letterSpacing: 3, fontFamily: "'Lato', sans-serif" }}>
+                  0917-123-4567
+                </span>
+                <button
+                  onClick={() => navigator.clipboard.writeText("09171234567")}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gold-muted)", fontSize: 11, padding: "4px 8px", borderRadius: 4 }}
+                  title="Copy number"
+                >
+                  📋
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.6 }}>
+                Open your GCash app →<br />
+                <strong style={{ color: "var(--text-primary)" }}>Pay Bills → Search "Erlbrew"</strong><br />
+                Reference: <strong style={{ color: "var(--gold)" }}>#{String(Math.floor(Math.random() * 900000 + 100000))}</strong><br />
+                <span style={{ fontSize: 10 }}>Enter amount: {formatCurrency(total)}</span>
+              </div>
             </div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>GCash · Maya · PayMaya accepted</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center" }}>
+              Tap <strong style={{ color: "var(--gold)" }}>Confirm & Place Order</strong> once payment is sent
+            </div>
           </div>
         )}
 
@@ -111,7 +134,7 @@ export const PaymentScreen: React.FC<Props> = ({ total, discountLabel, discountA
           <span style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 1 }}>
             {method === "cash"
               ? `Change: ${formatCurrency(change)} — keep the receipt`
-              : `${method === "card" ? "Present card" : "Scan QR"} to pay`}
+              : `${method === "card" ? "Present card" : "Reference shown above — pay via GCash"} to pay`}
           </span>
         </div>
       </div>

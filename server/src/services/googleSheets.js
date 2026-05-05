@@ -455,6 +455,10 @@ export function googleSheetsClientInit(pool) {
             ],
           },
         });
+      } catch (e) {
+        console.error('Sheet3 formatting/chart error (non-fatal):', e.message);
+      }
+      return { jwtClient, sheets };
     },
   };
 }

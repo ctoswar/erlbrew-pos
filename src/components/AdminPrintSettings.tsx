@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getCompanySettings, updateCompanySettings } from "../utils/api";
+import { useTheme } from "../hooks/useTheme";
+import { useFontSize, FONT_SIZE_LABELS, type FontSize } from "../hooks/useFontSize";
 
 export interface PrintSettings {
   paperSize: "58mm" | "80mm";
@@ -41,8 +44,83 @@ export function loadPrintSettings(): PrintSettings {
   return loadSettings();
 }
 
+interface CompanyInfo {
+  company_name: string;
+  company_address: string;
+  company_phone: string;
+  company_email: string;
+  company_logo: string;
+}
+
+function loadCompanySettings(): CompanyInfo {
+  try {
+    const s = localStorage.getItem("erlbrew_company_settings");
+    return s ? JSON.parse(s) : { company_name: 'Erlbrew Cafe', company_address: '', company_phone: '', company_email: '', company_logo: '' };
+  } catch { return { company_name: 'Erlbrew Cafe', company_address: '', company_phone: '', company_email: '', company_logo: '' }; }
+}
+
+function saveCompanySettingsLocal(s: CompanyInfo) {
+  localStorage.setItem("erlbrew_company_settings", JSON.stringify(s));
+}
+
 export const AdminPrintSettings: React.FC = () => {
   const [settings, setSettings] = useState<PrintSettings>(loadSettings);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(loadCompanySettings);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [savingCompany, setSavingCompany] = useState(false);
+  const [companySaved, setCompanySaved] = useState(false);
+  const [companyError, setCompanyError] = useState("");
+  const { theme, setThemeByName } = useTheme();
+  const { fontSize, setFontSize } = useFontSize();
+
+  // Load company info from server on mount
+  useEffect(() => {
+    getCompanySettings()
+      .then((data: any) => {
+        const info = {
+          company_name: data.company_name || 'Erlbrew Cafe',
+          company_address: data.company_address || '',
+          company_phone: data.company_phone || '',
+          company_email: data.company_email || '',
+          company_logo: data.company_logo || '',
+        };
+        setCompanyInfo(info);
+        if (info.company_logo) setLogoPreview(info.company_logo);
+        saveCompanySettingsLocal(info);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setCompanyError("Please select an image file");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target?.result as string;
+      setCompanyInfo(c => ({ ...c, company_logo: base64 }));
+      setLogoPreview(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveCompany = async () => {
+    setSavingCompany(true);
+    setCompanyError("");
+    try {
+      await updateCompanySettings(companyInfo);
+      saveCompanySettingsLocal(companyInfo);
+      setCompanySaved(true);
+      setTimeout(() => setCompanySaved(false), 2000);
+    } catch (e: any) {
+      setCompanyError(e.message || "Failed to save");
+    } finally {
+      setSavingCompany(false);
+    }
+  };
 
   const update = (patch: Partial<PrintSettings>) => {
     const next = { ...settings, ...patch };
@@ -71,7 +149,217 @@ export const AdminPrintSettings: React.FC = () => {
 
   return (
     <div style={{ padding: "1.5rem 2rem", overflowY: "auto", flex: 1 }}>
-      <div style={{ marginBottom: 20 }}>
+      {/* ── Theme Toggle ─────────────────────────────────────── */}
+      <div style={{ marginBottom: 24, padding: "14px 16px", background: "var(--bg-surface)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
+            App Theme
+          </div>
+          <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 2 }}>
+            Toggle between brown and white theme across all screens
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={() => setThemeByName("brown")}
+            style={{
+              padding: "8px 16px",
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: 1,
+              borderRadius: 8,
+              border: `1.5px solid ${theme === "brown" ? "var(--gold)" : "var(--border-default)"}`,
+              background: theme === "brown" ? "rgba(201,135,58,0.15)" : "transparent",
+              color: theme === "brown" ? "var(--gold)" : "var(--text-muted)",
+              cursor: "pointer",
+              textTransform: "uppercase" as const,
+            }}
+          >
+            ☕ Brown
+          </button>
+          <button
+            onClick={() => setThemeByName("white")}
+            style={{
+              padding: "8px 16px",
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: 1,
+              borderRadius: 8,
+              border: `1.5px solid ${theme === "white" ? "var(--gold)" : "var(--border-default)"}`,
+              background: theme === "white" ? "rgba(201,135,58,0.15)" : "transparent",
+              color: theme === "white" ? "var(--gold)" : "var(--text-muted)",
+              cursor: "pointer",
+              textTransform: "uppercase" as const,
+            }}
+          >
+            ☁️ White
+          </button>
+        </div>
+      </div>
+
+      {/* ── Font Size ──────────────────────────────────────── */}
+      <div style={{ marginBottom: 24, padding: "14px 16px", background: "var(--bg-surface)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
+            Font Size
+          </div>
+          <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 2 }}>
+            Adjust text size across all screens for better readability
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {(['small', 'normal', 'large', 'extra-large'] as FontSize[]).map((size) => (
+            <button
+              key={size}
+              onClick={() => setFontSize(size)}
+              style={{
+                width: 40,
+                height: 36,
+                fontSize: 10,
+                fontWeight: 700,
+                borderRadius: 8,
+                border: `1.5px solid ${fontSize === size ? "var(--gold)" : "var(--border-default)"}`,
+                background: fontSize === size ? "rgba(201,135,58,0.15)" : "transparent",
+                color: fontSize === size ? "var(--gold)" : "var(--text-muted)",
+                cursor: "pointer",
+                textTransform: "uppercase" as const,
+              }}
+            >
+              {FONT_SIZE_LABELS[size]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Company Info & Logo ────────────────────────────── */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "var(--gold)", marginBottom: 4 }}>
+          Company Information
+        </div>
+        <div style={{ fontSize: 9, color: "var(--text-muted)", marginBottom: 16 }}>
+          Shown on invoices and receipts. Upload your logo to appear on printed documents.
+        </div>
+
+        <div style={{ display: "flex", gap: 20, alignItems: "flex-start", marginBottom: 16 }}>
+          {/* Logo Preview */}
+          <div style={{
+            width: 100,
+            height: 100,
+            border: "2px dashed var(--border-medium)",
+            borderRadius: 12,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "var(--bg-base)",
+            overflow: "hidden",
+            flexShrink: 0,
+          }}>
+            {logoPreview ? (
+              <img src={logoPreview} alt="Logo" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+            ) : (
+              <span style={{ fontSize: 32 }}>🏪</span>
+            )}
+          </div>
+
+          {/* Logo Upload */}
+          <div style={{ flex: 1 }}>
+            <input type="file" accept="image/*" onChange={handleLogoChange} id="logo-upload" style={{ display: "none" }} />
+            <label htmlFor="logo-upload" style={{
+              display: "inline-block",
+              padding: "8px 16px",
+              fontSize: 9,
+              borderRadius: 8,
+              border: "1px solid var(--gold)",
+              background: "rgba(201,135,58,0.15)",
+              color: "var(--gold)",
+              cursor: "pointer",
+              fontWeight: 700,
+              letterSpacing: 1,
+              marginRight: 8,
+            }}>
+              Upload Logo
+            </label>
+            {logoPreview && (
+              <button onClick={() => { setCompanyInfo(c => ({ ...c, company_logo: "" })); setLogoPreview(null); }} style={{
+                padding: "8px 16px",
+                fontSize: 9,
+                borderRadius: 8,
+                border: "1px solid var(--border-default)",
+                background: "transparent",
+                color: "var(--text-muted)",
+                cursor: "pointer",
+              }}>
+                Remove
+              </button>
+            )}
+            <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 8 }}>
+              Square PNG/JPG recommended, max 500KB
+            </div>
+          </div>
+        </div>
+
+        {/* Company Info Fields */}
+        <div style={{ display: "grid", gap: 10 }}>
+          <input
+            type="text"
+            value={companyInfo.company_name}
+            onChange={(e) => setCompanyInfo(c => ({ ...c, company_name: e.target.value }))}
+            placeholder="Company Name"
+            style={{ padding: "8px 12px", fontSize: 11, borderRadius: 8, border: "1px solid var(--border-subtle)", background: "var(--bg-base)", color: "var(--text-primary)" }}
+          />
+          <input
+            type="text"
+            value={companyInfo.company_address}
+            onChange={(e) => setCompanyInfo(c => ({ ...c, company_address: e.target.value }))}
+            placeholder="Business Address"
+            style={{ padding: "8px 12px", fontSize: 11, borderRadius: 8, border: "1px solid var(--border-subtle)", background: "var(--bg-base)", color: "var(--text-primary)" }}
+          />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <input
+              type="text"
+              value={companyInfo.company_phone}
+              onChange={(e) => setCompanyInfo(c => ({ ...c, company_phone: e.target.value }))}
+              placeholder="Phone"
+              style={{ padding: "8px 12px", fontSize: 11, borderRadius: 8, border: "1px solid var(--border-subtle)", background: "var(--bg-base)", color: "var(--text-primary)" }}
+            />
+            <input
+              type="email"
+              value={companyInfo.company_email}
+              onChange={(e) => setCompanyInfo(c => ({ ...c, company_email: e.target.value }))}
+              placeholder="Email"
+              style={{ padding: "8px 12px", fontSize: 11, borderRadius: 8, border: "1px solid var(--border-subtle)", background: "var(--bg-base)", color: "var(--text-primary)" }}
+            />
+          </div>
+        </div>
+
+        {companyError && (
+          <div style={{ marginTop: 10, padding: "8px 12px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", borderRadius: 8, fontSize: 10, color: "var(--danger)" }}>
+            {companyError}
+          </div>
+        )}
+
+        <button
+          onClick={handleSaveCompany}
+          disabled={savingCompany}
+          style={{
+            marginTop: 12,
+            padding: "8px 20px",
+            fontSize: 9,
+            borderRadius: 8,
+            border: "none",
+            background: "var(--gold)",
+            color: "var(--bg-sidebar)",
+            cursor: savingCompany ? "not-allowed" : "pointer",
+            fontWeight: 700,
+            letterSpacing: 1,
+            opacity: savingCompany ? 0.6 : 1,
+          }}
+        >
+          {savingCompany ? "Saving..." : companySaved ? "✓ Saved!" : "Save Company Info"}
+        </button>
+      </div>
+
+      <div style={{ marginBottom: 20, marginTop: 28 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "var(--gold)", marginBottom: 4 }}>
           Receipt Print Settings
         </div>

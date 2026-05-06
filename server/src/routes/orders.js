@@ -372,5 +372,16 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     }
   });
 
+  // Clear all orders (admin only - for fresh start)
+  router.delete('/all', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      await req.db.execute(`DELETE FROM orders`);
+      return res.json({ ok: true, message: 'All orders deleted' });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   return router;
 }

@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Staff, Screen } from "../types";
 import { useClock } from "../hooks/useClock";
+import { useTheme } from "../hooks/useTheme";
+import { useFontSize, FONT_SIZE_LABELS, type FontSize } from "../hooks/useFontSize";
 import { formatTime } from "../utils";
 
 interface Props {
@@ -13,39 +15,15 @@ interface Props {
 
 export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNavigate, onLogout }) => {
   const time = useClock();
-  // Font-size toggle state
-  const [isLargeFont, setIsLargeFont] = useState<boolean>(false);
+  const { theme, setThemeByName } = useTheme();
+  const { fontSize, setFontSize } = useFontSize();
 
-  // Initialize font-size from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('erlbrew_font_size');
-      const isLarge = saved === 'large';
-      setIsLargeFont(isLarge);
-      if (isLarge) {
-        document.documentElement.setAttribute('data-font-size', 'large');
-      } else {
-        document.documentElement.removeAttribute('data-font-size');
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  // Toggle handler
-  const toggleFontSize = () => {
-    const next = isLargeFont ? 'normal' : 'large';
-    setIsLargeFont(!isLargeFont);
-    try {
-      localStorage.setItem('erlbrew_font_size', next);
-    } catch {
-      // ignore
-    }
-    if (next === 'large') {
-      document.documentElement.setAttribute('data-font-size', 'large');
-    } else {
-      document.documentElement.removeAttribute('data-font-size');
-    }
+  // Map font size to scale for Topbar layout calculations
+  const fontScaleMap: Record<FontSize, number> = {
+    'small': 0.85,
+    'normal': 1,
+    'large': 1.2,
+    'extra-large': 1.35,
   };
 
 const navItems: { screen: Screen; label: string; badge?: number; adminOnly?: boolean }[] = [
@@ -61,7 +39,7 @@ const navItems: { screen: Screen; label: string; badge?: number; adminOnly?: boo
   const isOrderRelated = screen === "pos" || screen === "checkout" || screen === "payment" || screen === "success";
 
   // Computed scale for this render
-  const scale = isLargeFont ? 1.35 : 1;
+  const scale = fontScaleMap[fontSize];
   const headerStyle: React.CSSProperties = {
     height: Math.round(58 * scale),
     background: "var(--bg-sidebar)",
@@ -106,8 +84,8 @@ const navItems: { screen: Screen; label: string; badge?: number; adminOnly?: boo
     padding: `${Math.round(6 * scale)}px ${Math.round(10 * scale)}px`,
     fontSize: Math.round(9 * scale),
     border: '1px solid var(--border-default)',
-    background: isLargeFont ? 'var(--gold)' : 'transparent',
-    color: isLargeFont ? 'var(--bg-sidebar)' : 'var(--text-muted)',
+    background: 'transparent',
+    color: 'var(--text-muted)',
     cursor: 'pointer'
   };
 
@@ -136,10 +114,35 @@ const navItems: { screen: Screen; label: string; badge?: number; adminOnly?: boo
         );
       })}
       </div>
-      <button onClick={toggleFontSize} aria-pressed={isLargeFont} title={isLargeFont ? 'Large text active' : 'Normal text'} style={toggleBtnStyle}>
-        {isLargeFont ? '☀' : 'Aa'}
+      <button
+        onClick={() => {
+          const sizes: FontSize[] = ['small', 'normal', 'large', 'extra-large'];
+          const idx = sizes.indexOf(fontSize);
+          const next = sizes[(idx + 1) % sizes.length];
+          setFontSize(next);
+        }}
+        title={`Font size: ${fontSize}`}
+        style={{
+          ...toggleBtnStyle,
+          background: fontSize !== 'normal' ? 'var(--gold)' : 'transparent',
+          color: fontSize !== 'normal' ? 'var(--bg-sidebar)' : 'var(--text-muted)',
+          minWidth: 36,
+        }}
+      >
+        {FONT_SIZE_LABELS[fontSize]}
       </button>
-      
+      <button
+        onClick={() => setThemeByName(theme === 'brown' ? 'white' : 'brown')}
+        title={theme === 'brown' ? 'Switch to white theme' : 'Switch to brown theme'}
+        style={{
+          ...toggleBtnStyle,
+          background: theme === 'white' ? 'var(--gold)' : 'transparent',
+          color: theme === 'white' ? 'var(--bg-sidebar)' : 'var(--text-muted)',
+        }}
+      >
+        {theme === 'brown' ? '☁' : '☕'}
+      </button>
+
       <div style={{ width: 1, height: 22, background: "var(--border-default)" }} />
 
       {/* Staff avatar */}

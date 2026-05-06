@@ -474,9 +474,9 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
                 <tr key={o.id} style={{ borderTop: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "7px 8px 7px 0", color: "var(--text-primary)", fontWeight: 700 }}>{o.id}</td>
                   <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{formatTime(o.createdAt)}</td>
-                  <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.staff.name.split(" ")[0]}</td>
+                  <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.staff?.name?.split(" ")[0] ?? '—'}</td>
                   <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.type === "dine-in" ? o.table : "Takeout"}</td>
-                  <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.items.reduce((s, ci) => s + ci.qty, 0)}</td>
+                  <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.items.reduce((s, ci) => s + (ci?.qty ?? 0), 0)}</td>
                   <td style={{ padding: "7px 8px 7px 0", color: "var(--gold)", fontWeight: 700 }}>{formatCurrency(o.total)}</td>
                   <td style={{ padding: "7px 0 7px 0" }}>
                     <span className={`pill ${o.status === "completed" ? "pill-success" : o.status === "ready" ? "pill-gold" : "pill-muted"}`}>

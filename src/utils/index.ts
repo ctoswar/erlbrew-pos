@@ -1,6 +1,9 @@
 import { CartItem, Order, DailySummary, PayMethod, Category, Discount } from "../types";
 
-export const formatCurrency = (n: number | string): string => `₱${Number(n).toFixed(2)}`;
+export const formatCurrency = (n: number | string): string => {
+  const num = Number(n);
+  return `₱${(isNaN(num) ? 0 : num).toFixed(2)}`;
+};
 
 export const formatTime = (d: Date): string =>
   d.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" });
@@ -48,6 +51,7 @@ export const buildDailySummary = (orders: Order[], cogsData?: { cogs: number; de
   const itemMap: Record<string, number> = {};
   completed.forEach((o) =>
     o.items.forEach((ci) => {
+      if (!ci.item) return;
       itemMap[ci.item.name] = (itemMap[ci.item.name] || 0) + ci.qty;
     })
   );
@@ -60,6 +64,7 @@ export const buildDailySummary = (orders: Order[], cogsData?: { cogs: number; de
   const catMap: Record<string, { revenue: number; count: number }> = {};
   completed.forEach((o) =>
     o.items.forEach((ci) => {
+      if (!ci.item) return;
       const cat = ci.item.category;
       if (!catMap[cat]) catMap[cat] = { revenue: 0, count: 0 };
       catMap[cat].revenue += ci.item.price * ci.qty;

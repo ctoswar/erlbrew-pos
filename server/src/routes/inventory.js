@@ -182,5 +182,16 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
   });
 
+  // Clear all inventory (admin only - for fresh start)
+  router.delete('/all', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      await pool.query(`DELETE FROM inventory`);
+      return res.json({ ok: true, message: 'All inventory items deleted' });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   return router;
 }

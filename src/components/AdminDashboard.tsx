@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Order, Staff, InventoryItem } from "../types";
 import { formatCurrency } from "../utils";
-import { apiGet } from "../utils/api";
+import { apiGet, clearAllOrders, clearAllInventory } from "../utils/api";
 import { AdminStaff } from "./AdminStaff";
 import { AdminMenu } from "./AdminMenu";
 import { AdminPrintSettings } from "./AdminPrintSettings";
 import { AdminInventory } from "./AdminInventory";
+import { Dashboard } from "./Dashboard";
+import { AdminReports } from "./AdminReports";
+import { AdminSupplierInvoices } from "./AdminSupplierInvoices";
 
 const STORAGE_KEY_ORDERS = 'erlbrew_admin_orders';
 const STORAGE_KEY_INVENTORY = 'erlbrew_admin_inventory';
@@ -17,7 +20,7 @@ interface Props {
 }
 
 export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'menu' | 'inventory' | 'cogs' | 'backup' | 'staff' | 'settings'>('menu');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'suppliers' | 'settings' | 'backup'>('dashboard');
   const [orders, setOrders] = useState<Order[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,17 +52,13 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
     }
   }, []);
 
-  // Save to localStorage when data changes
+  // Save to localStorage when data changes (always save, even if empty)
   useEffect(() => {
-    if (orders.length > 0) {
-      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
-    }
+    localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
   }, [orders]);
 
   useEffect(() => {
-    if (inventory.length > 0) {
-      localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(inventory));
-    }
+    localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(inventory));
   }, [inventory]);
 
   // Fetch from server and update localStorage
@@ -113,11 +112,11 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
     const details: { order_id: string; total: number; cogs: number; profit: number }[] = [];
 
     for (const order of filteredOrders) {
-      const subtotal = order.subtotal || 0;
-      const total = order.total || 0;
+      const subtotal = Number(order.subtotal) || 0;
+      const total = Number(order.total) || 0;
       // COGS calculation: for now estimate as 30% of subtotal (real implementation would use recipe costs)
       const cogs = order.discount?.amount
-        ? subtotal * 0.3 - (order.discount.amount * 0.3)
+        ? subtotal * 0.3 - (Number(order.discount.amount) * 0.3)
         : subtotal * 0.3;
       const profit = total - cogs;
 
@@ -126,7 +125,12 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
       details.push({ order_id: order.id, total, cogs, profit });
     }
 
-    return { cogs: totalCOGS, revenue: totalRevenue, profit: totalRevenue - totalCOGS, details };
+    return {
+      cogs: totalCOGS || 0,
+      revenue: totalRevenue || 0,
+      profit: (totalRevenue - totalCOGS) || 0,
+      details
+    };
   }, [orders]);
 
   // Backup/Export functions
@@ -184,6 +188,42 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
     }
   };
 
+  const [serverMsg, setServerMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const clearServerOrders = async () => {
+    if (!confirm('DELETE ALL orders from SERVER? This cannot be undone. Are you sure?')) return;
+    if (!confirm('This will permanently delete ALL orders. Type "DELETE" to confirm.')) return;
+    try {
+      const result = await clearAllOrders();
+      setServerMsg({ text: result.message, type: 'success' });
+      // Clear local data too
+      localStorage.removeItem(STORAGE_KEY_ORDERS);
+      setOrders([]);
+      // Re-sync to confirm
+      syncData();
+    } catch (e: any) {
+      setServerMsg({ text: e.message || 'Failed to delete orders', type: 'error' });
+    }
+    setTimeout(() => setServerMsg(null), 4000);
+  };
+
+  const clearServerInventory = async () => {
+    if (!confirm('DELETE ALL inventory from SERVER? This cannot be undone. Are you sure?')) return;
+    if (!confirm('This will permanently delete ALL inventory items. Type "DELETE" to confirm.')) return;
+    try {
+      const result = await clearAllInventory();
+      setServerMsg({ text: result.message, type: 'success' });
+      // Clear local data too
+      localStorage.removeItem(STORAGE_KEY_INVENTORY);
+      setInventory([]);
+      // Re-sync to confirm
+      syncData();
+    } catch (e: any) {
+      setServerMsg({ text: e.message || 'Failed to delete inventory', type: 'error' });
+    }
+    setTimeout(() => setServerMsg(null), 4000);
+  };
+
   const summary = calculateCOGS();
 
   if (loading) {
@@ -214,10 +254,13 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
 
         <nav style={{ flex: 1, padding: 12 }}>
           {[
+            ['Dashboard', 'dashboard', '📊'],
+            ['Reports', 'reports', '📈'],
             ['Menu Items', 'menu', '☕'],
             ['Staff', 'staff', '👥'],
             ['Inventory', 'inventory', '📦'],
             ['COGS', 'cogs', '💰'],
+            ['Supplier Invoices', 'suppliers', '📄'],
             ['Settings', 'settings', '⚙️'],
             ['Backup', 'backup', '💾'],
           ].map(([label, value, icon]) => (
@@ -292,6 +335,16 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
 
       {/* Main Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+        {/* Dashboard Tab */}
+        {activeTab === 'dashboard' && (
+          <Dashboard orders={orders} staffName={staff.name} />
+        )}
+
+        {/* Reports Tab */}
+        {activeTab === 'reports' && (
+          <AdminReports />
+        )}
+
         {/* Menu Items Tab */}
         {activeTab === 'menu' && (
           <AdminMenu />
@@ -325,10 +378,10 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             {/* Summary Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
               {[
-                { label: 'Total Revenue', value: formatCurrency(summary.revenue), color: 'var(--gold)' },
-                { label: 'Total COGS', value: formatCurrency(summary.cogs), color: 'var(--text-primary)' },
-                { label: 'Gross Profit', value: formatCurrency(summary.profit), color: summary.profit >= 0 ? 'var(--success)' : 'var(--danger)' },
-                { label: 'Orders', value: orders.length, color: 'var(--text-secondary)' },
+                { label: 'Total Revenue', value: formatCurrency(summary.revenue || 0), color: 'var(--gold)' },
+                { label: 'Total COGS', value: formatCurrency(summary.cogs || 0), color: 'var(--text-primary)' },
+                { label: 'Gross Profit', value: formatCurrency(summary.profit || 0), color: (summary.profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)' },
+                { label: 'Orders', value: summary.details.length, color: 'var(--text-secondary)' },
               ].map(({ label, value, color }) => (
                 <div key={label} style={{ background: 'var(--bg-surface)', borderRadius: 10, padding: 16, border: '1px solid var(--border-subtle)' }}>
                   <div style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
@@ -355,10 +408,10 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
                   {summary.details.slice(0, 50).map(d => (
                     <tr key={d.order_id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                       <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>#{d.order_id.slice(0, 8)}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{formatCurrency(d.total)}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>{formatCurrency(d.cogs)}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right', color: d.profit >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                        {formatCurrency(d.profit)}
+                      <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{formatCurrency(d.total || 0)}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>{formatCurrency(d.cogs || 0)}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right', color: (d.profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                        {formatCurrency(d.profit || 0)}
                       </td>
                     </tr>
                   ))}
@@ -373,6 +426,11 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
               </table>
             </div>
           </div>
+        )}
+
+        {/* Supplier Invoices Tab */}
+        {activeTab === 'suppliers' && (
+          <AdminSupplierInvoices />
         )}
 
         {/* Backup Tab */}
@@ -458,6 +516,56 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
                 >
                   Clear Local Data
                 </button>
+              </div>
+
+              {/* Clear Server Data - DANGER ZONE */}
+              <div style={{ background: 'var(--bg-surface)', borderRadius: 12, padding: 24, border: '2px solid var(--danger)', gridColumn: 'span 2' }}>
+                <h3 style={{ fontSize: 13, color: 'var(--danger)', marginBottom: 8 }}>☠️ Clear Server Data (Permanent)</h3>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>
+                  Permanently DELETE all orders or inventory from the SERVER database. This CANNOT be undone. Use for fresh production start only.
+                </p>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <button
+                    onClick={clearServerOrders}
+                    style={{
+                      padding: '10px 20px',
+                      fontSize: 11,
+                      borderRadius: 8,
+                      border: '1px solid var(--danger)',
+                      background: 'var(--danger)',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                    }}
+                  >
+                    Delete All Orders
+                  </button>
+                  <button
+                    onClick={clearServerInventory}
+                    style={{
+                      padding: '10px 20px',
+                      fontSize: 11,
+                      borderRadius: 8,
+                      border: '1px solid var(--danger)',
+                      background: 'var(--danger)',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                    }}
+                  >
+                    Delete All Inventory
+                  </button>
+                </div>
+                {serverMsg && (
+                  <div style={{
+                    marginTop: 12,
+                    fontSize: 11,
+                    color: serverMsg.type === 'success' ? 'var(--success)' : 'var(--danger)',
+                    fontWeight: 600,
+                  }}>
+                    {serverMsg.text}
+                  </div>
+                )}
               </div>
 
               {/* Info */}

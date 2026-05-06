@@ -4,7 +4,18 @@ import { LoginScreen } from "./components/LoginScreen";
 import { POSScreen } from "./components/POSScreen";
 import { CustomerDisplay } from "./components/CustomerDisplay";
 import { AdminDashboard } from "./components/AdminDashboard";
+import { getStoredTheme } from "./hooks/useTheme";
+import { getStoredFontSize, applyFontSize } from "./hooks/useFontSize";
 import "./styles/global.css";
+
+// Apply stored theme on app load
+const storedTheme = getStoredTheme();
+if (storedTheme === 'white') {
+  document.documentElement.setAttribute('data-theme', 'white');
+}
+
+// Apply stored font size on app load
+applyFontSize(getStoredFontSize());
 
 const AUTH_KEY = 'erlbrew_staff';
 const App: React.FC = () => {

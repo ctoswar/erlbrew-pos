@@ -143,3 +143,51 @@ INSERT INTO menu_items (id, name, category, price, badge, description, emoji, po
   ('m14','Cascara Lemonade','Cold Drinks',5.50,'RARE','Coffee cherry husks brewed into sweet tea blended with fresh Meyer lemon.','🍋',FALSE),
   ('m15','Oat Horchata Cold Brew','Cold Drinks',6.00,'SIGNATURE','House oat horchata swirled through our cold brew concentrate.','🥤',TRUE),
   ('m16','Still Water','Cold Drinks',1.50,'', 'Filtered still water.','💧',FALSE);
+
+-- Supplier invoices table
+CREATE TABLE IF NOT EXISTS supplier_invoices (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  invoice_number VARCHAR(64) NOT NULL,
+  supplier_name VARCHAR(128) NOT NULL,
+  contact_person VARCHAR(128),
+  contact_phone VARCHAR(32),
+  contact_email VARCHAR(128),
+  invoice_date DATE NOT NULL,
+  due_date DATE,
+  subtotal DECIMAL(12,2) DEFAULT 0,
+  tax_amount DECIMAL(12,2) DEFAULT 0,
+  total_amount DECIMAL(12,2) NOT NULL,
+  status VARCHAR(32) DEFAULT 'pending', -- pending, partial, paid, overdue, cancelled
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_invoice_number (invoice_number)
+);
+
+-- Supplier invoice line items
+CREATE TABLE IF NOT EXISTS supplier_invoice_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  invoice_id INT NOT NULL,
+  item_description VARCHAR(256) NOT NULL,
+  quantity DECIMAL(10,2) DEFAULT 1,
+  unit_price DECIMAL(12,2) NOT NULL,
+  total_price DECIMAL(12,2) NOT NULL,
+  FOREIGN KEY (invoice_id) REFERENCES supplier_invoices(id) ON DELETE CASCADE
+);
+
+-- Company settings table (for logo, company info)
+CREATE TABLE IF NOT EXISTS company_settings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  setting_key VARCHAR(64) UNIQUE NOT NULL,
+  setting_value TEXT,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Seed default company settings
+INSERT INTO company_settings (setting_key, setting_value) VALUES
+  ('company_name', 'Erlbrew Cafe'),
+  ('company_address', ''),
+  ('company_phone', ''),
+  ('company_email', ''),
+  ('company_logo', '')  -- Base64 encoded logo image
+ON DUPLICATE KEY UPDATE setting_key=LAST_INSERT_ID(setting_key);

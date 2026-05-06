@@ -10,7 +10,7 @@
 html, body, #root {
   height: 100%;
   width: 100%;
-  overflow: hidden;
+  overflow: auto;
 }
 
 body {
@@ -107,14 +107,81 @@ body {
   --danger:         #c97a7a;
   --danger-bg:      #2a1a1a;
   --danger-border:  #4a2a2a;
-  /* Font scaling tokens */
-  --scale-factor: 1;
-  --scale-large: 1.35;
 }
 
-/* When large font is active, bump scale factor via data-font-size attribute */
-html[data-font-size="large"] {
-  --scale-factor: var(--scale-large);
+/* Scale using zoom - this properly scales BOTH visuals AND click areas for accessibility */
+html, body {
+  overflow: auto;
+  height: 100%;
+  width: 100%;
+}
+
+/* Zoom scale rules - zoom properly scales layout, visuals, AND click areas */
+html[data-app-scale="0.85"] {
+  zoom: 0.85;
+}
+
+html[data-app-scale="1"] {
+  zoom: 1;
+}
+
+html[data-app-scale="1.2"] {
+  zoom: 1.2;
+}
+
+html[data-app-scale="1.4"] {
+  zoom: 1.4;
+}
+
+/* ── White Theme ─────────────────────────────────────────────────────────── */
+:root[data-theme="white"],
+html[data-theme="white"] {
+  --bg-base:     #ffffff;
+  --bg-surface:  #f5f5f5;
+  --bg-elevated: #ebebeb;
+  --bg-sidebar:  #f0f0f0;
+
+  --border-subtle:  #e0e0e0;
+  --border-default: #d0d0d0;
+  --border-medium:  #b0b0b0;
+  --border-strong:  #909090;
+
+  --gold:        #8B5A2B;
+  --gold-light:  #A0522D;
+  --gold-dim:    #6B4423;
+  --gold-muted:  #D2B48C;
+  --gold-faint:  #F5DEB3;
+
+  --text-primary:   #1a1a1a;
+  --text-secondary: #4a4a4a;
+  --text-muted:     #7a7a7a;
+  --text-faint:     #a0a0a0;
+  --text-disabled:  #c0c0c0;
+
+  --success:        #2e7d32;
+  --success-bg:     #e8f5e9;
+  --success-border: #c8e6c9;
+
+  --danger:         #c62828;
+  --danger-bg:      #ffebee;
+  --danger-border:  #ffcdd2;
+}
+
+html[data-theme="white"] body,
+:root[data-theme="white"] body {
+  background: #ffffff;
+  color: #1a1a1a;
+}
+
+html[data-theme="white"] ::-webkit-scrollbar-track,
+:root[data-theme="white"] ::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+html[data-theme="white"] ::-webkit-scrollbar-thumb,
+:root[data-theme="white"] ::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+  border-radius: 6px;
 }
 
 /* ── Buttons ─────────────────────────────────────────────────────────────── */

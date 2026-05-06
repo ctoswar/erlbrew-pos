@@ -12,6 +12,8 @@ import ordersRoutes from './routes/orders.js';
 import inventoryRoutes from './routes/inventory.js';
 import recipesRouter from './routes/recipes.js';
 import clockRouter from './routes/clock.js';
+import supplierInvoiceRoutes from './routes/supplierInvoices.js';
+import companySettingsRoutes from './routes/companySettings.js';
 import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
@@ -133,6 +135,8 @@ app.use('/api/orders', ordersRoutes(pool, gs));
 app.use('/api/inventory', inventoryRoutes(pool));
 app.use('/api/recipes', recipesRouter(pool));
 app.use('/api/clock', clockRouter(pool, gs));
+app.use('/api/supplier-invoices', supplierInvoiceRoutes(pool));
+app.use('/api/company-settings', companySettingsRoutes(pool));
 
 // ── Google Sheets sync: write Dashboard to Sheet3 ──────────────────────────
 app.post('/api/sheets/sync-dashboard', async (req, res) => {

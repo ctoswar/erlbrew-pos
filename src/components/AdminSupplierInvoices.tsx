@@ -37,6 +37,8 @@ export const AdminSupplierInvoices: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<SupplierInvoice | null>(null);
+  const [emailInvoice, setEmailInvoice] = useState<SupplierInvoice | null>(null);
+  const [emailBody, setEmailBody] = useState("");
 
   const loadInvoices = useCallback(() => {
     setLoading(true);
@@ -192,6 +194,55 @@ export const AdminSupplierInvoices: React.FC = () => {
     } catch {
       setError("Failed to delete");
     }
+  };
+
+  const generateEmailContent = (inv: SupplierInvoice) => {
+    const itemsList = inv.items?.map(item =>
+      `• ${item.item_description}: ${item.quantity} x ${formatCurrency(item.unit_price)} = ${formatCurrency(item.total_price)}`
+    ).join('\n') || 'No items';
+
+    return `Dear ${inv.contact_person || inv.supplier_name},
+
+Please find below the details for Invoice ${inv.invoice_number}:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INVOICE DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Invoice Number: ${inv.invoice_number}
+Invoice Date: ${inv.invoice_date}
+Due Date: ${inv.due_date || 'N/A'}
+Status: ${inv.status.toUpperCase()}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ITEMS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${itemsList}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PAYMENT SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Subtotal: ${formatCurrency(inv.subtotal || 0)}
+Tax (12%): ${formatCurrency(inv.tax_amount || 0)}
+TOTAL DUE: ${formatCurrency(inv.total_amount || 0)}
+
+Thank you for your business!
+Erlbrew Café`;
+  };
+
+  const handleEmailInvoice = (inv: SupplierInvoice) => {
+    if (!inv.contact_email) {
+      setError("No email address for this supplier");
+      return;
+    }
+    setEmailInvoice(inv);
+    setEmailBody(generateEmailContent(inv));
+  };
+
+  const handleSendViaGmail = () => {
+    if (!emailInvoice?.contact_email) return;
+    const subject = encodeURIComponent(`Invoice ${emailInvoice.invoice_number} from Erlbrew Café`);
+    const body = encodeURIComponent(emailBody);
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${emailInvoice.contact_email}&su=${subject}&body=${body}`, '_blank');
   };
 
   const inputStyle: React.CSSProperties = {
@@ -357,6 +408,24 @@ export const AdminSupplierInvoices: React.FC = () => {
                     textTransform: "uppercase" as const,
                   }}>
                     Edit
+                  </button>
+                  <button
+                    onClick={() => handleEmailInvoice(inv)}
+                    disabled={!inv.contact_email}
+                    title={inv.contact_email ? `Email ${inv.contact_email}` : "No email address"}
+                    style={{
+                      flex: 1,
+                      padding: "6px 0",
+                      borderRadius: 8,
+                      border: "1px solid var(--border-medium)",
+                      background: inv.contact_email ? "rgba(201,135,58,0.1)" : "transparent",
+                      color: inv.contact_email ? "var(--gold)" : "var(--text-muted)",
+                      fontSize: 8,
+                      fontWeight: 700,
+                      cursor: inv.contact_email ? "pointer" : "not-allowed",
+                      textTransform: "uppercase" as const,
+                    }}>
+                    ✉ Email
                   </button>
                   {deleteConfirm === inv.id ? (
                     <>
@@ -654,6 +723,139 @@ export const AdminSupplierInvoices: React.FC = () => {
               >
                 Edit Invoice
               </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Email Invoice Modal */}
+      {emailInvoice && (
+        <>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998 }} onClick={() => setEmailInvoice(null)} />
+          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
+            <div style={{
+              background: "var(--bg-elevated)",
+              border: "1.5px solid var(--border-medium)",
+              borderRadius: 16,
+              padding: "1.5rem",
+              width: "100%",
+              maxWidth: 600,
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}>
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Playfair Display', serif" }}>
+                  Send Invoice via Email
+                </div>
+                <button onClick={() => setEmailInvoice(null)} style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  fontSize: 18,
+                  padding: 4,
+                }}>
+                  ✕
+                </button>
+              </div>
+
+              {/* To Field */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1, marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>To</div>
+                <div style={{ padding: "10px 12px", background: "var(--bg-base)", borderRadius: 8, fontSize: 12, color: "var(--text-primary)", border: "1px solid var(--border-medium)" }}>
+                  {emailInvoice.contact_email}
+                </div>
+              </div>
+
+              {/* Subject Field */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1, marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>Subject</div>
+                <div style={{ padding: "10px 12px", background: "var(--bg-base)", borderRadius: 8, fontSize: 12, color: "var(--text-primary)", border: "1px solid var(--border-medium)" }}>
+                  Invoice {emailInvoice.invoice_number} from Erlbrew Café
+                </div>
+              </div>
+
+              {/* Message Body */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1, marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>Message</div>
+                <textarea
+                  value={emailBody}
+                  onChange={e => setEmailBody(e.target.value)}
+                  style={{
+                    width: "100%",
+                    minHeight: 350,
+                    padding: 12,
+                    fontSize: 11,
+                    fontFamily: "monospace",
+                    lineHeight: 1.6,
+                    borderRadius: 8,
+                    border: "1px solid var(--border-medium)",
+                    background: "var(--bg-base)",
+                    color: "var(--text-primary)",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+
+              {/* Invoice Summary Preview */}
+              <div style={{ padding: 12, background: "var(--bg-surface)", borderRadius: 10, marginBottom: 16, fontSize: 10 }}>
+                <div style={{ fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>Invoice Summary</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  <div><span style={{ color: "var(--text-muted)" }}>Amount:</span> <span style={{ color: "var(--gold)", fontWeight: 700 }}>{formatCurrency(emailInvoice.total_amount)}</span></div>
+                  <div><span style={{ color: "var(--text-muted)" }}>Due:</span> {emailInvoice.due_date || "N/A"}</div>
+                  <div><span style={{ color: "var(--text-muted)" }}>Status:</span> <span style={{ fontWeight: 700, textTransform: "capitalize" }}>{emailInvoice.status}</span></div>
+                  <div><span style={{ color: "var(--text-muted)" }}>Items:</span> {emailInvoice.items?.length || 0}</div>
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div style={{ marginBottom: 12, padding: "9px 12px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", borderRadius: 8, fontSize: 11, color: "var(--danger)" }}>
+                  {error}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setEmailInvoice(null)} style={{
+                  flex: 1,
+                  padding: "11px 0",
+                  borderRadius: 9,
+                  border: "1px solid var(--border-default)",
+                  background: "transparent",
+                  color: "var(--text-secondary)",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                  cursor: "pointer",
+                  textTransform: "uppercase" as const,
+                }}>
+                  Cancel
+                </button>
+                <button onClick={handleSendViaGmail} style={{
+                  flex: 2,
+                  padding: "11px 0",
+                  borderRadius: 9,
+                  border: "none",
+                  background: "var(--gold)",
+                  color: "var(--bg-sidebar)",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                  cursor: "pointer",
+                  textTransform: "uppercase" as const,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                  </svg>
+                  Open in Gmail
+                </button>
+              </div>
             </div>
           </div>
         </>

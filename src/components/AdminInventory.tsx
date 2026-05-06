@@ -146,13 +146,14 @@ export const AdminInventory: React.FC = () => {
     }
   };
 
-  const handleAdjustStock = async (item: InventoryItem, delta: number) => {
-    const newStock = Math.max(0, item.stock + delta);
+  const handleAdjustStock = async (itemId: string, currentStock: number | string, delta: number) => {
+    const stockNum = Number(currentStock);
+    const newStock = Math.max(0, stockNum + delta);
     try {
-      await apiAdminPut(`/inventory/${item.id}`, { stock: newStock });
+      await apiAdminPut(`/inventory/${itemId}`, { stock: newStock });
       loadItems();
-    } catch (e) {
-      setError("Failed to update stock");
+    } catch (e: any) {
+      setError(`Failed to update stock: ${e.message}`);
     }
   };
 
@@ -215,7 +216,7 @@ export const AdminInventory: React.FC = () => {
                 item={item}
                 onEdit={() => openEditForm(item)}
                 onDelete={() => setDeleteConfirm(item.id)}
-                onAdjustStock={(delta) => handleAdjustStock(item, delta)}
+                onAdjustStock={(delta) => handleAdjustStock(item.id, item.stock, delta)}
                 deleteConfirm={deleteConfirm === item.id}
                 onConfirmDelete={() => handleDelete(item.id)}
                 onCancelDelete={() => setDeleteConfirm(null)}

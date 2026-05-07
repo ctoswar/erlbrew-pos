@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { apiAdminGet, apiAdminPut } from "../utils/api";
+import { apiAdminGet, apiAdminPut, createStaff, CreateStaffData } from "../utils/api";
 
 interface StaffMember {
   id: number;
@@ -28,6 +28,17 @@ export const AdminStaff: React.FC = () => {
   const [editPw, setEditPw] = useState("");
 
   const [saving, setSaving] = useState(false);
+
+  // Add staff form state
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState({
+    rfid: '',
+    name: '',
+    role: 'Barista',
+    initials: '',
+    color: '#C9873A',
+    pin: '',
+  });
 
   const loadStaff = () => {
     setLoading(true);
@@ -85,6 +96,30 @@ export const AdminStaff: React.FC = () => {
     } finally { setSaving(false); }
   };
 
+  // ── Add new staff ────────────────────────────────────────────────────────────
+  const saveNewStaff = async () => {
+    if (!addForm.rfid.trim()) { showMsg("RFID is required", false); return; }
+    if (!addForm.name.trim()) { showMsg("Name is required", false); return; }
+    setSaving(true);
+    try {
+      const data: CreateStaffData = {
+        rfid: addForm.rfid.trim().toUpperCase(),
+        name: addForm.name.trim(),
+        role: addForm.role,
+        initials: addForm.initials.trim() || addForm.name.trim().split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 2),
+        color: addForm.color,
+      };
+      if (addForm.pin.length === 4) data.pin = addForm.pin;
+      await createStaff(data);
+      setShowAddForm(false);
+      setAddForm({ rfid: '', name: '', role: 'Barista', initials: '', color: '#C9873A', pin: '' });
+      showMsg("Staff added", true);
+      loadStaff();
+    } catch (e: any) {
+      showMsg(e.message || "Failed to add staff", false);
+    } finally { setSaving(false); }
+  };
+
   const startEditName = (s: StaffMember) => {
     setEditingNameId(s.id);
     setEditName(s.name);
@@ -126,8 +161,22 @@ export const AdminStaff: React.FC = () => {
         <div style={{ fontSize: 9, color: "var(--gold)", letterSpacing: 2, textTransform: "uppercase", fontWeight: 700 }}>
           Staff Management
         </div>
-        <div style={{ fontSize: 9, color: "var(--text-faint)" }}>
-          RFID · Name · Password
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ fontSize: 9, color: "var(--text-faint)" }}>
+            RFID · Name · Password
+          </div>
+          {!showAddForm && (
+            <button
+              onClick={() => { setShowAddForm(true); cancelAll(); }}
+              style={{
+                background: "var(--gold)", color: "var(--bg-sidebar)",
+                border: "none", borderRadius: 8, padding: "6px 14px",
+                fontSize: 9, fontWeight: 700, cursor: "pointer",
+              }}
+            >
+              + Add Staff
+            </button>
+          )}
         </div>
       </div>
 
@@ -137,6 +186,136 @@ export const AdminStaff: React.FC = () => {
           <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>Loading...</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+
+            {/* ── Add Staff Form ── */}
+            {showAddForm && (
+              <div style={{
+                background: "var(--bg-surface)", border: "1px solid var(--gold)",
+                borderRadius: 14, padding: "20px 18px",
+              }}>
+                <div style={{ fontSize: 10, color: "var(--gold)", fontWeight: 700, marginBottom: 14, letterSpacing: 1.5, textTransform: "uppercase" }}>
+                  New Staff
+                </div>
+
+                {/* Name + Role row */}
+                <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, color: "var(--text-faint)", marginBottom: 4, letterSpacing: 1 }}>RFID *</div>
+                    <input
+                      value={addForm.rfid}
+                      onChange={(e) => setAddForm(f => ({ ...f, rfid: e.target.value.toUpperCase() }))}
+                      placeholder="e.g. RF005"
+                      style={{
+                        width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-medium)",
+                        borderRadius: 8, color: "var(--text-primary)", padding: "8px 12px",
+                        fontSize: 12, fontFamily: "monospace", outline: "none",
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, color: "var(--text-faint)", marginBottom: 4, letterSpacing: 1 }}>Name *</div>
+                    <input
+                      value={addForm.name}
+                      onChange={(e) => setAddForm(f => ({ ...f, name: e.target.value }))}
+                      placeholder="Full name"
+                      style={{
+                        width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-medium)",
+                        borderRadius: 8, color: "var(--text-primary)", padding: "8px 12px",
+                        fontSize: 12, outline: "none",
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, color: "var(--text-faint)", marginBottom: 4, letterSpacing: 1 }}>Role</div>
+                    <select
+                      value={addForm.role}
+                      onChange={(e) => setAddForm(f => ({ ...f, role: e.target.value }))}
+                      style={{
+                        width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-medium)",
+                        borderRadius: 8, color: "var(--text-primary)", padding: "8px 12px",
+                        fontSize: 12, outline: "none",
+                      }}
+                    >
+                      <option>Barista</option>
+                      <option>Senior Barista</option>
+                      <option>Shift Supervisor</option>
+                      <option>Manager</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Initials + Color + PIN row */}
+                <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, color: "var(--text-faint)", marginBottom: 4, letterSpacing: 1 }}>Initials (auto)</div>
+                    <input
+                      value={addForm.initials}
+                      onChange={(e) => setAddForm(f => ({ ...f, initials: e.target.value.toUpperCase() }))}
+                      placeholder="JD"
+                      maxLength={2}
+                      style={{
+                        width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-medium)",
+                        borderRadius: 8, color: "var(--text-primary)", padding: "8px 12px",
+                        fontSize: 12, outline: "none", textTransform: "uppercase",
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, color: "var(--text-faint)", marginBottom: 4, letterSpacing: 1 }}>Color</div>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <input
+                        type="color"
+                        value={addForm.color}
+                        onChange={(e) => setAddForm(f => ({ ...f, color: e.target.value }))}
+                        style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid var(--border-default)", cursor: "pointer", background: "none", padding: 2 }}
+                      />
+                      <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{addForm.color}</span>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, color: "var(--text-faint)", marginBottom: 4, letterSpacing: 1 }}>PIN (4 digits, optional)</div>
+                    <input
+                      type="password"
+                      value={addForm.pin}
+                      onChange={(e) => setAddForm(f => ({ ...f, pin: e.target.value.replace(/\D/g, '').substring(0, 4) }))}
+                      placeholder="1234"
+                      maxLength={4}
+                      style={{
+                        width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-medium)",
+                        borderRadius: 8, color: "var(--text-primary)", padding: "8px 12px",
+                        fontSize: 12, fontFamily: "monospace", outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={saveNewStaff}
+                    disabled={saving}
+                    style={{
+                      background: "var(--gold)", color: "var(--bg-sidebar)", border: "none",
+                      borderRadius: 8, padding: "8px 18px", fontSize: 10, fontWeight: 700,
+                      cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.5 : 1,
+                    }}
+                  >
+                    {saving ? "Adding..." : "Add Staff"}
+                  </button>
+                  <button
+                    onClick={() => { setShowAddForm(false); setAddForm({ rfid: '', name: '', role: 'Barista', initials: '', color: '#C9873A', pin: '' }); }}
+                    style={{
+                      background: "transparent", color: "var(--text-muted)",
+                      border: "1px solid var(--border-default)", borderRadius: 8,
+                      padding: "8px 14px", fontSize: 10, cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             {staff.map((s) => (
               <div key={s.id} style={{
                 background: "var(--bg-surface)", border: "1px solid var(--border-subtle)",

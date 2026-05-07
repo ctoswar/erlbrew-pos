@@ -1,13 +1,18 @@
 import React from "react";
-import { CartItem, OrderType, Discount } from "../types";
+import { CartItem, OrderType, Discount, CartItemModifier } from "../types";
 import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
+
+function cartItemKey(ci: CartItem): string {
+  const modKey = (ci.modifiers || []).map(m => m.name).sort().join('|');
+  return modKey ? `${ci.item.id}::${modKey}` : ci.item.id;
+}
 
 interface Props {
   cart: CartItem[];
   discount: Discount | null;
   orderType: OrderType;
   table: string;
-  onUpdateQty: (id: string, delta: number) => void;
+  onUpdateQty: (id: string, delta: number, modifiers?: CartItemModifier[]) => void;
   onClearCart: () => void;
   onOrderTypeChange: (t: OrderType) => void;
   onTableChange: (t: string) => void;
@@ -151,10 +156,11 @@ export const CartPanel: React.FC<Props> = ({
         ) : (
           cart.map((ci) => (
             <CartItemRow
-              key={ci.item.id}
+              key={cartItemKey(ci)}
               item={ci.item}
               qty={ci.qty}
-              onUpdateQty={(delta) => onUpdateQty(ci.item.id, delta)}
+              modifiers={ci.modifiers}
+              onUpdateQty={(delta) => onUpdateQty(ci.item.id, delta, ci.modifiers)}
             />
           ))
         )}
@@ -230,10 +236,11 @@ export const CartPanel: React.FC<Props> = ({
 interface CartItemRowProps {
   item: CartItem["item"];
   qty: number;
+  modifiers?: CartItemModifier[];
   onUpdateQty: (delta: number) => void;
 }
 
-const CartItemRow: React.FC<CartItemRowProps> = ({ item, qty, onUpdateQty }) => {
+const CartItemRow: React.FC<CartItemRowProps> = ({ item, qty, modifiers, onUpdateQty }) => {
   return (
     <div style={{
       display: "flex",
@@ -246,8 +253,8 @@ const CartItemRow: React.FC<CartItemRowProps> = ({ item, qty, onUpdateQty }) => 
       {/* Emoji */}
       <span style={{ fontSize: 20, flexShrink: 0 }}>{item.emoji}</span>
 
-      {/* Name + price */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Name + modifiers + price */}
+        <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: 11.5,
           fontWeight: 700,
@@ -259,6 +266,23 @@ const CartItemRow: React.FC<CartItemRowProps> = ({ item, qty, onUpdateQty }) => 
         }}>
           {item.name}
         </div>
+        {modifiers && modifiers.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 3, marginBottom: 2 }}>
+            {modifiers.map((m, i) => (
+              <span key={i} style={{
+                fontSize: 8.5,
+                fontWeight: 600,
+                color: "var(--gold)",
+                background: "rgba(201,135,58,0.12)",
+                border: "1px solid rgba(201,135,58,0.25)",
+                borderRadius: 4,
+                padding: "1px 5px",
+              }}>
+                {m.name}{m.price > 0 ? ` +${formatCurrency(m.price)}` : ''}
+              </span>
+            ))}
+          </div>
+        )}
         <div style={{ fontSize: 10, color: "var(--gold-muted)" }}>
           {formatCurrency(item.price)} each
         </div>

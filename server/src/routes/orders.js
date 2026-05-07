@@ -2,7 +2,7 @@ import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 
-export default function ordersRouter(pool, googleSheets) {
+export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   const router = express.Router();
 
   // Simple input-validation helper (per FIX 5)
@@ -42,12 +42,29 @@ export default function ordersRouter(pool, googleSheets) {
     if (!orderIds.length) return [];
     const [items] = await pool.query(`
       SELECT oi.order_id, oi.menu_item_id, oi.qty, oi.notes, oi.price,
-             mi.name AS menu_item_name, mi.category, mi.emoji, mi.badge
+             mi.name AS menu_item_name, mi.category, mi.emoji, mi.badge,
+             JSON_ARRAYAGG(
+               CASE WHEN oim.id IS NOT NULL
+                 THEN JSON_OBJECT('name', oim.modifier_name, 'price', oim.modifier_price)
+                 ELSE NULL
+               END
+             ) AS modifiers
       FROM order_items oi
       LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+      LEFT JOIN order_item_modifiers oim ON oim.order_item_id = oi.id
       WHERE oi.order_id IN (?)
+      GROUP BY oi.id
     `, [orderIds]);
-    return items;
+    // Parse modifiers JSON and filter out nulls
+    const result = [];
+    for (const item of items) {
+      const modifiers = (() => {
+        try { const p = JSON.parse(item.modifiers); return Array.isArray(p) ? p.filter(Boolean) : []; }
+        catch { return []; }
+      })();
+      result.push({ ...item, modifiers });
+    }
+    return result;
   }
 
   // Helper: attach items to orders
@@ -72,9 +89,20 @@ export default function ordersRouter(pool, googleSheets) {
         LEFT JOIN staff s ON o.staff_id = s.id
         ORDER BY o.created_at DESC
       `);
+      // Log for first order with reference
+      const orderWithRef = rows.find(r => r.reference_number);
+      if (orderWithRef) {
+        console.log('[DEBUG GET] Order with ref found:', orderWithRef.id, 'reference_number:', orderWithRef.reference_number);
+      }
       const ids = rows.map(r => r.id);
       const items = ids.length ? await fetchOrderItems(ids) : [];
-      res.json(attachItems(rows, items));
+      const response = attachItems(rows, items);
+      // Log first item of response
+      const firstWithRef = response.find(r => r.reference_number);
+      if (firstWithRef) {
+        console.log('[DEBUG GET] Response item with ref:', firstWithRef.id, 'reference_number:', firstWithRef.reference_number);
+      }
+      res.json(response);
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });
@@ -106,6 +134,9 @@ export default function ordersRouter(pool, googleSheets) {
   // Create order and append to Google Sheets (public) -> now protected by auth
   router.post('/', authMiddleware, async (req, res) => {
     const { staff_id, staff_name, items, type, table_name, pay_method, reference_number } = req.body;
+    console.log('[DEBUG] Order request - pay_method:', pay_method, 'reference_number:', JSON.stringify(reference_number));
+    console.log('[DEBUG] Full body keys:', Object.keys(req.body).join(', '));
+    console.log('[DEBUG] Full body:', JSON.stringify(req.body).substring(0, 500));
     // Validation per FIX 5
     const err = validate(req, res, {
       items: { required: true, type: 'object', array: true },
@@ -122,7 +153,10 @@ export default function ordersRouter(pool, googleSheets) {
     try {
       let subtotal = 0;
       const itemsOut = items || [];
-      for (const it of itemsOut) subtotal += (Number(it.price) || 0) * (Number(it.qty) || 0);
+      for (const it of itemsOut) {
+        const modifierTotal = (it.modifiers || []).reduce((s, m) => s + (Number(m.price) || 0), 0);
+        subtotal += ((Number(it.price) || 0) + modifierTotal) * (Number(it.qty) || 0);
+      }
 const tax = 0;
     const total = subtotal;
       const id = uuidv4();
@@ -134,21 +168,42 @@ const tax = 0;
         if (staffRows.length) staffDbId = staffRows[0].id;
       }
 
-      await pool.query(
+await pool.query(
         'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, table_name, type, pay_method, reference_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [id, staffDbId, 'preparing', subtotal, tax, total, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null]
       );
+      console.log('[DEBUG] DB INSERT completed - id:', id, 'reference_number in DB:', reference_number);
       for (const it of itemsOut) {
-        await pool.query('INSERT INTO order_items (order_id, menu_item_id, qty, notes, price) VALUES (?, ?, ?, ?, ?)', [id, it.id, it.qty, it.notes || '', it.price]);
+        const [itemResult] = await pool.query(
+          'INSERT INTO order_items (order_id, menu_item_id, qty, notes, price) VALUES (?, ?, ?, ?, ?)',
+          [id, it.id, it.qty, it.notes || '', it.price]
+        );
+        const orderItemId = itemResult.insertId;
+        // Insert modifiers for this order item
+        if (it.modifiers && it.modifiers.length > 0) {
+          const modifierVals = it.modifiers.map(m => [orderItemId, m.name, Number(m.price) || 0]);
+          await pool.query(
+            'INSERT INTO order_item_modifiers (order_item_id, modifier_name, modifier_price) VALUES ?',
+            [modifierVals]
+          );
+        }
       }
 
-if (googleSheets) {
-      try {
-        await googleSheets.appendOrder({ orderId: id, staffName: staff_name || '', items: itemsOut, subtotal, tax, total, payMethod: pay_method, status: 'preparing' });
-      } catch (e) {
-        console.error('Sheets write failed', e);
+      // Verify the insert
+      const [verify] = await pool.query('SELECT reference_number FROM orders WHERE id = ?', [id]);
+      console.log('[DEBUG] DB verify - reference_number:', verify[0]?.reference_number);
+
+      if (googleSheets) {
+        try {
+          console.log('[DEBUG] About to call googleSheets.appendOrder with referenceNumber:', reference_number);
+          await googleSheets.appendOrder({ orderId: id, staffName: staff_name || '', items: itemsOut, subtotal, tax, total, payMethod: pay_method, referenceNumber: reference_number, status: 'preparing' });
+          console.log('[DEBUG] googleSheets.appendOrder SUCCESS - no error thrown');
+        } catch (e) {
+          console.error('Sheets write failed:', e.message, e.stack);
+        }
+      } else {
+        console.log('[DEBUG] googleSheets is NULL/FALSE - not calling');
       }
-    }
 
     // ── Auto-deduct inventory based on recipes ───────────────────────────────
     try {
@@ -201,14 +256,28 @@ if (googleSheets) {
     }
 
     res.json({ id, subtotal, tax, total, status: 'preparing' });
-    } catch (e) {
-      console.error(e);
-      res.status(500).json({ error: 'DB error' });
-    }
-  });
 
-// Update order status (admin only)
-router.put('/:id/status', authMiddleware, async (req, res) => {
+    // Broadcast new order to all SSE clients
+    if (broadcastEvent) {
+      try {
+        const [rows] = await pool.query(`
+          SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.table_name, o.type, o.pay_method,
+                 o.reference_number, o.created_at,
+                 s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
+          FROM orders o LEFT JOIN staff s ON o.staff_id = s.id WHERE o.id = ?`, [id]);
+        if (rows[0]) {
+          broadcastEvent('order:created', rows[0]);
+        }
+      } catch (e) { /* non-fatal */ }
+    }
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+  // PUT /api/orders/:id/status — update order status (e.g., preparing→ready→completed)
+  router.put('/:id/status', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   const allowed = ['pending','preparing','ready','completed'];
@@ -221,6 +290,20 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
   try {
     await pool.query('UPDATE orders SET status = ?, completed_at = ? WHERE id = ?', [status, status === 'completed' ? new Date() : null, id]);
     res.json({ ok: true });
+
+    // Broadcast status change to all SSE clients
+    if (broadcastEvent) {
+      try {
+        const [rows] = await pool.query(`
+          SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.table_name, o.type, o.pay_method,
+                 o.reference_number, o.created_at, o.completed_at,
+                 s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
+          FROM orders o LEFT JOIN staff s ON o.staff_id = s.id WHERE o.id = ?`, [id]);
+        if (rows[0]) {
+          broadcastEvent('order:updated', rows[0]);
+        }
+      } catch (e) { /* non-fatal */ }
+    }
   } catch (e) {
     res.status(500).json({ error: 'DB error' });
   }
@@ -233,6 +316,15 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: 'Invalid order id' });
   }
   try {
+    // Broadcast void before actual deletion so clients can react
+    if (broadcastEvent) {
+      try {
+        const [rows] = await pool.query('SELECT id FROM orders WHERE id = ?', [id]);
+        if (rows[0]) {
+          broadcastEvent('order:voided', { id });
+        }
+      } catch (e) { /* non-fatal */ }
+    }
     await pool.query('DELETE FROM order_items WHERE order_id = ?', [id]);
     await pool.query('DELETE FROM orders WHERE id = ?', [id]);
     res.json({ ok: true });
@@ -377,6 +469,247 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     try {
       await req.db.execute(`DELETE FROM orders`);
       return res.json({ ok: true, message: 'All orders deleted' });
+    } catch (e) {
+      console.error(e);
+res.status(500).json({ error: 'DB error' });
+  }
+});
+
+  // POST /api/orders/:id/void — admin only
+  router.post('/:id/void', async (req, res) => {
+    const { id } = req.params;
+    const { reason } = req.body || {};
+    if (!reason || typeof reason !== 'string' || !reason.trim()) {
+      return res.status(400).json({ error: 'void reason is required' });
+    }
+    try {
+      await pool.query('UPDATE orders SET status = ?, void_reason = ? WHERE id = ?', ['voided', reason.trim(), id]);
+      if (broadcastEvent) {
+        broadcastEvent('order:voided', { id, reason: reason.trim() });
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // POST /api/orders/:id/refund — admin only
+  router.post('/:id/refund', async (req, res) => {
+    const { id } = req.params;
+    const { reason } = req.body || {};
+    if (!reason || typeof reason !== 'string' || !reason.trim()) {
+      return res.status(400).json({ error: 'refund reason is required' });
+    }
+    try {
+      await pool.query('UPDATE orders SET status = ?, refund_reason = ? WHERE id = ?', ['refunded', reason.trim(), id]);
+      if (broadcastEvent) {
+        broadcastEvent('order:updated', { id, status: 'refunded' });
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // Helper for MySQL DATETIME format
+  function toMysqlDT(d) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
+  // Helper
+  function toMysqlDT(d) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
+  // ── Reusable Z-Report generator (used by route AND cron) ──────────────────
+  // targetDate: YYYY-MM-DD string. Defaults to today if omitted.
+  async function buildZReportData(pool, targetDate) {
+    const now = new Date();
+
+    let periodStart, periodEnd, reportDateStr;
+    if (targetDate) {
+      // Cron: cover the full day 00:00:00 → 23:59:59 of the target date
+      periodStart = new Date(targetDate + 'T00:00:00');
+      periodEnd = new Date(targetDate + 'T23:59:59');
+      reportDateStr = targetDate;
+    } else {
+      // Manual trigger: today from midnight to now
+      reportDateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      periodStart = new Date(`${reportDateStr}T00:00:00`);
+      periodEnd = now;
+    }
+
+    const periodStartStr = toMysqlDT(periodStart);
+    const periodEndStr = toMysqlDT(periodEnd);
+    const [salesRows] = await pool.query(`
+      SELECT
+        COUNT(*) AS total_orders,
+        COALESCE(SUM(total), 0) AS total_sales,
+        COALESCE(SUM(CASE WHEN pay_method = 'cash' THEN total ELSE 0 END), 0) AS total_cash,
+        COALESCE(SUM(CASE WHEN pay_method = 'card' THEN total ELSE 0 END), 0) AS total_card,
+        COALESCE(SUM(CASE WHEN pay_method = 'ewallet' THEN total ELSE 0 END), 0) AS total_ewallet
+      FROM orders WHERE DATE(created_at) = ${targetDate ? '?' : 'CURDATE()'} AND status = 'completed'
+    `, targetDate ? [targetDate] : []);
+    const [refundRows] = await pool.query(`
+      SELECT COUNT(*) AS total_refunds, COALESCE(SUM(total), 0) AS refund_total
+      FROM orders WHERE DATE(created_at) = ${targetDate ? '?' : 'CURDATE()'} AND status = 'refunded'
+    `, targetDate ? [targetDate] : []);
+    const [voidRows] = await pool.query(`
+      SELECT COUNT(*) AS total_voids FROM orders WHERE DATE(created_at) = ${targetDate ? '?' : 'CURDATE()'} AND status = 'voided'
+    `, targetDate ? [targetDate] : []);
+    const [cogsRows] = await pool.query(`
+      SELECT COALESCE(SUM(oi.qty * i.unit_cost), 0) AS total_cogs
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      JOIN menu_items m ON oi.menu_item_id = m.id
+      JOIN inventory i ON m.id = i.id
+      WHERE DATE(o.created_at) = ${targetDate ? '?' : 'CURDATE()'} AND o.status = 'completed' AND i.unit_cost > 0
+    `, targetDate ? [targetDate] : []);
+
+    const totalSales = Number(salesRows[0]?.total_sales) || 0;
+    const totalCOGS = Number(cogsRows[0]?.total_cogs) || 0;
+    const grossProfit = totalSales - totalCOGS;
+
+    return {
+      staff_id: null,
+      report_date: reportDateStr,
+      period_start: periodStartStr,
+      period_end: periodEndStr,
+      total_sales: totalSales,
+      total_orders: Number(salesRows[0]?.total_orders) || 0,
+      total_cash: Number(salesRows[0]?.total_cash) || 0,
+      total_card: Number(salesRows[0]?.total_card) || 0,
+      total_ewallet: Number(salesRows[0]?.total_ewallet) || 0,
+      total_refunds: Number(refundRows[0]?.refund_total) || 0,
+      total_voids: Number(voidRows[0]?.total_voids) || 0,
+      total_cogs: totalCOGS,
+      gross_profit: grossProfit,
+    };
+  }
+
+  // POST /api/orders/z-report — generate Z-Report for today
+  router.post('/z-report', async (req, res) => {
+    try {
+      const report = await buildZReportData(pool);
+      const [ins] = await pool.query(`
+        INSERT INTO z_reports (staff_id, report_date, period_start, period_end, total_sales, total_orders,
+          total_cash, total_card, total_ewallet, total_refunds, total_voids, total_cogs, gross_profit)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [report.staff_id, report.report_date, report.period_start, report.period_end,
+          report.total_sales, report.total_orders, report.total_cash, report.total_card,
+          report.total_ewallet, report.total_refunds, report.total_voids, report.total_cogs, report.gross_profit]);
+      report.id = ins.insertId;
+      res.json(report);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // Export for cron job (server-side only)
+  return { buildZReportData, router };
+
+  // GET /api/orders/z-reports — retrieve recent Z-Reports
+  router.get('/z-reports', async (req, res) => {
+    const limit = parseInt(String(req.query.limit || '10'), 10);
+    try {
+      const [rows] = await pool.query(
+        'SELECT * FROM z_reports ORDER BY printed_at DESC LIMIT ?',
+        [limit]
+      );
+      res.json(rows);
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // ── Cash Drawer ──────────────────────────────────────────────────────────
+
+  // Helper
+  function toMysqlDate(d) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+
+  // GET /api/orders/cash-drawer — today's open drawer or null
+  router.get('/cash-drawer', async (req, res) => {
+    try {
+      const today = toMysqlDate(new Date());
+      const [rows] = await pool.query(
+        'SELECT * FROM cash_drawer WHERE shift_date = ? AND status = "open" LIMIT 1',
+        [today]
+      );
+      if (rows.length) return res.json(rows[0]);
+
+      // Auto-calculate today's cash sales from completed cash orders
+      const [cashRows] = await pool.query(`
+        SELECT COALESCE(SUM(total), 0) AS cash_sales
+        FROM orders
+        WHERE DATE(created_at) = CURDATE() AND status = 'completed' AND pay_method = 'cash'
+      `);
+
+      res.json({
+        id: null,
+        shift_date: today,
+        status: 'open',
+        opening_float: 0,
+        cash_sales: Number(cashRows[0]?.cash_sales) || 0,
+        cash_payouts: 0,
+        closing_amount: 0,
+        expected_amount: 0,
+        variance: 0,
+        notes: '',
+      });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // POST /api/orders/cash-drawer — open (create) today's drawer
+  router.post('/cash-drawer', async (req, res) => {
+    try {
+      const today = toMysqlDate(new Date());
+      const { opening_float = 0 } = req.body || {};
+      // Close any existing open drawers for today
+      await pool.query('UPDATE cash_drawer SET status = "closed", closed_at = NOW() WHERE shift_date = ? AND status = "open"', [today]);
+      // Create new open drawer
+      const [ins] = await pool.query(`
+        INSERT INTO cash_drawer (shift_date, status, opening_float, expected_amount)
+        VALUES (?, 'open', ?, ?)
+      `, [today, opening_float, opening_float]);
+      const [rows] = await pool.query('SELECT * FROM cash_drawer WHERE id = ?', [ins.insertId]);
+      res.json(rows[0]);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // PUT /api/orders/cash-drawer/:id — update/close drawer
+  router.put('/cash-drawer/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { closing_amount, cash_payouts, notes, action } = req.body || {};
+      const [rows] = await pool.query('SELECT * FROM cash_drawer WHERE id = ?', [id]);
+      if (!rows.length) return res.status(404).json({ error: 'Drawer not found' });
+      const drawer = rows[0];
+      const closing = Number(closing_amount) || 0;
+      const payouts = Number(cash_payouts) || 0;
+      const expected = Number(drawer.opening_float) + Number(drawer.cash_sales) - payouts;
+      const variance = closing - expected;
+      const status = action === 'close' ? 'closed' : 'open';
+      const closedAt = action === 'close' ? 'NOW()' : 'NULL';
+      await pool.query(`
+        UPDATE cash_drawer SET
+          closing_amount = ?, cash_payouts = ?, expected_amount = ?, variance = ?,
+          status = ?, closed_at = ${closedAt}, notes = ?
+        WHERE id = ?
+      `, [closing, payouts, expected, variance, status, notes || '', id]);
+      const [updated] = await pool.query('SELECT * FROM cash_drawer WHERE id = ?', [id]);
+      res.json(updated[0]);
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });

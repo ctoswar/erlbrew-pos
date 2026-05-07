@@ -70,6 +70,21 @@ export default function staffRouter(pool){
     }
   });
 
+  // GET /staff/me — protected, returns current staff info from JWT
+  router.get('/me', authMiddleware, async (req, res) => {
+    try {
+      // req.user is set by authMiddleware (decoded JWT payload has { sub: id, name, role })
+      const [rows] = await pool.query(
+        'SELECT id, rfid, name, role, initials, color FROM staff WHERE id = ?',
+        [req.user.sub]
+      );
+      if (!rows.length) return res.status(404).json({ error: 'Staff not found' });
+      res.json(rows[0]);
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   // GET all staff (protected)
   router.get('/', authMiddleware, async (req, res) => {
     try {
@@ -160,9 +175,14 @@ router.post('/login', async (req, res) => {
       const [rows] = await pool.query('SELECT id, name, role, pin FROM staff WHERE rfid = ?', [rfid]);
       if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' });
       const user = rows[0];
-// Verify PIN against bcrypt hash stored in pin column
-    const ok = await bcrypt.compare(pin, user.pin);
-    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+// Verify PIN — supports both bcrypt-hashed and plain-text PINs
+      let ok = false;
+      if (user.pin && (user.pin.startsWith('$2b$') || user.pin.startsWith('$2a$'))) {
+        ok = await bcrypt.compare(pin, user.pin);
+      } else {
+        ok = pin === user.pin;
+      }
+      if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
     // Auto clock-in / clock-out on login
     let clockAction = null;

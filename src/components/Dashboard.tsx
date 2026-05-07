@@ -464,7 +464,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
             <thead>
               <tr>
-                {["Order", "Time", "Staff", "Type", "Items", "Total", "Status"].map(h => (
+                {["Order", "Time", "Staff", "Type", "Items", "Total", "Ref", "Status"].map(h => (
                   <th key={h} style={{ textAlign: "left", fontSize: 8, color: "var(--text-disabled)", letterSpacing: 1.5, textTransform: "uppercase", padding: "0 8px 8px 0", fontWeight: 400 }}>{h}</th>
                 ))}
               </tr>
@@ -478,6 +478,11 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
                   <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.type === "dine-in" ? o.table : "Takeout"}</td>
                   <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.items.reduce((s, ci) => s + (ci?.qty ?? 0), 0)}</td>
                   <td style={{ padding: "7px 8px 7px 0", color: "var(--gold)", fontWeight: 700 }}>{formatCurrency(o.total)}</td>
+                  <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)", fontSize: 9 }}>
+                    {o.payMethod === 'ewallet' && o.referenceNumber ? (
+                      <span style={{ color: "var(--gold)", fontWeight: 600 }}>{o.referenceNumber}</span>
+                    ) : '—'}
+                  </td>
                   <td style={{ padding: "7px 0 7px 0" }}>
                     <span className={`pill ${o.status === "completed" ? "pill-success" : o.status === "ready" ? "pill-gold" : "pill-muted"}`}>
                       {o.status}

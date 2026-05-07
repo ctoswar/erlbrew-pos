@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import { Staff, Screen, OrderType, PayMethod, Order } from "../types";
 import { useCart } from "../hooks/useCart";
 import { useOrders } from "../hooks/useOrders";
+import { useKitchenEvents } from "../hooks/useKitchenEvents";
 import { Topbar } from "./Topbar";
 import { MenuGrid } from "./MenuGrid";
 import { CartPanel } from "./CartPanel";
@@ -61,6 +62,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     } catch {}
   }, [orderType, table, cart]);
   const { orders, placeOrder, updateStatus, voidOrder, activeOrders } = useOrders();
+  useKitchenEvents(); // Establish SSE connection for real-time order updates
 
   const handleNavigate = useCallback((s: Screen) => {
     setScreen(s);
@@ -230,7 +232,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
       case "success":
         return lastOrder ? <SuccessScreen order={lastOrder} onDone={handleOrderDone} /> : null;
       case "kitchen":
-        return <KitchenBoard orders={orders} onUpdateStatus={updateStatus} staffRole={staff.role} onVoidOrder={voidOrder} />;
+        return <KitchenBoard orders={orders} onUpdateStatus={updateStatus} onVoidOrder={voidOrder} />;
 case "dashboard":
   return <Dashboard orders={orders} staffName={staff.name} />;
 case "admin":

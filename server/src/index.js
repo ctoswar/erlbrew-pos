@@ -6,6 +6,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
+import cron from 'node-cron';
 import staffRoutes from './routes/staff.js';
 import menuRoutes from './routes/menu.js';
 import ordersRoutes from './routes/orders.js';
@@ -104,6 +105,51 @@ async function initDb() {
     await pool.query('SELECT 1');
     console.log('DB connected');
 
+    // Ensure required tables exist
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS z_reports (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        staff_id INT,
+        report_date DATE NOT NULL,
+        period_start DATETIME NOT NULL,
+        period_end DATETIME NOT NULL,
+        total_sales DECIMAL(12,2) DEFAULT 0,
+        total_orders INT DEFAULT 0,
+        total_cash DECIMAL(12,2) DEFAULT 0,
+        total_card DECIMAL(12,2) DEFAULT 0,
+        total_ewallet DECIMAL(12,2) DEFAULT 0,
+        total_refunds DECIMAL(12,2) DEFAULT 0,
+        total_voids INT DEFAULT 0,
+        total_cogs DECIMAL(12,2) DEFAULT 0,
+        gross_profit DECIMAL(12,2) DEFAULT 0,
+        printed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('z_reports table ready');
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS cash_drawer (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        shift_date DATE NOT NULL,
+        status ENUM('open','closed') DEFAULT 'open',
+        opening_float DECIMAL(10,2) DEFAULT 0,
+        cash_sales DECIMAL(10,2) DEFAULT 0,
+        cash_payouts DECIMAL(10,2) DEFAULT 0,
+        closing_amount DECIMAL(10,2) DEFAULT 0,
+        expected_amount DECIMAL(10,2) DEFAULT 0,
+        variance DECIMAL(10,2) DEFAULT 0,
+        notes TEXT,
+        closed_at DATETIME DEFAULT NULL,
+        printed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    // Add missing columns to existing cash_drawer table (one by one for MySQL 5.x compatibility)
+    const addCol = (col, def) => pool.query(`ALTER TABLE cash_drawer ADD COLUMN ${col} ${def}`).catch(() => {});
+    await addCol('status', "ENUM('open','closed') DEFAULT 'open'");
+    await addCol('cash_payouts', 'DECIMAL(10,2) DEFAULT 0');
+    await addCol('closed_at', 'DATETIME DEFAULT NULL');
+    console.log('cash_drawer table ready');
+
     // Auto-seed menu_items if empty
     const [rows] = await pool.query('SELECT COUNT(*) AS cnt FROM menu_items');
     if (rows[0].cnt === 0) {
@@ -125,12 +171,51 @@ initDb();
 // Initialize Google Sheets client (on demand)
 const gs = googleSheetsClientInit(pool);
 
+// ── SSE: Real-time event broadcaster ─────────────────────────────────────────
+const sseClients = new Set();
+
+function broadcastEvent(event, data) {
+  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const res of sseClients) {
+    try {
+      res.write(payload);
+    } catch (e) {
+      sseClients.delete(res);
+    }
+  }
+}
+
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  // Send heartbeat every 30s to keep connection alive
+  const heartbeat = setInterval(() => {
+    try { res.write(': heartbeat\n\n'); } catch (e) { clearInterval(heartbeat); }
+  }, 30000);
+
+  sseClients.add(res);
+  req.on('close', () => {
+    sseClients.delete(res);
+    clearInterval(heartbeat);
+  });
+});
+
+app.get('/api/events/ping', (req, res) => res.json({ ok: true, clients: sseClients.size }));
+
+// Make broadcastEvent available to routes via app.locals
+app.locals.broadcastEvent = broadcastEvent;
+
 // Routes
 app.use('/api/staff', staffRoutes(pool));
 // Menu: public reads, admin writes (auth applied inline per route)
 app.use('/api/menu', menuRoutes(pool));
 // Orders: public creates and reads, admin status updates (auth applied inline)
-app.use('/api/orders', ordersRoutes(pool, gs));
+const ordersExports = ordersRoutes(pool, gs, broadcastEvent);
+app.use('/api/orders', ordersExports.router);
 // Inventory: admin only
 app.use('/api/inventory', inventoryRoutes(pool));
 app.use('/api/recipes', recipesRouter(pool));
@@ -271,6 +356,30 @@ app.post('/api/open-drawer', async (req, res) => {
 
 const server = app.listen(PORT, () => {
   console.log(`API server listening on port ${PORT}`);
+});
+
+// ── Midnight Z-Report cron job ───────────────────────────────────────────────
+// Runs at 00:00:00 every day, generates a Z-Report for the previous day
+cron.schedule('0 0 0 * * *', async () => {
+  // Calculate yesterday's date string
+  const yd = new Date(Date.now() - 86400000);
+  const pad = n => String(n).padStart(2, '0');
+  const yesterdayStr = `${yd.getFullYear()}-${pad(yd.getMonth()+1)}-${pad(yd.getDate())}`;
+
+  console.log(`[cron] Generating Z-Report for ${yesterdayStr}...`);
+  try {
+    const report = await ordersExports.buildZReportData(pool, yesterdayStr);
+    const [ins] = await pool.query(`
+      INSERT INTO z_reports (staff_id, report_date, period_start, period_end, total_sales, total_orders,
+        total_cash, total_card, total_ewallet, total_refunds, total_voids, total_cogs, gross_profit)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [report.staff_id, report.report_date, report.period_start, report.period_end,
+        report.total_sales, report.total_orders, report.total_cash, report.total_card,
+        report.total_ewallet, report.total_refunds, report.total_voids, report.total_cogs, report.gross_profit]);
+    console.log(`[cron] Z-Report #${ins.insertId} for ${yesterdayStr} saved.`);
+  } catch (e) {
+    console.error(`[cron] Z-Report generation failed: ${e.message}`);
+  }
 });
 
 server.on('error', (e) => {

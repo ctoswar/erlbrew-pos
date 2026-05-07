@@ -348,3 +348,188 @@ export async function updateCompanySettings(settings: Partial<CompanySettings>):
   }
   return res.json();
 }
+
+// Staff management
+export interface CreateStaffData {
+  rfid: string;
+  name: string;
+  role: string;
+  initials?: string;
+  color?: string;
+  pin?: string; // 4-digit PIN
+}
+
+export async function createStaff(data: CreateStaffData): Promise<{ id: number }> {
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl('/staff'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    if (res.status === 403) throw new Error('Admin access required');
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `API failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+// Modifier API
+export interface Modifier {
+  id?: number;
+  name: string;
+  price: number;
+  isDefault: boolean;
+}
+
+export async function getModifiers(menuItemId: string): Promise<Modifier[]> {
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl(`/menu/${menuItemId}/modifiers`), {
+    credentials: 'include',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createModifier(menuItemId: string, data: Omit<Modifier, 'id'>): Promise<Modifier> {
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl(`/menu/${menuItemId}/modifiers`), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `API failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function updateModifier(id: number, data: Partial<Modifier>): Promise<{ ok: boolean }> {
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl(`/menu/modifiers/${id}`), {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `API failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function deleteModifier(id: number): Promise<{ ok: boolean }> {
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl(`/menu/modifiers/${id}`), {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+// Z-Report API
+export interface ZReport {
+  id?: number;
+  staff_id: number | null;
+  report_date: string;
+  period_start: string;
+  period_end: string;
+  total_sales: number;
+  total_orders: number;
+  total_cash: number;
+  total_card: number;
+  total_ewallet: number;
+  total_refunds: number;
+  total_voids: number;
+  total_cogs: number;
+  gross_profit: number;
+  printed_at?: string;
+}
+
+export async function generateZReport(): Promise<ZReport> {
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl('/orders/z-report'), {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `API failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function getZReports(limit = 10): Promise<ZReport[]> {
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl(`/orders/z-reports?limit=${limit}`), {
+    credentials: 'include',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+// ── Cash Drawer ──────────────────────────────────────────────────────────────
+
+export interface CashDrawer {
+  id: number | null;
+  shift_date: string;
+  status: 'open' | 'closed';
+  opening_float: number;
+  cash_sales: number;
+  cash_payouts: number;
+  closing_amount: number;
+  expected_amount: number;
+  variance: number;
+  notes: string;
+}
+
+export async function getCashDrawer(): Promise<CashDrawer> {
+  const res = await fetch(getApiUrl('/orders/cash-drawer'), { credentials: 'include' });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+export async function openCashDrawer(openingFloat: number): Promise<CashDrawer> {
+  const res = await fetch(getApiUrl('/orders/cash-drawer'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ opening_float: openingFloat }),
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+export async function updateCashDrawer(id: number, data: {
+  closing_amount?: number;
+  cash_payouts?: number;
+  notes?: string;
+  action?: 'save' | 'close';
+}): Promise<CashDrawer> {
+  const res = await fetch(getApiUrl(`/orders/cash-drawer/${id}`), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}

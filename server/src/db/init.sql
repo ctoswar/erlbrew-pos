@@ -183,6 +183,68 @@ CREATE TABLE IF NOT EXISTS company_settings (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- Menu modifiers (admin-editable per menu item)
+CREATE TABLE IF NOT EXISTS menu_modifiers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  menu_item_id VARCHAR(64) NOT NULL,
+  name VARCHAR(128) NOT NULL,
+  price DECIMAL(10,2) DEFAULT 0,
+  is_default BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,
+  INDEX idx_menu_item (menu_item_id)
+);
+
+-- Modifiers selected per order item
+CREATE TABLE IF NOT EXISTS order_item_modifiers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_item_id INT NOT NULL,
+  modifier_name VARCHAR(128) NOT NULL,
+  modifier_price DECIMAL(10,2) DEFAULT 0,
+  FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE CASCADE
+);
+
+-- Void/refund reason fields (non-destructive migration)
+ALTER TABLE orders
+  ADD COLUMN void_reason VARCHAR(256) DEFAULT NULL,
+  ADD COLUMN refund_reason VARCHAR(256) DEFAULT NULL;
+
+-- Z-Reports table
+CREATE TABLE IF NOT EXISTS z_reports (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  staff_id INT,
+  report_date DATE NOT NULL,
+  period_start DATETIME NOT NULL,
+  period_end DATETIME NOT NULL,
+  total_sales DECIMAL(12,2) DEFAULT 0,
+  total_orders INT DEFAULT 0,
+  total_cash DECIMAL(12,2) DEFAULT 0,
+  total_card DECIMAL(12,2) DEFAULT 0,
+  total_ewallet DECIMAL(12,2) DEFAULT 0,
+  total_refunds DECIMAL(12,2) DEFAULT 0,
+  total_voids INT DEFAULT 0,
+  total_cogs DECIMAL(12,2) DEFAULT 0,
+  gross_profit DECIMAL(12,2) DEFAULT 0,
+  printed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (staff_id) REFERENCES staff(id)
+);
+
+-- Cash drawer tracking table
+CREATE TABLE IF NOT EXISTS cash_drawer (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  shift_date DATE NOT NULL,
+  opening_float DECIMAL(10,2) DEFAULT 0,
+  cash_sales DECIMAL(10,2) DEFAULT 0,
+  cash_payouts DECIMAL(10,2) DEFAULT 0,
+  closing_amount DECIMAL(10,2) DEFAULT 0,
+  expected_amount DECIMAL(10,2) DEFAULT 0,
+  variance DECIMAL(10,2) DEFAULT 0,
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  closed_at TIMESTAMP NULL,
+  INDEX idx_shift_date (shift_date)
+);
+
 -- Seed default company settings
 INSERT INTO company_settings (setting_key, setting_value) VALUES
   ('company_name', 'Erlbrew Cafe'),

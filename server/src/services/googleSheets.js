@@ -119,7 +119,8 @@ export function googleSheetsClientInit(pool) {
         resource: { values: [values] },
       });
     },
-    async appendOrder({ orderId, staffName, items, subtotal, tax, total, payMethod, status }) {
+    async appendOrder({ orderId, staffName, items, subtotal, tax, total, payMethod, status, referenceNumber }) {
+      console.log('[DEBUG appendOrder] Called with - payMethod:', payMethod, 'referenceNumber:', JSON.stringify(referenceNumber), 'type:', typeof referenceNumber);
       // Refresh menu item names from DB before each append
       await loadMenuItemNames(pool);
 
@@ -143,6 +144,7 @@ export function googleSheetsClientInit(pool) {
         `₱${Number(tax).toFixed(2)}`,
         `₱${Number(total).toFixed(2)}`,
         payMethod,
+        referenceNumber || '—',
         status,
       ];
 
@@ -262,9 +264,9 @@ export function googleSheetsClientInit(pool) {
         });
       rows.push(['']);
 
-      // Order Detail
-      rows.push(['── ORDER DETAIL ──', '', '', '', '', '', '', '', '']);
-      rows.push(['Timestamp', 'Order ID', 'Staff', 'Type', 'Items', 'Subtotal', 'Tax', 'Total', 'Pay Method', 'Status']);
+// Order Detail
+      rows.push(['── ORDER DETAIL ──', '', '', '', '', '', '', '', '', '', '']);
+      rows.push(['Timestamp', 'Order ID', 'Staff', 'Type', 'Items', 'Subtotal', 'Tax', 'Total', 'Pay Method', 'Ref No', 'Status']);
       completed.forEach((o) => {
         const ts = new Date(o.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
         const itemList = (o.items || []).map((it) => {
@@ -281,6 +283,7 @@ export function googleSheetsClientInit(pool) {
           fmt(o.tax).toFixed(2),
           fmt(o.total).toFixed(2),
           o.payMethod || '—',
+          o.referenceNumber || '—',
           o.status || '—',
         ]);
       });

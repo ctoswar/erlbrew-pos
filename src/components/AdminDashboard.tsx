@@ -9,6 +9,8 @@ import { AdminInventory } from "./AdminInventory";
 import { Dashboard } from "./Dashboard";
 import { AdminReports } from "./AdminReports";
 import { AdminSupplierInvoices } from "./AdminSupplierInvoices";
+import { ZReportScreen } from "./ZReportScreen";
+import { CashDrawerScreen } from "./CashDrawerScreen";
 
 const STORAGE_KEY_ORDERS = 'erlbrew_admin_orders';
 const STORAGE_KEY_INVENTORY = 'erlbrew_admin_inventory';
@@ -20,7 +22,7 @@ interface Props {
 }
 
 export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'suppliers' | 'settings' | 'backup'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer'>('dashboard');
   const [orders, setOrders] = useState<Order[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,10 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
         const parsed = JSON.parse(storedOrders);
         setOrders(parsed.map((o: any) => ({
           ...o,
-          createdAt: new Date(o.createdAt)
+          createdAt: new Date(o.createdAt),
+          // Transform snake_case to camelCase for fields that may be stored in legacy format
+          payMethod: o.payMethod || o.pay_method || 'cash',
+          referenceNumber: o.referenceNumber || o.reference_number || undefined,
         })));
       } catch {}
     }
@@ -66,12 +71,27 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
     setSyncStatus('syncing');
     try {
       // Fetch orders (public endpoint)
-      const ordersData = await apiGet<Order[]>('/orders');
-      setOrders(ordersData.map((o: any) => ({
+      const ordersData = await apiGet<any[]>('/orders');
+      const transformedOrders = ordersData.map((o: any) => ({
         ...o,
-        createdAt: new Date(o.createdAt)
-      })));
-      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(ordersData));
+        createdAt: o.createdAt ? new Date(o.createdAt) : o.created_at ? new Date(o.created_at) : new Date(),
+        completedAt: o.completedAt ? new Date(o.completedAt) : o.completed_at ? new Date(o.completed_at) : undefined,
+        // Transform flat staff fields from API into nested staff object
+        staff: o.staff_name ? {
+          id: o.staff_id,
+          name: o.staff_name,
+          initials: o.staff_initials || '',
+          rfid: o.staff_rfid || '',
+          role: o.staff_role || 'barista',
+          color: o.staff_color || '#C9873A'
+        } : null,
+        // Transform pay_method (snake_case API) to payMethod (camelCase UI)
+        payMethod: o.payMethod || o.pay_method || 'cash',
+        // Transform reference_number to referenceNumber
+        referenceNumber: o.reference_number || o.referenceNumber || undefined,
+      }));
+      setOrders(transformedOrders);
+      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(transformedOrders));
 
       // Fetch inventory
       const invData = await apiGet<InventoryItem[]>('/inventory');
@@ -95,6 +115,13 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
   useEffect(() => {
     syncData().finally(() => setLoading(false));
   }, [syncData]);
+
+  // Sync orders whenever switching to Dashboard tab (ensures fresh data after placing orders in POS)
+  useEffect(() => {
+    if (activeTab === 'dashboard') {
+      syncData();
+    }
+  }, [activeTab, syncData]);
 
   // Calculate COGS from orders and inventory
   const calculateCOGS = useCallback((startDate?: string, endDate?: string) => {
@@ -259,7 +286,9 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             ['Menu Items', 'menu', '☕'],
             ['Staff', 'staff', '👥'],
             ['Inventory', 'inventory', '📦'],
-            ['COGS', 'cogs', '💰'],
+            ['Z-Report', 'zreport', '📋'],
+            ['Cash Drawer', 'cashdrawer', '💰'],
+            ['COGS', 'cogs', '📊'],
             ['Supplier Invoices', 'suppliers', '📄'],
             ['Settings', 'settings', '⚙️'],
             ['Backup', 'backup', '💾'],
@@ -425,6 +454,22 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* Z-Report Tab */}
+        {activeTab === 'zreport' && (
+          <div>
+            <h2 style={{ fontSize: 18, color: 'var(--text-primary)', marginBottom: 20 }}>📋 Z-Report</h2>
+            <ZReportScreen />
+          </div>
+        )}
+
+        {/* Cash Drawer Tab */}
+        {activeTab === 'cashdrawer' && (
+          <div>
+            <h2 style={{ fontSize: 18, color: 'var(--text-primary)', marginBottom: 20 }}>💰 Cash Drawer</h2>
+            <CashDrawerScreen />
           </div>
         )}
 

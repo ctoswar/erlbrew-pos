@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { Order, OrderStatus, Role } from "../types";
+import { Order, OrderStatus } from "../types";
 import { formatTime, formatCurrency } from "../utils";
+import { VoidCredentialModal } from "./VoidCredentialModal";
 
 interface Props {
   orders: Order[];
   onUpdateStatus: (id: string, status: OrderStatus) => void;
-  staffRole: Role;
   onVoidOrder: (id: string) => void;
 }
 
@@ -16,19 +16,18 @@ const COLUMNS: { status: OrderStatus; label: string; color: string; accent: stri
   { status: "completed", label: "Completed", color: "var(--gold)", accent: "rgba(201,135,58,0.12)" },
 ];
 
-// Roles that can void orders
-const VOID_ROLES: Role[] = ["Manager", "Shift Supervisor"];
+export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOrder }) => {
+  const [voidTarget, setVoidTarget] = useState<string | null>(null);
 
-export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, staffRole, onVoidOrder }) => {
-  const [confirmVoid, setConfirmVoid] = useState<string | null>(null);
-
-  const handleVoid = (id: string) => {
-    onVoidOrder(id);
-    setConfirmVoid(null);
+  const handleAuthorizeVoid = (_managerName: string) => {
+    if (voidTarget) {
+      onVoidOrder(voidTarget);
+      setVoidTarget(null);
+    }
   };
 
   return (
-    <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: "1.2rem", gap: 10, minHeight: 0 }}>
+    <>
       {COLUMNS.map((col) => {
         const colOrders = orders.filter((o) => o.status === col.status);
         return (
@@ -57,18 +56,22 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, staffRol
                   order={order}
                   accentColor={col.accent}
                   onUpdateStatus={onUpdateStatus}
-                  canVoid={VOID_ROLES.includes(staffRole)}
-                  isVoidConfirm={confirmVoid === order.id}
-                  onRequestVoid={() => setConfirmVoid(order.id)}
-                  onCancelVoid={() => setConfirmVoid(null)}
-                  onConfirmVoid={() => handleVoid(order.id)}
+isVoidPending={voidTarget === order.id}
+                    onRequestVoid={() => setVoidTarget(order.id)}
                 />
               ))}
             </div>
           </div>
         );
       })}
-    </div>
+      {voidTarget && (
+        <VoidCredentialModal
+          orderId={voidTarget}
+          onCancel={() => setVoidTarget(null)}
+          onAuthorize={handleAuthorizeVoid}
+        />
+      )}
+    </>
   );
 };
 
@@ -76,76 +79,16 @@ interface KitchenCardProps {
   order: Order;
   accentColor: string;
   onUpdateStatus: (id: string, status: OrderStatus) => void;
-  canVoid: boolean;
-  isVoidConfirm: boolean;
+  isVoidPending: boolean;
   onRequestVoid: () => void;
-  onCancelVoid: () => void;
-  onConfirmVoid: () => void;
 }
 
 const KitchenCard: React.FC<KitchenCardProps> = ({
   order, accentColor, onUpdateStatus,
-  canVoid, isVoidConfirm, onRequestVoid, onCancelVoid, onConfirmVoid,
+  isVoidPending, onRequestVoid,
 }) => {
   const elapsed = Math.floor((Date.now() - order.createdAt.getTime()) / 60000);
   const isLate = order.status === "preparing" && elapsed >= 10;
-
-  if (isVoidConfirm) {
-    // ── Void confirmation overlay ──
-    return (
-      <div style={{
-        background: "var(--bg-elevated)",
-        border: "1.5px solid var(--danger)",
-        borderRadius: 10,
-        padding: 14,
-      }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
-          Void this order?
-        </div>
-        <div style={{ fontSize: 10, color: "var(--danger)", marginBottom: 12 }}>
-          This will permanently remove it from the kitchen board.
-        </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button
-            onClick={onCancelVoid}
-            style={{
-              flex: 1,
-              padding: "9px 0",
-              borderRadius: 8,
-              border: "1px solid var(--border-default)",
-              background: "var(--bg-base)",
-              color: "var(--text-secondary)",
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: 1,
-              cursor: "pointer",
-              textTransform: "uppercase" as const,
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirmVoid}
-            style={{
-              flex: 1,
-              padding: "9px 0",
-              borderRadius: 8,
-              border: "none",
-              background: "var(--danger)",
-              color: "#fff",
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: 1,
-              cursor: "pointer",
-              textTransform: "uppercase" as const,
-            }}
-          >
-            Void Order
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="animate-slideInRight" style={{
@@ -191,7 +134,24 @@ const KitchenCard: React.FC<KitchenCardProps> = ({
             <button className="btn btn-success" onClick={() => onUpdateStatus(order.id, "ready")} style={{ flex: 1, padding: "8px 0", fontSize: 8 }}>
               Mark Ready ✓
             </button>
-            {canVoid && (
+            {isVoidPending ? (
+              <button
+                disabled
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border-default)",
+                  background: "var(--bg-base)",
+                  color: "var(--gold)",
+                  fontSize: 8,
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                  textTransform: "uppercase" as const,
+                }}
+              >
+                Authorizing…
+              </button>
+            ) : (
               <button
                 onClick={onRequestVoid}
                 style={{

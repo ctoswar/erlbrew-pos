@@ -6,7 +6,7 @@ import { apiGet, apiPost, apiAdminPost, apiAdminPut, apiAdminDelete, getAuthToke
 const POLL_INTERVAL = 15000; // 15s — sync with server for multi-device
 
 // Convert a server order object (snake_case) to a frontend Order
-function serverOrderToOrder(o: any): Order {
+export function serverOrderToOrder(o: any): Order {
   // Build CartItem[] from server order_items
   const items: CartItem[] = (o.items || []).map((it: any) => ({
     item: {
@@ -42,6 +42,7 @@ function serverOrderToOrder(o: any): Order {
     table: o.table_name ? (o.type === 'dine-in' ? `Table ${o.table_name}` : undefined) : undefined,
     type: (o.type || 'dine-in') as OrderType,
     payMethod: (o.pay_method || 'cash') as PayMethod,
+    referenceNumber: o.referenceNumber || o.reference_number || undefined,
   };
 }
 
@@ -83,8 +84,13 @@ export function useOrders() {
     // Start periodic polling for multi-device sync
     pollRef.current = setInterval(syncFromServer, POLL_INTERVAL);
 
+    // Listen for SSE-triggered refresh events (from useKitchenEvents)
+    const handleSSERefresh = () => { syncFromServer(); };
+    window.addEventListener('kitchen:refresh', handleSSERefresh);
+
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
+      window.removeEventListener('kitchen:refresh', handleSSERefresh);
     };
   }, []);
 
@@ -99,6 +105,7 @@ export function useOrders() {
         qty: ci.qty,
         price: ci.item.price,
         notes: ci.notes,
+        modifiers: ci.modifiers || [],
       }));
       const payload: Record<string, unknown> = {
         staff_id: staff ? staff.rfid : undefined,
@@ -116,6 +123,11 @@ export function useOrders() {
         payload.subtotal = subtotal;
         payload.total = total;
       }
+      // Add reference number for e-wallet payments
+      if (payMethod === 'ewallet' && referenceNumber) {
+        payload.reference_number = referenceNumber;
+      }
+      console.log('[DEBUG useOrders] payload to send:', JSON.stringify(payload));
 
       // Optimistic local order
       const localOrder: Order = {

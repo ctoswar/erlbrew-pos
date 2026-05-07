@@ -1,17 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { MenuItem, CartItem } from "../types";
+import { MenuItem, CartItem, CartItemModifier } from "../types";
 import { formatCurrency } from "../utils";
 import { apiGet } from "../utils/api";
+import { ModifierModal } from "./ModifierModal";
 
 interface Props {
   cart: CartItem[];
-  onAddItem: (item: MenuItem) => void;
+  onAddItem: (item: MenuItem, modifiers?: CartItemModifier[]) => void;
 }
 
 export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("");
+  const [modifierItem, setModifierItem] = useState<MenuItem | null>(null);
+
+  const handleItemTap = (item: MenuItem) => {
+    if (item.modifiers && item.modifiers.length > 0) {
+      setModifierItem(item);
+    } else {
+      onAddItem(item);
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -21,6 +31,10 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
         ...d,
         price: Number(d.price) || 0,
         popular: !!d.popular,
+        modifiers: (d.modifiers || []).map((m: any) => ({
+          ...m,
+          price: Number(m.price) || 0,
+        })),
       }));
       setMenuItems(items);
       const cats = [...new Set(items.map((i) => i.category))];
@@ -90,15 +104,22 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
           >
             {items.map((item) => (
               <MenuCard
-                key={item.id}
+                key={`${item.id}-${(item.modifiers || []).map(m => m.id || m.name).join('-')}`}
                 item={item}
                 cartItem={cart.find((ci) => ci.item.id === item.id)}
-                onAdd={onAddItem}
+                onAdd={handleItemTap}
               />
             ))}
           </div>
         )}
       </div>
+      {modifierItem && (
+        <ModifierModal
+          item={modifierItem}
+          onAdd={(item, modifiers) => { onAddItem(item, modifiers); setModifierItem(null); }}
+          onClose={() => setModifierItem(null)}
+        />
+      )}
     </div>
   );
 };

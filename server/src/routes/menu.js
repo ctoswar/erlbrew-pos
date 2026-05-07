@@ -27,12 +27,29 @@ function validate(req, res, rules){
 export default function menuRouter(pool){
   const router = express.Router();
 
-  // GET all menu items (public)
+  // GET all menu items (public) — with modifiers
   router.get('/', async (req, res) => {
     try {
       const [rows] = await pool.query('SELECT * FROM menu_items');
-      res.json(rows);
+      // Fetch modifiers separately and attach (compatible with all MySQL versions)
+      const [modRows] = await pool.query('SELECT id, menu_item_id, name, price, is_default AS isDefault FROM menu_modifiers');
+      const modMap = {};
+      for (const mod of modRows) {
+        if (!modMap[mod.menu_item_id]) modMap[mod.menu_item_id] = [];
+        modMap[mod.menu_item_id].push({
+          id: mod.id,
+          name: mod.name,
+          price: mod.price,
+          isDefault: !!mod.isDefault,
+        });
+      }
+      const result = rows.map(row => ({
+        ...row,
+        modifiers: modMap[row.id] || [],
+      }));
+      res.json(result);
     } catch (e) {
+      console.error(e);
       res.status(500).json({ error: 'DB error' });
     }
   });
@@ -73,21 +90,87 @@ const err = validate(req, res, {
     }
   });
 
-  // Delete item (admin only)
+// Delete item (admin only)
 router.delete('/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  if (!id || typeof id !== 'string' || id.length > 64) {
-    return res.status(400).json({ error: 'id is required and must be a string' });
-  }
-  try {
-    // Delete child order_items first, then the menu item
-    await pool.query('DELETE FROM order_items WHERE menu_item_id = ?', [id]);
-    await pool.query('DELETE FROM menu_items WHERE id = ?', [id]);
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: 'DB error' });
-  }
-});
+    const { id } = req.params;
+    if (!id || typeof id !== 'string' || id.length > 64) {
+      return res.status(400).json({ error: 'id is required and must be a string' });
+    }
+    try {
+      // Delete child order_items first, then the menu item
+      await pool.query('DELETE FROM order_items WHERE menu_item_id = ?', [id]);
+      await pool.query('DELETE FROM menu_items WHERE id = ?', [id]);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // GET modifiers for a menu item (public)
+  router.get('/:id/modifiers', async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [rows] = await pool.query(
+        'SELECT id, name, price, is_default AS isDefault FROM menu_modifiers WHERE menu_item_id = ?',
+        [id]
+      );
+      res.json(rows);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // POST a modifier for a menu item (admin only)
+  router.post('/:id/modifiers', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const { name, price = 0, isDefault = false } = req.body;
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ error: 'name is required' });
+    }
+    try {
+      const [r] = await pool.query(
+        'INSERT INTO menu_modifiers (menu_item_id, name, price, is_default) VALUES (?, ?, ?, ?)',
+        [id, name, Number(price) || 0, Boolean(isDefault)]
+      );
+      res.json({ id: r.insertId, name, price: Number(price) || 0, isDefault: Boolean(isDefault) });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // PUT update a modifier (admin only)
+  router.put('/modifiers/:id', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const { name, price, isDefault } = req.body;
+    try {
+      const fields = [];
+      const vals = [];
+      if (name !== undefined) { fields.push('name = ?'); vals.push(name); }
+      if (price !== undefined) { fields.push('price = ?'); vals.push(Number(price)); }
+      if (isDefault !== undefined) { fields.push('is_default = ?'); vals.push(Boolean(isDefault)); }
+      if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
+      vals.push(id);
+      await pool.query(`UPDATE menu_modifiers SET ${fields.join(', ')} WHERE id = ?`, vals);
+      res.json({ ok: true });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // DELETE a modifier (admin only)
+  router.delete('/modifiers/:id', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    try {
+      await pool.query('DELETE FROM menu_modifiers WHERE id = ?', [id]);
+      res.json({ ok: true });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
 
   return router;
 }

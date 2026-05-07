@@ -3,6 +3,7 @@ import { MenuItem } from "../types";
 import { formatCurrency } from "../utils";
 import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete } from "../utils/api";
 import { IngredientEditor } from "./IngredientEditor";
+import { ModifierEditor } from "./ModifierEditor";
 
 const CATEGORIES = ["Signature Brews", "Espresso", "Pastries", "Cold Drinks"];
 
@@ -27,6 +28,7 @@ export const AdminMenu: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [ingredientItem, setIngredientItem] = useState<MenuItem | null>(null);
+  const [modifierItem, setModifierItem] = useState<MenuItem | null>(null);
 
   const loadItems = () => {
     setLoading(true);
@@ -36,6 +38,10 @@ export const AdminMenu: React.FC = () => {
           ...d,
           price: Number(d.price) || 0,
           popular: !!d.popular,
+          modifiers: (d.modifiers || []).map((m: any) => ({
+            ...m,
+            price: Number(m.price) || 0,
+          })),
         })));
       })
       .catch(() => setError("Failed to load menu items"))
@@ -135,6 +141,9 @@ export const AdminMenu: React.FC = () => {
       {ingredientItem && (
         <IngredientEditor menuItem={ingredientItem} onClose={() => setIngredientItem(null)} />
       )}
+      {modifierItem && (
+        <ModifierEditor item={modifierItem} onClose={() => setModifierItem(null)} />
+      )}
 
       {/* Header */}
       <div style={{
@@ -168,6 +177,7 @@ export const AdminMenu: React.FC = () => {
                 onEdit={() => openEditForm(item)}
                 onDelete={() => setDeleteConfirm(item.id)}
                 onManageIngredients={() => setIngredientItem(item)}
+                onManageModifiers={() => setModifierItem(item)}
                 deleteConfirm={deleteConfirm === item.id}
                 onConfirmDelete={() => handleDelete(item.id)}
                 onCancelDelete={() => setDeleteConfirm(null)}
@@ -282,12 +292,13 @@ interface AdminItemCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onManageIngredients: () => void;
+  onManageModifiers: () => void;
   deleteConfirm: boolean;
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
 }
 
-const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, onManageIngredients, deleteConfirm, onConfirmDelete, onCancelDelete }) => (
+const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, onManageIngredients, onManageModifiers, deleteConfirm, onConfirmDelete, onCancelDelete }) => (
   <div style={{
     background: "var(--bg-surface)", border: "1px solid var(--border-subtle)",
     borderRadius: 12, padding: "12px 12px 10px", display: "flex", flexDirection: "column", gap: 6,
@@ -318,6 +329,9 @@ const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, o
         </button>
         <button onClick={onManageIngredients} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid rgba(201,135,58,0.4)", background: "rgba(201,135,58,0.08)", color: "var(--gold)", fontSize: 8, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const }}>
           🧾 Ingredients
+        </button>
+        <button onClick={onManageModifiers} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid rgba(201,135,58,0.4)", background: "rgba(201,135,58,0.08)", color: "var(--gold)", fontSize: 8, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const }}>
+          ⚡ Modifiers
         </button>
         <button onClick={onDelete} style={{ padding: "7px 10px", borderRadius: 8, border: "1px solid var(--danger-border)", background: "transparent", color: "var(--danger)", fontSize: 8, fontWeight: 700, cursor: "pointer", letterSpacing: 1 }}>
           ✕

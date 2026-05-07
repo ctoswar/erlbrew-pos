@@ -18,7 +18,10 @@ export const generateOrderId = (): string =>
   `#${Math.floor(1000 + Math.random() * 9000)}`;
 
 export const calcSubtotal = (cart: CartItem[]): number =>
-  cart.reduce((sum, ci) => sum + ci.item.price * ci.qty, 0);
+  cart.reduce((sum, ci) => {
+    const modifierTotal = (ci.modifiers || []).reduce((s, m) => s + m.price, 0);
+    return sum + (ci.item.price + modifierTotal) * ci.qty;
+  }, 0);
 
 export const calcTax = (subtotal: number): number => Math.round(subtotal * 0.12 * 100) / 100;
 
@@ -39,7 +42,7 @@ export const getQuickCashAmounts = (total: number): number[] => {
 
 export const buildDailySummary = (orders: Order[], cogsData?: { cogs: number; details: { order_id: string; total: number; cogs: number; profit: number }[] }): DailySummary => {
   const completed = orders.filter((o) => o.status === "completed");
-  const totalRevenue = completed.reduce((s, o) => s + o.total, 0);
+  const totalRevenue = completed.reduce((s, o) => s + Number(o.total), 0);
   const totalOrders = completed.length;
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
@@ -82,7 +85,7 @@ export const buildDailySummary = (orders: Order[], cogsData?: { cogs: number; de
     const m = o.payMethod;
     if (!payMap[m]) payMap[m] = { count: 0, total: 0 };
     payMap[m].count++;
-    payMap[m].total += o.total;
+    payMap[m].total += Number(o.total);
   });
   const byPayMethod = Object.entries(payMap).map(([method, data]) => ({
     method: method as PayMethod,

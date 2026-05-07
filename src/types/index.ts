@@ -1,6 +1,6 @@
 export type Role = "Barista" | "Senior Barista" | "Shift Supervisor" | "Manager";
 export type Category = "Signature Brews" | "Espresso" | "Pastries" | "Cold Drinks";
-export type OrderStatus = "pending" | "preparing" | "ready" | "completed";
+export type OrderStatus = "pending" | "preparing" | "ready" | "completed" | "voided" | "refunded";
 export type DiscountType = "pwd" | "senior" | "custom_pct" | "custom_fixed" | null;
 
 export interface Discount {
@@ -24,6 +24,18 @@ export interface Staff {
   color: string;
 }
 
+export interface Modifier {
+  id?: number;
+  name: string;
+  price: number;
+  isDefault: boolean;
+}
+
+export interface CartItemModifier {
+  name: string;
+  price: number;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -33,12 +45,14 @@ export interface MenuItem {
   description: string;
   emoji: string;
   popular?: boolean;
+  modifiers?: Modifier[];
 }
 
 export interface CartItem {
   item: MenuItem;
   qty: number;
   notes?: string;
+  modifiers?: CartItemModifier[];
 }
 
 export interface Order {

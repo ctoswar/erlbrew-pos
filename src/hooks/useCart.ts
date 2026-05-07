@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { CartItem, MenuItem, Discount, DiscountType } from "../types";
+import { CartItem, MenuItem, Discount, DiscountType, CartItemModifier } from "../types";
 
 export function useCart() {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -29,28 +29,41 @@ export function useCart() {
     } catch (err) { console.error("Failed to persist discount:", err); }
   }, [discount]);
 
-  const addItem = useCallback((item: MenuItem) => {
+  const addItem = useCallback((item: MenuItem, modifiers?: CartItemModifier[]) => {
     setCart((prev) => {
-      const existing = prev.find((ci) => ci.item.id === item.id);
+      const key = JSON.stringify({ id: item.id, modifiers: modifiers || [] });
+      const existing = prev.find((ci) => {
+        const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [] });
+        return ciKey === key;
+      });
       if (existing) {
-        return prev.map((ci) =>
-          ci.item.id === item.id ? { ...ci, qty: ci.qty + 1 } : ci
-        );
+        return prev.map((ci) => {
+          const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [] });
+          return ciKey === key ? { ...ci, qty: ci.qty + 1 } : ci;
+        });
       }
-      return [...prev, { item, qty: 1 }];
+      return [...prev, { item, qty: 1, modifiers: modifiers || [] }];
     });
   }, []);
 
-  const updateQty = useCallback((id: string, delta: number) => {
-    setCart((prev) =>
-      prev
-        .map((ci) => (ci.item.id === id ? { ...ci, qty: ci.qty + delta } : ci))
-        .filter((ci) => ci.qty > 0)
-    );
+  const updateQty = useCallback((id: string, delta: number, modifiers?: CartItemModifier[]) => {
+    setCart((prev) => {
+      const key = JSON.stringify({ id, modifiers: modifiers || [] });
+      return prev
+        .map((ci) => {
+          const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [] });
+          return ciKey === key ? { ...ci, qty: ci.qty + delta } : ci;
+        })
+        .filter((ci) => ci.qty > 0);
+    });
   }, []);
 
-  const removeItem = useCallback((id: string) => {
-    setCart((prev) => prev.filter((ci) => ci.item.id !== id));
+  const removeItem = useCallback((id: string, modifiers?: CartItemModifier[]) => {
+    const key = JSON.stringify({ id, modifiers: modifiers || [] });
+    setCart((prev) => prev.filter((ci) => {
+      const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [] });
+      return ciKey !== key;
+    }));
   }, []);
 
   const clearCart = useCallback(() => {

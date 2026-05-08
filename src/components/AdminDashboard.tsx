@@ -11,6 +11,7 @@ import { AdminReports } from "./AdminReports";
 import { AdminSupplierInvoices } from "./AdminSupplierInvoices";
 import { ZReportScreen } from "./ZReportScreen";
 import { CashDrawerScreen } from "./CashDrawerScreen";
+import { TimeKeeping } from "./TimeKeeping";
 
 const STORAGE_KEY_ORDERS = 'erlbrew_admin_orders';
 const STORAGE_KEY_INVENTORY = 'erlbrew_admin_inventory';
@@ -22,7 +23,7 @@ interface Props {
 }
 
 export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer' | 'time'>('dashboard');
   const [orders, setOrders] = useState<Order[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -285,6 +286,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             ['Reports', 'reports', '📈'],
             ['Menu Items', 'menu', '☕'],
             ['Staff', 'staff', '👥'],
+            ['Time Keeping', 'time', '⏱️'],
             ['Inventory', 'inventory', '📦'],
             ['Z-Report', 'zreport', '📋'],
             ['Cash Drawer', 'cashdrawer', '💰'],
@@ -470,6 +472,13 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
           <div>
             <h2 style={{ fontSize: 18, color: 'var(--text-primary)', marginBottom: 20 }}>💰 Cash Drawer</h2>
             <CashDrawerScreen />
+          </div>
+        )}
+
+        {/* Time Keeping Tab */}
+        {activeTab === 'time' && (
+          <div>
+            <TimeKeeping />
           </div>
         )}
 

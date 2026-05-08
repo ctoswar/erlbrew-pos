@@ -40,6 +40,19 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
     rfidInputRef.current?.focus();
   }, []);
 
+  // Force refocus RFID input whenever RFID step is active (handles click loss)
+  useEffect(() => {
+    if (step === "rfid") {
+      rfidInputRef.current?.focus();
+      const interval = setInterval(() => {
+        if (document.activeElement !== rfidInputRef.current) {
+          rfidInputRef.current?.focus();
+        }
+      }, 500);
+      return () => clearInterval(interval);
+    }
+  }, [step]);
+
   // When staff is selected, focus PIN input
   useEffect(() => {
     if (step === "pin" && selectedStaff) {
@@ -150,38 +163,140 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
 
         {/* ── Step 1: Scan RFID ── */}
         {step === "rfid" && (
-          <div className="animate-fadeInUp card-elevated" style={{ padding: "2.5rem 2rem", width: 360, textAlign: "center" }}>
-            <div style={{ fontSize: 52, marginBottom: 16 }}>📲</div>
-            <div className="font-display" style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
-              Tap Your Card
-            </div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 28, lineHeight: 1.6 }}>
-              Scan your RFID employee card<br />or tap the button below to test
+          <div className="animate-fadeInUp" style={{ padding: "2.5rem 2rem", width: 360, textAlign: "center", position: "relative" }} onClick={() => rfidInputRef.current?.focus()}>
+            {/* Invisible input for USB RFID reader (must stay in viewport to receive keystrokes) */}
+            <input
+              ref={rfidInputRef}
+              value={rfid}
+              onChange={(e) => setRfid(e.target.value.toUpperCase())}
+              onKeyDown={handleRfidKeyDown}
+              style={{
+                position: "fixed", top: 0, left: 0,
+                width: 1, height: 1, opacity: 0,
+                zIndex: -1,
+              }}
+              autoFocus
+            />
+
+            {/* Animated card scan visual */}
+            <div style={{
+              position: "relative", width: 160, height: 110, margin: "0 auto 24px",
+              perspective: 600,
+            }}>
+              {/* Card body */}
+              <div style={{
+                position: "absolute", inset: 0,
+                background: "linear-gradient(145deg, rgba(201,135,58,0.18), rgba(201,135,58,0.06))",
+                border: "1.5px solid rgba(201,135,58,0.3)",
+                borderRadius: 16,
+                overflow: "hidden",
+                backdropFilter: "blur(4px)",
+              }}>
+                {/* Card chip */}
+                <div style={{
+                  position: "absolute", top: 16, left: 20,
+                  width: 22, height: 16,
+                  background: "linear-gradient(135deg, var(--gold), rgba(201,135,58,0.5))",
+                  borderRadius: 3,
+                  opacity: 0.7,
+                }} />
+                {/* Card rings */}
+                <div style={{
+                  position: "absolute", top: 14, left: 48,
+                  width: 8, height: 8, borderRadius: "50%",
+                  border: "1.5px solid rgba(201,135,58,0.25)",
+                }} />
+                <div style={{
+                  position: "absolute", top: 18, left: 58,
+                  width: 6, height: 6, borderRadius: "50%",
+                  border: "1px solid rgba(201,135,58,0.15)",
+                }} />
+
+                {/* Wifi icon */}
+                <div style={{
+                  position: "absolute", top: 38, left: 20,
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
+                }}>
+                  {[16, 12, 8].map((w, i) => (
+                    <div key={i} style={{
+                      width: w, height: 3, borderRadius: 2,
+                      background: "var(--gold)",
+                      opacity: 0.4 - i * 0.1,
+                    }} />
+                  ))}
+                </div>
+
+                {/* Card number dots */}
+                <div style={{
+                  position: "absolute", bottom: 22, left: 20,
+                  display: "flex", gap: 5, alignItems: "center",
+                }}>
+                  {[1,2,3,4].map((g) => (
+                    <div key={g} style={{
+                      display: "flex", gap: 3,
+                    }}>
+                      {[1,2,3,4].map((d) => (
+                        <div key={d} style={{
+                          width: 4, height: 4, borderRadius: "50%",
+                          background: "var(--gold)", opacity: 0.25,
+                        }} />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Scan line — sweeps up and down */}
+              <div style={{
+                position: "absolute", left: 0, right: 0, height: 2,
+                background: "linear-gradient(90deg, transparent, var(--gold), transparent)",
+                boxShadow: "0 0 8px rgba(201,135,58,0.6), 0 0 20px rgba(201,135,58,0.2)",
+                animation: "scanLine 2.2s ease-in-out infinite",
+              }} />
+
+              {/* Outer glow ring */}
+              <div style={{
+                position: "absolute", inset: -6, borderRadius: 20,
+                border: "1px solid rgba(201,135,58,0.08)",
+                animation: "pulseGlow 3s ease-in-out infinite",
+              }} />
             </div>
 
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <input
-                ref={rfidInputRef}
-                value={rfid}
-                onChange={(e) => setRfid(e.target.value.toUpperCase())}
-                onKeyDown={handleRfidKeyDown}
-                placeholder="Scan card or type ID…"
-                style={{
-                  flex: 1, background: "var(--bg-base)", border: "1px solid var(--border-medium)",
-                  borderRadius: 10, color: "var(--text-primary)", padding: "12px 16px",
-                  fontSize: 13, textAlign: "center", outline: "none", fontFamily: "monospace",
-                }}
-              />
+            {/* Tap prompt */}
+            <div style={{
+              fontSize: 14, fontWeight: 600, color: "var(--text-primary)",
+              marginBottom: 6, letterSpacing: 1,
+              fontFamily: "'Playfair Display', serif",
+            }}>
+              Tap Your Card
+            </div>
+            <div style={{
+              fontSize: 10, color: "var(--text-faint)", lineHeight: 1.6, letterSpacing: 0.5,
+            }}>
+              Place your card near the reader to scan<br />
+              or tap the button below
+            </div>
+
+            {/* Manual trigger button (fallback for test) */}
+            <div style={{ marginTop: 20 }}>
               <button
-                className="btn btn-gold"
                 onClick={() => handleRfidSubmit(rfid)}
-                style={{ padding: "12px 20px", borderRadius: 10, fontSize: 11, fontWeight: 700 }}
+                style={{
+                  background: "rgba(201,135,58,0.1)", color: "var(--gold)",
+                  border: "1px solid rgba(201,135,58,0.3)", borderRadius: 10,
+                  padding: "10px 24px", fontSize: 10, fontWeight: 700,
+                  letterSpacing: 1, cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(201,135,58,0.2)"; e.currentTarget.style.borderColor = "var(--gold)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(201,135,58,0.1)"; e.currentTarget.style.borderColor = "rgba(201,135,58,0.3)"; }}
               >
-                GO →
+                SIMULATE SCAN
               </button>
             </div>
 
-            <div style={{ textAlign: "center", fontSize: 11, marginTop: 14, letterSpacing: 1, color: msgColor, minHeight: 18 }}>
+            {/* Status message */}
+            <div style={{ textAlign: "center", fontSize: 11, marginTop: 16, letterSpacing: 1, color: msgColor, minHeight: 18 }}>
               {msg.text}
             </div>
           </div>

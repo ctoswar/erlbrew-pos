@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { apiGet, apiPost } from "../utils/api";
 
 interface TimeRecord {
@@ -150,6 +150,7 @@ export const TimeKeeping: React.FC = () => {
 
 // ── RFID Scan Input ──────────────────────────────────────────────────────────
 const RfidInput: React.FC<{ onScan: (rfid: string) => void }> = ({ onScan }) => {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -159,30 +160,78 @@ const RfidInput: React.FC<{ onScan: (rfid: string) => void }> = ({ onScan }) => 
     }
   };
 
+  // Force focus whenever component is mounted
+  useEffect(() => {
+    inputRef.current?.focus();
+    const interval = setInterval(() => {
+      if (document.activeElement !== inputRef.current) {
+        inputRef.current?.focus();
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      {/* Invisible input for USB RFID reader */}
       <input
+        ref={inputRef}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Scan RFID card or type ID…"
-        autoFocus
         style={{
-          background: "var(--bg-base)", border: "1px solid var(--border-medium)",
-          borderRadius: 10, color: "var(--text-primary)", padding: "10px 16px",
-          fontSize: 12, width: 240, textAlign: "center", outline: "none",
+          position: "fixed", top: 0, left: 0,
+          width: 1, height: 1, opacity: 0,
+          zIndex: -1,
         }}
+        autoFocus
       />
-      <button
-        onClick={() => { if (value.trim()) { onScan(value.trim()); setValue(""); } }}
+
+      {/* Animated card visual */}
+      <div
+        onClick={() => inputRef.current?.focus()}
         style={{
-          background: "var(--gold)", color: "var(--bg-sidebar)", border: "none",
-          borderRadius: 10, padding: "10px 18px", fontSize: 10, fontWeight: 700,
-          letterSpacing: 1, cursor: "pointer", textTransform: "uppercase",
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+          cursor: "pointer", padding: "4px 0",
         }}
       >
-        Tap
-      </button>
+        <div style={{
+          position: "relative", width: 140, height: 96,
+        }}>
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(145deg, rgba(201,135,58,0.18), rgba(201,135,58,0.06))",
+            border: "1.5px solid rgba(201,135,58,0.3)", borderRadius: 14, overflow: "hidden",
+          }}>
+            <div style={{
+              position: "absolute", top: 14, left: 18, width: 20, height: 14,
+              background: "linear-gradient(135deg, var(--gold), rgba(201,135,58,0.5))",
+              borderRadius: 3, opacity: 0.7,
+            }} />
+            <div style={{
+              position: "absolute", bottom: 16, left: 18,
+              display: "flex", gap: 4,
+            }}>
+              {[1,2,3,4].map((g) => (
+                <div key={g} style={{ display: "flex", gap: 2 }}>
+                  {[1,2,3,4].map((d) => (
+                    <div key={d} style={{ width: 3, height: 3, borderRadius: "50%", background: "var(--gold)", opacity: 0.25 }} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{
+            position: "absolute", left: 0, right: 0, height: 2,
+            background: "linear-gradient(90deg, transparent, var(--gold), transparent)",
+            boxShadow: "0 0 8px rgba(201,135,58,0.6)",
+            animation: "scanLine 2.2s ease-in-out infinite",
+          }} />
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 0.5 }}>
+          Tap your card to clock in/out
+        </div>
+      </div>
     </div>
   );
 };

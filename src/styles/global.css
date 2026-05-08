@@ -66,6 +66,19 @@ body {
   50% { transform: scale(1.1); box-shadow: 0 0 16px var(--gold); }
 }
 
+@keyframes scanLine {
+  0% { top: 4px; opacity: 0; }
+  10% { opacity: 1; }
+  50% { top: calc(100% - 4px); opacity: 1; }
+  60% { opacity: 0.6; }
+  90% { top: 4px; opacity: 0.4; }
+  100% { top: 4px; opacity: 0; }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(201,135,58,0.2); }
+  50% { box-shadow: 0 0 24px rgba(201,135,58,0.4); }
+}
+
 .animate-fadeInUp    { animation: fadeInUp    0.3s ease forwards; }
 .animate-successPop  { animation: successPop  0.5s ease forwards; }
 .animate-slideInRight{ animation: slideInRight 0.3s ease forwards; }

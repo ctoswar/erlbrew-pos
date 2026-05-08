@@ -2,20 +2,47 @@ import { Order } from "../types";
 import { formatCurrency } from "./index";
 import { PrintSettings } from "../components/AdminPrintSettings";
 
-export const STORE = {
-  name: "ERLBREW CAFE",
-  addr1: "Unit 1, Ground Floor",
-  addr2: "123 Main St, BGC, Taguig",
-  tel: "(02) 8888-8888",
-  tin: "000-000-000-000",
-  birCorNo: "COR-2024-00-00000",
-  atpNo: "ATP-2024-00-00000",
-  atpDate: "Jan 01, 2024",
-  serial: "ERL-2024-00001",
-  ptuNo: "PTU-2024-00-00000",
-  machineNo: "POS-01",
-  posAccNo: "ACC-2024-0001",
-};
+// Load company settings from localStorage (set by AdminPrintSettings)
+function loadCompanySettings() {
+  try {
+    const s = localStorage.getItem('erlbrew_company_settings');
+    if (s) {
+      const data = JSON.parse(s);
+      return {
+        name: data.company_name || 'ERLBREW CAFE',
+        addr1: data.company_address || 'Unit 1, Ground Floor',
+        addr2: data.company_address2 || '123 Main St, BGC, Taguig',
+        tel: data.company_phone || '(02) 8888-8888',
+        tin: '000-000-000-000',
+        birCorNo: 'COR-2024-00-00000',
+        atpNo: 'ATP-2024-00-00000',
+        atpDate: 'Jan 01, 2024',
+        serial: 'ERL-2024-00001',
+        ptuNo: 'PTU-2024-00-00000',
+        machineNo: 'POS-01',
+        posAccNo: 'ACC-2024-0001',
+      };
+    }
+  } catch {}
+  return {
+    name: 'ERLBREW CAFE',
+    addr1: 'Unit 1, Ground Floor',
+    addr2: '123 Main St, BGC, Taguig',
+    tel: '(02) 8888-8888',
+    tin: '000-000-000-000',
+    birCorNo: 'COR-2024-00-00000',
+    atpNo: 'ATP-2024-00-00000',
+    atpDate: 'Jan 01, 2024',
+    serial: 'ERL-2024-00001',
+    ptuNo: 'PTU-2024-00-00000',
+    machineNo: 'POS-01',
+    posAccNo: 'ACC-2024-0001',
+  };
+}
+
+export function getStoreInfo() {
+  return loadCompanySettings();
+}
 
 const MONO = "'Courier New', 'Lucida Console', monospace";
 
@@ -41,12 +68,15 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
   const dateStr = now.toLocaleDateString("en-PH", { month: "short", day: "2-digit", year: "numeric" });
   const timeStr = now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
+  // Load company settings from localStorage
+  const STORE = getStoreInfo();
+
   // 1. Store Header
   if (settings.showStoreHeader) {
     lines.push(padCenter(STORE.name));
     lines.push(padCenter(STORE.addr1));
-    lines.push(padCenter(STORE.addr2));
-    lines.push(padCenter(`Tel: ${STORE.tel}`));
+    if (STORE.addr2) lines.push(padCenter(STORE.addr2));
+    if (STORE.tel) lines.push(padCenter(`Tel: ${STORE.tel}`));
     lines.push(ln("="));
   }
 

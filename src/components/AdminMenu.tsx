@@ -163,13 +163,13 @@ export const AdminMenu: React.FC = () => {
       </div>
 
       {/* Grid */}
-      <div className="scroll-area" style={{ flex: 1, padding: "0.8rem 1rem", overflowY: "auto", minHeight: 0 }}>
+      <div className="scroll-area" style={{ flex: 1, padding: "1rem", overflowY: "auto", minHeight: 0 }}>
         {loading ? (
           <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>Loading...</div>
         ) : items.length === 0 ? (
           <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>No menu items</div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
             {items.map((item) => (
               <AdminItemCard
                 key={item.id}
@@ -301,40 +301,59 @@ interface AdminItemCardProps {
 const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, onManageIngredients, onManageModifiers, deleteConfirm, onConfirmDelete, onCancelDelete }) => (
   <div style={{
     background: "var(--bg-surface)", border: "1px solid var(--border-subtle)",
-    borderRadius: 12, padding: "12px 12px 10px", display: "flex", flexDirection: "column", gap: 6,
-  }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-      <span style={{ fontSize: 22 }}>{item.emoji}</span>
-      <div style={{ display: "flex", gap: 4 }}>
-        {item.popular && <span style={{ fontSize: 7, fontWeight: 700, background: "var(--gold)", color: "var(--bg-sidebar)", padding: "2px 5px", borderRadius: 4, letterSpacing: 1 }}>POP</span>}
-        {item.badge && <span style={{ fontSize: 7, fontWeight: 700, color: "var(--gold)", border: "1px solid var(--gold-dim)", padding: "2px 5px", borderRadius: 4, letterSpacing: 1 }}>{item.badge}</span>}
+    borderRadius: 12, padding: 0, display: "flex", flexDirection: "column",
+    transition: "box-shadow 0.2s, transform 0.15s", cursor: "default",
+    overflow: "hidden",
+  }}
+    onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.18)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}
+  >
+    {/* Top accent bar */}
+    <div style={{ height: 3, background: "linear-gradient(90deg, var(--gold), rgba(201,135,58,0.3))", flexShrink: 0 }} />
+
+    <div style={{ padding: "14px 14px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* Emoji + badges row */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 28, lineHeight: 1 }}>{item.emoji}</span>
+        <div style={{ display: "flex", gap: 4 }}>
+          {item.popular && <span style={{ fontSize: 7, fontWeight: 700, background: "var(--gold)", color: "var(--bg-sidebar)", padding: "2px 6px", borderRadius: 4, letterSpacing: 1 }}>POP</span>}
+          {item.badge && <span style={{ fontSize: 7, fontWeight: 700, color: "var(--gold)", border: "1px solid rgba(201,135,58,0.35)", padding: "2px 6px", borderRadius: 4, letterSpacing: 1 }}>{item.badge}</span>}
+        </div>
+      </div>
+
+      {/* Name */}
+      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.25 }}>{item.name}</div>
+
+      {/* Category + Price row */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 1, textTransform: "uppercase", background: "var(--bg-base)", padding: "2px 6px", borderRadius: 4 }}>{item.category}</span>
+        <span className="font-display" style={{ fontSize: 15, fontWeight: 700, color: "var(--gold)" }}>{formatCurrency(item.price)}</span>
       </div>
     </div>
-    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3 }}>{item.name}</div>
-    <div style={{ fontSize: 10, color: "var(--gold-muted)", letterSpacing: 0.5 }}>{item.category}</div>
-    <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--gold)" }}>{formatCurrency(item.price)}</div>
 
     {deleteConfirm ? (
-      <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 4 }}>
-        <div style={{ fontSize: 9, color: "var(--danger)", textAlign: "center" }}>Delete this item?</div>
-        <div style={{ display: "flex", gap: 5 }}>
-          <button onClick={onCancelDelete} style={{ flex: 1, padding: "6px 0", borderRadius: 7, border: "1px solid var(--border-default)", background: "transparent", color: "var(--text-secondary)", fontSize: 8, fontWeight: 700, cursor: "pointer" }}>No</button>
-          <button onClick={onConfirmDelete} style={{ flex: 1, padding: "6px 0", borderRadius: 7, border: "none", background: "var(--danger)", color: "#fff", fontSize: 8, fontWeight: 700, cursor: "pointer" }}>Yes, Delete</button>
+      <div style={{ padding: "10px 14px 12px", borderTop: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ fontSize: 9, color: "var(--danger)", textAlign: "center" }}>Delete {item.name}?</div>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={onCancelDelete} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid var(--border-default)", background: "transparent", color: "var(--text-secondary)", fontSize: 8, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+          <button onClick={onConfirmDelete} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "none", background: "var(--danger)", color: "#fff", fontSize: 8, fontWeight: 700, cursor: "pointer", letterSpacing: 0.5 }}>Delete</button>
         </div>
       </div>
     ) : (
-      <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
-        <button onClick={onEdit} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid var(--border-medium)", background: "transparent", color: "var(--text-secondary)", fontSize: 8, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const }}>
-          Edit
-        </button>
-        <button onClick={onManageIngredients} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid rgba(201,135,58,0.4)", background: "rgba(201,135,58,0.08)", color: "var(--gold)", fontSize: 8, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const }}>
+      <div style={{ padding: "8px 14px 12px", borderTop: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: 5 }}>
+        <div style={{ display: "flex", gap: 5 }}>
+          <button onClick={onEdit} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid var(--border-medium)", background: "transparent", color: "var(--text-secondary)", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, cursor: "pointer" }}>
+            ✏️ Edit
+          </button>
+          <button onClick={onDelete} style={{ width: 32, borderRadius: 8, border: "1px solid var(--danger-border)", background: "transparent", color: "var(--danger)", fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
+            🗑
+          </button>
+        </div>
+        <button onClick={onManageIngredients} style={{ width: "100%", padding: "7px 0", borderRadius: 8, border: "1px solid rgba(201,135,58,0.3)", background: "rgba(201,135,58,0.06)", color: "var(--gold)", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, cursor: "pointer" }}>
           🧾 Ingredients
         </button>
-        <button onClick={onManageModifiers} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid rgba(201,135,58,0.4)", background: "rgba(201,135,58,0.08)", color: "var(--gold)", fontSize: 8, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const }}>
+        <button onClick={onManageModifiers} style={{ width: "100%", padding: "7px 0", borderRadius: 8, border: "1px solid rgba(201,135,58,0.3)", background: "rgba(201,135,58,0.06)", color: "var(--gold)", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, cursor: "pointer" }}>
           ⚡ Modifiers
-        </button>
-        <button onClick={onDelete} style={{ padding: "7px 10px", borderRadius: 8, border: "1px solid var(--danger-border)", background: "transparent", color: "var(--danger)", fontSize: 8, fontWeight: 700, cursor: "pointer", letterSpacing: 1 }}>
-          ✕
         </button>
       </div>
     )}

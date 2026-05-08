@@ -68,7 +68,7 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Apply login-specific limiter early (before login route handling)
 app.use('/api/staff/login', loginLimiter);
@@ -149,6 +149,18 @@ async function initDb() {
     await addCol('cash_payouts', 'DECIMAL(10,2) DEFAULT 0');
     await addCol('closed_at', 'DATETIME DEFAULT NULL');
     console.log('cash_drawer table ready');
+
+await pool.query(`
+      CREATE TABLE IF NOT EXISTS company_settings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        setting_key VARCHAR(128) UNIQUE NOT NULL,
+        setting_value MEDIUMTEXT,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    // Ensure setting_value is MEDIUMTEXT (not just TEXT) for large base64 logos
+    await pool.query(`ALTER TABLE company_settings MODIFY setting_value MEDIUMTEXT`).catch(() => {});
+    console.log('company_settings table ready');
 
     // Auto-seed menu_items if empty
     const [rows] = await pool.query('SELECT COUNT(*) AS cnt FROM menu_items');

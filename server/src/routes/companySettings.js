@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import express from 'express';
 
 export default function companySettingsRouter(pool) {
   const router = Router();
+
+  // Allow larger payloads (base64 logos can be several MB)
+  router.use(express.json({ limit: '10mb' }));
 
   // GET all company settings
   router.get('/', async (req, res) => {

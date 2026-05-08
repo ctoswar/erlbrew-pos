@@ -4,12 +4,26 @@ import { useClock } from "../hooks/useClock";
 import { formatTime, formatDate } from "../utils";
 import { apiPost, setAuthToken } from "../utils/api";
 
+interface CompanyInfo {
+  company_name: string;
+  company_address: string;
+  company_phone: string;
+  company_email: string;
+  company_logo: string;
+}
+
 interface Props {
   onLogin: (staff: Staff) => void;
 }
 
 export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
   const time = useClock();
+  const [company, setCompany] = useState<CompanyInfo>(() => {
+    try {
+      const s = localStorage.getItem('erlbrew_company_settings');
+      return s ? JSON.parse(s) : { company_name: 'Erlbrew Cafe', company_address: '', company_phone: '', company_email: '', company_logo: '' };
+    } catch { return { company_name: 'Erlbrew Cafe', company_address: '', company_phone: '', company_email: '', company_logo: '' }; }
+  });
 
   const [rfid, setRfid] = useState("");
   const [pin, setPin] = useState("");
@@ -101,25 +115,35 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
 
   const msgColor = msg.type === "error" ? "var(--danger)" : msg.type === "success" ? "var(--success)" : "var(--text-muted)";
 
-  return (
-    <div style={{ display: "flex", height: "100vh", background: "var(--bg-base)" }}>
-      {/* ── Sidebar ── */}
-      <aside style={{
-        width: 220, background: "var(--bg-sidebar)", borderRight: "1px solid var(--border-default)",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        padding: "2rem 1.2rem", flexShrink: 0,
-      }}>
-        <CoffeeSVG />
-        <div className="font-display" style={{ fontSize: 20, fontWeight: 700, color: "var(--gold)", letterSpacing: 3, marginBottom: 2 }}>ERLBREW</div>
-        <div style={{ fontSize: 9, color: "var(--text-disabled)", letterSpacing: 5, textTransform: "uppercase", marginBottom: 32 }}>Café</div>
-        <div style={{ width: 36, height: 1, background: "var(--border-default)", marginBottom: 14 }} />
-        <div className="font-display" style={{ fontSize: 26, fontWeight: 700, color: "var(--gold)" }}>{formatTime(time)}</div>
-        <div style={{ fontSize: 10, color: "var(--gold-muted)", letterSpacing: 1, marginTop: 4 }}>{formatDate(time)}</div>
-        <div style={{ width: 36, height: 1, background: "var(--border-default)", margin: "20px 0 16px" }} />
-        <div style={{ fontSize: 9, color: "var(--text-disabled)", letterSpacing: 2, textTransform: "uppercase", textAlign: "center", lineHeight: 2 }}>
-          Point of Sale<br />v2.0
-        </div>
-      </aside>
+    return (
+      <div style={{ display: "flex", height: "100vh", background: "var(--bg-base)" }}>
+        {/* ── Sidebar ── */}
+        <aside style={{
+          width: 220, background: "var(--bg-sidebar)", borderRight: "1px solid var(--border-default)",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          padding: "2rem 1.2rem", flexShrink: 0,
+        }}>
+          {company.company_logo ? (
+            <img src={company.company_logo} alt="Company Logo" style={{ width: 48, height: 48, marginBottom: 8 }} />
+          ) : (
+            <CoffeeSVG />
+          )}
+          <div className="font-display" style={{ fontSize: 20, fontWeight: 700, color: "var(--gold)", letterSpacing: 3, marginBottom: 2 }}>
+            {company.company_name || 'Erlbrew Cafe'}
+          </div>
+          {company.company_address && (
+            <div style={{ fontSize: 9, color: "var(--text-disabled)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 32 }}>
+              {company.company_address}
+            </div>
+          )}
+          <div style={{ width: 36, height: 1, background: "var(--border-default)", marginBottom: 14 }} />
+          <div className="font-display" style={{ fontSize: 26, fontWeight: 700, color: "var(--gold)" }}>{formatTime(time)}</div>
+          <div style={{ fontSize: 10, color: "var(--gold-muted)", letterSpacing: 1, marginTop: 4 }}>{formatDate(time)}</div>
+          <div style={{ width: 36, height: 1, background: "var(--border-default)", margin: "20px 0 16px" }} />
+          <div style={{ fontSize: 9, color: "var(--text-disabled)", letterSpacing: 2, textTransform: "uppercase", textAlign: "center", lineHeight: 2 }}>
+            Point of Sale<br />v2.0
+          </div>
+        </aside>
 
       {/* ── Main ── */}
       <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem", overflowY: "auto" }}>

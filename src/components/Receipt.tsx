@@ -12,21 +12,43 @@ const FONT = "'Courier New', 'Lucida Console', monospace";
 const FONT_SIZE = 11;
 const W = 32;
 
-// ── BIR-required store details ──────────────────────────────────────────────
-const STORE = {
-  name: "ERLBREW CAFE",
-  addr1: "Unit 1, Ground Floor",
-  addr2: "123 Main St, BGC, Taguig",
-  tel: "(02) 8888-8888",
-  tin: "000-000-000-000",
-  birCorNo: "COR-2024-00-00000",
-  atpNo: "ATP-2024-00-00000",
-  atpDate: "Jan 01, 2024",
-  serial: "ERL-2024-00001",
-  ptuNo: "PTU-2024-00-00000",
-  machineNo: "POS-01",
-  posAccNo: "ACC-2024-0001",
-};
+// Load company settings from localStorage (set by AdminPrintSettings)
+function getStoreInfo() {
+  try {
+    const s = localStorage.getItem('erlbrew_company_settings');
+    if (s) {
+      const data = JSON.parse(s);
+      return {
+        name: data.company_name || 'ERLBREW CAFE',
+        addr1: data.company_address || 'Unit 1, Ground Floor',
+        addr2: data.company_address2 || '123 Main St, BGC, Taguig',
+        tel: data.company_phone || '(02) 8888-8888',
+        tin: '000-000-000-000',
+        birCorNo: 'COR-2024-00-00000',
+        atpNo: 'ATP-2024-00-00000',
+        atpDate: 'Jan 01, 2024',
+        serial: 'ERL-2024-00001',
+        ptuNo: 'PTU-2024-00-00000',
+        machineNo: 'POS-01',
+        posAccNo: 'ACC-2024-0001',
+      };
+    }
+  } catch {}
+  return {
+    name: 'ERLBREW CAFE',
+    addr1: 'Unit 1, Ground Floor',
+    addr2: '123 Main St, BGC, Taguig',
+    tel: '(02) 8888-8888',
+    tin: '000-000-000-000',
+    birCorNo: 'COR-2024-00-00000',
+    atpNo: 'ATP-2024-00-00000',
+    atpDate: 'Jan 01, 2024',
+    serial: 'ERL-2024-00001',
+    ptuNo: 'PTU-2024-00-00000',
+    machineNo: 'POS-01',
+    posAccNo: 'ACC-2024-0001',
+  };
+}
 
 function padCenter(text: string, width = W): string {
   const s = text.length <= width ? text : text.substring(0, width - 2) + "..";
@@ -55,12 +77,13 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   const slipNo = order.id || "0000";
 
   const lines: string[] = [];
+  const STORE = getStoreInfo();
 
   // ── 1. Store Header ────────────────────────────────────────────────────────
   lines.push(padCenter(STORE.name));
   lines.push(padCenter(STORE.addr1));
-  lines.push(padCenter(STORE.addr2));
-  lines.push(padCenter(`Tel: ${STORE.tel}`));
+  if (STORE.addr2) lines.push(padCenter(STORE.addr2));
+  if (STORE.tel) lines.push(padCenter(`Tel: ${STORE.tel}`));
   lines.push(ln("="));
 
   // ── 2. BIR Accreditations ──────────────────────────────────────────────────

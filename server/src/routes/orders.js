@@ -608,9 +608,6 @@ res.status(500).json({ error: 'DB error' });
     }
   });
 
-  // Export for cron job (server-side only)
-  return { buildZReportData, router };
-
   // GET /api/orders/z-reports — retrieve recent Z-Reports
   router.get('/z-reports', async (req, res) => {
     const limit = parseInt(String(req.query.limit || '10'), 10);
@@ -716,5 +713,5 @@ res.status(500).json({ error: 'DB error' });
     }
   });
 
-  return router;
+  return { buildZReportData, router };
 }

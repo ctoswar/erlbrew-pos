@@ -41,7 +41,8 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
         const parsed = JSON.parse(storedOrders);
         setOrders(parsed.map((o: any) => ({
           ...o,
-          createdAt: new Date(o.createdAt),
+          createdAt: o.createdAt ? new Date(o.createdAt) : new Date(),
+          completedAt: o.completedAt ? new Date(o.completedAt) : undefined,
           // Transform snake_case to camelCase for fields that may be stored in legacy format
           payMethod: o.payMethod || o.pay_method || 'cash',
           referenceNumber: o.referenceNumber || o.reference_number || undefined,

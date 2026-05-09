@@ -87,7 +87,8 @@ const KitchenCard: React.FC<KitchenCardProps> = ({
   order, accentColor, onUpdateStatus,
   isVoidPending, onRequestVoid,
 }) => {
-  const elapsed = Math.floor((Date.now() - order.createdAt.getTime()) / 60000);
+  const createdAt = order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt);
+  const elapsed = Math.floor((Date.now() - createdAt.getTime()) / 60000);
   const isLate = order.status === "preparing" && elapsed >= 10;
 
   return (

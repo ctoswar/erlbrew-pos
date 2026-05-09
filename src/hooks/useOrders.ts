@@ -84,9 +84,16 @@ export function serverOrderToOrder(o: any): Order {
 export function useOrders() {
   const [orders, setOrders] = useState<Order[]>(() => {
     // Rehydrate local (pending-sync) orders from localStorage on mount
+    // JSON.parse turns Date objects into strings — convert them back
     try {
       const raw = localStorage.getItem('erlbrew_local_orders');
-      return raw ? JSON.parse(raw) : [];
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return (Array.isArray(parsed) ? parsed : []).map((o: any) => ({
+        ...o,
+        createdAt: o.createdAt ? new Date(o.createdAt) : new Date(),
+        completedAt: o.completedAt ? new Date(o.completedAt) : undefined,
+      }));
     } catch { return []; }
   });
   const [pendingCount, setPendingCount] = useState(() => readQueue().length);

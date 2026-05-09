@@ -2,6 +2,7 @@
 // Set before any modules load so it's in effect for all HTTPS calls in this process
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
+import { resolve } from 'path';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';

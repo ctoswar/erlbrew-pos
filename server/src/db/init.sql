@@ -93,6 +93,13 @@ ALTER TABLE inventory
 ALTER TABLE orders
   ADD COLUMN reference_number VARCHAR(128) DEFAULT NULL;
 
+-- Secondary RFID for tablet reader (different keyboard layout / byte order)
+ALTER TABLE staff
+  ADD COLUMN rfid_alt VARCHAR(64) DEFAULT NULL AFTER rfid;
+
+-- Auto-populate rfid_alt with reversed rfid for existing staff
+UPDATE staff SET rfid_alt = REVERSE(rfid) WHERE rfid IS NOT NULL AND rfid_alt IS NULL;
+
 -- Seed inventory items
 INSERT INTO inventory (id, name, category, unit, stock, low_stock_threshold) VALUES
 ('cup-s',    'Small Cup (8oz)',   'Cups',     'pcs', 500, 50),

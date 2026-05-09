@@ -21,16 +21,17 @@ export default function clockRouter(pool, googleSheets) {
   // POST /api/clock — RFID scan → clock in or clock out
   // Public (no auth) so employees can tap their card directly
   router.post('/', async (req, res) => {
-    const { rfid } = req.body;
+    let { rfid } = req.body;
+    if (rfid && typeof rfid === 'string') rfid = rfid.replace(/[\x00-\x1f]/g, '').trim().toUpperCase();
     if (!rfid || typeof rfid !== 'string' || rfid.length > 64) {
       return res.status(400).json({ error: 'Valid RFID required' });
     }
 
     try {
-      // Find staff by RFID
+      // Find staff by RFID — try exact then reversed (handles tablet keyboard layout differences)
       const [staff] = await pool.query(
-        'SELECT id, name, role, initials, color FROM staff WHERE rfid = ?',
-        [rfid]
+        'SELECT id, name, role, initials, color FROM staff WHERE rfid = ? OR rfid_alt = ?',
+        [rfid, rfid]
       );
       if (!staff.length) return res.status(404).json({ error: 'Unrecognized card' });
 

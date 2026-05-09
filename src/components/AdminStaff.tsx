@@ -4,6 +4,7 @@ import { apiAdminGet, apiAdminPut, createStaff, CreateStaffData } from "../utils
 interface StaffMember {
   id: number;
   rfid: string | null;
+  rfid_alt: string | null;
   name: string;
   role: string;
   initials: string;
@@ -22,6 +23,10 @@ export const AdminStaff: React.FC = () => {
   // Edit RFID state
   const [editingRfidId, setEditingRfidId] = useState<number | null>(null);
   const [editRfid, setEditRfid] = useState("");
+
+  // Edit RFID Alt state (tablet reader)
+  const [editingRfidAltId, setEditingRfidAltId] = useState<number | null>(null);
+  const [editRfidAlt, setEditRfidAlt] = useState("");
 
   // Change password state
   const [changingPwId, setChangingPwId] = useState<number | null>(null);
@@ -82,6 +87,19 @@ export const AdminStaff: React.FC = () => {
     } finally { setSaving(false); }
   };
 
+  // ── Save RFID Alt (tablet reader) ────────────────────────────────────────
+  const saveRfidAlt = async (id: number) => {
+    setSaving(true);
+    try {
+      await apiAdminPut(`/staff/${id}`, { rfid_alt: editRfidAlt.trim() || null });
+      setEditingRfidAltId(null);
+      showMsg("Tablet RFID saved", true);
+      loadStaff();
+    } catch (e: any) {
+      showMsg(e.message || "Failed to save", false);
+    } finally { setSaving(false); }
+  };
+
   // ── Save password ──────────────────────────────────────────────────────────
   const savePassword = async (id: number) => {
     if (editPw.length < 4) { showMsg("Password must be at least 4 characters", false); return; }
@@ -134,6 +152,12 @@ export const AdminStaff: React.FC = () => {
     setMsg(null);
   };
 
+  const startEditRfidAlt = (s: StaffMember) => {
+    setEditingRfidAltId(s.id);
+    setEditRfidAlt(s.rfid_alt || "");
+    setMsg(null);
+  };
+
   const startChangePw = (s: StaffMember) => {
     setChangingPwId(s.id);
     setEditPw("");
@@ -145,9 +169,11 @@ export const AdminStaff: React.FC = () => {
   const cancelAll = () => {
     setEditingNameId(null);
     setEditingRfidId(null);
+    setEditingRfidAltId(null);
     setChangingPwId(null);
     setEditName("");
     setEditRfid("");
+    setEditRfidAlt("");
     setEditPw("");
   };
 
@@ -417,7 +443,57 @@ export const AdminStaff: React.FC = () => {
                   )}
                 </div>
 
-                {/* ── Row 3: PIN ── */}
+                {/* ── Row 3: RFID Alt (tablet reader) ── */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                  <div style={{ fontSize: 9, color: "var(--text-faint)", width: 70, flexShrink: 0, letterSpacing: 1 }}>RFID Alt</div>
+                  {editingRfidAltId === s.id ? (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", flex: 1 }}>
+                      <input
+                        value={editRfidAlt}
+                        onChange={(e) => setEditRfidAlt(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === "Enter" && saveRfidAlt(s.id)}
+                        placeholder="Tap card on tablet to get the value…"
+                        autoFocus
+                        style={{
+                          flex: 1, background: "var(--bg-base)", border: "1px solid var(--border-medium)",
+                          borderRadius: 8, color: "var(--text-primary)", padding: "7px 12px",
+                          fontSize: 11, fontFamily: "monospace", outline: "none",
+                        }}
+                      />
+                      <button onClick={() => saveRfidAlt(s.id)} disabled={saving}
+                        style={{ background: "var(--gold)", color: "var(--bg-sidebar)", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: 9, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+                        Save
+                      </button>
+                      <button onClick={() => setEditingRfidAltId(null)}
+                        style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border-default)", borderRadius: 8, padding: "7px 10px", fontSize: 9, cursor: "pointer" }}>
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{
+                        background: s.rfid_alt ? "rgba(201,135,58,0.12)" : "var(--bg-base)",
+                        border: `1px solid ${s.rfid_alt ? "var(--gold-dim)" : "var(--border-default)"}`,
+                        borderRadius: 8, padding: "6px 14px",
+                        fontFamily: "monospace", fontSize: 11,
+                        color: s.rfid_alt ? "var(--gold)" : "var(--text-faint)",
+                        minWidth: 120, textAlign: "center" as const,
+                      }}>
+                        {s.rfid_alt || "Not set"}
+                      </div>
+                      <button onClick={() => startEditRfidAlt(s)}
+                        style={{
+                          background: "transparent", color: "var(--gold)",
+                          border: "1px solid var(--gold-dim)", borderRadius: 8,
+                          padding: "6px 12px", fontSize: 9, fontWeight: 700, cursor: "pointer",
+                        }}>
+                        {s.rfid_alt ? "Change Alt" : "Set Alt"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Row 4: PIN ── */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ fontSize: 9, color: "var(--text-faint)", width: 70, flexShrink: 0, letterSpacing: 1 }}>PIN</div>
                   {changingPwId === s.id ? (

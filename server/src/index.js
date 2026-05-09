@@ -162,6 +162,12 @@ await pool.query(`
     await pool.query(`ALTER TABLE company_settings MODIFY setting_value MEDIUMTEXT`).catch(() => {});
     console.log('company_settings table ready');
 
+    // Add rfid_alt column for tablet RFID reader compatibility (reversed byte order)
+    await pool.query(`ALTER TABLE staff ADD COLUMN rfid_alt VARCHAR(64) DEFAULT NULL AFTER rfid`).catch(() => {});
+    // Auto-populate rfid_alt with reversed rfid for existing staff
+    await pool.query(`UPDATE staff SET rfid_alt = REVERSE(rfid) WHERE rfid IS NOT NULL AND rfid_alt IS NULL`).catch(() => {});
+    console.log('staff rfid_alt column ready');
+
     // Auto-seed menu_items if empty
     const [rows] = await pool.query('SELECT COUNT(*) AS cnt FROM menu_items');
     if (rows[0].cnt === 0) {

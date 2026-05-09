@@ -155,7 +155,7 @@ const RfidInput: React.FC<{ onScan: (rfid: string) => void }> = ({ onScan }) => 
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && value.trim()) {
-      onScan(value.trim());
+      onScan(value.replace(/[\x00-\x1f]/g, '').trim());
       setValue("");
     }
   };

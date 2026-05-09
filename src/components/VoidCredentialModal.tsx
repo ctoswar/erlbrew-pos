@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 interface Props {
   orderId: string;
@@ -13,8 +13,16 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onAuth
   const [loading, setLoading] = useState(false);
   const rfidRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus RFID on mount
-  React.useEffect(() => { rfidRef.current?.focus(); }, []);
+  // Force focus on hidden RFID input when modal opens
+  useEffect(() => {
+    rfidRef.current?.focus();
+    const interval = setInterval(() => {
+      if (document.activeElement !== rfidRef.current) {
+        rfidRef.current?.focus();
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
 
   const pressPin = (key: string) => {
     if (key === "CLR") { setPin(""); return; }
@@ -33,7 +41,7 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onAuth
       const loginRes = await fetch("/api/staff/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rfid: rfid.trim().toUpperCase(), pin }),
+        body: JSON.stringify({ rfid: rfid.replace(/[\x00-\x1f]/g, '').trim().toUpperCase(), pin }),
       });
       if (!loginRes.ok) throw new Error("Invalid credentials");
       const loginData = await loginRes.json();
@@ -79,21 +87,51 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onAuth
           Manager authorization required to void this order.
         </div>
 
-        {/* RFID */}
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, marginBottom: 6, textTransform: "uppercase" }}>Manager RFID</div>
+        {/* RFID — hidden input for USB reader + animated card visual */}
+        <div style={{ marginBottom: 12, position: "relative" }}>
           <input
             ref={rfidRef}
             value={rfid}
-            onChange={(e) => setRfid(e.target.value.toUpperCase())}
+            onChange={(e) => setRfid(e.target.value.replace(/[\x00-\x1f]/g, '').toUpperCase())}
             onKeyDown={(e) => { if (e.key === "Enter") { /* move to pin */ } }}
-            placeholder="e.g. RF004"
             style={{
-              width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-medium)",
-              borderRadius: 8, color: "var(--text-primary)", padding: "10px 14px",
-              fontSize: 12, fontFamily: "monospace", outline: "none", boxSizing: "border-box",
+              position: "fixed", top: 0, left: 0,
+              width: 1, height: 1, opacity: 0,
+              zIndex: -1,
             }}
+            autoFocus
           />
+          <div
+            onClick={() => rfidRef.current?.focus()}
+            style={{
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+              cursor: "pointer", padding: "8px 0",
+            }}
+          >
+            {/* Small animated card */}
+            <div style={{ position: "relative", width: 120, height: 80 }}>
+              <div style={{
+                position: "absolute", inset: 0,
+                background: "linear-gradient(145deg, rgba(201,135,58,0.18), rgba(201,135,58,0.06))",
+                border: "1.5px solid rgba(201,135,58,0.3)", borderRadius: 12, overflow: "hidden",
+              }}>
+                <div style={{
+                  position: "absolute", top: 12, left: 14, width: 16, height: 12,
+                  background: "linear-gradient(135deg, var(--gold), rgba(201,135,58,0.5))",
+                  borderRadius: 2, opacity: 0.6,
+                }} />
+              </div>
+              <div style={{
+                position: "absolute", left: 0, right: 0, height: 2,
+                background: "linear-gradient(90deg, transparent, var(--gold), transparent)",
+                boxShadow: "0 0 8px rgba(201,135,58,0.6)",
+                animation: "scanLine 2.2s ease-in-out infinite",
+              }} />
+            </div>
+            <div style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 0.5 }}>
+              Scan manager card
+            </div>
+          </div>
         </div>
 
         {/* PIN pad */}

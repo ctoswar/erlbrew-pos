@@ -62,7 +62,7 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
 
   // Handle RFID scan (Enter key or button)
   const handleRfidSubmit = async (rfidValue: string) => {
-    const trimmed = rfidValue.trim().toUpperCase();
+    const trimmed = rfidValue.replace(/[\x00-\x1f]/g, '').trim().toUpperCase();
     if (!trimmed) return;
     try {
       const res = await fetch(`/api/staff/rfid/${encodeURIComponent(trimmed)}`);

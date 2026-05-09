@@ -60,9 +60,10 @@ export default function staffRouter(pool){
   // GET /staff/rfid/:rfid — public, used by LoginScreen for card-lookup
   router.get('/rfid/:rfid', async (req, res) => {
     try {
+      const rfid = (req.params.rfid || '').replace(/[\x00-\x1f]/g, '').trim().toUpperCase();
       const [rows] = await pool.query(
-        'SELECT id, rfid, name, role, initials, color, created_at FROM staff WHERE rfid = ?',
-        [req.params.rfid]
+        'SELECT id, rfid, rfid_alt, name, role, initials, color, created_at FROM staff WHERE rfid = ? OR rfid_alt = ?',
+        [rfid, rfid]
       );
       return res.json(rows[0] || null);
     } catch (e) {
@@ -88,7 +89,7 @@ export default function staffRouter(pool){
   // GET all staff (protected)
   router.get('/', authMiddleware, async (req, res) => {
     try {
-      const [rows] = await pool.query('SELECT id, rfid, name, role, initials, color, created_at FROM staff');
+      const [rows] = await pool.query('SELECT id, rfid, rfid_alt, name, role, initials, color, created_at FROM staff');
       res.json(rows);
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
@@ -97,7 +98,7 @@ export default function staffRouter(pool){
 
 // Create staff (admin only, token required)
 router.post('/', authMiddleware, async (req, res) => {
-    const { rfid, pin, name, role, initials, color } = req.body;
+    const { rfid, rfid_alt, pin, name, role, initials, color } = req.body;
     // Validation: required fields and constraints per FIX 5
     const err = validate(req, res, {
       rfid: { required: true, type: 'string', maxLen: 64 },
@@ -113,7 +114,7 @@ router.post('/', authMiddleware, async (req, res) => {
       }
     }
     try {
-      const [r] = await pool.query('INSERT INTO staff (rfid, pin, name, role, initials, color) VALUES (?, ?, ?, ?, ?, ?)', [rfid, pin, name, role, initials, color]);
+      const [r] = await pool.query('INSERT INTO staff (rfid, rfid_alt, pin, name, role, initials, color) VALUES (?, ?, ?, ?, ?, ?, ?)', [rfid, rfid_alt || null, pin, name, role, initials, color]);
       res.json({ id: r.insertId });
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
@@ -135,11 +136,12 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // PUT update staff (auth required)
   router.put('/:id', authMiddleware, async (req, res) => {
     const { id } = req.params;
-    const { rfid, name, role, initials, color, password } = req.body;
+    const { rfid, rfid_alt, name, role, initials, color, password } = req.body;
     try {
       const fields = [];
       const values = [];
       if (rfid !== undefined) { fields.push('rfid = ?'); values.push(rfid || null); }
+      if (rfid_alt !== undefined) { fields.push('rfid_alt = ?'); values.push(rfid_alt || null); }
       if (name !== undefined) { fields.push('name = ?'); values.push(name); }
       if (role !== undefined) { fields.push('role = ?'); values.push(role); }
       if (initials !== undefined) { fields.push('initials = ?'); values.push(initials); }
@@ -154,7 +156,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
       if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
       values.push(id);
       await pool.query(`UPDATE staff SET ${fields.join(', ')} WHERE id = ?`, values);
-    const [rows] = await pool.query('SELECT id, rfid, name, role, initials, color FROM staff WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT id, rfid, rfid_alt, name, role, initials, color FROM staff WHERE id = ?', [id]);
     res.json(rows[0]);
   } catch (e) {
     if (e.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'RFID already assigned to another staff member' });
@@ -164,15 +166,16 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
 // LOGIN (PIN-only for POS staff - bcrypt hashed PINs)
 router.post('/login', async (req, res) => {
-  const { username, password, rfid, pin } = req.body;
+  let { username, password, rfid, pin } = req.body;
+  if (rfid && typeof rfid === 'string') rfid = rfid.replace(/[\x00-\x1f]/g, '').trim().toUpperCase();
   // Basic validation per FIX 5
   if (!((rfid && pin) || username)) {
     return res.status(400).json({ error: 'Either RFID+PIN or username must be provided' });
   }
   try {
     // RFID + PIN login (from card scan)
-    if (rfid && pin) {
-      const [rows] = await pool.query('SELECT id, name, role, pin FROM staff WHERE rfid = ?', [rfid]);
+if (rfid && pin) {
+      const [rows] = await pool.query('SELECT id, name, role, pin FROM staff WHERE rfid = ? OR rfid_alt = ?', [rfid, rfid]);
       if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' });
       const user = rows[0];
 // Verify PIN — supports both bcrypt-hashed and plain-text PINs

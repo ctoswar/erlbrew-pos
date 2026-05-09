@@ -50,13 +50,14 @@ interface CompanyInfo {
   company_phone: string;
   company_email: string;
   company_logo: string;
+  print_server_url: string;
 }
 
 function loadCompanySettings(): CompanyInfo {
   try {
     const s = localStorage.getItem("erlbrew_company_settings");
-    return s ? JSON.parse(s) : { company_name: 'Erlbrew Cafe', company_address: '', company_phone: '', company_email: '', company_logo: '' };
-  } catch { return { company_name: 'Erlbrew Cafe', company_address: '', company_phone: '', company_email: '', company_logo: '' }; }
+    return s ? JSON.parse(s) : { company_name: 'Erlbrew Cafe', company_address: '', company_phone: '', company_email: '', company_logo: '', print_server_url: '' };
+  } catch { return { company_name: 'Erlbrew Cafe', company_address: '', company_phone: '', company_email: '', company_logo: '', print_server_url: '' }; }
 }
 
 function saveCompanySettingsLocal(s: CompanyInfo) {
@@ -83,6 +84,7 @@ export const AdminPrintSettings: React.FC = () => {
           company_phone: data.company_phone || '',
           company_email: data.company_email || '',
           company_logo: data.company_logo || '',
+          print_server_url: data.print_server_url || '',
         };
         setCompanyInfo(info);
         if (info.company_logo) setLogoPreview(info.company_logo);
@@ -453,10 +455,53 @@ export const AdminPrintSettings: React.FC = () => {
 
       {/* ── Bluetooth Print Server URL ───────────────────────── */}
       {settings.printVia === "bluetooth" && (
-        <div style={rowStyle}>
+        <div style={{ ...rowStyle, flexDirection: "column", alignItems: "stretch", gap: 6 }}>
           <div>
             <div style={labelStyle}>Print Server URL</div>
-            <div style={subStyle}>Running on your Pi — e.g. http://192.168.75.101:9100</div>
+            <div style={subStyle}>Running on your Pi — e.g. https://192.168.75.101:9100</div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              value={companyInfo.print_server_url || ""}
+              onChange={(e) => setCompanyInfo(c => ({ ...c, print_server_url: e.target.value }))}
+              placeholder="https://192.168.75.101:9100"
+              style={{
+                flex: 1,
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid var(--border-subtle)",
+                background: "var(--bg-base)",
+                color: "var(--text-primary)",
+                fontSize: 11,
+              }}
+            />
+            <button
+              onClick={async () => {
+                try {
+                  await updateCompanySettings({ print_server_url: companyInfo.print_server_url || "" });
+                  saveCompanySettingsLocal(companyInfo);
+                  setCompanySaved(true);
+                  setTimeout(() => setCompanySaved(false), 2000);
+                } catch (e: any) {
+                  setCompanyError(e.message || "Failed to save");
+                }
+              }}
+              style={{
+                padding: "8px 14px",
+                fontSize: 9,
+                borderRadius: 8,
+                border: "none",
+                background: "var(--gold)",
+                color: "var(--bg-sidebar)",
+                cursor: "pointer",
+                fontWeight: 700,
+                letterSpacing: 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Save URL
+            </button>
           </div>
         </div>
       )}

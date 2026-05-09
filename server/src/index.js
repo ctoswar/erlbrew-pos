@@ -1,8 +1,6 @@
-// Allow self-signed certs for print server only (Pi uses self-signed HTTPS)
-// Set before any modules load so it's in effect for all HTTPS calls in this process
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
 import { resolve } from 'path';
+import http from 'http';
+import https from 'https';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -21,9 +19,7 @@ import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
 
-// Allow self-signed certs for print server only (Pi uses self-signed HTTPS) — scoped to prevent global TLS bypass
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-const PRINT_SERVER = process.env.PRINT_SERVER_URL || 'https://192.168.75.101:9100';
+const HARDCODED_PRINT_SERVER = 'https://192.168.75.101:9100';
 
 dotenv.config();
 
@@ -83,6 +79,20 @@ const pool = mysql.createPool({
   timezone: '+08:00',
   dateStrings: false,
 });
+
+// Print server URL resolver: env var › DB company_settings › hardcoded default
+async function resolvePrintServer() {
+  const fromEnv = process.env.PRINT_SERVER_URL;
+  if (fromEnv) return fromEnv;
+  try {
+    const [settings] = await pool.execute(
+      `SELECT setting_value FROM company_settings WHERE setting_key = 'print_server_url'`
+    );
+    if (settings.length > 0 && settings[0].setting_value) return settings[0].setting_value;
+  } catch (_) { /* table may not exist yet */ }
+  return HARDCODED_PRINT_SERVER;
+}
+
 const MENU_SEED = [
   ['m1','Smoked Sea Salt Mocha','Signature Brews',6.75,'SIGNATURE','Single-origin dark chocolate, espresso, steamed oat milk, topped with house-smoked Maldon sea salt.','☕',1],
   ['m2','Velvet Matcha Latte','Signature Brews',6.25,'SIGNATURE','Ceremonial grade Uji matcha whisked with Madagascar vanilla bean and creamy macadamia milk.','🍵',1],
@@ -348,13 +358,50 @@ app.post('/api/sheets/sync-dashboard', async (req, res) => {
 });
 
 // ── Print proxy: browser → backend → Pi Bluetooth print server ─────────────────
+// Use https.request directly for self-signed cert support (native fetch agent option unreliable)
+function printServerRequest(urlStr, options = {}) {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(urlStr);
+    const mod = urlObj.protocol === 'https:' ? https : http;
+    const bodyStr = options.body || '';
+    const opts = {
+      hostname: urlObj.hostname,
+      port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+      path: urlObj.pathname + urlObj.search,
+      method: options.method || 'GET',
+      headers: {
+        ...(options.headers || {}),
+        'Content-Length': Buffer.byteLength(bodyStr),
+      },
+      rejectUnauthorized: false,
+    };
+    const req = mod.request(opts, (res) => {
+      const chunks = [];
+      res.on('data', d => chunks.push(d));
+      res.on('end', () => {
+        const body = Buffer.concat(chunks).toString();
+        console.log(`[print-proxy] Response ${res.statusCode}:`, body.slice(0, 500));
+        resolve({
+          ok: res.statusCode >= 200 && res.statusCode < 300,
+          status: res.statusCode,
+          json: () => { try { return JSON.parse(body); } catch { return { error: body || 'empty response' }; } },
+        });
+      });
+    });
+    req.on('error', reject);
+    if (bodyStr) req.write(bodyStr);
+    req.end();
+  });
+}
+
 app.post('/api/print', async (req, res) => {
   const { lines, paperSize } = req.body || {};
   if (!lines || !Array.isArray(lines)) {
     return res.status(400).json({ error: 'lines array required' });
   }
+  const serverUrl = await resolvePrintServer();
   try {
-    const br = await fetch(`${PRINT_SERVER}/print`, {
+    const br = await printServerRequest(`${serverUrl}/print`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lines, paperSize: paperSize || '80mm' }),
@@ -362,21 +409,22 @@ app.post('/api/print', async (req, res) => {
     const data = await br.json();
     res.status(br.ok ? 200 : 502).json(data);
   } catch (e) {
-    console.error(`[print-proxy] Error: ${e.message}`, e.cause);
+    console.error(`[print-proxy] Error:`, e);
     res.status(502).json({ error: `Print server unreachable: ${e.message}` });
   }
 });
 
 app.post('/api/open-drawer', async (req, res) => {
+  const serverUrl = await resolvePrintServer();
   try {
-    const br = await fetch(`${PRINT_SERVER}/open-drawer`, {
+    const br = await printServerRequest(`${serverUrl}/open-drawer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
     const data = await br.json();
     res.status(br.ok ? 200 : 502).json(data);
   } catch (e) {
-    console.error(`[drawer-proxy] Error: ${e.message}`, e.cause);
+    console.error(`[drawer-proxy] Error:`, e);
     res.status(502).json({ error: `Print server unreachable: ${e.message}` });
   }
 });

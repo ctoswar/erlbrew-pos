@@ -321,6 +321,7 @@ export interface CompanySettings {
   company_phone: string;
   company_email: string;
   company_logo: string;
+  print_server_url: string;
 }
 
 export async function getCompanySettings(): Promise<CompanySettings> {

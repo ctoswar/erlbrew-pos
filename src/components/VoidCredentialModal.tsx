@@ -1,16 +1,19 @@
 import React, { useState, useRef, useEffect } from "react";
+import { apiAdminPost } from "../utils/api";
 
 interface Props {
   orderId: string;
   onCancel: () => void;
-  onAuthorize: (managerName: string) => void;
+  onVoidSuccess: () => void;
 }
 
-export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onAuthorize }) => {
+export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onVoidSuccess }) => {
   const [rfid, setRfid] = useState("");
   const [pin, setPin] = useState("");
+  const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<"reason" | "auth">("reason");
   const rfidRef = useRef<HTMLInputElement>(null);
 
   // Force focus on hidden RFID input when modal opens
@@ -56,7 +59,9 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onAuth
         setLoading(false);
         return;
       }
-      onAuthorize(meData.name || "Manager");
+      // Authorize void on server
+      await apiAdminPost(`/orders/${orderId}/void`, { reason });
+      onVoidSuccess();
     } catch {
       setError("Invalid manager credentials");
     } finally {
@@ -87,7 +92,45 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onAuth
           Manager authorization required to void this order.
         </div>
 
-        {/* RFID — hidden input for USB reader + animated card visual */}
+        {/* Step 1: Void reason */}
+        {step === "reason" ? (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, marginBottom: 6, textTransform: "uppercase" }}>Reason for Void</div>
+            <input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. Customer cancelled, wrong order…"
+              autoFocus
+              onKeyDown={(e) => { if (e.key === "Enter" && reason.trim()) setStep("auth"); }}
+              style={{
+                width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-medium)",
+                borderRadius: 8, color: "var(--text-primary)", padding: "10px 14px",
+                fontSize: 11, outline: "none", boxSizing: "border-box",
+              }}
+            />
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button onClick={onCancel} style={{
+                flex: 1, padding: "10px 0", borderRadius: 9,
+                border: "1px solid var(--border-default)", background: "var(--bg-base)",
+                color: "var(--text-secondary)", fontSize: 10, fontWeight: 700,
+                cursor: "pointer", textTransform: "uppercase", letterSpacing: 1,
+              }}>Cancel</button>
+              <button onClick={() => reason.trim() && setStep("auth")}
+                disabled={!reason.trim()}
+                style={{
+                  flex: 1, padding: "10px 0", borderRadius: 9, border: "none",
+                  background: reason.trim() ? "var(--danger)" : "var(--bg-surface)",
+                  color: reason.trim() ? "#fff" : "var(--text-disabled)",
+                  fontSize: 10, fontWeight: 700, cursor: reason.trim() ? "pointer" : "default",
+                  textTransform: "uppercase", letterSpacing: 1,
+                }}>
+                Continue →
+              </button>
+            </div>
+          </div>
+        ) : (
+        <>
+        {/* Step 2: RFID — hidden input for USB reader + animated card visual */}
         <div style={{ marginBottom: 12, position: "relative" }}>
           <input
             ref={rfidRef}
@@ -212,6 +255,8 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onAuth
             {loading ? "Verifying…" : "Authorize Void"}
           </button>
         </div>
+        </>
+      )}
       </div>
     </div>
   );

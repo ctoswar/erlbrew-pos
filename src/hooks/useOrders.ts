@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Order, CartItem, Staff, OrderStatus, OrderType, PayMethod, MenuItem, Role, Discount } from "../types";
 import { calcSubtotal, calcTax, calcGrand, generateOrderId } from "../utils";
-import { apiGet, apiPost, apiAdminPost, apiAdminPut, apiAdminDelete, getAuthToken } from "../utils/api";
+import { apiGet, apiPost, apiAdminPost, apiAdminPut, getAuthToken } from "../utils/api";
 
 const POLL_INTERVAL = 15000; // 15s — sync with server for multi-device
 const QUEUE_KEY = 'erlbrew_pending_queue';
@@ -154,6 +154,15 @@ export function useOrders() {
     const handleSSERefresh = () => { syncFromServer(); };
     window.addEventListener('kitchen:refresh', handleSSERefresh);
 
+    // Handle voided orders from other devices
+    const handleVoided = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.id) {
+        setOrders((prev) => prev.map((o) => o.id === detail.id ? { ...o, status: "voided" as OrderStatus } : o));
+      }
+    };
+    window.addEventListener('order:voided', handleVoided);
+
     // Retry queue when browser detects connectivity
     const handleOnline = () => { retryPending(); };
     window.addEventListener('online', handleOnline);
@@ -165,6 +174,7 @@ export function useOrders() {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
       window.removeEventListener('kitchen:refresh', handleSSERefresh);
+      window.removeEventListener('order:voided', handleVoided);
       window.removeEventListener('online', handleOnline);
     };
   }, [retryPending]);
@@ -297,13 +307,8 @@ export function useOrders() {
   const completedOrders = orders.filter((o) => o.status === "completed");
 
   const voidOrder = useCallback((id: string) => {
-    // Remove locally immediately
-    setOrders((prev) => prev.filter((o) => o.id !== id));
-    // Delete from server
-    const token = getAuthToken();
-    if (token) {
-      apiAdminDelete(`/orders/${id}`).catch((err) => console.error("Failed to delete order from server:", err));
-    }
+    // Mark as voided locally (the POST /:id/void was already called by VoidCredentialModal)
+    setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status: "voided" as OrderStatus } : o));
   }, []);
 
   return { orders, placeOrder, updateStatus, voidOrder, activeOrders, completedOrders, pendingCount };

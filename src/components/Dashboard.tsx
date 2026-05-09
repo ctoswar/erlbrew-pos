@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Order } from "../types";
 import { buildDailySummary, formatCurrency, formatTime } from "../utils";
 import { apiAdminGet, resetCogs, resetInventoryCosts } from "../utils/api";
+import { Receipt } from "./Receipt";
 
 interface CogsData {
   cogs: number;
@@ -18,6 +19,7 @@ interface Props {
 
 export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
   const [cogsData, setCogsData] = useState<CogsData | null>(null);
+  const [reprintOrder, setReprintOrder] = useState<Order | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'ok' | 'error'>('idle');
   const [dateRange, setDateRange] = useState<'today' | 'this_week' | 'last_week' | 'this_month' | 'last_2_weeks' | 'custom'>('today');
   const [startDate, setStartDate] = useState(() => {
@@ -464,7 +466,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
             <thead>
               <tr>
-                {["Order", "Time", "Staff", "Type", "Items", "Total", "Ref", "Status"].map(h => (
+                {["Order", "Time", "Staff", "Type", "Items", "Total", "Ref", "Status", ""].map(h => (
                   <th key={h} style={{ textAlign: "left", fontSize: 8, color: "var(--text-disabled)", letterSpacing: 1.5, textTransform: "uppercase", padding: "0 8px 8px 0", fontWeight: 400 }}>{h}</th>
                 ))}
               </tr>
@@ -488,12 +490,47 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
                       {o.status}
                     </span>
                   </td>
+                  <td style={{ padding: "7px 0 7px 0" }}>
+                    <button onClick={() => setReprintOrder(o)} style={{
+                      background: "none", border: "1px solid var(--border-default)", borderRadius: 6,
+                      color: "var(--text-muted)", fontSize: 8, padding: "3px 8px", cursor: "pointer",
+                      letterSpacing: 1, textTransform: "uppercase",
+                    }}>
+                      🖨 Reprint
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {/* Reprint receipt modal */}
+      {reprintOrder && (
+        <>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9998 }} onClick={() => setReprintOrder(null)} />
+          <div style={{
+            position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "1rem",
+          }}>
+            <div style={{
+              background: "var(--bg-elevated)", border: "1.5px solid var(--border-medium)", borderRadius: 16, padding: "1.5rem",
+              width: 400, maxHeight: "90vh", overflowY: "auto",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Playfair Display', serif" }}>
+                  Reprint Receipt
+                </div>
+                <button onClick={() => setReprintOrder(null)}
+                  style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: 16, cursor: "pointer" }}>
+                  ✕
+                </button>
+              </div>
+              <Receipt order={reprintOrder} onPrint={() => setReprintOrder(null)} />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

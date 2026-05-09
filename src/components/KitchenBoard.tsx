@@ -19,7 +19,7 @@ const COLUMNS: { status: OrderStatus; label: string; color: string; accent: stri
 export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOrder }) => {
   const [voidTarget, setVoidTarget] = useState<string | null>(null);
 
-  const handleAuthorizeVoid = (_managerName: string) => {
+  const handleVoidSuccess = () => {
     if (voidTarget) {
       onVoidOrder(voidTarget);
       setVoidTarget(null);
@@ -68,7 +68,7 @@ isVoidPending={voidTarget === order.id}
         <VoidCredentialModal
           orderId={voidTarget}
           onCancel={() => setVoidTarget(null)}
-          onAuthorize={handleAuthorizeVoid}
+          onVoidSuccess={handleVoidSuccess}
         />
       )}
     </>

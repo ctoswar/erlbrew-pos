@@ -25,6 +25,8 @@ interface Props {
 const MOBILE_BREAKPOINT = 768;
 const TABLET_BREAKPOINT = 1024;
 
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 min inactivity → auto-logout
+
 export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const [screen, setScreen] = useState<Screen>("pos");
   const [showDiscountModal, setShowDiscountModal] = useState(false);
@@ -44,6 +46,22 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Session timeout — reset on any user interaction
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const reset = () => {
+      clearTimeout(timer);
+      timer = setTimeout(onLogout, SESSION_TIMEOUT_MS);
+    };
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    events.forEach((e) => window.addEventListener(e, reset));
+    reset();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, reset));
+    };
+  }, [onLogout]);
 
   // Cart visible on tablet+ throughout order flow
   const isOrderFlow = screen === "pos" || screen === "checkout" || screen === "payment";

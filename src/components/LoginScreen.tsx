@@ -18,7 +18,7 @@ interface Props {
 
 export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
   const time = useClock();
-  const [company, setCompany] = useState<CompanyInfo>(() => {
+  const [company] = useState<CompanyInfo>(() => {
     try {
       const s = localStorage.getItem('erlbrew_company_settings');
       return s ? JSON.parse(s) : { company_name: 'Erlbrew Cafe', company_address: '', company_phone: '', company_email: '', company_logo: '' };

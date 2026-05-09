@@ -4,6 +4,40 @@ import { calcSubtotal, calcTax, calcGrand, generateOrderId } from "../utils";
 import { apiGet, apiPost, apiAdminPost, apiAdminPut, apiAdminDelete, getAuthToken } from "../utils/api";
 
 const POLL_INTERVAL = 15000; // 15s — sync with server for multi-device
+const QUEUE_KEY = 'erlbrew_pending_queue';
+
+interface PendingPayload {
+  id: string;        // local order id
+  payload: Record<string, unknown>;
+  createdAt: string;
+}
+
+function readQueue(): PendingPayload[] {
+  try {
+    const raw = localStorage.getItem(QUEUE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function writeQueue(queue: PendingPayload[]) {
+  try {
+    if (queue.length > 0) localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    else localStorage.removeItem(QUEUE_KEY);
+  } catch { /* storage full — silently drop */ }
+}
+
+function addToQueue(payload: Record<string, unknown>, localId: string) {
+  const queue = readQueue();
+  // Don't duplicate
+  if (queue.some(q => q.id === localId)) return;
+  queue.push({ id: localId, payload, createdAt: new Date().toISOString() });
+  writeQueue(queue);
+}
+
+function removeFromQueue(localId: string) {
+  const queue = readQueue().filter(q => q.id !== localId);
+  writeQueue(queue);
+}
 
 // Convert a server order object (snake_case) to a frontend Order
 export function serverOrderToOrder(o: any): Order {
@@ -20,6 +54,7 @@ export function serverOrderToOrder(o: any): Order {
     } as MenuItem,
     qty: it.qty || 1,
     notes: it.notes || '',
+    modifiers: (it.modifiers || []).map((m: any) => ({ name: m.name || '', price: Number(m.price) || 0 })),
   }));
 
   return {
@@ -47,9 +82,37 @@ export function serverOrderToOrder(o: any): Order {
 }
 
 export function useOrders() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<Order[]>(() => {
+    // Rehydrate local (pending-sync) orders from localStorage on mount
+    try {
+      const raw = localStorage.getItem('erlbrew_local_orders');
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  });
+  const [pendingCount, setPendingCount] = useState(() => readQueue().length);
   const syncedRef = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Retry pending offline orders
+  const retryPending = useCallback(() => {
+    const queue = readQueue();
+    const token = getAuthToken();
+    if (queue.length === 0 || !token) return;
+
+    let changed = false;
+    queue.forEach((pending) => {
+      apiAdminPost('/orders', pending.payload).then((data: any) => {
+        setOrders((prev) =>
+          prev.map((o) => (o.id === pending.id ? { ...o, id: data.id || o.id } : o))
+        );
+        removeFromQueue(pending.id);
+        setPendingCount(readQueue().length);
+      }).catch(() => {
+        // Still offline — leave in queue
+      });
+    });
+    if (changed) setPendingCount(readQueue().length);
+  }, []);
 
   // Sync today's orders from backend on mount (once)
   useEffect(() => {
@@ -82,17 +145,36 @@ export function useOrders() {
     syncFromServer();
 
     // Start periodic polling for multi-device sync
-    pollRef.current = setInterval(syncFromServer, POLL_INTERVAL);
+    pollRef.current = setInterval(() => {
+      syncFromServer();
+      retryPending();
+    }, POLL_INTERVAL);
 
     // Listen for SSE-triggered refresh events (from useKitchenEvents)
     const handleSSERefresh = () => { syncFromServer(); };
     window.addEventListener('kitchen:refresh', handleSSERefresh);
 
+    // Retry queue when browser detects connectivity
+    const handleOnline = () => { retryPending(); };
+    window.addEventListener('online', handleOnline);
+
+    // Retry pending queue on mount (from prior session)
+    retryPending();
+    setPendingCount(readQueue().length);
+
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
       window.removeEventListener('kitchen:refresh', handleSSERefresh);
+      window.removeEventListener('online', handleOnline);
     };
-  }, []);
+  }, [retryPending]);
+
+  // Persist local (pending-sync) orders so they survive page refresh
+  useEffect(() => {
+    try {
+      localStorage.setItem('erlbrew_local_orders', JSON.stringify(orders));
+    } catch { /* quota exceeded — silently drop */ }
+  }, [orders]);
 
   const placeOrder = useCallback(
     (cart: CartItem[], staff: Staff, type: OrderType, table: string | undefined, payMethod: PayMethod, cashTendered?: number, discount?: Discount | null, referenceNumber?: string): Order => {
@@ -167,7 +249,8 @@ export function useOrders() {
           );
         }).catch((err) => {
           console.error("Failed to persist order to server (admin):", err);
-          // Order already added locally, just keep it
+          // Offline — save to pending queue for later retry
+          addToQueue(payload, localOrder.id);
         });
       } else {
         // Fallback: try without auth (will fail if server requires auth)
@@ -184,7 +267,10 @@ export function useOrders() {
               };
             })
           );
-        }).catch((err) => console.error("Failed to persist order to server (fallback):", err));
+        }).catch((err) => {
+          console.error("Failed to persist order to server (fallback):", err);
+          addToQueue(payload, localOrder.id);
+        });
       }
 
       return localOrder;
@@ -220,5 +306,5 @@ export function useOrders() {
     }
   }, []);
 
-  return { orders, placeOrder, updateStatus, voidOrder, activeOrders, completedOrders };
+  return { orders, placeOrder, updateStatus, voidOrder, activeOrders, completedOrders, pendingCount };
 }

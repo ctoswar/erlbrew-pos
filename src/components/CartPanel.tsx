@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { CartItem, OrderType, Discount, CartItemModifier } from "../types";
 import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
 
@@ -19,6 +19,7 @@ interface Props {
   onCheckout: () => void;
   onOpenDiscount: () => void;
   onRemoveDiscount: () => void;
+  onAddNote: (id: string, notes: string, modifiers?: CartItemModifier[]) => void;
 }
 
 const TABLES = ["1", "2", "3", "4", "5", "6"];
@@ -26,7 +27,7 @@ const TABLES = ["1", "2", "3", "4", "5", "6"];
 export const CartPanel: React.FC<Props> = ({
   cart, discount, orderType, table,
   onUpdateQty, onClearCart, onOrderTypeChange, onTableChange, onCheckout,
-  onOpenDiscount, onRemoveDiscount,
+  onOpenDiscount, onRemoveDiscount, onAddNote,
 }) => {
   const subtotal = calcSubtotal(cart);
   const grand = calcGrand(subtotal, discount);
@@ -159,8 +160,10 @@ export const CartPanel: React.FC<Props> = ({
               key={cartItemKey(ci)}
               item={ci.item}
               qty={ci.qty}
+              notes={ci.notes}
               modifiers={ci.modifiers}
               onUpdateQty={(delta) => onUpdateQty(ci.item.id, delta, ci.modifiers)}
+              onAddNote={(notes) => onAddNote(ci.item.id, notes, ci.modifiers)}
             />
           ))
         )}
@@ -236,11 +239,30 @@ export const CartPanel: React.FC<Props> = ({
 interface CartItemRowProps {
   item: CartItem["item"];
   qty: number;
+  notes?: string;
   modifiers?: CartItemModifier[];
   onUpdateQty: (delta: number) => void;
+  onAddNote: (notes: string) => void;
 }
 
-const CartItemRow: React.FC<CartItemRowProps> = ({ item, qty, modifiers, onUpdateQty }) => {
+const CartItemRow: React.FC<CartItemRowProps> = ({ item, qty, notes, modifiers, onUpdateQty, onAddNote }) => {
+  const [showNote, setShowNote] = useState(false);
+  const [noteText, setNoteText] = useState(notes || '');
+  const noteRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showNote) noteRef.current?.focus();
+  }, [showNote]);
+
+  const saveNote = () => {
+    onAddNote(noteText);
+    setShowNote(false);
+  };
+
+  // Modifier price suffix for line total
+  const modPrice = (modifiers || []).reduce((s, m) => s + m.price, 0);
+  const linePrice = (item.price + modPrice) * qty;
+
   return (
     <div style={{
       display: "flex",
@@ -253,8 +275,8 @@ const CartItemRow: React.FC<CartItemRowProps> = ({ item, qty, modifiers, onUpdat
       {/* Emoji */}
       <span style={{ fontSize: 20, flexShrink: 0 }}>{item.emoji}</span>
 
-      {/* Name + modifiers + price */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Name + modifiers + note + price */}
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: 11.5,
           fontWeight: 700,
@@ -283,8 +305,53 @@ const CartItemRow: React.FC<CartItemRowProps> = ({ item, qty, modifiers, onUpdat
             ))}
           </div>
         )}
-        <div style={{ fontSize: 10, color: "var(--gold-muted)" }}>
-          {formatCurrency(item.price)} each
+        {/* Note display / input */}
+        {showNote ? (
+          <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 2 }}>
+            <input
+              ref={noteRef}
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') saveNote(); }}
+              placeholder="Add note…"
+              style={{
+                flex: 1, fontSize: 10, padding: "3px 8px", borderRadius: 6,
+                border: "1px solid var(--border-medium)", background: "var(--bg-base)",
+                color: "var(--text-primary)", outline: "none",
+              }}
+            />
+            <button onClick={saveNote} style={{
+              background: "var(--gold)", color: "var(--bg-sidebar)", border: "none",
+              borderRadius: 6, padding: "3px 8px", fontSize: 9, fontWeight: 700, cursor: "pointer",
+            }}>Save</button>
+            <button onClick={() => { setShowNote(false); setNoteText(notes || ''); }} style={{
+              background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border-default)",
+              borderRadius: 6, padding: "3px 6px", fontSize: 9, cursor: "pointer",
+            }}>✕</button>
+          </div>
+        ) : notes ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
+            <span style={{ fontSize: 9.5, color: "var(--text-muted)", fontStyle: "italic" }}>
+              📝 {notes}
+            </span>
+            <button onClick={() => setShowNote(true)} style={{
+              background: "none", border: "none", color: "var(--text-faint)",
+              fontSize: 8, cursor: "pointer", textDecoration: "underline", padding: 0,
+            }}>edit</button>
+          </div>
+        ) : null}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 10, color: "var(--gold-muted)" }}>
+            {formatCurrency(item.price)} each
+          </span>
+          {!notes && !showNote && (
+            <button onClick={() => setShowNote(true)} style={{
+              background: "none", border: "none", color: "var(--text-faint)",
+              fontSize: 8.5, cursor: "pointer", padding: 0, textDecoration: "underline",
+            }}>
+              + note
+            </button>
+          )}
         </div>
       </div>
 
@@ -293,61 +360,35 @@ const CartItemRow: React.FC<CartItemRowProps> = ({ item, qty, modifiers, onUpdat
         <button
           onClick={() => onUpdateQty(-1)}
           style={{
-            width: 28,
-            height: 28,
-            borderRadius: 8,
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--border-default)",
-            color: "var(--text-secondary)",
-            fontSize: 16,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            transition: "all 0.12s",
+            width: 28, height: 28, borderRadius: 8,
+            background: "var(--bg-elevated)", border: "1px solid var(--border-default)",
+            color: "var(--text-secondary)", fontSize: 16,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", transition: "all 0.12s",
           }}
-        >
-          −
-        </button>
+        >−</button>
         <span style={{
-          fontSize: 13,
-          fontWeight: 700,
-          color: "var(--text-primary)",
-          minWidth: 18,
-          textAlign: "center",
-        }}>
-          {qty}
-        </span>
+          fontSize: 13, fontWeight: 700, color: "var(--text-primary)",
+          minWidth: 18, textAlign: "center",
+        }}>{qty}</span>
         <button
           onClick={() => onUpdateQty(1)}
           style={{
-            width: 28,
-            height: 28,
-            borderRadius: 8,
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--border-default)",
-            color: "var(--gold)",
-            fontSize: 16,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            transition: "all 0.12s",
+            width: 28, height: 28, borderRadius: 8,
+            background: "var(--bg-elevated)", border: "1px solid var(--border-default)",
+            color: "var(--gold)", fontSize: 16,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", transition: "all 0.12s",
           }}
-        >
-          +
-        </button>
+        >+</button>
       </div>
 
       {/* Line total */}
       <div style={{
-        fontSize: 12,
-        fontWeight: 700,
-        color: "var(--gold)",
-        minWidth: 52,
-        textAlign: "right",
+        fontSize: 12, fontWeight: 700, color: "var(--gold)",
+        minWidth: 52, textAlign: "right",
       }}>
-        {formatCurrency(item.price * qty)}
+        {formatCurrency(linePrice)}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { Order } from "../types";
+import { Order, CartItem } from "../types";
 import { formatCurrency } from "../utils";
 
 interface Props {
@@ -110,15 +110,28 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   lines.push("QTY  ITEM              AMOUNT");
   lines.push(ln("-"));
   items.forEach((ci) => {
+    const ciMods = (ci as CartItem).modifiers || [];
+    const modifierPrice = ciMods.reduce((s, m) => s + m.price, 0);
+    const lineTotal = (ci.item.price + modifierPrice) * ci.qty;
     const qtyStr = String(ci.qty).padStart(3);
-    const amtStr = formatCurrency(ci.item.price * ci.qty).replace("₱", "").trim();
+    const amtStr = formatCurrency(lineTotal).replace("₱", "").trim();
     const name = ci.item.name.length > 17 ? ci.item.name.substring(0, 16) + "…" : ci.item.name;
     lines.push(`${qtyStr}  ${padRight(name, 17)} ${padLeft(amtStr, 8)}`);
     if (ci.qty > 1) {
-      lines.push(`     @ ${formatCurrency(ci.item.price).replace("₱","").trim()} ea`);
+      const unitPrice = ci.item.price + modifierPrice;
+      lines.push(`     @ ${formatCurrency(unitPrice).replace("₱","").trim()} ea`);
     }
     if (ci.notes) {
       lines.push(`     > ${ci.notes}`);
+    }
+    // Print modifier lines under each item
+    if (ciMods.length > 0) {
+      ciMods.forEach((m) => {
+        const modLabel = m.price > 0
+          ? `     + ${m.name} (${formatCurrency(m.price).replace("₱","").trim()})`
+          : `     + ${m.name}`;
+        lines.push(padRight(modLabel, W));
+      });
     }
   });
   lines.push(ln("-"));

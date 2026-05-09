@@ -71,9 +71,13 @@ export function useCart() {
     setDiscount(null);
   }, []);
 
-  const addNote = useCallback((id: string, notes: string) => {
+  const addNote = useCallback((id: string, notes: string, modifiers?: CartItemModifier[]) => {
+    const key = JSON.stringify({ id, modifiers: modifiers || [] });
     setCart((prev) =>
-      prev.map((ci) => (ci.item.id === id ? { ...ci, notes } : ci))
+      prev.map((ci) => {
+        const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [] });
+        return ciKey === key ? { ...ci, notes } : ci;
+      })
     );
   }, []);
 

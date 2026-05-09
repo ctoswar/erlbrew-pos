@@ -49,7 +49,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const isOrderFlow = screen === "pos" || screen === "checkout" || screen === "payment";
   const showDesktopCart = !isMobile && isOrderFlow;
 
-  const { cart, discount, addItem, updateQty, clearCart, applyDiscount, removeDiscount } = useCart();
+  const { cart, discount, addItem, updateQty, clearCart, applyDiscount, removeDiscount, addNote } = useCart();
 
   // Sync cart meta to localStorage for CustomerDisplay (second monitor)
   // Note: cart is in deps because useCart returns a new object reference on every render.
@@ -61,7 +61,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
       localStorage.setItem("erlbrew_cart_version", v);
     } catch {}
   }, [orderType, table, cart]);
-  const { orders, placeOrder, updateStatus, voidOrder, activeOrders } = useOrders();
+  const { orders, placeOrder, updateStatus, voidOrder, activeOrders, pendingCount } = useOrders();
   useKitchenEvents(); // Establish SSE connection for real-time order updates
 
   const handleNavigate = useCallback((s: Screen) => {
@@ -141,6 +141,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
             onCheckout={() => { setMobileCartOpen(false); handleCheckout(); }}
             onOpenDiscount={() => setShowDiscountModal(true)}
             onRemoveDiscount={removeDiscount}
+            onAddNote={addNote}
           />
         </div>
       </div>
@@ -197,6 +198,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
           onCheckout={handleCheckout}
           onOpenDiscount={() => setShowDiscountModal(true)}
           onRemoveDiscount={removeDiscount}
+          onAddNote={addNote}
         />
       </div>
     );
@@ -269,6 +271,22 @@ case "admin":
           {renderMainScreen()}
         </div>
       </div>
+
+      {/* Offline queue indicator */}
+      {pendingCount > 0 && (
+        <div style={{
+          position: "fixed", bottom: 16, left: 16, zIndex: 999,
+          background: "rgba(201,135,58,0.12)", border: "1px solid var(--gold-dim)",
+          borderRadius: 10, padding: "8px 14px",
+          display: "flex", alignItems: "center", gap: 8,
+          fontSize: 10, color: "var(--gold)", fontWeight: 700,
+          backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+          animation: "fadeInUp 0.3s ease",
+        }}>
+          <span style={{ fontSize: 14 }}>📡</span>
+          <span>{pendingCount} order{pendingCount > 1 ? 's' : ''} pending sync</span>
+        </div>
+      )}
 
       {/* ── Desktop cart panel (tablet+) — visible throughout order flow ── */}
       {showDesktopCart && renderDesktopCart()}

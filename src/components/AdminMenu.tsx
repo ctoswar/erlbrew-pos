@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { MenuItem } from "../types";
 import { formatCurrency } from "../utils";
-import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete } from "../utils/api";
+import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete, uploadMenuItemImage } from "../utils/api";
 import { IngredientEditor } from "./IngredientEditor";
 import { ModifierEditor } from "./ModifierEditor";
 
@@ -298,7 +298,25 @@ interface AdminItemCardProps {
   onCancelDelete: () => void;
 }
 
-const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, onManageIngredients, onManageModifiers, deleteConfirm, onConfirmDelete, onCancelDelete }) => (
+const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, onManageIngredients, onManageModifiers, deleteConfirm, onConfirmDelete, onCancelDelete }) => {
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await uploadMenuItemImage(item.id, file);
+      // Trigger parent reload
+      onEdit(); onEdit(); // quick hack: call twice to refresh via parent
+    } catch (err) {
+      console.error('Upload failed', err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
   <div style={{
     background: "var(--bg-surface)", border: "1px solid var(--border-subtle)",
     borderRadius: 12, padding: 0, display: "flex", flexDirection: "column",
@@ -308,6 +326,12 @@ const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, o
     onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.18)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
     onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}
   >
+    {/* Image area */}
+    {item.image && (
+      <div style={{ width: "100%", height: 120, overflow: "hidden", background: "var(--bg-base)", position: "relative" }}>
+        <img src={item.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      </div>
+    )}
     {/* Top accent bar */}
     <div style={{ height: 3, background: "linear-gradient(90deg, var(--gold), rgba(201,135,58,0.3))", flexShrink: 0 }} />
 
@@ -355,10 +379,16 @@ const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, o
         <button onClick={onManageModifiers} style={{ width: "100%", padding: "7px 0", borderRadius: 8, border: "1px solid rgba(201,135,58,0.3)", background: "rgba(201,135,58,0.06)", color: "var(--gold)", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, cursor: "pointer" }}>
           ⚡ Modifiers
         </button>
+        {/* Image upload */}
+        <label style={{ width: "100%", padding: "7px 0", borderRadius: 8, border: "1px dashed rgba(201,135,58,0.4)", background: "rgba(201,135,58,0.04)", color: "var(--gold)", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, cursor: uploading ? "wait" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+          {uploading ? "⟳ Uploading…" : item.image ? "🖼 Change Image" : "🖼 Add Image"}
+          <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} disabled={uploading} />
+        </label>
       </div>
     )}
   </div>
-);
+  );
+};
 
 // ── Form Field ────────────────────────────────────────────────────────────────
 

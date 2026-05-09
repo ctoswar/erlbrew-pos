@@ -45,6 +45,7 @@ export interface MenuItem {
   description: string;
   emoji: string;
   popular?: boolean;
+  image?: string;
   modifiers?: Modifier[];
 }
 

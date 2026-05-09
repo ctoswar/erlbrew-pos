@@ -518,6 +518,20 @@ export async function openCashDrawer(openingFloat: number): Promise<CashDrawer> 
   return res.json();
 }
 
+// Upload menu item image (multipart/form-data)
+export async function uploadMenuItemImage(id: string, file: File): Promise<{ imageUrl: string }> {
+  const token = getAuthToken();
+  const formData = new FormData();
+  formData.append('image', file);
+  const res = await fetch(getApiUrl(`/menu/${id}/image`), {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+  return res.json();
+}
+
 export async function updateCashDrawer(id: number, data: {
   closing_amount?: number;
   cash_payouts?: number;

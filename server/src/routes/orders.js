@@ -131,6 +131,75 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     }
   });
 
+  // GET /history — paginated order history with search, date range, status filter
+  router.get('/history', async (req, res) => {
+    try {
+      const { start, end, search, status, limit = 50, offset = 0 } = req.query;
+      const lim = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 500);
+      const off = Math.max(parseInt(String(offset), 10) || 0, 0);
+
+      const conditions = [];
+      const params = [];
+
+      if (start) {
+        conditions.push('o.created_at >= ?');
+        params.push(start);
+      }
+      if (end) {
+        conditions.push('o.created_at < DATE_ADD(?, INTERVAL 1 DAY)');
+        params.push(end);
+      }
+      if (status) {
+        conditions.push('o.status = ?');
+        params.push(status);
+      }
+      if (search) {
+        conditions.push('(o.id LIKE ? OR s.name LIKE ?)');
+        params.push(`%${search}%`, `%${search}%`);
+      }
+      if (conditions.length === 0) {
+        // Default: last 30 days
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        conditions.push('o.created_at >= ?');
+        params.push(d.toISOString().slice(0, 10));
+      }
+
+      const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+
+      const [[{ total }]] = await pool.query(
+        `SELECT COUNT(*) AS total FROM orders o LEFT JOIN staff s ON o.staff_id = s.id ${where}`,
+        params
+      );
+
+      const [rows] = await pool.query(`
+        SELECT o.id, o.status, o.subtotal, o.tax, o.total,
+               o.table_name, o.type, o.pay_method, o.reference_number,
+               o.created_at, o.completed_at,
+               s.name AS staff_name, s.initials AS staff_initials,
+               s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
+        FROM orders o
+        LEFT JOIN staff s ON o.staff_id = s.id
+        ${where}
+        ORDER BY o.created_at DESC
+        LIMIT ? OFFSET ?
+      `, [...params, lim, off]);
+
+      const ids = rows.map(r => r.id);
+      const items = ids.length ? await fetchOrderItems(ids) : [];
+
+      res.json({
+        orders: attachItems(rows, items),
+        total: Number(total),
+        limit: lim,
+        offset: off,
+      });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   // Create order and append to Google Sheets (public) -> now protected by auth
   router.post('/', authMiddleware, async (req, res) => {
     const { staff_id, staff_name, items, type, table_name, pay_method, reference_number } = req.body;

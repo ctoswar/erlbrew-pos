@@ -93,6 +93,10 @@ ALTER TABLE inventory
 ALTER TABLE orders
   ADD COLUMN reference_number VARCHAR(128) DEFAULT NULL;
 
+-- Menu item image
+ALTER TABLE menu_items
+  ADD COLUMN image VARCHAR(512) DEFAULT NULL AFTER emoji;
+
 -- Secondary RFID for tablet reader (different keyboard layout / byte order)
 ALTER TABLE staff
   ADD COLUMN rfid_alt VARCHAR(64) DEFAULT NULL AFTER rfid;

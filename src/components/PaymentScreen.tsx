@@ -16,13 +16,28 @@ export const PaymentScreen: React.FC<Props> = ({ total, discountLabel, discountA
   const [method, setMethod] = useState<PayMethod>("cash");
   const [cashGiven, setCashGiven] = useState("");
   const [referenceNumber, setReferenceNumber] = useState("");
+  const [splitMode, setSplitMode] = useState(false);
+  const [splitEwallet, setSplitEwallet] = useState("");
+  const [splitRef, setSplitRef] = useState("");
   const printSettings = loadPrintSettings();
 
   const cash = parseFloat(cashGiven) || 0;
   const change = cash - total;
   const quickAmounts = getQuickCashAmounts(total);
-  const canConfirm = method !== "cash" || (cashGiven !== "" && cash >= total);
+  const splitEwalletNum = parseFloat(splitEwallet) || 0;
+  const splitCashNeeded = total - splitEwalletNum;
+  const canConfirm = splitMode
+    ? (splitEwalletNum > 0 && splitEwalletNum < total && splitRef.trim() !== "" && cashGiven !== "" && parseFloat(cashGiven) >= splitCashNeeded)
+    : method !== "cash" || (cashGiven !== "" && cash >= total);
   const canConfirmEwallet = method === "ewallet" && referenceNumber.trim() !== "";
+
+  const handleConfirm = () => {
+    if (splitMode) {
+      onConfirm("cash", parseFloat(cashGiven) || 0, `SPLIT:₱${splitEwalletNum.toFixed(0)}-${splitRef}`);
+    } else {
+      onConfirm(method, method === 'cash' ? cash : undefined, method === 'ewallet' ? referenceNumber : undefined);
+    }
+  };
 
   return (
     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-base)" }}>
@@ -44,7 +59,8 @@ export const PaymentScreen: React.FC<Props> = ({ total, discountLabel, discountA
           )}
         </div>
 
-        {/* Method Tabs */}
+        {/* Method Tabs (hidden when split mode) */}
+        {!splitMode && (
         <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
           {(["cash", "card", "ewallet"] as PayMethod[]).map((m) => (
             <button key={m} className={`btn tab ${method === m ? "active-subtle" : ""}`}
@@ -54,6 +70,7 @@ export const PaymentScreen: React.FC<Props> = ({ total, discountLabel, discountA
             </button>
           ))}
         </div>
+        )}
 
         {/* Cash Panel */}
         {method === "cash" && (
@@ -149,10 +166,49 @@ export const PaymentScreen: React.FC<Props> = ({ total, discountLabel, discountA
           </div>
         )}
 
-        <button className="btn btn-gold" onClick={() => canConfirm && onConfirm(method, method === 'cash' ? cash : undefined, method === 'ewallet' ? referenceNumber : undefined)}
+        {/* Split Bill Toggle */}
+        <div style={{ marginBottom: 10 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 10, color: "var(--text-muted)", justifyContent: "center" }}>
+            <input type="checkbox" checked={splitMode} onChange={(e) => setSplitMode(e.target.checked)}
+              style={{ accentColor: "var(--gold)", width: 14, height: 14 }} />
+            Split bill (Cash + E-Wallet)
+          </label>
+        </div>
+
+        {/* Split Bill Panel */}
+        {splitMode && (
+          <div style={{ marginBottom: 12, padding: 12, background: "var(--bg-base)", borderRadius: 10, border: "1px solid var(--border-subtle)" }}>
+            <div style={{ fontSize: 9, color: "var(--gold)", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Split Payment</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div>
+                <div style={{ fontSize: 8, color: "var(--text-faint)", marginBottom: 3 }}>E-Wallet Amount</div>
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", fontSize: 11 }}>₱</span>
+                  <input type="number" value={splitEwallet} onChange={(e) => setSplitEwallet(e.target.value)}
+                    placeholder="0.00" min="0" max={total}
+                    style={{ width: "100%", padding: "8px 10px 8px 24px", borderRadius: 6, border: "1px solid var(--border-default)", background: "var(--bg-surface)", color: "var(--text-primary)", fontSize: 12 }} />
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 8, color: "var(--text-faint)", marginBottom: 3 }}>E-Wallet Reference</div>
+                <input type="text" value={splitRef} onChange={(e) => setSplitRef(e.target.value)}
+                  placeholder="GCash ref number…"
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-default)", background: "var(--bg-surface)", color: "var(--text-primary)", fontSize: 12 }} />
+              </div>
+              {splitEwalletNum > 0 && (
+                <div style={{ padding: "6px 10px", background: "rgba(201,135,58,0.08)", borderRadius: 6, fontSize: 10, color: "var(--text-muted)" }}>
+                  <div>E-Wallet: <strong style={{ color: "var(--gold)" }}>₱{splitEwalletNum.toFixed(2)}</strong></div>
+                  <div>Cash due: <strong style={{ color: "var(--text-primary)" }}>₱{Math.max(0, splitCashNeeded).toFixed(2)}</strong></div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <button className="btn btn-gold" onClick={handleConfirm}
           disabled={!canConfirm || (method === 'ewallet' && !canConfirmEwallet)}
           style={{ width: "100%", fontSize: 11, padding: 13, borderRadius: 10, marginBottom: 6 }}>
-          Confirm & Place Order ✓
+          {splitMode ? `Confirm Split (₱${splitEwalletNum.toFixed(0)} GCash + ₱${Math.max(0, splitCashNeeded).toFixed(0)} Cash)` : "Confirm & Place Order ✓"}
         </button>
         <div style={{ textAlign: "center" }}>
           <span style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 1 }}>

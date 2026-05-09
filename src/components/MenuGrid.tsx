@@ -132,6 +132,7 @@ interface MenuCardProps {
 
 const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd }) => {
   const [hovered, setHovered] = useState(false);
+  const hasImage = !!item.image;
 
   return (
     <div
@@ -142,17 +143,22 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd }) => {
         background: hovered ? "var(--bg-elevated)" : "var(--bg-surface)",
         border: `1.5px solid ${cartItem ? "var(--gold)" : hovered ? "var(--border-medium)" : "var(--border-subtle)"}`,
         borderRadius: 14,
-        padding: "14px 14px 12px",
         cursor: "pointer",
         transition: "all 0.15s ease",
         transform: hovered ? "translateY(-2px)" : "translateY(0)",
         boxShadow: hovered ? "0 6px 20px rgba(0,0,0,0.35)" : "0 1px 4px rgba(0,0,0,0.15)",
         display: "flex",
         flexDirection: "column",
-        gap: 6,
-        minHeight: 140,
+        overflow: "hidden",
       }}
     >
+      {/* Image */}
+      {hasImage && (
+        <div style={{ width: "100%", height: 100, overflow: "hidden", background: "var(--bg-base)" }}>
+          <img src={item.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s", transform: hovered ? "scale(1.05)" : "scale(1)" }} />
+        </div>
+      )}
+      <div style={{ padding: "14px 14px 12px", display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
       {/* Top row: emoji + optional badge */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <span style={{ fontSize: 32, lineHeight: 1 }}>{item.emoji}</span>
@@ -233,6 +239,7 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd }) => {
             {cartItem.qty}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

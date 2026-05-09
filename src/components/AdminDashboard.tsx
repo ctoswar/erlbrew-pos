@@ -12,6 +12,7 @@ import { AdminSupplierInvoices } from "./AdminSupplierInvoices";
 import { ZReportScreen } from "./ZReportScreen";
 import { CashDrawerScreen } from "./CashDrawerScreen";
 import { TimeKeeping } from "./TimeKeeping";
+import { OrderHistory } from "./OrderHistory";
 
 const STORAGE_KEY_ORDERS = 'erlbrew_admin_orders';
 const STORAGE_KEY_INVENTORY = 'erlbrew_admin_inventory';
@@ -23,7 +24,7 @@ interface Props {
 }
 
 export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer' | 'time'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer' | 'time'>('dashboard');
   const [orders, setOrders] = useState<Order[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -285,6 +286,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
           {[
             ['Dashboard', 'dashboard', '📊'],
             ['Reports', 'reports', '📈'],
+            ['Order History', 'history', '📋'],
             ['Menu Items', 'menu', '☕'],
             ['Staff', 'staff', '👥'],
             ['Time Keeping', 'time', '⏱️'],
@@ -375,6 +377,11 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
         {/* Reports Tab */}
         {activeTab === 'reports' && (
           <AdminReports />
+        )}
+
+        {/* Order History Tab */}
+        {activeTab === 'history' && (
+          <OrderHistory />
         )}
 
         {/* Menu Items Tab */}

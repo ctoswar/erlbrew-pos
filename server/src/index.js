@@ -15,6 +15,7 @@ import recipesRouter from './routes/recipes.js';
 import clockRouter from './routes/clock.js';
 import supplierInvoiceRoutes from './routes/supplierInvoices.js';
 import companySettingsRoutes from './routes/companySettings.js';
+import uploadRouter from './routes/upload.js';
 import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
@@ -164,6 +165,9 @@ await pool.query(`
 
     // Add rfid_alt column for tablet RFID reader compatibility (reversed byte order)
     await pool.query(`ALTER TABLE staff ADD COLUMN rfid_alt VARCHAR(64) DEFAULT NULL AFTER rfid`).catch(() => {});
+
+    // Add image column to menu_items
+    await pool.query(`ALTER TABLE menu_items ADD COLUMN image VARCHAR(512) DEFAULT NULL AFTER emoji`).catch(() => {});
     // Auto-populate rfid_alt with reversed rfid for existing staff
     await pool.query(`UPDATE staff SET rfid_alt = REVERSE(rfid) WHERE rfid IS NOT NULL AND rfid_alt IS NULL`).catch(() => {});
     console.log('staff rfid_alt column ready');
@@ -227,6 +231,9 @@ app.get('/api/events/ping', (req, res) => res.json({ ok: true, clients: sseClien
 // Make broadcastEvent available to routes via app.locals
 app.locals.broadcastEvent = broadcastEvent;
 
+// Serve uploaded images
+app.use('/uploads', express.static(resolve('server/uploads')));
+
 // Routes
 app.use('/api/staff', staffRoutes(pool));
 // Menu: public reads, admin writes (auth applied inline per route)
@@ -240,6 +247,7 @@ app.use('/api/recipes', recipesRouter(pool));
 app.use('/api/clock', clockRouter(pool, gs));
 app.use('/api/supplier-invoices', supplierInvoiceRoutes(pool));
 app.use('/api/company-settings', companySettingsRoutes(pool));
+app.use('/api', uploadRouter(pool));
 
 // ── Google Sheets sync: write Dashboard to Sheet3 ──────────────────────────
 app.post('/api/sheets/sync-dashboard', async (req, res) => {

@@ -9,7 +9,7 @@ interface Props {
   onDone: () => void;
 }
 
-const AUTO_CLOSE_DELAY = 15000; // 15 seconds before auto-return (was 3s)
+const AUTO_CLOSE_DELAY = 15000;
 
 export const SuccessScreen: React.FC<Props> = ({ order, onDone }) => {
   const [showPreview, setShowPreview] = useState(false);
@@ -17,7 +17,6 @@ export const SuccessScreen: React.FC<Props> = ({ order, onDone }) => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Auto-close after delay
   useEffect(() => {
     timerRef.current = setTimeout(onDone, AUTO_CLOSE_DELAY);
     intervalRef.current = setInterval(() => {
@@ -35,38 +34,113 @@ export const SuccessScreen: React.FC<Props> = ({ order, onDone }) => {
   };
 
   return (
-    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-base)" }}>
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "var(--bg-base)",
+      }}
+    >
       <div className="animate-successPop" style={{ textAlign: "center" }}>
-        <div style={{ width: 80, height: 80, borderRadius: "50%", background: "var(--success-bg)", border: "2px solid var(--success)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 32 }}>
-          ✓
+        {/* Success checkmark */}
+        <div
+          style={{
+            width: 88,
+            height: 88,
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, rgba(122,201,122,0.15), rgba(122,201,122,0.05))",
+            border: "2px solid rgba(122,201,122,0.3)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 24px",
+            fontSize: 36,
+            color: "var(--success)",
+            boxShadow: "0 0 40px rgba(122,201,122,0.15)",
+          }}
+        >
+          &#x2713;
         </div>
-        <div className="font-display" style={{ fontSize: 28, color: "var(--success)", marginBottom: 6 }}>Order Placed!</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: "var(--gold)", marginBottom: 4 }}>{order.id}</div>
-        <div style={{ fontSize: 12, color: "var(--gold-muted)", marginBottom: 8 }}>
-          {order.type === "dine-in" ? order.table : "Takeout"} · {formatCurrency(order.total)}
+
+        <div
+          className="font-display"
+          style={{ fontSize: 30, color: "var(--success)", marginBottom: 8, letterSpacing: 1 }}
+        >
+          Order Placed!
         </div>
-        <div style={{ fontSize: 11, color: "var(--text-disabled)", letterSpacing: 2 }}>Sent to kitchen…</div>
+
+        {/* Order ID card */}
+        <div
+          className="card-glass animate-scaleIn"
+          style={{
+            display: "inline-block",
+            padding: "10px 24px",
+            borderRadius: 12,
+            marginBottom: 6,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: "var(--gold)",
+              letterSpacing: 2,
+              fontFamily: "'Courier New', monospace",
+            }}
+          >
+            {order.id}
+          </div>
+        </div>
+
+        <div
+          style={{
+            fontSize: 12,
+            color: "var(--gold-dim)",
+            marginBottom: 8,
+            letterSpacing: 1,
+          }}
+        >
+          {order.type === "dine-in" ? `Table ${order.table}` : "Takeout"} &middot;{" "}
+          {formatCurrency(order.total)}
+        </div>
+
+        <div
+          style={{
+            fontSize: 11,
+            color: "var(--text-disabled)",
+            letterSpacing: 2,
+            marginBottom: 4,
+          }}
+        >
+          Sent to kitchen&hellip;
+        </div>
 
         <div style={{ marginTop: 12, fontSize: 10, color: "var(--text-faint)" }}>
           Auto-return in {countdown}s
         </div>
 
-        <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 16 }}>
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 20 }}>
           <button
             className="btn btn-gold"
             onClick={() => setShowPreview(true)}
-            style={{ fontSize: 10, padding: "9px 20px" }}
+            style={{ fontSize: 10, padding: "10px 22px" }}
           >
-            🖨 Print Receipt
+            &#x1F5A8; Print Receipt
           </button>
           <button
             className="btn btn-outline"
             onClick={handlePrintAndDone}
-            style={{ fontSize: 10, padding: "9px 20px" }}
+            style={{ fontSize: 10, padding: "10px 22px" }}
           >
-            Print & Done
+            Print &amp; Done
           </button>
-          <button className="btn btn-outline" onClick={onDone} style={{ fontSize: 10, padding: "9px 20px" }}>
+          <button
+            className="btn btn-outline"
+            onClick={onDone}
+            style={{ fontSize: 10, padding: "10px 22px" }}
+          >
             New Order
           </button>
         </div>

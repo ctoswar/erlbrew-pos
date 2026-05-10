@@ -180,26 +180,19 @@ export const AdminStaff: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
       {/* Header */}
-      <div style={{
+      <div className="glass-panel" style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0.9rem 1rem", borderBottom: "1px solid var(--border-default)", flexShrink: 0,
+        padding: "0.8rem 1rem", borderBottom: "1px solid rgba(201,135,58,0.08)", flexShrink: 0,
+        borderRadius: 0,
       }}>
-        <div style={{ fontSize: 9, color: "var(--gold)", letterSpacing: 2, textTransform: "uppercase", fontWeight: 700 }}>
+        <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
           Staff Management
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ fontSize: 9, color: "var(--text-faint)" }}>
-            RFID · Name · Password
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 1 }}>{staff.length} staff</span>
           {!showAddForm && (
-            <button
-              onClick={() => { setShowAddForm(true); cancelAll(); }}
-              style={{
-                background: "var(--gold)", color: "var(--bg-sidebar)",
-                border: "none", borderRadius: 8, padding: "6px 14px",
-                fontSize: 9, fontWeight: 700, cursor: "pointer",
-              }}
-            >
+            <button onClick={() => { setShowAddForm(true); cancelAll(); }}
+              className="btn btn-gold" style={{ fontSize: 9, padding: "6px 14px", letterSpacing: 1 }}>
               + Add Staff
             </button>
           )}
@@ -215,10 +208,7 @@ export const AdminStaff: React.FC = () => {
 
             {/* ── Add Staff Form ── */}
             {showAddForm && (
-              <div style={{
-                background: "var(--bg-surface)", border: "1px solid var(--gold)",
-                borderRadius: 14, padding: "20px 18px",
-              }}>
+              <div className="card-glass" style={{ padding: "20px 18px", border: "1px solid rgba(201,135,58,0.2)" }}>
                 <div style={{ fontSize: 10, color: "var(--gold)", fontWeight: 700, marginBottom: 14, letterSpacing: 1.5, textTransform: "uppercase" }}>
                   New Staff
                 </div>
@@ -343,42 +333,28 @@ export const AdminStaff: React.FC = () => {
             )}
 
             {staff.map((s) => (
-              <div key={s.id} style={{
-                background: "var(--bg-surface)", border: "1px solid var(--border-subtle)",
-                borderRadius: 14, padding: "16px 18px",
-              }}>
+              <div key={s.id} className="card-glass" style={{ padding: "16px 18px" }}>
                 {/* ── Row 1: Avatar + Name (editable) + Role ── */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                   <div style={{
                     width: 44, height: 44, borderRadius: "50%",
-                    background: s.color || "#555",
+                    background: `linear-gradient(135deg, ${s.color || "#555"}, ${(s.color || "#555")}cc)`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 14, fontWeight: 700, color: "#fff", flexShrink: 0,
+                    boxShadow: "0 0 0 2px rgba(201,135,58,0.15)",
                   }}>
                     {s.initials}
                   </div>
 
                   {editingNameId === s.id ? (
                     <div style={{ display: "flex", gap: 6, alignItems: "center", flex: 1 }}>
-                      <input
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && saveName(s.id)}
-                        autoFocus
-                        style={{
-                          flex: 1, background: "var(--bg-base)", border: "1px solid var(--border-medium)",
-                          borderRadius: 8, color: "var(--text-primary)", padding: "7px 12px",
-                          fontSize: 13, fontWeight: 700, outline: "none",
-                        }}
-                      />
-                      <button onClick={() => saveName(s.id)} disabled={saving}
-                        style={{ background: "var(--gold)", color: "var(--bg-sidebar)", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: 9, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
-                        Save
-                      </button>
-                      <button onClick={cancelAll}
-                        style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border-default)", borderRadius: 8, padding: "7px 10px", fontSize: 9, cursor: "pointer" }}>
-                        ✕
-                      </button>
+                      <input value={editName} onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && saveName(s.id)} autoFocus
+                        style={{ flex: 1, fontSize: 13, fontWeight: 700 }} />
+                      <button onClick={() => saveName(s.id)} disabled={saving} className="btn btn-gold"
+                        style={{ fontSize: 9, padding: "7px 12px", borderRadius: 8 }}>Save</button>
+                      <button onClick={cancelAll} className="btn-ghost"
+                        style={{ fontSize: 9, padding: "7px 10px", borderRadius: 8, border: "1px solid var(--border-default)" }}>✕</button>
                     </div>
                   ) : (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
@@ -395,29 +371,17 @@ export const AdminStaff: React.FC = () => {
 
                 {/* ── Row 2: RFID ── */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <div style={{ fontSize: 9, color: "var(--text-faint)", width: 70, flexShrink: 0, letterSpacing: 1 }}>RFID</div>
+                  <div style={{ fontSize: 9, color: "var(--text-faint)", width: 68, flexShrink: 0, letterSpacing: 1 }}>RFID</div>
                   {editingRfidId === s.id ? (
                     <div style={{ display: "flex", gap: 6, alignItems: "center", flex: 1 }}>
-                      <input
-                        value={editRfid}
-                        onChange={(e) => setEditRfid(e.target.value.toUpperCase())}
+                      <input value={editRfid} onChange={(e) => setEditRfid(e.target.value.toUpperCase())}
                         onKeyDown={(e) => e.key === "Enter" && saveRfid(s.id)}
-                        placeholder="Tap card or type…"
-                        autoFocus
-                        style={{
-                          flex: 1, background: "var(--bg-base)", border: "1px solid var(--border-medium)",
-                          borderRadius: 8, color: "var(--text-primary)", padding: "7px 12px",
-                          fontSize: 11, fontFamily: "monospace", outline: "none",
-                        }}
-                      />
-                      <button onClick={() => saveRfid(s.id)} disabled={saving}
-                        style={{ background: "var(--gold)", color: "var(--bg-sidebar)", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: 9, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
-                        Save
-                      </button>
-                      <button onClick={() => setEditingRfidId(null)}
-                        style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border-default)", borderRadius: 8, padding: "7px 10px", fontSize: 9, cursor: "pointer" }}>
-                        ✕
-                      </button>
+                        placeholder="Tap card or type…" autoFocus
+                        style={{ flex: 1, fontSize: 11, fontFamily: "monospace" }} />
+                      <button onClick={() => saveRfid(s.id)} disabled={saving} className="btn btn-gold"
+                        style={{ fontSize: 9, padding: "7px 12px", borderRadius: 8 }}>Save</button>
+                      <button onClick={() => setEditingRfidId(null)} className="btn-ghost"
+                        style={{ fontSize: 9, padding: "7px 10px", borderRadius: 8, border: "1px solid var(--border-default)" }}>✕</button>
                     </div>
                   ) : (
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -427,16 +391,12 @@ export const AdminStaff: React.FC = () => {
                         borderRadius: 8, padding: "6px 14px",
                         fontFamily: "monospace", fontSize: 11,
                         color: s.rfid ? "var(--gold)" : "var(--text-faint)",
-                        minWidth: 120, textAlign: "center" as const,
+                        minWidth: 120, textAlign: "center",
                       }}>
                         {s.rfid || "Not set"}
                       </div>
-                      <button onClick={() => startEditRfid(s)}
-                        style={{
-                          background: "transparent", color: "var(--gold)",
-                          border: "1px solid var(--gold-dim)", borderRadius: 8,
-                          padding: "6px 12px", fontSize: 9, fontWeight: 700, cursor: "pointer",
-                        }}>
+                      <button onClick={() => startEditRfid(s)} className="btn-glass"
+                        style={{ fontSize: 9, padding: "6px 12px" }}>
                         {s.rfid ? "Change RFID" : "Assign RFID"}
                       </button>
                     </div>
@@ -445,29 +405,17 @@ export const AdminStaff: React.FC = () => {
 
                 {/* ── Row 3: RFID Alt (tablet reader) ── */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <div style={{ fontSize: 9, color: "var(--text-faint)", width: 70, flexShrink: 0, letterSpacing: 1 }}>RFID Alt</div>
+                  <div style={{ fontSize: 9, color: "var(--text-faint)", width: 68, flexShrink: 0, letterSpacing: 1 }}>Alt</div>
                   {editingRfidAltId === s.id ? (
                     <div style={{ display: "flex", gap: 6, alignItems: "center", flex: 1 }}>
-                      <input
-                        value={editRfidAlt}
-                        onChange={(e) => setEditRfidAlt(e.target.value.toUpperCase())}
+                      <input value={editRfidAlt} onChange={(e) => setEditRfidAlt(e.target.value.toUpperCase())}
                         onKeyDown={(e) => e.key === "Enter" && saveRfidAlt(s.id)}
-                        placeholder="Tap card on tablet to get the value…"
-                        autoFocus
-                        style={{
-                          flex: 1, background: "var(--bg-base)", border: "1px solid var(--border-medium)",
-                          borderRadius: 8, color: "var(--text-primary)", padding: "7px 12px",
-                          fontSize: 11, fontFamily: "monospace", outline: "none",
-                        }}
-                      />
-                      <button onClick={() => saveRfidAlt(s.id)} disabled={saving}
-                        style={{ background: "var(--gold)", color: "var(--bg-sidebar)", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: 9, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
-                        Save
-                      </button>
-                      <button onClick={() => setEditingRfidAltId(null)}
-                        style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border-default)", borderRadius: 8, padding: "7px 10px", fontSize: 9, cursor: "pointer" }}>
-                        ✕
-                      </button>
+                        placeholder="Tap card on tablet to get the value…" autoFocus
+                        style={{ flex: 1, fontSize: 11, fontFamily: "monospace" }} />
+                      <button onClick={() => saveRfidAlt(s.id)} disabled={saving} className="btn btn-gold"
+                        style={{ fontSize: 9, padding: "7px 12px", borderRadius: 8 }}>Save</button>
+                      <button onClick={() => setEditingRfidAltId(null)} className="btn-ghost"
+                        style={{ fontSize: 9, padding: "7px 10px", borderRadius: 8, border: "1px solid var(--border-default)" }}>✕</button>
                     </div>
                   ) : (
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -477,16 +425,12 @@ export const AdminStaff: React.FC = () => {
                         borderRadius: 8, padding: "6px 14px",
                         fontFamily: "monospace", fontSize: 11,
                         color: s.rfid_alt ? "var(--gold)" : "var(--text-faint)",
-                        minWidth: 120, textAlign: "center" as const,
+                        minWidth: 120, textAlign: "center",
                       }}>
                         {s.rfid_alt || "Not set"}
                       </div>
-                      <button onClick={() => startEditRfidAlt(s)}
-                        style={{
-                          background: "transparent", color: "var(--gold)",
-                          border: "1px solid var(--gold-dim)", borderRadius: 8,
-                          padding: "6px 12px", fontSize: 9, fontWeight: 700, cursor: "pointer",
-                        }}>
+                      <button onClick={() => startEditRfidAlt(s)} className="btn-glass"
+                        style={{ fontSize: 9, padding: "6px 12px" }}>
                         {s.rfid_alt ? "Change Alt" : "Set Alt"}
                       </button>
                     </div>
@@ -495,10 +439,9 @@ export const AdminStaff: React.FC = () => {
 
                 {/* ── Row 4: PIN ── */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ fontSize: 9, color: "var(--text-faint)", width: 70, flexShrink: 0, letterSpacing: 1 }}>PIN</div>
+                  <div style={{ fontSize: 9, color: "var(--text-faint)", width: 68, flexShrink: 0, letterSpacing: 1 }}>PIN</div>
                   {changingPwId === s.id ? (
                     <div style={{ flex: 1 }}>
-                      {/* PIN dots */}
                       <div style={{ display: "flex", gap: 8, marginBottom: 10, justifyContent: "flex-start" }}>
                         {[0,1,2,3].map((i) => (
                           <div key={i} style={{
@@ -506,52 +449,45 @@ export const AdminStaff: React.FC = () => {
                             background: "var(--bg-base)",
                             border: `1.5px solid ${i < editPw.length ? "var(--gold)" : "var(--border-default)"}`,
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 18, color: "var(--gold)", transition: "all 0.12s",
+                            fontSize: 18, color: "var(--gold)",
+                            transition: "all 0.12s var(--ease-out)",
+                            boxShadow: i < editPw.length ? "0 0 8px rgba(201,135,58,0.1)" : "none",
                           }}>
                             {i < editPw.length ? "●" : ""}
                           </div>
                         ))}
                       </div>
-                      {/* Keypad */}
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 5, maxWidth: 200 }}>
                         {(["1","2","3","4","5","6","7","8","9","CLR","0","⌫"] as string[]).map((k) => (
-                          <button
-                            key={k}
+                          <button key={k} className="btn"
                             onClick={() => {
                               if (k === "CLR") { setEditPw(""); return; }
                               if (k === "⌫") { setEditPw((p) => p.slice(0,-1)); return; }
                               if (editPw.length < 4) setEditPw((p) => p + k);
                             }}
                             style={{
-                              background: k === "CLR" || k === "⌫" ? "var(--bg-base)" : "var(--card-bg)",
+                              background: k === "CLR" || k === "⌫" ? "var(--bg-base)" : "var(--bg-surface)",
                               border: "1px solid var(--border-default)", borderRadius: 8,
                               color: k === "CLR" || k === "⌫" ? "var(--text-muted)" : "var(--text-primary)",
                               fontSize: 14, padding: "8px 0", cursor: "pointer",
-                              fontFamily: "'Lato', sans-serif",
+                              transition: "all 0.1s var(--ease-out)",
                             }}
-                          >
-                            {k}
-                          </button>
+                          >{k}</button>
                         ))}
                       </div>
                       <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
                         <button onClick={() => savePassword(s.id)} disabled={saving || editPw.length !== 4}
-                          style={{ background: "var(--gold)", color: "var(--bg-sidebar)", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 9, fontWeight: 700, cursor: (saving || editPw.length !== 4) ? "not-allowed" : "pointer", opacity: (saving || editPw.length !== 4) ? 0.5 : 1 }}>
-                          Save
-                        </button>
-                        <button onClick={cancelAll}
-                          style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border-default)", borderRadius: 8, padding: "7px 12px", fontSize: 9, cursor: "pointer" }}>
-                          ✕
-                        </button>
+                          className="btn btn-gold"
+                          style={{ fontSize: 9, padding: "7px 14px", borderRadius: 8 }}>Save</button>
+                        <button onClick={cancelAll} className="btn-ghost"
+                          style={{ fontSize: 9, padding: "7px 12px", borderRadius: 8, border: "1px solid var(--border-default)" }}>✕</button>
                       </div>
                     </div>
                   ) : (
-                    <button onClick={() => startChangePw(s)}
+                    <button onClick={() => startChangePw(s)} className="btn-ghost"
                       style={{
-                        background: "transparent", color: "var(--text-muted)",
-                        border: "1px solid var(--border-default)", borderRadius: 8,
-                        padding: "6px 14px", fontSize: 9, fontWeight: 700, cursor: "pointer",
-                        letterSpacing: 0.5,
+                        fontSize: 9, padding: "6px 14px", borderRadius: 8,
+                        border: "1px solid var(--border-default)", letterSpacing: 0.5,
                       }}>
                       Change PIN
                     </button>

@@ -8,79 +8,80 @@ import { CashDrawerScreen } from "./CashDrawerScreen";
 
 type AdminTab = "menu" | "inventory" | "staff" | "reports" | "cash" | "print";
 
+const TABS: { key: AdminTab; label: string; icon: string }[] = [
+  { key: "menu", label: "Menu Items", icon: "🍽️" },
+  { key: "inventory", label: "Inventory", icon: "📦" },
+  { key: "staff", label: "Staff", icon: "👥" },
+  { key: "print", label: "Print Settings", icon: "🖨️" },
+  { key: "reports", label: "Z-Report", icon: "📊" },
+  { key: "cash", label: "Cash Drawer", icon: "💰" },
+];
+
 export const AdminScreen: React.FC = () => {
   const [tab, setTab] = useState<AdminTab>("menu");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
-      {/* Sub-tab bar */}
-      <div style={{
+    <div
+      style={{
         display: "flex",
-        gap: 8,
-        padding: "0.75rem 1rem",
-        borderBottom: "1px solid var(--border-default)",
-        flexShrink: 0,
-      }}>
-        <button onClick={() => setTab("menu")} style={{
-          padding: "7px 20px", borderRadius: 9,
-          border: `1.5px solid ${tab === "menu" ? "var(--gold)" : "var(--border-default)"}`,
-          background: tab === "menu" ? "rgba(201,135,58,0.15)" : "transparent",
-          color: tab === "menu" ? "var(--gold)" : "var(--text-secondary)",
-          fontSize: 9, fontWeight: 700, letterSpacing: 1.5, cursor: "pointer",
-          textTransform: "uppercase" as const,
-        }}>
-          Menu Items
-        </button>
-<button onClick={() => setTab("inventory")} style={{
-        padding: "7px 20px", borderRadius: 9,
-        border: `1.5px solid ${tab === "inventory" ? "var(--gold)" : "var(--border-default)"}`,
-        background: tab === "inventory" ? "rgba(201,135,58,0.15)" : "transparent",
-        color: tab === "inventory" ? "var(--gold)" : "var(--text-secondary)",
-        fontSize: 9, fontWeight: 700, letterSpacing: 1.5, cursor: "pointer",
-        textTransform: "uppercase" as const,
-      }}>
-        Inventory
-      </button>
-<button onClick={() => setTab("staff")} style={{
-          padding: "7px 20px", borderRadius: 9,
-          border: `1.5px solid ${tab === "staff" ? "var(--gold)" : "var(--border-default)"}`,
-          background: tab === "staff" ? "rgba(201,135,58,0.15)" : "transparent",
-          color: tab === "staff" ? "var(--gold)" : "var(--text-secondary)",
-          fontSize: 9, fontWeight: 700, letterSpacing: 1.5, cursor: "pointer",
-          textTransform: "uppercase" as const,
-        }}>
-          Staff
-        </button>
-        <button onClick={() => setTab("print")} style={{
-          padding: "7px 20px", borderRadius: 9,
-          border: `1.5px solid ${tab === "print" ? "var(--gold)" : "var(--border-default)"}`,
-          background: tab === "print" ? "rgba(201,135,58,0.15)" : "transparent",
-          color: tab === "print" ? "var(--gold)" : "var(--text-secondary)",
-          fontSize: 9, fontWeight: 700, letterSpacing: 1.5, cursor: "pointer",
-          textTransform: "uppercase" as const,
-        }}>
-          🖨 Print Settings
-        </button>
-        <button onClick={() => setTab("reports")} style={{
-          padding: "7px 20px", borderRadius: 9,
-          border: `1.5px solid ${tab === "reports" ? "var(--gold)" : "var(--border-default)"}`,
-          background: tab === "reports" ? "rgba(201,135,58,0.15)" : "transparent",
-          color: tab === "reports" ? "var(--gold)" : "var(--text-secondary)",
-          fontSize: 9, fontWeight: 700, letterSpacing: 1.5, cursor: "pointer",
-          textTransform: "uppercase" as const,
-        }}>
-          📊 Z-Report
-        </button>
-        <button onClick={() => setTab("cash")} style={{
-          padding: "7px 20px", borderRadius: 9,
-          border: `1.5px solid ${tab === "cash" ? "var(--gold)" : "var(--border-default)"}`,
-          background: tab === "cash" ? "rgba(201,135,58,0.15)" : "transparent",
-          color: tab === "cash" ? "var(--gold)" : "var(--text-secondary)",
-          fontSize: 9, fontWeight: 700, letterSpacing: 1.5, cursor: "pointer",
-          textTransform: "uppercase" as const,
-        }}>
-          💰 Cash Drawer
-        </button>
+        flexDirection: "column",
+        flex: 1,
+        overflow: "hidden",
+        minHeight: 0,
+      }}
+    >
+      {/* Sub-tab bar */}
+      <div
+        className="glass-panel"
+        style={{
+          display: "flex",
+          gap: 6,
+          padding: "0.75rem 1rem",
+          borderBottom: "1px solid rgba(201,135,58,0.08)",
+          flexShrink: 0,
+          position: "relative",
+          borderRadius: 0,
+        }}
+      >
+        {TABS.map(({ key, label, icon }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            style={{
+              position: "relative",
+              padding: "7px 16px",
+              borderRadius: 9,
+              border: `1.5px solid ${
+                tab === key ? "var(--gold)" : "var(--border-default)"
+              }`,
+              background:
+                tab === key ? "rgba(201,135,58,0.12)" : "transparent",
+              color: tab === key ? "var(--gold)" : "var(--text-secondary)",
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: 1.2,
+              cursor: "pointer",
+              textTransform: "uppercase",
+              transition: "all 0.15s var(--ease-out)",
+            }}
+          >
+            <span style={{ marginRight: 4 }}>{icon}</span>
+            {label}
+            {tab === key && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: -1,
+                  left: "15%",
+                  right: "15%",
+                  height: 2,
+                  background: "var(--gold)",
+                  borderRadius: 2,
+                }}
+              />
+            )}
+          </button>
+        ))}
       </div>
 
       {/* Tab content */}

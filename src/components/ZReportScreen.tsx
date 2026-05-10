@@ -49,11 +49,8 @@ export const ZReportScreen: React.FC = () => {
 
       {/* Last generated report */}
       {lastReport && (
-        <div style={{
-          background: "var(--bg-elevated)", border: "1.5px solid var(--border-medium)",
-          borderRadius: 12, padding: "1rem",
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)", marginBottom: 10, fontFamily: "'Playfair Display', serif" }}>
+        <div className="card-glass" style={{ padding: "1rem" }}>
+          <div className="font-display" style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", marginBottom: 10 }}>
             📊 Report — {new Date(lastReport.period_end).toLocaleTimeString()}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
@@ -82,10 +79,9 @@ export const ZReportScreen: React.FC = () => {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {reports.map((r) => (
-              <div key={r.id} style={{
+              <div key={r.id} className="card" style={{
                 display: "flex", alignItems: "center", gap: 10,
-                padding: "8px 12px", borderRadius: 8,
-                background: "var(--bg-surface)", border: "1px solid var(--border-subtle)",
+                padding: "8px 12px",
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)" }}>

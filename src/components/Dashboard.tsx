@@ -154,11 +154,11 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
     : "var(--danger)";
 
   return (
-    <div className="scroll-area" style={{ flex: 1, padding: "1.2rem 1.4rem", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", minHeight: 0 }}>
+    <div className="scroll-area" style={{ flex: 1, padding: "1.4rem 1.6rem", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto", minHeight: 0 }}>
       {/* Page header */}
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
         <div>
-          <div className="font-display" style={{ fontSize: 18, color: "var(--text-primary)" }}>Daily Dashboard</div>
+          <div className="font-display" style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)" }}>Daily Dashboard</div>
           <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{summary.date}</div>
         </div>
         <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Viewing as <strong style={{ color: "var(--gold)" }}>{staffName}</strong></div>
@@ -189,9 +189,9 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
       </div>
 
       {/* Date Range Selector */}
-      <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: "12px 14px" }}>
+      <div className="card-glass" style={{ padding: "14px 16px", borderRadius: 14 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase" }}>Analysis Period</div>
+          <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>Analysis Period</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {([
               ["Today", "today"],
@@ -271,9 +271,9 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
       </div>
 
       {/* Reset Options */}
-      <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: "12px 14px" }}>
+      <div className="card-glass" style={{ padding: "12px 14px", borderRadius: 12 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase" }}>Reset Data</div>
+          <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>Reset Data</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
               onClick={handleResetCOGSRange}
@@ -345,9 +345,9 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
           { label: "Avg. Order",      value: formatCurrency(summary.avgOrderValue), sub: "Per ticket" },
           { label: "Active",          value: String(orders.filter(o => o.status === "preparing" || o.status === "ready").length), sub: "In kitchen" },
         ].map(({ label, value, sub }) => (
-          <div key={label} style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: "14px 12px" }}>
-            <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
-            <div className="font-display" style={{ fontSize: 22, fontWeight: 700, color: "var(--gold)", marginBottom: 2 }}>{value}</div>
+          <div key={label} className="stat-card" style={{ padding: "16px 14px", borderRadius: 14 }}>
+            <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>{label}</div>
+            <div className="font-display" style={{ fontSize: 24, fontWeight: 700, color: "var(--gold)", marginBottom: 2 }}>{value}</div>
             <div style={{ fontSize: 9, color: "var(--text-disabled)", letterSpacing: 1 }}>{sub}</div>
           </div>
         ))}

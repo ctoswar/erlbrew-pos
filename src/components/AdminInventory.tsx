@@ -160,24 +160,20 @@ export const AdminInventory: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
       {/* Header */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0.9rem 1rem",
-        borderBottom: "1px solid var(--border-default)",
-        flexShrink: 0,
+      <div className="glass-panel" style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0.8rem 1rem", borderBottom: "1px solid rgba(201,135,58,0.08)", flexShrink: 0,
+        borderRadius: 0,
       }}>
-        <div style={{ fontSize: 9, color: "var(--gold)", letterSpacing: 2, textTransform: "uppercase", fontWeight: 700 }}>
-          Inventory ({items.length} items)
+        <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
+          Inventory
         </div>
-        <button onClick={openAddForm} style={{
-          background: "var(--gold)", color: "var(--bg-sidebar)", border: "none",
-          borderRadius: 9, padding: "8px 16px", fontSize: 9, fontWeight: 700,
-          letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const,
-        }}>
-          + Add Item
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 1 }}>{items.length} items</span>
+          <button onClick={openAddForm} className="btn btn-gold" style={{ fontSize: 9, padding: "7px 14px", letterSpacing: 1 }}>
+            + Add Item
+          </button>
+        </div>
       </div>
 
       {/* Category filter tabs */}
@@ -192,7 +188,7 @@ export const AdminInventory: React.FC = () => {
               background: isActive ? "var(--gold)" : "transparent",
               color: isActive ? "var(--bg-sidebar)" : "var(--text-secondary)",
               fontSize: 9, fontWeight: 700, letterSpacing: 1, cursor: "pointer",
-              textTransform: "uppercase" as const,
+              textTransform: "uppercase" as const, whiteSpace: "nowrap",
             }}>
               {cat} <span style={{ opacity: 0.7 }}>({count})</span>
             </button>
@@ -203,9 +199,12 @@ export const AdminInventory: React.FC = () => {
       {/* Items grid */}
       <div className="scroll-area" style={{ flex: 1, padding: "0.5rem 1rem", overflowY: "auto", minHeight: 0 }}>
         {loading ? (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>Loading...</div>
+          <div style={{ textAlign: "center", padding: "3rem" }}>
+            <div className="animate-shimmer" style={{ width: 120, height: 14, borderRadius: 4, margin: "0 auto 8px" }} />
+            <div className="animate-shimmer" style={{ width: 80, height: 10, borderRadius: 4, margin: "0 auto" }} />
+          </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem", fontSize: 11 }}>
+          <div style={{ textAlign: "center", color: "var(--text-disabled)", padding: "3rem", fontSize: 11, letterSpacing: 1 }}>
             No inventory items in this category
           </div>
         ) : (
@@ -233,59 +232,51 @@ export const AdminInventory: React.FC = () => {
         <>
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998, animation: "fadeInOverlay 0.2s ease" }} onClick={closeForm} />
           <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
-            <div style={{
-              background: "var(--bg-elevated)", border: "1.5px solid var(--border-medium)",
-              borderRadius: 16, padding: "1.5rem", width: "100%", maxWidth: 400,
-              maxHeight: "90vh", overflowY: "auto", animation: "fadeInUp 0.2s ease",
+            <div className="animate-scaleIn card-glass" style={{
+              padding: "1.5rem", width: "100%", maxWidth: 420,
+              maxHeight: "90vh", overflowY: "auto",
             }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 16, fontFamily: "'Playfair Display', serif" }}>
+              <div className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 18 }}>
                 {editingId ? "Edit Inventory Item" : "Add Inventory Item"}
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <FormField label="Item ID" hint="Short code, e.g. cup-s">
                   <input value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))}
-                    placeholder="cup-s" disabled={!!editingId}
-                    style={{ opacity: editingId ? 0.5 : 1, cursor: editingId ? "not-allowed" : "text" }} />
+                    placeholder="cup-s" disabled={!!editingId} />
                 </FormField>
                 <FormField label="Name">
                   <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     placeholder="Medium Cup (12oz)" />
                 </FormField>
                 <FormField label="Category">
-                  <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                    style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }}>
+                  <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
                     {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </FormField>
                 <FormField label="Unit">
-                  <select value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
-                    style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }}>
+                  <select value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}>
                     {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
                   </select>
                 </FormField>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <FormField label="Current Stock">
                     <input type="number" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
-                      placeholder="0" min="0" step="1"
-                      style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }} />
+                      placeholder="0" min="0" step="1" />
                   </FormField>
                   <FormField label="Low Stock Alert">
                     <input type="number" value={form.low_stock_threshold} onChange={(e) => setForm((f) => ({ ...f, low_stock_threshold: e.target.value }))}
-                      placeholder="10" min="0"
-                      style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }} />
+                      placeholder="10" min="0" />
                   </FormField>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <FormField label="Purchase Cost" hint="₱ per unit">
                     <input type="number" value={form.purchase_cost} onChange={(e) => setForm((f) => ({ ...f, purchase_cost: e.target.value }))}
-                      placeholder="0.00" min="0" step="0.01"
-                      style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }} />
+                      placeholder="0.00" min="0" step="0.01" />
                   </FormField>
                   <FormField label="Unit Cost" hint="₱ per serving">
                     <input type="number" value={form.unit_cost} onChange={(e) => setForm((f) => ({ ...f, unit_cost: e.target.value }))}
-                      placeholder="0.00" min="0" step="0.01"
-                      style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }} />
+                      placeholder="0.00" min="0" step="0.01" />
                   </FormField>
                 </div>
               </div>
@@ -297,10 +288,10 @@ export const AdminInventory: React.FC = () => {
               )}
 
               <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-                <button onClick={closeForm} style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "1px solid var(--border-default)", background: "transparent", color: "var(--text-secondary)", fontSize: 10, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const }}>
+                <button onClick={closeForm} className="btn btn-outline" style={{ flex: 1, fontSize: 10, padding: "11px 0" }}>
                   Cancel
                 </button>
-                <button onClick={handleSave} disabled={saving} style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "none", background: "var(--gold)", color: "var(--bg-sidebar)", fontSize: 10, fontWeight: 700, letterSpacing: 1, cursor: saving ? "not-allowed" : "pointer", textTransform: "uppercase" as const, opacity: saving ? 0.6 : 1 }}>
+                <button onClick={handleSave} disabled={saving} className="btn btn-gold" style={{ flex: 1, fontSize: 10, padding: "11px 0" }}>
                   {saving ? "Saving..." : editingId ? "Update Item" : "Add Item"}
                 </button>
               </div>
@@ -331,13 +322,13 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
   deleteConfirm, onConfirmDelete, onCancelDelete,
   stockStatus, stockStatusColor,
 }) => (
-  <div style={{
-    background: "var(--bg-surface)", border: "1px solid var(--border-subtle)",
-    borderRadius: 12, padding: "12px 12px 10px", display: "flex", flexDirection: "column", gap: 6,
-  }}>
+  <div className="card" style={{ padding: "12px 12px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3, flex: 1, marginRight: 8 }}>{item.name}</div>
-      <span style={{ fontSize: 7, fontWeight: 700, color: stockStatusColor, background: "rgba(0,0,0,0.3)", padding: "2px 6px", borderRadius: 4, letterSpacing: 1, textTransform: "uppercase" as const, flexShrink: 0 }}>
+      <span className="pill" style={{
+        fontSize: 7, color: stockStatusColor, background: "rgba(0,0,0,0.3)",
+        padding: "2px 6px", letterSpacing: 1, textTransform: "uppercase", flexShrink: 0,
+      }}>
         {stockStatus === "out" ? "OUT" : stockStatus === "low" ? "LOW" : "OK"}
       </span>
     </div>
@@ -346,26 +337,34 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
 
     {/* Stock row with quick +/- buttons */}
     <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-      <button onClick={() => onAdjustStock(-1)} style={{ width: 26, height: 26, borderRadius: 7, background: "var(--bg-base)", border: "1px solid var(--border-default)", color: "var(--text-secondary)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+      <button onClick={() => onAdjustStock(-1)} className="btn-ghost" style={{
+        width: 26, height: 26, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center",
+        border: "1px solid var(--border-default)", borderRadius: 7, padding: 0,
+      }}>−</button>
       <div style={{ flex: 1, textAlign: "center" }}>
         <span style={{ fontSize: 18, fontWeight: 700, color: stockStatusColor }}>{item.stock}</span>
         <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: 3 }}>{item.unit}</span>
       </div>
-      <button onClick={() => onAdjustStock(1)} style={{ width: 26, height: 26, borderRadius: 7, background: "var(--bg-base)", border: "1px solid var(--border-default)", color: "var(--gold)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+      <button onClick={() => onAdjustStock(1)} className="btn-ghost" style={{
+        width: 26, height: 26, fontSize: 16, color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center",
+        border: "1px solid var(--border-default)", borderRadius: 7, padding: 0,
+      }}>+</button>
     </div>
 
-    <div style={{ fontSize: 9, color: "var(--text-faint)" }}>Alert below: {item.low_stock_threshold} {item.unit}</div>
+    <div style={{ fontSize: 8.5, color: "var(--text-faint)", letterSpacing: 0.5 }}>
+      Alert below: {item.low_stock_threshold} {item.unit}
+    </div>
 
     {(item.purchase_cost != null || item.unit_cost != null) && (
       <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
         {item.purchase_cost != null && (
-          <div style={{ fontSize: 9, color: "var(--text-muted)" }}>
-            Cost: <span style={{ color: "var(--text-secondary)" }}>₱{Number(item.purchase_cost).toFixed(2)}</span>
+          <div style={{ fontSize: 8.5, color: "var(--text-muted)" }}>
+            Cost: <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>₱{Number(item.purchase_cost).toFixed(2)}</span>
           </div>
         )}
         {item.unit_cost != null && (
-          <div style={{ fontSize: 9, color: "var(--text-muted)" }}>
-            Unit: <span style={{ color: "var(--text-secondary)" }}>₱{Number(item.unit_cost).toFixed(2)}</span>
+          <div style={{ fontSize: 8.5, color: "var(--text-muted)" }}>
+            Unit: <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>₱{Number(item.unit_cost).toFixed(2)}</span>
           </div>
         )}
       </div>
@@ -373,18 +372,24 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
 
     {deleteConfirm ? (
       <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 4 }}>
-        <div style={{ fontSize: 9, color: "var(--danger)", textAlign: "center" }}>Delete this item?</div>
+        <div style={{ fontSize: 9, color: "var(--danger)", textAlign: "center", fontWeight: 600 }}>Delete this item?</div>
         <div style={{ display: "flex", gap: 5 }}>
-          <button onClick={onCancelDelete} style={{ flex: 1, padding: "6px 0", borderRadius: 7, border: "1px solid var(--border-default)", background: "transparent", color: "var(--text-secondary)", fontSize: 8, fontWeight: 700, cursor: "pointer" }}>No</button>
-          <button onClick={onConfirmDelete} style={{ flex: 1, padding: "6px 0", borderRadius: 7, border: "none", background: "var(--danger)", color: "#fff", fontSize: 8, fontWeight: 700, cursor: "pointer" }}>Yes, Delete</button>
+          <button onClick={onCancelDelete} className="btn btn-outline" style={{ flex: 1, fontSize: 8, padding: "6px 0", borderRadius: 7 }}>No</button>
+          <button onClick={onConfirmDelete} className="btn btn-danger" style={{ flex: 1, fontSize: 8, padding: "6px 0", borderRadius: 7, background: "var(--danger)", border: "none", color: "#fff" }}>Yes, Delete</button>
         </div>
       </div>
     ) : (
       <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
-        <button onClick={onEdit} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid var(--border-medium)", background: "transparent", color: "var(--text-secondary)", fontSize: 8, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const }}>
+        <button onClick={onEdit} className="btn-ghost" style={{
+          flex: 1, fontSize: 8, padding: "6px 0", borderRadius: 8,
+          border: "1px solid var(--border-medium)", letterSpacing: 1, textTransform: "uppercase",
+        }}>
           Edit
         </button>
-        <button onClick={onDelete} style={{ padding: "7px 10px", borderRadius: 8, border: "1px solid var(--danger-border)", background: "transparent", color: "var(--danger)", fontSize: 8, fontWeight: 700, cursor: "pointer", letterSpacing: 1 }}>
+        <button onClick={onDelete} className="btn-ghost" style={{
+          padding: "6px 10px", borderRadius: 8, border: "1px solid var(--danger-border)",
+          color: "var(--danger)", fontSize: 8, letterSpacing: 1,
+        }}>
           ✕
         </button>
       </div>

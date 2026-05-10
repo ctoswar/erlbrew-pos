@@ -137,8 +137,8 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
             </div>
 
             <div style={{ marginBottom: 6 }}>
-              {order.items.map((ci) => (
-                <div key={ci.item.id} style={{ marginBottom: 5 }}>
+              {order.items.map((ci, idx) => (
+                <div key={ci.item.id + '-' + idx} style={{ marginBottom: 5 }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <div style={{ flex: 1, paddingRight: 8 }}>
                       <span style={{ fontWeight: 700 }}>{ci.qty}×</span> {ci.item.name}
@@ -152,6 +152,11 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
                       @ {formatCurrency(ci.item.price)} ea
                     </div>
                   )}
+                  {ci.modifiers && ci.modifiers.length > 0 && ci.modifiers.map((m, mi) => (
+                    <div key={mi} style={{ fontSize: 9, color: "#666", paddingLeft: 20 }}>
+                      + {m.name}{m.price > 0 ? ` (${formatCurrency(m.price)})` : ''}
+                    </div>
+                  ))}
                   {ci.notes && (
                     <div style={{ fontSize: 9, color: "#777", paddingLeft: 20, fontStyle: "italic" }}>
                       Note: {ci.notes}

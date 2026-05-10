@@ -68,13 +68,13 @@ export const TimeKeeping: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
       {/* Header */}
-      <div style={{
-        padding: "0.9rem 1rem",
-        borderBottom: "1px solid var(--border-default)",
+      <div className="glass-panel" style={{
+        padding: "0.8rem 1rem",
+        borderBottom: "1px solid rgba(201,135,58,0.08)",
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        flexShrink: 0,
+        flexShrink: 0, borderRadius: 0,
       }}>
-        <div style={{ fontSize: 9, color: "var(--gold)", letterSpacing: 2, textTransform: "uppercase", fontWeight: 700 }}>
+        <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
           Timekeeping
         </div>
         <div style={{ fontSize: 10, color: "var(--text-faint)" }}>{dateStr}</div>
@@ -85,18 +85,17 @@ export const TimeKeeping: React.FC = () => {
 
         {/* ── Last tap feedback ── */}
         {lastTap && (
-          <div style={{
+          <div className="animate-scaleIn" style={{
             background: lastTap.action === "clock_in" ? "var(--success-bg)" : "rgba(201,135,58,0.12)",
             border: `1.5px solid ${lastTap.action === "clock_in" ? "var(--success)" : "var(--gold)"}`,
             borderRadius: 14, padding: "16px 20px",
-            animation: "fadeInUp 0.3s ease",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{
                 width: 48, height: 48, borderRadius: "50%",
                 background: lastTap.action === "clock_in" ? "var(--success)" : "var(--gold)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 22, flexShrink: 0,
+                fontSize: 22, flexShrink: 0, boxShadow: "0 0 0 3px rgba(255,255,255,0.08)",
               }}>
                 {lastTap.action === "clock_in" ? "✅" : "🔴"}
               </div>
@@ -117,14 +116,11 @@ export const TimeKeeping: React.FC = () => {
         )}
 
         {/* ── RFID Scan Box ── */}
-        <div style={{
-          background: "var(--bg-elevated)",
-          border: "2px dashed var(--gold-dim)",
-          borderRadius: 16, padding: "24px",
-          textAlign: "center",
+        <div className="card-glass" style={{
+          padding: "24px", textAlign: "center", borderStyle: "dashed",
         }}>
           <div style={{ fontSize: 40, marginBottom: 10 }}>📲</div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, color: "var(--text-primary)", marginBottom: 6 }}>
+          <div className="font-display" style={{ fontSize: 15, color: "var(--text-primary)", marginBottom: 6 }}>
             Scan your RFID Card
           </div>
           <div style={{ fontSize: 10, color: "var(--text-faint)", marginBottom: 16 }}>
@@ -258,27 +254,24 @@ const StaffGroup: React.FC<{
           const hours = rec?.total_hours ? parseFloat(String(rec.total_hours)) : 0;
 
           return (
-            <div key={r.staff_id} style={{
+            <div key={r.staff_id} className="card" style={{
               display: "flex", alignItems: "center", gap: 10,
-              background: "var(--bg-surface)", borderRadius: 10, padding: "10px 14px",
+              padding: "10px 14px",
             }}>
-              {/* Avatar */}
               <div style={{
                 width: 34, height: 34, borderRadius: "50%",
-                background: r.color || "#555",
+                background: `linear-gradient(135deg, ${r.color || "#555"}, ${(r.color || "#555")}cc)`,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0,
               }}>
                 {r.initials}
               </div>
 
-              {/* Info */}
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{r.name}</div>
                 <div style={{ fontSize: 9, color: "var(--text-faint)" }}>{r.role}</div>
               </div>
 
-              {/* Times */}
               <div style={{ textAlign: "right" }}>
                 {rec ? (
                   <>
@@ -287,7 +280,7 @@ const StaffGroup: React.FC<{
                       {rec.clock_out ? (
                         <span style={{ color: "var(--text-faint)" }}> → {new Date(rec.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}</span>
                       ) : (
-                        <span style={{ color: "var(--success)", fontSize: 9, marginLeft: 4 }}>● IN</span>
+                        <span className="animate-pulse" style={{ color: "var(--success)", fontSize: 9, marginLeft: 4 }}>● IN</span>
                       )}
                     </div>
                     <div style={{ fontSize: 9, color: "var(--gold)" }}>

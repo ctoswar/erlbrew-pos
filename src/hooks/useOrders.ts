@@ -310,7 +310,7 @@ export function useOrders() {
     }
   }, []);
 
-  const activeOrders = orders.filter((o) => o.status !== "completed");
+  const activeOrders = orders.filter((o) => o.status === "pending" || o.status === "preparing" || o.status === "ready");
   const completedOrders = orders.filter((o) => o.status === "completed");
 
   const voidOrder = useCallback((id: string) => {

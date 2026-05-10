@@ -111,6 +111,12 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
     const name = ci.item.name.length > 17 ? ci.item.name.substring(0, 16) + "…" : ci.item.name;
     lines.push(`${qtyStr}  ${padRight(name, 17)} ${padLeft(amtStr, 8)}`);
     if (ci.qty > 1) lines.push(`     @ ${formatCurrency(ci.item.price).replace("₱", "").trim()} ea`);
+    if (ci.modifiers && ci.modifiers.length > 0) {
+      ci.modifiers.forEach(m => {
+        const modLine = `     + ${m.name}${m.price > 0 ? ' (' + formatCurrency(m.price).replace("₱", "").trim() + ')' : ''}`;
+        lines.push(modLine);
+      });
+    }
     if (ci.notes) lines.push(`     > ${ci.notes}`);
   });
   lines.push(ln("-"));

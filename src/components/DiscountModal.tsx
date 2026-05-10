@@ -44,28 +44,25 @@ export const DiscountModal: React.FC<Props> = ({ subtotal, currentDiscount, onAp
     <>
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998, animation: "fadeInOverlay 0.2s ease" }} onClick={onClose} />
       <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
-        <div style={{
-          background: "var(--bg-elevated)", border: "1.5px solid var(--border-medium)",
-          borderRadius: 16, padding: "1.5rem", width: "100%", maxWidth: 380,
-          maxHeight: "90vh", overflowY: "auto", animation: "fadeInUp 0.2s ease",
+        <div className="animate-scaleIn card-glass" style={{
+          padding: "1.5rem", width: "100%", maxWidth: 380,
+          maxHeight: "90vh", overflowY: "auto",
         }}>
           {/* Header */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Playfair Display', serif" }}>
-              Apply Discount
-            </div>
-            <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: 18, cursor: "pointer" }}>✕</button>
+          <div className="font-display" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>Apply Discount</div>
+            <button onClick={onClose} className="btn-ghost" style={{ fontSize: 16, padding: "2px 6px", color: "var(--text-muted)" }}>✕</button>
           </div>
 
           {/* Current discount badge */}
           {currentDiscount && (
-            <div style={{ background: "rgba(201,135,58,0.12)", border: "1px solid var(--gold)", borderRadius: 8, padding: "8px 12px", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ background: "rgba(201,135,58,0.12)", border: "1px solid var(--gold)", borderRadius: 8, padding: "10px 14px", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <div style={{ fontSize: 10, color: "var(--gold)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 2 }}>Active Discount</div>
+                <div style={{ fontSize: 9, color: "var(--gold)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 2, fontWeight: 700 }}>Active Discount</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{currentDiscount.label}</div>
               </div>
-              <button onClick={() => { onRemove(); onClose(); }}
-                style={{ background: "var(--danger)", color: "#fff", border: "none", borderRadius: 6, fontSize: 9, fontWeight: 700, padding: "5px 10px", cursor: "pointer", letterSpacing: 1 }}>
+              <button onClick={() => { onRemove(); onClose(); }} className="btn btn-danger"
+                style={{ fontSize: 9, fontWeight: 700, padding: "5px 10px", borderRadius: 6, letterSpacing: 1, background: "var(--danger)", border: "none", color: "#fff" }}>
                 Remove
               </button>
             </div>
@@ -85,7 +82,7 @@ export const DiscountModal: React.FC<Props> = ({ subtotal, currentDiscount, onAp
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     padding: "12px 14px", borderRadius: 10, border: "1.5px solid var(--border-medium)",
-                    background: "var(--bg-base)", cursor: "pointer", transition: "all 0.15s", width: "100%",
+                    background: "var(--bg-base)", cursor: "pointer", transition: "var(--transition-fast)", width: "100%",
                   }}>
                   <div style={{ textAlign: "left" }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{d.label}</div>
@@ -101,11 +98,10 @@ export const DiscountModal: React.FC<Props> = ({ subtotal, currentDiscount, onAp
 
           {/* Custom toggle */}
           {!showCustom ? (
-            <button onClick={() => setShowCustom(true)}
+            <button onClick={() => setShowCustom(true)} className="btn-ghost"
               style={{
                 width: "100%", padding: "10px", borderRadius: 9, border: "1.5px dashed var(--border-default)",
-                background: "transparent", color: "var(--text-muted)", fontSize: 10, fontWeight: 700,
-                letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const,
+                fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase",
               }}>
               + Custom Discount
             </button>
@@ -115,26 +111,16 @@ export const DiscountModal: React.FC<Props> = ({ subtotal, currentDiscount, onAp
                 Custom Discount
               </div>
               <div style={{ marginBottom: 10 }}>
-                <input
-                  value={customLabel}
-                  onChange={(e) => setCustomLabel(e.target.value)}
-                  placeholder="Discount name"
-                  style={{ width: "100%", marginBottom: 8, background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "8px 10px", fontSize: 12 }}
-                />
+                <input value={customLabel} onChange={(e) => setCustomLabel(e.target.value)}
+                  placeholder="Discount name" style={{ marginBottom: 8 }} />
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   <div style={{ position: "relative" }}>
-                    <input
-                      type="number"
-                      value={customPct}
-                      onChange={(e) => setCustomPct(e.target.value)}
-                      placeholder="e.g. 15"
-                      min="1" max="100"
-                      style={{ width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "8px 10px", fontSize: 12, paddingRight: 30 }}
-                    />
+                    <input type="number" value={customPct} onChange={(e) => setCustomPct(e.target.value)}
+                      placeholder="e.g. 15" min="1" max="100" style={{ paddingRight: 30 }} />
                     <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", fontSize: 11, pointerEvents: "none" }}>%</span>
                   </div>
                   <button onClick={applyCustomPct} disabled={!customPct || parseFloat(customPct) <= 0}
-                    style={{ background: "var(--gold)", color: "var(--bg-sidebar)", border: "none", borderRadius: 8, padding: "8px", fontSize: 10, fontWeight: 700, cursor: parseFloat(customPct) > 0 ? "pointer" : "not-allowed", opacity: parseFloat(customPct) > 0 ? 1 : 0.5 }}>
+                    className="btn btn-gold" style={{ fontSize: 10, padding: "8px", borderRadius: 8 }}>
                     Apply %
                   </button>
                 </div>
@@ -146,17 +132,11 @@ export const DiscountModal: React.FC<Props> = ({ subtotal, currentDiscount, onAp
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
                   <div style={{ position: "relative" }}>
                     <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", fontSize: 11, pointerEvents: "none" }}>₱</span>
-                    <input
-                      type="number"
-                      value={customFixed}
-                      onChange={(e) => setCustomFixed(e.target.value)}
-                      placeholder="e.g. 50"
-                      min="1"
-                      style={{ width: "100%", background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "8px 10px", fontSize: 12, paddingLeft: 24 }}
-                    />
+                    <input type="number" value={customFixed} onChange={(e) => setCustomFixed(e.target.value)}
+                      placeholder="e.g. 50" min="1" style={{ paddingLeft: 24 }} />
                   </div>
                   <button onClick={applyCustomFixed} disabled={!customFixed || parseFloat(customFixed) <= 0}
-                    style={{ background: "var(--gold)", color: "var(--bg-sidebar)", border: "none", borderRadius: 8, padding: "8px", fontSize: 10, fontWeight: 700, cursor: parseFloat(customFixed) > 0 ? "pointer" : "not-allowed", opacity: parseFloat(customFixed) > 0 ? 1 : 0.5 }}>
+                    className="btn btn-gold" style={{ fontSize: 10, padding: "8px", borderRadius: 8 }}>
                     Apply ₱
                   </button>
                 </div>

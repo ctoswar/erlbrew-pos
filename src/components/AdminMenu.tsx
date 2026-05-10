@@ -146,28 +146,35 @@ export const AdminMenu: React.FC = () => {
       )}
 
       {/* Header */}
-      <div style={{
+      <div className="glass-panel" style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0.9rem 1rem", borderBottom: "1px solid var(--border-default)", flexShrink: 0,
+        padding: "0.8rem 1rem", borderBottom: "1px solid rgba(201,135,58,0.08)", flexShrink: 0,
+        borderRadius: 0,
       }}>
-        <div style={{ fontSize: 9, color: "var(--gold)", letterSpacing: 2, textTransform: "uppercase", fontWeight: 700 }}>
+        <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
           Menu Management
         </div>
-        <button onClick={openAddForm} style={{
-          background: "var(--gold)", color: "var(--bg-sidebar)", border: "none",
-          borderRadius: 9, padding: "8px 16px", fontSize: 9, fontWeight: 700,
-          letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const,
-        }}>
-          + Add Item
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 1 }}>{items.length} items</span>
+          <button onClick={openAddForm} className="btn btn-gold" style={{
+            fontSize: 9, padding: "7px 14px", letterSpacing: 1,
+          }}>
+            + Add Item
+          </button>
+        </div>
       </div>
 
       {/* Grid */}
       <div className="scroll-area" style={{ flex: 1, padding: "1rem", overflowY: "auto", minHeight: 0 }}>
         {loading ? (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>Loading...</div>
+          <div style={{ textAlign: "center", padding: "3rem" }}>
+            <div className="animate-shimmer" style={{ width: 120, height: 14, borderRadius: 4, margin: "0 auto 8px" }} />
+            <div className="animate-shimmer" style={{ width: 80, height: 10, borderRadius: 4, margin: "0 auto" }} />
+          </div>
         ) : items.length === 0 ? (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>No menu items</div>
+          <div style={{ textAlign: "center", color: "var(--text-disabled)", padding: "3rem", fontSize: 11, letterSpacing: 1 }}>
+            No menu items yet
+          </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
             {items.map((item) => (
@@ -198,42 +205,37 @@ export const AdminMenu: React.FC = () => {
             position: "fixed", inset: 0, display: "flex", alignItems: "center",
             justifyContent: "center", zIndex: 999, padding: "1rem",
           }}>
-            <div style={{
-              background: "var(--bg-elevated)", border: "1.5px solid var(--border-medium)",
-              borderRadius: 16, padding: "1.5rem", width: "100%", maxWidth: 400,
-              maxHeight: "90vh", overflowY: "auto", animation: "fadeInUp 0.2s ease",
+            <div className="animate-scaleIn card-glass" style={{
+              padding: "1.5rem", width: "100%", maxWidth: 420,
+              maxHeight: "90vh", overflowY: "auto",
             }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 16, fontFamily: "'Playfair Display', serif" }}>
+              <div className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 18 }}>
                 {editingId ? "Edit Menu Item" : "Add Menu Item"}
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <FormField label="Item ID" hint="e.g. m17 (must be unique)">
                   <input value={form.id} onChange={(e) => setField("id", e.target.value)} placeholder="m17"
-                    style={{ opacity: editingId ? 0.5 : 1, cursor: editingId ? "not-allowed" : "text" }}
                     disabled={!!editingId} />
                 </FormField>
                 <FormField label="Name">
                   <input value={form.name} onChange={(e) => setField("name", e.target.value)} placeholder="Item name" />
                 </FormField>
                 <FormField label="Category">
-                  <select value={form.category} onChange={(e) => setField("category", e.target.value)}
-                    style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }}>
+                  <select value={form.category} onChange={(e) => setField("category", e.target.value)}>
                     {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </FormField>
                 <FormField label="Price (₱)">
                   <input type="number" value={form.price} onChange={(e) => setField("price", e.target.value)}
-                    placeholder="0.00" min="0" step="0.01"
-                    style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%" }} />
+                    placeholder="0.00" min="0" step="0.01" />
                 </FormField>
                 <FormField label="Badge (optional)" hint="e.g. SIGNATURE, NEW">
                   <input value={form.badge} onChange={(e) => setField("badge", e.target.value)} placeholder="SIGNATURE" />
                 </FormField>
                 <FormField label="Description">
                   <textarea value={form.description} onChange={(e) => setField("description", e.target.value)}
-                    placeholder="Short description..."
-                    style={{ background: "var(--bg-base)", border: "1px solid var(--border-medium)", borderRadius: 8, color: "var(--text-primary)", padding: "9px 12px", fontSize: 13, width: "100%", resize: "vertical", minHeight: 64 }} />
+                    placeholder="Short description..." />
                 </FormField>
                 <FormField label="Emoji">
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -249,7 +251,7 @@ export const AdminMenu: React.FC = () => {
                       style={{ width: 38, height: 38, borderRadius: 8, background: "var(--bg-base)", border: "1px solid var(--border-default)", color: "var(--text-primary)", fontSize: 18, textAlign: "center" }} />
                   </div>
                 </FormField>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "4px 0" }}>
                   <input type="checkbox" checked={form.popular} onChange={(e) => setField("popular", e.target.checked)}
                     style={{ width: 16, height: 16, accentColor: "var(--gold)" }} />
                   <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>Mark as Popular</span>
@@ -263,16 +265,11 @@ export const AdminMenu: React.FC = () => {
               )}
 
               <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-                <button onClick={closeForm} style={{
-                  flex: 1, padding: "11px 0", borderRadius: 9, border: "1px solid var(--border-default)",
-                  background: "transparent", color: "var(--text-secondary)", fontSize: 10, fontWeight: 700,
-                  letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const,
+                <button onClick={closeForm} className="btn btn-outline" style={{
+                  flex: 1, fontSize: 10, padding: "11px 0",
                 }}>Cancel</button>
-                <button onClick={handleSave} disabled={saving} style={{
-                  flex: 1, padding: "11px 0", borderRadius: 9, border: "none", background: "var(--gold)",
-                  color: "var(--bg-sidebar)", fontSize: 10, fontWeight: 700, letterSpacing: 1,
-                  cursor: saving ? "not-allowed" : "pointer", textTransform: "uppercase" as const,
-                  opacity: saving ? 0.6 : 1,
+                <button onClick={handleSave} disabled={saving} className="btn btn-gold" style={{
+                  flex: 1, fontSize: 10, padding: "11px 0",
                 }}>
                   {saving ? "Saving..." : editingId ? "Update Item" : "Add Item"}
                 </button>
@@ -317,14 +314,12 @@ const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, o
   };
 
   return (
-  <div style={{
-    background: "var(--bg-surface)", border: "1px solid var(--border-subtle)",
-    borderRadius: 12, padding: 0, display: "flex", flexDirection: "column",
-    transition: "box-shadow 0.2s, transform 0.15s", cursor: "default",
-    overflow: "hidden",
+  <div className="card" style={{
+    display: "flex", flexDirection: "column", cursor: "default",
+    overflow: "hidden", transition: "var(--transition-normal)",
   }}
-    onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.18)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}
+    onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-md)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-sm)"; e.currentTarget.style.transform = "none"; }}
   >
     {/* Image area */}
     {item.image && (
@@ -340,8 +335,8 @@ const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, o
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ fontSize: 28, lineHeight: 1 }}>{item.emoji}</span>
         <div style={{ display: "flex", gap: 4 }}>
-          {item.popular && <span style={{ fontSize: 7, fontWeight: 700, background: "var(--gold)", color: "var(--bg-sidebar)", padding: "2px 6px", borderRadius: 4, letterSpacing: 1 }}>POP</span>}
-          {item.badge && <span style={{ fontSize: 7, fontWeight: 700, color: "var(--gold)", border: "1px solid rgba(201,135,58,0.35)", padding: "2px 6px", borderRadius: 4, letterSpacing: 1 }}>{item.badge}</span>}
+          {item.popular && <span className="pill pill-gold" style={{ fontSize: 7, padding: "2px 6px", letterSpacing: 1 }}>POP</span>}
+          {item.badge && <span className="pill pill-gold" style={{ fontSize: 7, padding: "2px 6px", letterSpacing: 1, background: "transparent", border: "1px solid rgba(201,135,58,0.35)" }}>{item.badge}</span>}
         </div>
       </div>
 
@@ -350,37 +345,37 @@ const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, o
 
       {/* Category + Price row */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 1, textTransform: "uppercase", background: "var(--bg-base)", padding: "2px 6px", borderRadius: 4 }}>{item.category}</span>
+        <span className="pill pill-muted" style={{ fontSize: 8, padding: "2px 6px", letterSpacing: 1, background: "var(--bg-base)" }}>{item.category}</span>
         <span className="font-display" style={{ fontSize: 15, fontWeight: 700, color: "var(--gold)" }}>{formatCurrency(item.price)}</span>
       </div>
     </div>
 
     {deleteConfirm ? (
       <div style={{ padding: "10px 14px 12px", borderTop: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: 6 }}>
-        <div style={{ fontSize: 9, color: "var(--danger)", textAlign: "center" }}>Delete {item.name}?</div>
+        <div style={{ fontSize: 9, color: "var(--danger)", textAlign: "center", fontWeight: 600 }}>Delete “{item.name}”?</div>
         <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={onCancelDelete} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid var(--border-default)", background: "transparent", color: "var(--text-secondary)", fontSize: 8, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
-          <button onClick={onConfirmDelete} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "none", background: "var(--danger)", color: "#fff", fontSize: 8, fontWeight: 700, cursor: "pointer", letterSpacing: 0.5 }}>Delete</button>
+          <button onClick={onCancelDelete} className="btn btn-outline" style={{ flex: 1, fontSize: 8, padding: "7px 0", borderRadius: 8 }}>Cancel</button>
+          <button onClick={onConfirmDelete} className="btn btn-danger" style={{ flex: 1, fontSize: 8, padding: "7px 0", borderRadius: 8, background: "var(--danger)", border: "none", color: "#fff", letterSpacing: 0.5 }}>Delete</button>
         </div>
       </div>
     ) : (
       <div style={{ padding: "8px 14px 12px", borderTop: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: 5 }}>
         <div style={{ display: "flex", gap: 5 }}>
-          <button onClick={onEdit} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid var(--border-medium)", background: "transparent", color: "var(--text-secondary)", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, cursor: "pointer" }}>
+          <button onClick={onEdit} className="btn-ghost" style={{ flex: 1, fontSize: 8, padding: "6px 0", borderRadius: 8, border: "1px solid var(--border-medium)" }}>
             ✏️ Edit
           </button>
-          <button onClick={onDelete} style={{ width: 32, borderRadius: 8, border: "1px solid var(--danger-border)", background: "transparent", color: "var(--danger)", fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
+          <button onClick={onDelete} className="btn-ghost" style={{ width: 30, height: 30, fontSize: 10, borderRadius: 8, border: "1px solid var(--danger-border)", color: "var(--danger)" }}>
             🗑
           </button>
         </div>
-        <button onClick={onManageIngredients} style={{ width: "100%", padding: "7px 0", borderRadius: 8, border: "1px solid rgba(201,135,58,0.3)", background: "rgba(201,135,58,0.06)", color: "var(--gold)", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, cursor: "pointer" }}>
+        <button onClick={onManageIngredients} className="btn-glass" style={{ width: "100%", fontSize: 8, padding: "6px 0", letterSpacing: 0.5 }}>
           🧾 Ingredients
         </button>
-        <button onClick={onManageModifiers} style={{ width: "100%", padding: "7px 0", borderRadius: 8, border: "1px solid rgba(201,135,58,0.3)", background: "rgba(201,135,58,0.06)", color: "var(--gold)", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, cursor: "pointer" }}>
+        <button onClick={onManageModifiers} className="btn-glass" style={{ width: "100%", fontSize: 8, padding: "6px 0", letterSpacing: 0.5 }}>
           ⚡ Modifiers
         </button>
         {/* Image upload */}
-        <label style={{ width: "100%", padding: "7px 0", borderRadius: 8, border: "1px dashed rgba(201,135,58,0.4)", background: "rgba(201,135,58,0.04)", color: "var(--gold)", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, cursor: uploading ? "wait" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+        <label className="btn-glass" style={{ width: "100%", fontSize: 8, padding: "6px 0", letterSpacing: 0.5, cursor: uploading ? "wait" : "pointer", borderStyle: "dashed", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
           {uploading ? "⟳ Uploading…" : item.image ? "🖼 Change Image" : "🖼 Add Image"}
           <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} disabled={uploading} />
         </label>

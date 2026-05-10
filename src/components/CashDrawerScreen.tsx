@@ -93,7 +93,7 @@ const handleOpenDrawer = async () => {
   const inputStyle: React.CSSProperties = {
     width: 140, padding: "5px 10px", borderRadius: 7,
     border: "1.5px solid var(--border-default)", textAlign: "right",
-    background: "var(--bg-elevated)", color: "var(--text-primary)", fontSize: 13,
+    background: "var(--bg-base)", color: "var(--text-primary)", fontSize: 13,
   };
 
   const rowLabel: React.CSSProperties = {
@@ -101,16 +101,19 @@ const handleOpenDrawer = async () => {
   };
 
   const sectionStyle: React.CSSProperties = {
-    background: "var(--bg-elevated)", border: "1.5px solid var(--border-medium)",
-    borderRadius: 12, padding: "1rem",
+    padding: "1rem",
+    background: "rgba(58,37,24,0.5)", backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+    border: "1px solid rgba(201,135,58,0.1)",
+    borderRadius: 12,
   };
 
   return (
-    <div style={{ padding: "0.8rem 1.2rem", display: "flex", flexDirection: "column", gap: 14, maxWidth: 480 }}>
+    <div className="scroll-area" style={{ padding: "0.8rem 1.2rem", display: "flex", flexDirection: "column", gap: 14, maxWidth: 480, overflowY: "auto", minHeight: 0 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <div style={{ fontSize: 9, color: "var(--gold)", letterSpacing: 2, fontWeight: 700, textTransform: "uppercase" }}>
+          <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
             Cash Drawer
           </div>
           <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
@@ -232,52 +235,28 @@ const handleOpenDrawer = async () => {
 
       {/* Action Buttons */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {/* Open Drawer — always visible, for hardware trigger */}
-        <button
-          onClick={handleOpenDrawer}
-          disabled={drawerStatus !== 'idle'}
-          style={{
-            width: "100%", padding: "11px 0", borderRadius: 9,
-            background: drawerStatus === 'opening' ? "rgba(201,135,58,0.5)" : drawerStatus === 'ok' ? "var(--success)" : "var(--gold)",
-            color: "#fff", border: "none", fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
-            cursor: drawerStatus === 'idle' ? "pointer" : "wait",
-            textTransform: "uppercase" as const,
-          }}
-        >
-          {drawerStatus === 'opening' ? "Opening..." : drawerStatus === 'ok' ? "✓ Drawer Opened" : "🔓 Open Cash Drawer"}
+        <button onClick={handleOpenDrawer} disabled={drawerStatus !== 'idle'}
+          className="btn btn-gold" style={{
+            width: "100%", fontSize: 10, padding: "11px 0",
+            background: drawerStatus === 'ok' ? "var(--success)" : undefined,
+          }}>
+          {drawerStatus === 'opening' ? "⟳ Opening..." : drawerStatus === 'ok' ? "✓ Drawer Opened" : "🔓 Open Cash Drawer"}
         </button>
 
         {drawer?.status === 'open' && (
           <>
-            {/* Save */}
-            <button
-              onClick={handleSave}
-              disabled={drawerStatus === 'saving'}
-              style={{
-                width: "100%", padding: "10px 0", borderRadius: 9,
-                border: "1.5px solid var(--gold)", background: "transparent",
-                color: "var(--gold)", fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
-                cursor: drawerStatus === 'idle' ? "pointer" : "wait",
-                textTransform: "uppercase" as const,
-              }}
-            >
-              {drawerStatus === 'saving' ? "Saving..." : "Save Progress"}
+            <button onClick={handleSave} disabled={drawerStatus === 'saving'}
+              className="btn btn-outline" style={{ width: "100%", fontSize: 10, padding: "10px 0", borderColor: "var(--gold)", color: "var(--gold)" }}>
+              {drawerStatus === 'saving' ? "⟳ Saving..." : "Save Progress"}
             </button>
 
-            {/* Close Drawer */}
-            <button
-              onClick={handleCloseDrawer}
-              disabled={drawerStatus === 'saving' || closingAmount === 0}
-              style={{
-                width: "100%", padding: "11px 0", borderRadius: 9,
+            <button onClick={handleCloseDrawer} disabled={drawerStatus === 'saving' || closingAmount === 0}
+              className="btn btn-gold" style={{
+                width: "100%", fontSize: 10, padding: "11px 0",
                 background: closingAmount === 0 ? "rgba(80,201,80,0.15)" : "var(--success)",
                 color: closingAmount === 0 ? "var(--success)" : "#fff",
-                border: "none", fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
-                cursor: closingAmount === 0 || drawerStatus !== 'idle' ? "default" : "pointer",
-                textTransform: "uppercase" as const,
-              }}
-            >
-              {drawerStatus === 'saving' ? "Closing..." : "✓ Close & Balance Drawer"}
+              }}>
+              {drawerStatus === 'saving' ? "⟳ Closing..." : "✓ Close & Balance Drawer"}
             </button>
 
             {closingAmount === 0 && (
@@ -293,18 +272,9 @@ const handleOpenDrawer = async () => {
             <div style={{ fontSize: 10, color: "var(--text-muted)", textAlign: "center", padding: "8px 0" }}>
               This shift is closed. Start a new shift to open the drawer again.
             </div>
-            <button
-              onClick={handleOpenDrawer}
-              disabled={drawerStatus !== 'idle'}
-              style={{
-                width: "100%", padding: "10px 0", borderRadius: 9,
-                border: "1.5px solid var(--border-medium)", background: "transparent",
-                color: "var(--text-secondary)", fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
-                cursor: drawerStatus === 'idle' ? "pointer" : "wait",
-                textTransform: "uppercase" as const,
-              }}
-            >
-              {drawerStatus === 'opening' ? "Opening..." : "Start New Shift"}
+            <button onClick={handleOpenDrawer} disabled={drawerStatus !== 'idle'}
+              className="btn btn-outline" style={{ width: "100%", fontSize: 10, padding: "10px 0" }}>
+              {drawerStatus === 'opening' ? "⟳ Opening..." : "Start New Shift"}
             </button>
           </>
         )}

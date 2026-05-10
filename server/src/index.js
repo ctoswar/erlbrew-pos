@@ -268,8 +268,8 @@ app.post('/api/sheets/sync-dashboard', async (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
     const [orderRows] = await pool.query(`
       SELECT o.id, o.status, o.subtotal, o.tax, o.total,
-             o.table_name, o.type, o.pay_method,
-             o.created_at, o.completed_at,
+o.customer_name, o.table_name, o.type, o.pay_method,
+               o.created_at, o.completed_at,
              s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
       FROM orders o
       LEFT JOIN staff s ON o.staff_id = s.id
@@ -308,7 +308,7 @@ app.post('/api/sheets/sync-dashboard', async (req, res) => {
       id: o.id, status: o.status,
       subtotal: o.subtotal, tax: o.tax, total: o.total,
       type: o.type, payMethod: o.pay_method,
-      table: o.table_name,
+      table: o.customer_name || o.table_name,
       createdAt: o.created_at, completedAt: o.completed_at,
       staff: { name: o.staff_name || '—', initials: o.staff_initials || '?', rfid: o.staff_rfid || '', role: o.staff_role || 'Barista', color: o.staff_color || '#888' },
       items: orderItems[o.id] || [],

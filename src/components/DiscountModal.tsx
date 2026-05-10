@@ -44,101 +44,79 @@ export const DiscountModal: React.FC<Props> = ({ subtotal, currentDiscount, onAp
     <>
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998, animation: "fadeInOverlay 0.2s ease" }} onClick={onClose} />
       <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
-        <div className="animate-scaleIn card-glass" style={{
-          padding: "1.5rem", width: "100%", maxWidth: 380,
-          maxHeight: "90vh", overflowY: "auto",
-        }}>
+        <div className="animate-scaleIn card-glass" style={{ padding: "1.3rem", width: "100%", maxWidth: 360, maxHeight: "90vh", overflowY: "auto" }}>
           {/* Header */}
-          <div className="font-display" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>Apply Discount</div>
-            <button onClick={onClose} className="btn-ghost" style={{ fontSize: 16, padding: "2px 6px", color: "var(--text-muted)" }}>✕</button>
+          <div className="font-display" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>Apply Discount</div>
+            <button onClick={onClose} className="btn-ghost" style={{ fontSize: 14, padding: "2px 5px", color: "var(--text-muted)" }}>✕</button>
           </div>
 
-          {/* Current discount badge */}
+          {/* Current discount */}
           {currentDiscount && (
-            <div style={{ background: "rgba(201,135,58,0.12)", border: "1px solid var(--gold)", borderRadius: 8, padding: "10px 14px", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ background: "rgba(201,135,58,0.12)", border: "1px solid var(--gold)", borderRadius: 8, padding: "8px 12px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <div style={{ fontSize: 9, color: "var(--gold)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 2, fontWeight: 700 }}>Active Discount</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{currentDiscount.label}</div>
+                <div style={{ fontSize: 8, color: "var(--gold)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 1, fontWeight: 700 }}>Active Discount</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)" }}>{currentDiscount.label}</div>
               </div>
-              <button onClick={() => { onRemove(); onClose(); }} className="btn btn-danger"
-                style={{ fontSize: 9, fontWeight: 700, padding: "5px 10px", borderRadius: 6, letterSpacing: 1, background: "var(--danger)", border: "none", color: "#fff" }}>
-                Remove
-              </button>
+              <button onClick={() => { onRemove(); onClose(); }} style={{ fontSize: 8, fontWeight: 700, padding: "4px 8px", borderRadius: 6, letterSpacing: 1, background: "var(--danger)", border: "none", color: "#fff", cursor: "pointer" }}>Remove</button>
             </div>
           )}
 
-          {/* Subtotal info */}
-          <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>
+          {/* Subtotal */}
+          <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>
             Subtotal: <strong style={{ color: "var(--gold)" }}>₱{subtotal.toFixed(2)}</strong>
           </div>
 
-          {/* Preset discounts */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+          {/* Presets */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
             {PRESET_DISCOUNTS.map((d) => {
               const savings = subtotal * (d.value / 100);
               return (
                 <button key={d.type} onClick={() => applyPreset(d.type, d.label, d.value)}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "12px 14px", borderRadius: 10, border: "1.5px solid var(--border-medium)",
+                    padding: "10px 12px", borderRadius: 8, border: "1.5px solid var(--border-medium)",
                     background: "var(--bg-base)", cursor: "pointer", transition: "var(--transition-fast)", width: "100%",
                   }}>
                   <div style={{ textAlign: "left" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{d.label}</div>
-                    <div style={{ fontSize: 9, color: "var(--text-muted)" }}>{d.desc}</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)", marginBottom: 1 }}>{d.label}</div>
+                    <div style={{ fontSize: 8, color: "var(--text-muted)" }}>{d.desc}</div>
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "var(--success)" }}>−₱{savings.toFixed(2)}</div>
-                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--success)" }}>−₱{savings.toFixed(2)}</div>
                 </button>
               );
             })}
           </div>
 
-          {/* Custom toggle */}
+          {/* Custom */}
           {!showCustom ? (
             <button onClick={() => setShowCustom(true)} className="btn-ghost"
-              style={{
-                width: "100%", padding: "10px", borderRadius: 9, border: "1.5px dashed var(--border-default)",
-                fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase",
-              }}>
+              style={{ width: "100%", padding: "8px", borderRadius: 8, border: "1.5px dashed var(--border-default)", fontSize: 9, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>
               + Custom Discount
             </button>
           ) : (
-            <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 14 }}>
-              <div style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>
-                Custom Discount
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                <input value={customLabel} onChange={(e) => setCustomLabel(e.target.value)}
-                  placeholder="Discount name" style={{ marginBottom: 8 }} />
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 12 }}>
+              <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Custom Discount</div>
+              <div style={{ marginBottom: 8 }}>
+                <input value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} placeholder="Discount name" style={{ marginBottom: 6, fontSize: 11, padding: "8px 10px" }} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                   <div style={{ position: "relative" }}>
-                    <input type="number" value={customPct} onChange={(e) => setCustomPct(e.target.value)}
-                      placeholder="e.g. 15" min="1" max="100" style={{ paddingRight: 30 }} />
-                    <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", fontSize: 11, pointerEvents: "none" }}>%</span>
+                    <input type="number" value={customPct} onChange={(e) => setCustomPct(e.target.value)} placeholder="e.g. 15" min="1" max="100" style={{ paddingRight: 28, fontSize: 11, padding: "8px 28px 8px 10px" }} />
+                    <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", fontSize: 10, pointerEvents: "none" }}>%</span>
                   </div>
                   <button onClick={applyCustomPct} disabled={!customPct || parseFloat(customPct) <= 0}
-                    className="btn btn-gold" style={{ fontSize: 10, padding: "8px", borderRadius: 8 }}>
-                    Apply %
-                  </button>
+                    className="btn btn-gold" style={{ fontSize: 9, padding: "7px", borderRadius: 7 }}>Apply %</button>
                 </div>
                 {customPct && parseFloat(customPct) > 0 && (
-                  <div style={{ fontSize: 9, color: "var(--success)", marginTop: 4 }}>
-                    Saves ₱{(subtotal * (parseFloat(customPct) / 100)).toFixed(2)}
-                  </div>
+                  <div style={{ fontSize: 8, color: "var(--success)", marginTop: 3 }}>Saves ₱{(subtotal * (parseFloat(customPct) / 100)).toFixed(2)}</div>
                 )}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 6 }}>
                   <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", fontSize: 11, pointerEvents: "none" }}>₱</span>
-                    <input type="number" value={customFixed} onChange={(e) => setCustomFixed(e.target.value)}
-                      placeholder="e.g. 50" min="1" style={{ paddingLeft: 24 }} />
+                    <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", fontSize: 10, pointerEvents: "none" }}>₱</span>
+                    <input type="number" value={customFixed} onChange={(e) => setCustomFixed(e.target.value)} placeholder="e.g. 50" min="1" style={{ paddingLeft: 22, fontSize: 11, padding: "8px 10px 8px 22px" }} />
                   </div>
                   <button onClick={applyCustomFixed} disabled={!customFixed || parseFloat(customFixed) <= 0}
-                    className="btn btn-gold" style={{ fontSize: 10, padding: "8px", borderRadius: 8 }}>
-                    Apply ₱
-                  </button>
+                    className="btn btn-gold" style={{ fontSize: 9, padding: "7px", borderRadius: 7 }}>Apply ₱</button>
                 </div>
               </div>
             </div>

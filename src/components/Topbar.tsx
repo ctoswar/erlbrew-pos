@@ -15,10 +15,18 @@ interface Props {
 
 const NAV_ICONS: Record<string, string> = {
   pos: "☕",
-  time: "⏱️",
+  time: "⏱",
   kitchen: "🍳",
   dashboard: "📊",
-  admin: "⚙️",
+  admin: "⚙",
+};
+
+const NAV_LABELS: Record<string, string> = {
+  pos: "Order",
+  time: "Time",
+  kitchen: "Kitchen",
+  dashboard: "Dashboard",
+  admin: "Admin",
 };
 
 export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNavigate, onLogout }) => {
@@ -45,38 +53,30 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
   const isOrderRelated = screen === "pos" || screen === "checkout" || screen === "payment" || screen === "success";
   const scale = fontScaleMap[fontSize];
 
+  const handleLogout = () => {
+    onLogout();
+  };
+
   return (
     <header
       className="glass-panel"
       style={{
-        height: Math.round(52 * scale),
+        height: 46,
         display: "flex",
         alignItems: "center",
-        padding: `0 ${Math.round(14 * scale)}px`,
-        gap: Math.round(6 * scale),
+        padding: "0 14px",
+        gap: 6,
         flexShrink: 0,
         borderBottom: "1px solid rgba(201,135,58,0.08)",
         position: "relative",
         zIndex: 100,
       }}
     >
-      {/* Gold accent line */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: "5%",
-          right: "5%",
-          height: 1,
-          background: "linear-gradient(90deg, transparent, rgba(201,135,58,0.3), transparent)",
-        }}
-      />
-
-      {/* Logo — fixed, no shrink */}
+      {/* Logo */}
       <div
         className="font-display"
         style={{
-          fontSize: Math.round(14 * scale),
+          fontSize: 13,
           fontWeight: 700,
           color: "var(--gold)",
           letterSpacing: 2.5,
@@ -84,24 +84,23 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
           alignItems: "center",
           gap: 6,
           flexShrink: 0,
-          marginRight: Math.round(4 * scale),
         }}
       >
         ERLBREW
+        <div style={{ width: 1, height: 18, background: "rgba(201,135,58,0.2)", margin: "0 4px", flexShrink: 0 }} />
       </div>
 
-      {/* Nav — fills remaining space, scrolls only if truly needed */}
+      {/* Nav */}
       <div
         className="hide-scrollbar"
         style={{
           display: "flex",
           alignItems: "center",
-          gap: Math.round(2 * scale),
+          gap: 2,
           overflowX: "auto",
           whiteSpace: "nowrap",
           flex: 1,
           minWidth: 0,
-          paddingRight: Math.round(4 * scale),
         }}
       >
         {visibleNavItems.map(({ screen: s, label, badge }) => {
@@ -112,69 +111,57 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
               onClick={() => onNavigate(s)}
               style={{
                 position: "relative",
-                background: "transparent",
+                background: isActive ? "rgba(201,135,58,0.1)" : "transparent",
                 border: "none",
-                borderRadius: Math.round(6 * scale),
-                color: isActive ? "var(--gold)" : "var(--text-disabled)",
-                fontSize: Math.round(9 * scale),
-                fontWeight: 700,
-                letterSpacing: 1.2,
-                padding: `${Math.round(5 * scale)}px ${Math.round(9 * scale)}px`,
+                borderRadius: 8,
+                color: isActive ? "var(--gold)" : "var(--text-faint)",
+                fontSize: 8.5,
+                fontWeight: isActive ? 700 : 500,
+                letterSpacing: 1,
+                padding: "6px 10px",
                 cursor: "pointer",
-                transition: "color 0.2s var(--ease-out), background 0.2s var(--ease-out)",
+                transition: "all 0.15s var(--ease-out)",
                 flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: 3,
               }}
               onMouseEnter={(e) => {
-                if (!isActive) e.currentTarget.style.background = "rgba(201,135,58,0.06)";
+                if (!isActive) { e.currentTarget.style.color = "var(--text-secondary)"; e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }
               }}
               onMouseLeave={(e) => {
-                if (!isActive) e.currentTarget.style.background = "transparent";
+                if (!isActive) { e.currentTarget.style.color = "var(--text-faint)"; e.currentTarget.style.background = "transparent"; }
               }}
             >
-              <span style={{ marginRight: 3 }}>{NAV_ICONS[s]}</span>
+              <span style={{ fontSize: 10, lineHeight: 1 }}>{NAV_ICONS[s]}</span>
               {label}
-              {badge ? (
+              {badge != null && badge > 0 ? (
                 <span
                   style={{
-                    position: "absolute",
-                    top: -2,
-                    right: -2,
-                    background: "var(--gold)",
-                    color: "var(--bg-sidebar)",
-                    borderRadius: "50%",
-                    width: 14,
-                    height: 14,
+                    background: isActive ? "var(--gold)" : "rgba(201,135,58,0.3)",
+                    color: isActive ? "var(--bg-sidebar)" : "var(--gold)",
+                    borderRadius: 4,
+                    padding: "0 5px",
                     fontSize: 7,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
                     fontWeight: 700,
+                    lineHeight: "14px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    minWidth: 14,
+                    justifyContent: "center",
                   }}
                 >
                   {badge}
                 </span>
               ) : null}
-              {isActive && (
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: 0,
-                    left: "15%",
-                    right: "15%",
-                    height: 2,
-                    background: "var(--gold)",
-                    borderRadius: 2,
-                  }}
-                />
-              )}
             </button>
           );
         })}
       </div>
 
-      {/* Right side — all fixed, no shrink */}
-      <div style={{ display: "flex", alignItems: "center", gap: Math.round(4 * scale), flexShrink: 0 }}>
-        {/* Font size toggle */}
+      {/* Right side */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        {/* Font size */}
         <button
           onClick={() => {
             const sizes: FontSize[] = ["small", "normal", "large", "extra-large"];
@@ -182,96 +169,85 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
             const next = sizes[(idx + 1) % sizes.length];
             setFontSize(next);
           }}
-          title={`Font size: ${fontSize}`}
           className="btn-ghost"
           style={{
-            minWidth: 28,
-            fontSize: Math.round(9 * scale),
+            fontSize: 8,
             color: fontSize !== "normal" ? "var(--gold)" : "var(--text-muted)",
-            padding: `${Math.round(4 * scale)}px ${Math.round(6 * scale)}px`,
+            padding: "4px 6px",
+            letterSpacing: 0.5,
           }}
         >
           {FONT_SIZE_LABELS[fontSize]}
         </button>
 
-        {/* Theme toggle */}
+        {/* Theme */}
         <button
           onClick={() => setThemeByName(theme === "brown" ? "white" : "brown")}
-          title={theme === "brown" ? "Switch to white theme" : "Switch to brown theme"}
           className="btn-ghost"
           style={{
-            fontSize: Math.round(12 * scale),
-            padding: `${Math.round(4 * scale)}px ${Math.round(6 * scale)}px`,
+            fontSize: 12,
+            padding: "4px 5px",
+            opacity: 0.7,
           }}
         >
           {theme === "brown" ? "☁" : "☕"}
         </button>
 
-        <div style={{ width: 1, height: 16, background: "var(--border-default)", flexShrink: 0 }} />
+        <div style={{ width: 1, height: 16, background: "rgba(201,135,58,0.12)", flexShrink: 0 }} />
 
-        {/* Staff avatar */}
-        <div
-          style={{
-            width: Math.round(26 * scale),
-            height: Math.round(26 * scale),
-            borderRadius: "50%",
-            background: `linear-gradient(135deg, ${staff.color}, ${staff.color}dd)`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: Math.round(9 * scale),
-            fontWeight: 700,
-            color: "#fff",
-            flexShrink: 0,
-            boxShadow: "0 0 0 2px rgba(201,135,58,0.15)",
-          }}
-        >
-          {staff.initials}
-        </div>
-
-        {/* Staff name (hide on very narrow) */}
-        <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
+        {/* Staff pill */}
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
           <div
             style={{
-              fontSize: Math.round(10.5 * scale),
-              color: "var(--text-primary)",
+              width: 24,
+              height: 24,
+              borderRadius: "50%",
+              background: `linear-gradient(135deg, ${staff.color}, ${staff.color}cc)`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 8,
               fontWeight: 700,
+              color: "#fff",
+              flexShrink: 0,
+              boxShadow: "0 0 0 2px rgba(201,135,58,0.15)",
             }}
           >
-            {staff.name.split(" ")[0]}
+            {staff.initials}
           </div>
-          <div
-            style={{
-              fontSize: Math.round(7 * scale),
-              color: "var(--gold-muted)",
-              letterSpacing: 0.8,
-            }}
-          >
-            {staff.role}
+          <div style={{ lineHeight: 1.2 }}>
+            <div style={{ fontSize: 9, color: "var(--text-primary)", fontWeight: 700 }}>
+              {staff.name.split(" ")[0]}
+            </div>
+            <div style={{ fontSize: 7, color: "var(--text-faint)", letterSpacing: 0.5 }}>
+              {staff.role}
+            </div>
           </div>
         </div>
 
         {/* Clock */}
         <div
           style={{
-            fontSize: Math.round(9.5 * scale),
-            color: "var(--gold-muted)",
-            letterSpacing: 1,
+            fontSize: 9,
+            color: "var(--gold-dim)",
+            letterSpacing: 0.5,
             fontVariantNumeric: "tabular-nums",
             flexShrink: 0,
+            marginRight: 4,
           }}
         >
           {formatTime(time)}
         </div>
 
         <button
-          className="btn btn-outline"
-          onClick={onLogout}
+          className="btn-ghost"
+          onClick={handleLogout}
           style={{
-            fontSize: Math.round(8 * scale),
-            padding: `${Math.round(5 * scale)}px ${Math.round(8 * scale)}px`,
+            fontSize: 7.5,
+            padding: "5px 8px",
             letterSpacing: 1,
             flexShrink: 0,
+            color: "var(--text-disabled)",
           }}
         >
           Logout

@@ -103,7 +103,7 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   lines.push(`Time: ${timeStr}`);
   lines.push(`Slip No: ${slipNo}`);
   lines.push(`Server : ${order.staff.name}`);
-  lines.push(`Type   : ${order.type === "dine-in" ? `DINE-IN${order.table ? ` / Tbl ${order.table}` : ""}` : "TAKEOUT"}`);
+  lines.push(`Type   : ${order.type === "dine-in" ? `DINE-IN${order.customerName ? ` / ${order.customerName}` : ""}` : "TAKEOUT"}`);
   lines.push(ln("-"));
 
   // ── 4. Line Items ──────────────────────────────────────────────────────────

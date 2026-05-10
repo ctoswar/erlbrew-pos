@@ -99,7 +99,7 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
   lines.push(`Time: ${timeStr}`);
   lines.push(`Slip No: ${order.id}`);
   lines.push(`Server : ${order.staff.name}`);
-  lines.push(`Type   : ${order.type === "dine-in" ? `DINE-IN${order.table ? ` / Tbl ${order.table}` : ""}` : "TAKEOUT"}`);
+  lines.push(`Type   : ${order.type === "dine-in" ? `DINE-IN${order.customerName ? ` / ${order.customerName}` : ""}` : "TAKEOUT"}`);
   lines.push(ln("-"));
 
   // 4. Line Items

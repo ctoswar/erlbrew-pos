@@ -123,7 +123,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
               <div>Time: {timeStr}</div>
               <div>Slip No: {order.id}</div>
               <div>Server : {order.staff.name}</div>
-              <div>Type   : {order.type === "dine-in" ? `DINE-IN${order.table ? ` / Tbl ${order.table}` : ""}` : "TAKEOUT"}</div>
+              <div>Type   : {order.type === "dine-in" ? `DINE-IN${order.customerName ? ` / ${order.customerName}` : ""}` : "TAKEOUT"}</div>
             </div>
 
             <div style={{ borderTop: "1px dashed #aaa", marginBottom: 6 }} />

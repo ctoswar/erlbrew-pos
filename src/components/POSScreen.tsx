@@ -31,7 +31,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const [screen, setScreen] = useState<Screen>("pos");
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>("dine-in");
-  const [table, setTable] = useState("1");
+  const [customerName, setCustomerName] = useState("");
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
   const [isTablet, setIsTablet] = useState(() => window.innerWidth >= MOBILE_BREAKPOINT && window.innerWidth < TABLET_BREAKPOINT);
@@ -74,12 +74,12 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   // This is intentional - we want to sync orderType/table changes immediately.
   useEffect(() => {
     try {
-      localStorage.setItem("erlbrew_cart_meta", JSON.stringify({ orderType, table }));
+      localStorage.setItem("erlbrew_cart_meta", JSON.stringify({ orderType, customerName }));
       const v = String(Date.now());
       localStorage.setItem("erlbrew_cart_version", v);
     } catch {}
-  }, [orderType, table, cart]);
-  const { orders, placeOrder, updateStatus, voidOrder, activeOrders, pendingCount } = useOrders();
+  }, [orderType, customerName, cart]);
+  const { orders, placeOrder, updateStatus, voidOrder, refundOrder, activeOrders, pendingCount } = useOrders();
   useKitchenEvents(); // Establish SSE connection for real-time order updates
 
   const handleNavigate = useCallback((s: Screen) => {
@@ -91,7 +91,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   };
 
   const handleConfirmPayment = (method: PayMethod, cashTendered?: number, referenceNumber?: string) => {
-    const order = placeOrder(cart, staff, orderType, table, method, cashTendered, discount, referenceNumber);
+    const order = placeOrder(cart, staff, orderType, customerName, method, cashTendered, discount, referenceNumber);
     setLastOrder(order);
     clearCart();
     setMobileCartOpen(false);
@@ -151,11 +151,11 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
             cart={cart}
             discount={discount}
             orderType={orderType}
-            table={table}
+            customerName={customerName}
             onUpdateQty={updateQty}
             onClearCart={() => { clearCart(); setMobileCartOpen(false); }}
             onOrderTypeChange={setOrderType}
-            onTableChange={setTable}
+            onCustomerNameChange={setCustomerName}
             onCheckout={() => { setMobileCartOpen(false); handleCheckout(); }}
             onOpenDiscount={() => setShowDiscountModal(true)}
             onRemoveDiscount={removeDiscount}
@@ -208,11 +208,11 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
           cart={cart}
           discount={discount}
           orderType={orderType}
-          table={table}
+          customerName={customerName}
           onUpdateQty={updateQty}
           onClearCart={clearCart}
           onOrderTypeChange={setOrderType}
-          onTableChange={setTable}
+          onCustomerNameChange={setCustomerName}
           onCheckout={handleCheckout}
           onOpenDiscount={() => setShowDiscountModal(true)}
           onRemoveDiscount={removeDiscount}
@@ -233,7 +233,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
             cart={cart}
             discount={discount}
             orderType={orderType}
-            table={table}
+            customerName={customerName}
             staffName={staff.name}
             onBack={handleBack}
             onContinue={() => setScreen("payment")}
@@ -252,7 +252,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
       case "success":
         return lastOrder ? <SuccessScreen order={lastOrder} onDone={handleOrderDone} /> : null;
       case "kitchen":
-        return <KitchenBoard orders={orders} onUpdateStatus={updateStatus} onVoidOrder={voidOrder} />;
+        return <KitchenBoard orders={orders} onUpdateStatus={updateStatus} onVoidOrder={voidOrder} onRefundOrder={refundOrder} />;
 case "dashboard":
   return <Dashboard orders={orders} staffName={staff.name} />;
 case "admin":

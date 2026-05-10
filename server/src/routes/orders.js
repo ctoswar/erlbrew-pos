@@ -82,7 +82,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     try {
       const [rows] = await pool.query(`
         SELECT o.id, o.status, o.subtotal, o.tax, o.total,
-               o.table_name, o.type, o.pay_method, o.reference_number,
+               o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number,
                o.created_at, o.completed_at,
                s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
         FROM orders o
@@ -114,7 +114,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     try {
       const [rows] = await pool.query(`
         SELECT o.id, o.status, o.subtotal, o.tax, o.total,
-               o.table_name, o.type, o.pay_method, o.reference_number,
+               o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number,
                o.created_at, o.completed_at,
                s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
         FROM orders o
@@ -174,7 +174,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
       const [rows] = await pool.query(`
         SELECT o.id, o.status, o.subtotal, o.tax, o.total,
-               o.table_name, o.type, o.pay_method, o.reference_number,
+               o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number,
                o.created_at, o.completed_at,
                s.name AS staff_name, s.initials AS staff_initials,
                s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
@@ -202,7 +202,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
   // Create order and append to Google Sheets (public) -> now protected by auth
   router.post('/', authMiddleware, async (req, res) => {
-    const { staff_id, staff_name, items, type, table_name, pay_method, reference_number } = req.body;
+    const { staff_id, staff_name, items, type, customer_name, table_name, pay_method, reference_number } = req.body;
     console.log('[DEBUG] Order request - pay_method:', pay_method, 'reference_number:', JSON.stringify(reference_number));
     console.log('[DEBUG] Full body keys:', Object.keys(req.body).join(', '));
     console.log('[DEBUG] Full body:', JSON.stringify(req.body).substring(0, 500));
@@ -238,8 +238,8 @@ const tax = 0;
       }
 
 await pool.query(
-        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, table_name, type, pay_method, reference_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, staffDbId, 'preparing', subtotal, tax, total, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null]
+        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name, table_name, type, pay_method, reference_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, staffDbId, 'preparing', subtotal, tax, total, customer_name || null, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null]
       );
       console.log('[DEBUG] DB INSERT completed - id:', id, 'reference_number in DB:', reference_number);
       for (const it of itemsOut) {

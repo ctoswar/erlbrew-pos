@@ -66,7 +66,7 @@ export interface Order {
   total: number;
   createdAt: Date;
   completedAt?: Date;
-  table?: string;
+  customerName?: string;
   type: OrderType;
   payMethod: PayMethod;
   /** Cash amount tendered — needed to compute change on cash orders */

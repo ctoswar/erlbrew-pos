@@ -68,72 +68,61 @@ export const TimeKeeping: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
       {/* Header */}
-      <div className="glass-panel" style={{
-        padding: "0.8rem 1rem",
-        borderBottom: "1px solid rgba(201,135,58,0.08)",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        flexShrink: 0, borderRadius: 0,
-      }}>
-        <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
-          Timekeeping
-        </div>
-        <div style={{ fontSize: 10, color: "var(--text-faint)" }}>{dateStr}</div>
+      <div className="glass-panel" style={{ padding: "0.7rem 1rem", borderBottom: "1px solid rgba(201,135,58,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, borderRadius: 0 }}>
+        <div className="font-display" style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>Timekeeping</div>
+        <div style={{ fontSize: 9, color: "var(--text-faint)" }}>{dateStr}</div>
       </div>
 
       {/* Body */}
-      <div className="scroll-area" style={{ flex: 1, padding: "1rem", display: "flex", flexDirection: "column", gap: 20, overflowY: "auto", minHeight: 0 }}>
+      <div className="scroll-area" style={{ flex: 1, padding: "0.8rem", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto", minHeight: 0 }}>
 
-        {/* ── Last tap feedback ── */}
+        {/* Last tap feedback */}
         {lastTap && (
           <div className="animate-scaleIn" style={{
             background: lastTap.action === "clock_in" ? "var(--success-bg)" : "rgba(201,135,58,0.12)",
             border: `1.5px solid ${lastTap.action === "clock_in" ? "var(--success)" : "var(--gold)"}`,
-            borderRadius: 14, padding: "16px 20px",
+            borderRadius: 12, padding: "14px 16px",
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{
-                width: 48, height: 48, borderRadius: "50%",
+                width: 42, height: 42, borderRadius: "50%",
                 background: lastTap.action === "clock_in" ? "var(--success)" : "var(--gold)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 22, flexShrink: 0, boxShadow: "0 0 0 3px rgba(255,255,255,0.08)",
+                fontSize: 18, flexShrink: 0,
               }}>
                 {lastTap.action === "clock_in" ? "✅" : "🔴"}
               </div>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
                   {lastTap.action === "clock_in" ? "Clocked In" : "Clocked Out"}
                 </div>
-                <div style={{ fontSize: 12, color: "var(--gold)", fontWeight: 600 }}>
+                <div style={{ fontSize: 11, color: "var(--gold)", fontWeight: 600 }}>
                   {lastTap.staff.name} · {lastTap.staff.role}
                 </div>
-                <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>
-                  {lastTap.record?.clock_in ? `In: ${new Date(lastTap.record.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}` : ""}
-                  {lastTap.record?.clock_out ? `  Out: ${new Date(lastTap.record.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}` : ""}
-                </div>
+                {lastTap.record?.clock_in && (
+                  <div style={{ fontSize: 9, color: "var(--text-faint)", marginTop: 1 }}>
+                    {`In: ${new Date(lastTap.record.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`}
+                    {lastTap.record?.clock_out ? `  Out: ${new Date(lastTap.record.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}` : ""}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* ── RFID Scan Box ── */}
-        <div className="card-glass" style={{
-          padding: "24px", textAlign: "center", borderStyle: "dashed",
-        }}>
-          <div style={{ fontSize: 40, marginBottom: 10 }}>📲</div>
-          <div className="font-display" style={{ fontSize: 15, color: "var(--text-primary)", marginBottom: 6 }}>
-            Scan your RFID Card
-          </div>
-          <div style={{ fontSize: 10, color: "var(--text-faint)", marginBottom: 16 }}>
-            Tap to clock in or out automatically
-          </div>
+        {/* RFID Scan Box */}
+        <div className="card-glass" style={{ padding: "20px", textAlign: "center", border: "1.5px dashed rgba(201,135,58,0.2)" }}>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>📲</div>
+          <div className="font-display" style={{ fontSize: 14, color: "var(--text-primary)", marginBottom: 4 }}>Scan your RFID Card</div>
+          <div style={{ fontSize: 9, color: "var(--text-faint)", marginBottom: 12 }}>Tap to clock in or out automatically</div>
           <RfidInput onScan={handleTap} />
         </div>
 
-        {/* ── Staff status groups ── */}
+        {/* Staff status groups */}
         {loading ? (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>Loading...</div>
+          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem", fontSize: 11 }}>Loading...</div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <StaffGroup label="Clocked In" count={clockedIn.length} color="var(--success)" records={clockedIn} />
             <StaffGroup label="Not Yet In" count={notIn.length} color="var(--text-faint)" records={notIn} />
             <StaffGroup label="Clocked Out" count={clockedOut.length} color="var(--gold)" records={clockedOut} />

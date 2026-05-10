@@ -74,7 +74,7 @@ export function serverOrderToOrder(o: any): Order {
     total: Number(o.total) || 0,
     createdAt: new Date(o.created_at),
     completedAt: o.completed_at ? new Date(o.completed_at) : undefined,
-    table: o.table_name ? (o.type === 'dine-in' ? `Table ${o.table_name}` : undefined) : undefined,
+    customerName: o.customer_name || (o.type === 'dine-in' ? o.table_name : undefined) || undefined,
     type: (o.type || 'dine-in') as OrderType,
     payMethod: (o.pay_method || 'cash') as PayMethod,
     referenceNumber: o.referenceNumber || o.reference_number || undefined,
@@ -194,7 +194,7 @@ export function useOrders() {
   }, [orders]);
 
   const placeOrder = useCallback(
-    (cart: CartItem[], staff: Staff, type: OrderType, table: string | undefined, payMethod: PayMethod, cashTendered?: number, discount?: Discount | null, referenceNumber?: string): Order => {
+    (cart: CartItem[], staff: Staff, type: OrderType, customerName: string | undefined, payMethod: PayMethod, cashTendered?: number, discount?: Discount | null, referenceNumber?: string): Order => {
       const subtotal = calcSubtotal(cart);
       const tax = calcTax(subtotal);
       const total = calcGrand(subtotal, discount);
@@ -210,7 +210,7 @@ export function useOrders() {
         staff_id: staff ? staff.rfid : undefined,
         staff_name: staff?.name,
         type,
-        table_name: table ? table : undefined,
+        customer_name: customerName || null,
         pay_method: payMethod,
         items,
       };
@@ -238,7 +238,7 @@ export function useOrders() {
         tax,
         total,
         createdAt: new Date(),
-        table: type === "dine-in" ? `Table ${table}` : undefined,
+        customerName: type === "dine-in" ? (customerName || "Walk-in") : undefined,
         type,
         payMethod,
         cashTendered,
@@ -318,5 +318,10 @@ export function useOrders() {
     setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status: "voided" as OrderStatus } : o));
   }, []);
 
-  return { orders, placeOrder, updateStatus, voidOrder, activeOrders, completedOrders, pendingCount };
+  const refundOrder = useCallback((id: string) => {
+    // Mark as refunded locally (the POST /:id/refund was already called by VoidCredentialModal)
+    setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status: "refunded" as OrderStatus } : o));
+  }, []);
+
+  return { orders, placeOrder, updateStatus, voidOrder, refundOrder, activeOrders, completedOrders, pendingCount };
 }

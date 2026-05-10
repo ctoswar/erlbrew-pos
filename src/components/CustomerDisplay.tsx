@@ -9,19 +9,19 @@ const POLL_INTERVAL = 3000;
 interface DisplayCart {
   items: CartItem[];
   orderType: OrderType;
-  table: string;
+  customerName: string;
 }
 
 function readCart(): DisplayCart {
   try {
     const raw = localStorage.getItem(CART_KEY);
-    if (!raw) return { items: [], orderType: "dine-in" as OrderType, table: "1" };
+    if (!raw) return { items: [], orderType: "dine-in" as OrderType, customerName: "" };
     const cart: CartItem[] = JSON.parse(raw);
     const metaRaw = localStorage.getItem("erlbrew_cart_meta");
-    const meta = metaRaw ? JSON.parse(metaRaw) : { orderType: "dine-in", table: "1" };
-    return { items: cart, orderType: meta.orderType || "dine-in", table: meta.table || "1" };
+    const meta = metaRaw ? JSON.parse(metaRaw) : { orderType: "dine-in", customerName: "" };
+    return { items: cart, orderType: meta.orderType || "dine-in", customerName: meta.customerName || "" };
   } catch {
-    return { items: [], orderType: "dine-in", table: "1" };
+    return { items: [], orderType: "dine-in", customerName: "" };
   }
 }
 
@@ -56,12 +56,12 @@ const handler = (e: StorageEvent) => {
     // remember last length to help debug/logging if needed
   }, [cart.items.length]);
 
-  const { items, orderType, table } = cart;
+  const { items, orderType, customerName } = cart;
   const subtotal = calcSubtotal(items);
   const grand = calcGrand(subtotal, discount);
   const isEmpty = items.length === 0;
 
-  const orderLabel = orderType === "dine-in" ? `Table ${table}` : "Takeout";
+  const orderLabel = orderType === "dine-in" ? (customerName || "Dine-in") : "Takeout";
 
   return (
     <div style={{
@@ -213,7 +213,7 @@ const handler = (e: StorageEvent) => {
 
               <div style={{ marginTop: 24, padding: "14px 16px", background: "rgba(0,0,0,0.2)", borderRadius: 10, textAlign: "center" as const }}>
                 <div style={{ fontSize: 10, color: "rgba(245,230,208,0.35)", letterSpacing: 1, marginBottom: 4 }}>Order Type</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "#f5e6d0" }}>{orderType === "dine-in" ? `🍽️ Dine-in — Table ${table}` : "🥤 Takeout"}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#f5e6d0" }}>{orderType === "dine-in" ? `🍽️ ${customerName || "Dine-in"}` : "🥤 Takeout"}</div>
               </div>
             </div>
           </div>

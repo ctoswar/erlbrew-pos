@@ -93,6 +93,10 @@ ALTER TABLE inventory
 ALTER TABLE orders
   ADD COLUMN reference_number VARCHAR(128) DEFAULT NULL;
 
+-- Customer name field (replaces table_name for dine-in)
+ALTER TABLE orders
+  ADD COLUMN customer_name VARCHAR(128) DEFAULT NULL;
+
 -- Menu item image
 ALTER TABLE menu_items
   ADD COLUMN image VARCHAR(512) DEFAULT NULL AFTER emoji;

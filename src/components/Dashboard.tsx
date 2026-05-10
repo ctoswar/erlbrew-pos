@@ -153,122 +153,63 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
     ? "var(--gold)"
     : "var(--danger)";
 
-  return (
-    <div className="scroll-area" style={{ flex: 1, padding: "1.4rem 1.6rem", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto", minHeight: 0 }}>
+return (
+    <div className="scroll-area" style={{ flex: 1, padding: "1.2rem 1.4rem", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", minHeight: 0 }}>
       {/* Page header */}
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
         <div>
-          <div className="font-display" style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)" }}>Daily Dashboard</div>
-          <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{summary.date}</div>
+          <div className="font-display" style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)" }}>Daily Dashboard</div>
+          <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 1 }}>{summary.date}</div>
         </div>
-        <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Viewing as <strong style={{ color: "var(--gold)" }}>{staffName}</strong></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {syncStatus === 'syncing' && (
-            <span style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: 1 }}>⟳ Syncing Sheet3…</span>
-          )}
-          {syncStatus === 'ok' && (
-            <span style={{ fontSize: 9, color: 'var(--success)', letterSpacing: 1 }}>✓ Sheet3 synced</span>
-          )}
-          {syncStatus === 'error' && (
-            <span style={{ fontSize: 9, color: 'var(--danger)', letterSpacing: 1 }}>✗ Sheet3 failed</span>
-          )}
-          {syncStatus === 'idle' && (
-            <span
-              style={{ fontSize: 9, color: 'var(--text-disabled)', letterSpacing: 1, cursor: 'pointer' }}
-              onClick={async () => {
-                setSyncStatus('syncing');
-                try {
-                  const r = await fetch('/api/sheets/sync-dashboard', { method: 'POST' });
-                  setSyncStatus(r.ok ? 'ok' : 'error');
-                } catch { setSyncStatus('error'); }
-                setTimeout(() => setSyncStatus('idle'), 3000);
-              }}
-            >⇌ Sync Sheet3</span>
-          )}
-        </div>
+        <div style={{ fontSize: 9, color: "var(--text-muted)" }}>Viewing as <strong style={{ color: "var(--gold)" }}>{staffName}</strong></div>
       </div>
 
       {/* Date Range Selector */}
-      <div className="card-glass" style={{ padding: "14px 16px", borderRadius: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>Analysis Period</div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {([
-              ["Today", "today"],
-              ["This Week", "this_week"],
-              ["Last Week", "last_week"],
-              ["This Month", "this_month"],
-              ["Last 2 Weeks", "last_2_weeks"],
-              ["Custom", "custom"],
-            ] as const).map(([label, value]) => (
-              <button
-                key={value}
-                onClick={() => setDateRange(value)}
+      <div className="card-glass" style={{ padding: "12px 14px", borderRadius: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>Period</div>
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            {([["Today","today"],["This Week","this_week"],["Last Week","last_week"],["This Month","this_month"],["Last 2 Weeks","last_2_weeks"],["Custom","custom"]] as const).map(([label, value]) => (
+              <button key={value} onClick={() => setDateRange(value)}
                 style={{
-                  padding: "5px 10px",
-                  fontSize: 9,
-                  borderRadius: 6,
-                  border: "1px solid",
+                  padding: "4px 8px", fontSize: 8, borderRadius: 6, border: "1px solid",
                   borderColor: dateRange === value ? "var(--gold)" : "var(--border-subtle)",
                   background: dateRange === value ? "rgba(201,135,58,0.15)" : "transparent",
                   color: dateRange === value ? "var(--gold)" : "var(--text-muted)",
-                  cursor: "pointer",
-                  fontWeight: dateRange === value ? 700 : 400,
-                  letterSpacing: 0.5,
+                  cursor: "pointer", fontWeight: dateRange === value ? 700 : 400, letterSpacing: 0.5,
                 }}
-              >
-                {label}
-              </button>
+              >{label}</button>
             ))}
           </div>
           {dateRange === 'custom' && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setDateRange('custom'); }}
-                style={{
-                  padding: "4px 8px",
-                  fontSize: 10,
-                  borderRadius: 6,
-                  border: "1px solid var(--border-subtle)",
-                  background: "var(--bg-base)",
-                  color: "var(--text-primary)",
-                }}
-              />
-              <span style={{ color: "var(--text-muted)", fontSize: 10 }}>to</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setDateRange('custom'); }}
-                style={{
-                  padding: "4px 8px",
-                  fontSize: 10,
-                  borderRadius: 6,
-                  border: "1px solid var(--border-subtle)",
-                  background: "var(--bg-base)",
-                  color: "var(--text-primary)",
-                }}
-              />
-              <button
-                onClick={fetchCogs}
-                style={{
-                  padding: "4px 10px",
-                  fontSize: 9,
-                  borderRadius: 6,
-                  border: "1px solid var(--gold)",
-                  background: "var(--gold)",
-                  color: "var(--bg-base)",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                }}
-              >
-                Apply
-              </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setDateRange('custom'); }}
+                style={{ padding: "3px 6px", fontSize: 9, borderRadius: 5, border: "1px solid var(--border-subtle)", background: "var(--bg-base)", color: "var(--text-primary)" }} />
+              <span style={{ color: "var(--text-muted)", fontSize: 9 }}>to</span>
+              <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setDateRange('custom'); }}
+                style={{ padding: "3px 6px", fontSize: 9, borderRadius: 5, border: "1px solid var(--border-subtle)", background: "var(--bg-base)", color: "var(--text-primary)" }} />
+              <button onClick={fetchCogs} style={{ padding: "3px 8px", fontSize: 8, borderRadius: 5, border: "1px solid var(--gold)", background: "var(--gold)", color: "var(--bg-base)", cursor: "pointer", fontWeight: 700 }}>Apply</button>
             </div>
           )}
         </div>
       </div>
+
+      {/* KPI Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+        {[
+          { label: "Revenue", value: formatCurrency(summary.totalRevenue), sub: "Today" },
+          { label: "Orders", value: String(summary.totalOrders), sub: "Completed" },
+          { label: "Avg Order", value: formatCurrency(summary.avgOrderValue), sub: "Per ticket" },
+          { label: "Active", value: String(orders.filter(o => o.status === "preparing" || o.status === "ready").length), sub: "In kitchen" },
+        ].map(({ label, value, sub }) => (
+          <div key={label} className="stat-card" style={{ padding: "14px 12px", borderRadius: 12 }}>
+            <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>{label}</div>
+            <div className="font-display" style={{ fontSize: 22, fontWeight: 700, color: "var(--gold)", marginBottom: 1 }}>{value}</div>
+            <div style={{ fontSize: 8, color: "var(--text-disabled)", letterSpacing: 1 }}>{sub}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 9, color: "var(--text-muted)" }}>Viewing as <strong style={{ color: "var(--gold)" }}>{staffName}</strong></div>
 
       {/* Reset Options */}
       <div className="card-glass" style={{ padding: "12px 14px", borderRadius: 12 }}>
@@ -352,33 +293,32 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
           </div>
         ))}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
         {[
-          { label: "COGS",    value: formatCurrency(summary.totalCOGS ?? 0),  sub: "Cost of Goods Sold", color: "var(--text-secondary)" },
-          { label: "Profit",  value: formatCurrency(summary.grossProfit ?? 0), sub: "Revenue − COGS",     color: (summary.grossProfit ?? 0) >= 0 ? "var(--success)" : "var(--danger)" },
-          { label: "Margin",  value: `${(summary.profitMargin ?? 0).toFixed(1)}%`, sub: "Profit ÷ Revenue", color: marginColor },
+          { label: "COGS", value: formatCurrency(summary.totalCOGS ?? 0), sub: "Cost of Goods", color: "var(--text-secondary)" },
+          { label: "Profit", value: formatCurrency(summary.grossProfit ?? 0), sub: "Revenue − COGS", color: (summary.grossProfit ?? 0) >= 0 ? "var(--success)" : "var(--danger)" },
+          { label: "Margin", value: `${(summary.profitMargin ?? 0).toFixed(1)}%`, sub: "Profit ÷ Revenue", color: marginColor },
         ].map(({ label, value, sub, color }) => (
-          <div key={label} style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: "14px 12px" }}>
-            <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
-            <div className="font-display" style={{ fontSize: 22, fontWeight: 700, color, marginBottom: 2 }}>{value}</div>
-            <div style={{ fontSize: 9, color: "var(--text-disabled)", letterSpacing: 1 }}>{sub}</div>
+          <div key={label} className="stat-card" style={{ padding: "12px 12px", borderRadius: 10 }}>
+            <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
+            <div className="font-display" style={{ fontSize: 20, fontWeight: 700, color, marginBottom: 1 }}>{value}</div>
+            <div style={{ fontSize: 8, color: "var(--text-disabled)", letterSpacing: 1 }}>{sub}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {/* Top Items */}
-        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: "14px" }}>
-          <div style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>Top Items</div>
+        <div className="stat-card" style={{ padding: "12px", borderRadius: 10 }}>
+          <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>Top Items</div>
           {summary.topItems.length === 0 ? (
-            <div style={{ fontSize: 11, color: "var(--text-disabled)", textAlign: "center", padding: "1rem 0" }}>No data yet</div>
+            <div style={{ fontSize: 10, color: "var(--text-disabled)", textAlign: "center", padding: "0.8rem 0" }}>No data yet</div>
           ) : summary.topItems.map((item, i) => (
-            <div key={item.name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <div style={{ fontSize: 9, color: "var(--gold-muted)", minWidth: 14 }}>#{i + 1}</div>
-              <div style={{ flex: 1, fontSize: 11, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-              <div style={{ fontSize: 11, color: "var(--gold)", fontWeight: 700, minWidth: 24, textAlign: "right" }}>{item.qty}</div>
-              {/* Bar */}
-              <div style={{ width: 60, height: 4, background: "var(--border-subtle)", borderRadius: 2, overflow: "hidden" }}>
+            <div key={item.name} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+              <div style={{ fontSize: 8, color: "var(--gold-muted)", minWidth: 12 }}>#{i + 1}</div>
+              <div style={{ flex: 1, fontSize: 10, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+              <div style={{ fontSize: 10, color: "var(--gold)", fontWeight: 600, minWidth: 20, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{item.qty}</div>
+              <div style={{ width: 50, height: 3, background: "var(--border-subtle)", borderRadius: 2, overflow: "hidden" }}>
                 <div style={{ width: `${Math.round((item.qty / (summary.topItems[0]?.qty || 1)) * 100)}%`, height: "100%", background: "var(--gold)", borderRadius: 2 }} />
               </div>
             </div>
@@ -386,19 +326,19 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
         </div>
 
         {/* By Category */}
-        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: "14px" }}>
-          <div style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>Revenue by Category</div>
+        <div className="stat-card" style={{ padding: "12px", borderRadius: 10 }}>
+          <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>Revenue by Category</div>
           {summary.byCategory.length === 0 ? (
-            <div style={{ fontSize: 11, color: "var(--text-disabled)", textAlign: "center", padding: "1rem 0" }}>No data yet</div>
+            <div style={{ fontSize: 10, color: "var(--text-disabled)", textAlign: "center", padding: "0.8rem 0" }}>No data yet</div>
           ) : summary.byCategory.map((cat) => {
             const maxRev = Math.max(...summary.byCategory.map(c => c.revenue));
             return (
-              <div key={cat.category} style={{ marginBottom: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, color: "var(--text-secondary)" }}>{cat.category}</span>
-                  <span style={{ fontSize: 10, color: "var(--gold)", fontWeight: 700 }}>{formatCurrency(cat.revenue)}</span>
+              <div key={cat.category} style={{ marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                  <span style={{ fontSize: 9, color: "var(--text-secondary)" }}>{cat.category}</span>
+                  <span style={{ fontSize: 9, color: "var(--gold)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{formatCurrency(cat.revenue)}</span>
                 </div>
-                <div style={{ width: "100%", height: 4, background: "var(--border-subtle)", borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ width: "100%", height: 3, background: "var(--border-subtle)", borderRadius: 2, overflow: "hidden" }}>
                   <div style={{ width: `${Math.round((cat.revenue / maxRev) * 100)}%`, height: "100%", background: "var(--gold)", borderRadius: 2 }} />
                 </div>
               </div>
@@ -409,15 +349,15 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
 
       {/* Payment Methods */}
       {summary.byPayMethod.length > 0 && (
-        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: "14px" }}>
-          <div style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>Payment Methods</div>
-          <div style={{ display: "flex", gap: 12 }}>
+        <div className="stat-card" style={{ padding: "12px", borderRadius: 10 }}>
+          <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>Payment Methods</div>
+          <div style={{ display: "flex", gap: 8 }}>
             {summary.byPayMethod.map((pm) => (
-              <div key={pm.method} style={{ flex: 1, background: "var(--bg-base)", borderRadius: 8, padding: 12, textAlign: "center" }}>
-                <div style={{ fontSize: 18, marginBottom: 4 }}>{pm.method === "cash" ? "💵" : pm.method === "card" ? "💳" : "📱"}</div>
-                <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>{pm.method}</div>
-                <div style={{ fontSize: 14, color: "var(--gold)", fontWeight: 700 }}>{formatCurrency(pm.total)}</div>
-                <div style={{ fontSize: 9, color: "var(--text-disabled)" }}>{pm.count} orders</div>
+              <div key={pm.method} style={{ flex: 1, background: "var(--bg-base)", borderRadius: 8, padding: "10px", textAlign: "center" }}>
+                <div style={{ fontSize: 16, marginBottom: 2 }}>{pm.method === "cash" ? "💵" : pm.method === "card" ? "💳" : "📱"}</div>
+                <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 2 }}>{pm.method}</div>
+                <div style={{ fontSize: 13, color: "var(--gold)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{formatCurrency(pm.total)}</div>
+                <div style={{ fontSize: 8, color: "var(--text-disabled)" }}>{pm.count} orders</div>
               </div>
             ))}
           </div>
@@ -426,13 +366,13 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
 
       {/* Cost Analysis */}
       {summary.cogsDetails && summary.cogsDetails.length > 0 && (
-        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: "14px" }}>
-          <div style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>Cost Analysis</div>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+        <div className="stat-card" style={{ padding: "12px", borderRadius: 10 }}>
+          <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Cost Analysis</div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
             <thead>
               <tr>
                 {["Order", "Revenue", "COGS", "Profit", "Margin"].map(h => (
-                  <th key={h} style={{ textAlign: "right", fontSize: 8, color: "var(--text-disabled)", letterSpacing: 1.5, textTransform: "uppercase", padding: "0 0 8px 12px", fontWeight: 400 }}>{h}</th>
+                  <th key={h} style={{ textAlign: "right", fontSize: 7, color: "var(--text-disabled)", letterSpacing: 1.5, textTransform: "uppercase", padding: "0 0 6px 8px", fontWeight: 400 }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -442,12 +382,12 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
                 const mColor = m >= 30 ? "var(--success)" : m >= 15 ? "var(--gold)" : "var(--danger)";
                 return (
                   <tr key={d.order_id} style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                    <td style={{ padding: "7px 0 7px 12px", color: "var(--text-primary)", fontWeight: 700 }}>{d.order_id}</td>
-                    <td style={{ padding: "7px 0 7px 12px", color: "var(--gold)", fontWeight: 700, textAlign: "right" }}>{formatCurrency(d.total)}</td>
-                    <td style={{ padding: "7px 0 7px 12px", color: "var(--text-secondary)", textAlign: "right" }}>{formatCurrency(d.cogs)}</td>
-                    <td style={{ padding: "7px 0 7px 12px", color: d.profit >= 0 ? "var(--success)" : "var(--danger)", fontWeight: 700, textAlign: "right" }}>{formatCurrency(d.profit)}</td>
-                    <td style={{ padding: "7px 0 7px 12px", textAlign: "right" }}>
-                      <span style={{ fontSize: 9, fontWeight: 700, color: mColor, background: "rgba(0,0,0,0.3)", padding: "2px 6px", borderRadius: 4 }}>{m.toFixed(1)}%</span>
+                    <td style={{ padding: "5px 0 5px 8px", color: "var(--text-primary)", fontWeight: 600 }}>{d.order_id}</td>
+                    <td style={{ padding: "5px 0 5px 8px", color: "var(--gold)", fontWeight: 600, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatCurrency(d.total)}</td>
+                    <td style={{ padding: "5px 0 5px 8px", color: "var(--text-secondary)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatCurrency(d.cogs)}</td>
+                    <td style={{ padding: "5px 0 5px 8px", color: d.profit >= 0 ? "var(--success)" : "var(--danger)", fontWeight: 600, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatCurrency(d.profit)}</td>
+                    <td style={{ padding: "5px 0 5px 8px", textAlign: "right" }}>
+                      <span style={{ fontSize: 8, fontWeight: 600, color: mColor, background: "rgba(0,0,0,0.2)", padding: "1px 5px", borderRadius: 3 }}>{m.toFixed(1)}%</span>
                     </td>
                   </tr>
                 );
@@ -458,46 +398,44 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
       )}
 
       {/* Recent Orders */}
-      <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: "14px" }}>
-        <div style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>Recent Orders</div>
+      <div className="stat-card" style={{ padding: "12px", borderRadius: 10 }}>
+        <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Recent Orders</div>
         {recentOrders.length === 0 ? (
-          <div style={{ fontSize: 11, color: "var(--text-disabled)", textAlign: "center", padding: "1rem 0" }}>No orders yet</div>
+          <div style={{ fontSize: 10, color: "var(--text-disabled)", textAlign: "center", padding: "0.8rem 0" }}>No orders yet</div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
             <thead>
               <tr>
                 {["Order", "Time", "Staff", "Type", "Items", "Total", "Ref", "Status", ""].map(h => (
-                  <th key={h} style={{ textAlign: "left", fontSize: 8, color: "var(--text-disabled)", letterSpacing: 1.5, textTransform: "uppercase", padding: "0 8px 8px 0", fontWeight: 400 }}>{h}</th>
+                  <th key={h} style={{ textAlign: "left", fontSize: 7, color: "var(--text-disabled)", letterSpacing: 1.5, textTransform: "uppercase", padding: "0 6px 6px 0", fontWeight: 400 }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {recentOrders.map((o) => (
                 <tr key={o.id} style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                  <td style={{ padding: "7px 8px 7px 0", color: "var(--text-primary)", fontWeight: 700 }}>{o.id}</td>
-                  <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{formatTime(o.createdAt)}</td>
-                  <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.staff?.name?.split(" ")[0] ?? '—'}</td>
-                  <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.type === "dine-in" ? o.table : "Takeout"}</td>
-                  <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.items.reduce((s, ci) => s + (ci?.qty ?? 0), 0)}</td>
-                  <td style={{ padding: "7px 8px 7px 0", color: "var(--gold)", fontWeight: 700 }}>{formatCurrency(o.total)}</td>
-                  <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)", fontSize: 9 }}>
+                  <td style={{ padding: "5px 6px 5px 0", color: "var(--text-primary)", fontWeight: 600, fontSize: 9 }}>{o.id.slice(0, 8)}</td>
+                  <td style={{ padding: "5px 6px 5px 0", color: "var(--text-muted)", fontSize: 9 }}>{formatTime(o.createdAt)}</td>
+                  <td style={{ padding: "5px 6px 5px 0", color: "var(--text-muted)", fontSize: 9 }}>{o.staff?.name?.split(" ")[0] ?? '—'}</td>
+                  <td style={{ padding: "5px 6px 5px 0", color: "var(--text-muted)", fontSize: 9 }}>{o.type === "dine-in" ? (o.customerName || "Dine-in") : "Takeout"}</td>
+                  <td style={{ padding: "5px 6px 5px 0", color: "var(--text-muted)", fontSize: 9, fontVariantNumeric: "tabular-nums" }}>{o.items.reduce((s, ci) => s + (ci?.qty ?? 0), 0)}</td>
+                  <td style={{ padding: "5px 6px 5px 0", color: "var(--gold)", fontWeight: 600, fontVariantNumeric: "tabular-nums", fontSize: 9 }}>{formatCurrency(o.total)}</td>
+                  <td style={{ padding: "5px 6px 5px 0", color: "var(--text-muted)", fontSize: 8 }}>
                     {o.payMethod === 'ewallet' && o.referenceNumber ? (
-                      <span style={{ color: "var(--gold)", fontWeight: 600 }}>{o.referenceNumber}</span>
+                      <span style={{ color: "var(--gold)", fontWeight: 500 }}>{o.referenceNumber}</span>
                     ) : '—'}
                   </td>
-                  <td style={{ padding: "7px 0 7px 0" }}>
-                    <span className={`pill ${o.status === "completed" ? "pill-success" : o.status === "ready" ? "pill-gold" : "pill-muted"}`}>
+                  <td style={{ padding: "5px 0 5px 0" }}>
+                    <span className={`pill ${o.status === "completed" ? "pill-success" : o.status === "ready" ? "pill-gold" : "pill-muted"}`} style={{ fontSize: 7, padding: "2px 6px" }}>
                       {o.status}
                     </span>
                   </td>
-                  <td style={{ padding: "7px 0 7px 0" }}>
+                  <td style={{ padding: "5px 0 5px 0" }}>
                     <button onClick={() => setReprintOrder(o)} style={{
-                      background: "none", border: "1px solid var(--border-default)", borderRadius: 6,
-                      color: "var(--text-muted)", fontSize: 8, padding: "3px 8px", cursor: "pointer",
-                      letterSpacing: 1, textTransform: "uppercase",
-                    }}>
-                      🖨 Reprint
-                    </button>
+                      background: "none", border: "1px solid var(--border-default)", borderRadius: 5,
+                      color: "var(--text-muted)", fontSize: 7, padding: "2px 6px", cursor: "pointer",
+                      letterSpacing: 0.5, textTransform: "uppercase",
+                    }}>🖨</button>
                   </td>
                 </tr>
               ))}

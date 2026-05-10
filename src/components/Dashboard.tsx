@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Order } from "../types";
 import { buildDailySummary, formatCurrency, formatTime } from "../utils";
-import { apiAdminGet, resetCogs, resetInventoryCosts } from "../utils/api";
+import { apiAdminGet, apiGet, resetCogs, resetInventoryCosts } from "../utils/api";
 import { Receipt } from "./Receipt";
 
 interface CogsData {
@@ -20,7 +20,7 @@ interface Props {
 export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
   const [cogsData, setCogsData] = useState<CogsData | null>(null);
   const [reprintOrder, setReprintOrder] = useState<Order | null>(null);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'ok' | 'error'>('idle');
+  const [_syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'ok' | 'error'>('idle');
   const [dateRange, setDateRange] = useState<'today' | 'this_week' | 'last_week' | 'this_month' | 'last_2_weeks' | 'custom'>('today');
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -31,6 +31,9 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
     return d.toISOString().split("T")[0];
   });
   const [resetMsg, setResetMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [yesterdayOrders, setYesterdayOrders] = useState<Order[]>([]);
+  const [hourlyData, setHourlyData] = useState<{ hour: number; revenue: number; count: number }[]>([]);
+  const [lowStockItems, setLowStockItems] = useState<{ name: string; stock: number; threshold: number }[]>([]);
 
   const fmt = (d: Date) => d.toISOString().split("T")[0];
 
@@ -138,14 +141,89 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
       } catch {
         setSyncStatus('error');
       }
-      // Reset label after 3s
       setTimeout(() => setSyncStatus('idle'), 3000);
-    }, 2000); // 2s debounce to avoid hammering on rapid changes
+    }, 2000);
     return () => clearTimeout(timer);
   }, [orders.length]);
 
+  // Fetch yesterday's orders for day-over-day comparison
+  useEffect(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const y = fmt(yesterday);
+    apiGet<any[]>('/orders?start=' + y + '&end=' + y)
+      .then((data) => {
+        const transformed = data.map((o: any) => ({
+          ...o,
+          payMethod: o.payMethod || o.pay_method || 'cash',
+          createdAt: new Date(o.created_at),
+          completedAt: o.completed_at ? new Date(o.completed_at) : undefined,
+        })) as Order[];
+        setYesterdayOrders(transformed);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Build hourly revenue data from today's completed orders
+  useEffect(() => {
+    const now = new Date();
+    const isToday = startDate === fmt(now) && endDate === fmt(now);
+    if (!isToday) {
+      setHourlyData([]);
+      return;
+    }
+    const hours: { hour: number; revenue: number; count: number }[] = [];
+    for (let h = 6; h <= 22; h++) {
+      hours.push({ hour: h, revenue: 0, count: 0 });
+    }
+    orders
+      .filter((o) => o.status === 'completed')
+      .forEach((o) => {
+        const h = o.createdAt.getHours();
+        const slot = hours.find((s) => s.hour === h);
+        if (slot) {
+          slot.revenue += Number(o.total);
+          slot.count += 1;
+        }
+      });
+    setHourlyData(hours);
+  }, [orders, startDate, endDate]);
+
+  // Fetch low inventory items
+  useEffect(() => {
+    apiGet<any[]>('/inventory')
+      .then((data) => {
+        const low = data.filter(
+          (item: any) =>
+            item.stock <= item.low_stock_threshold &&
+            item.low_stock_threshold > 0
+        );
+        setLowStockItems(
+          low.map((item: any) => ({
+            name: item.name,
+            stock: item.stock,
+            threshold: item.low_stock_threshold,
+          }))
+        );
+      })
+      .catch(() => {});
+  }, []);
+
   const summary = buildDailySummary(orders, cogsData ?? undefined);
+  const yesterdaySummary = yesterdayOrders.length > 0
+    ? buildDailySummary(yesterdayOrders)
+    : null;
   const recentOrders = [...orders].slice(0, 8);
+
+  const revenueDelta = yesterdaySummary
+    ? summary.totalRevenue - yesterdaySummary.totalRevenue
+    : 0;
+  const ordersDelta = yesterdaySummary
+    ? summary.totalOrders - yesterdaySummary.totalOrders
+    : 0;
+  const avgDelta = yesterdaySummary && yesterdaySummary.avgOrderValue > 0
+    ? ((summary.avgOrderValue - yesterdaySummary.avgOrderValue) / yesterdaySummary.avgOrderValue) * 100
+    : 0;
 
   const marginColor = (summary.profitMargin ?? 0) >= 30
     ? "var(--success)"
@@ -194,22 +272,21 @@ return (
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-        {[
-          { label: "Revenue", value: formatCurrency(summary.totalRevenue), sub: "Today" },
-          { label: "Orders", value: String(summary.totalOrders), sub: "Completed" },
-          { label: "Avg Order", value: formatCurrency(summary.avgOrderValue), sub: "Per ticket" },
-          { label: "Active", value: String(orders.filter(o => o.status === "preparing" || o.status === "ready").length), sub: "In kitchen" },
-        ].map(({ label, value, sub }) => (
-          <div key={label} className="stat-card" style={{ padding: "14px 12px", borderRadius: 12 }}>
-            <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>{label}</div>
-            <div className="font-display" style={{ fontSize: 22, fontWeight: 700, color: "var(--gold)", marginBottom: 1 }}>{value}</div>
-            <div style={{ fontSize: 8, color: "var(--text-disabled)", letterSpacing: 1 }}>{sub}</div>
+      {/* Low Inventory Alert */}
+      {lowStockItems.length > 0 && (
+        <div className="card-glass" style={{ padding: "10px 14px", borderRadius: 12, border: "1px solid var(--danger)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ color: "var(--danger)", fontSize: 10 }}>⚠</span>
+            <span style={{ fontSize: 9, color: "var(--text-primary)", fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" }}>
+              Low Inventory ({lowStockItems.length})
+            </span>
+            <span style={{ fontSize: 8, color: "var(--text-muted)" }}>
+              {lowStockItems.slice(0, 5).map((i) => `${i.name} (${i.stock}/${i.threshold})`).join(', ')}
+              {lowStockItems.length > 5 ? ` +${lowStockItems.length - 5} more` : ''}
+            </span>
           </div>
-        ))}
-      </div>
-      <div style={{ fontSize: 9, color: "var(--text-muted)" }}>Viewing as <strong style={{ color: "var(--gold)" }}>{staffName}</strong></div>
+        </div>
+      )}
 
       {/* Reset Options */}
       <div className="card-glass" style={{ padding: "12px 14px", borderRadius: 12 }}>
@@ -278,20 +355,38 @@ return (
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards with Day-over-Day deltas */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
         {[
-          { label: "Total Revenue",   value: formatCurrency(summary.totalRevenue), sub: "Today" },
-          { label: "Orders",          value: String(summary.totalOrders),          sub: "Completed" },
-          { label: "Avg. Order",      value: formatCurrency(summary.avgOrderValue), sub: "Per ticket" },
-          { label: "Active",          value: String(orders.filter(o => o.status === "preparing" || o.status === "ready").length), sub: "In kitchen" },
-        ].map(({ label, value, sub }) => (
-          <div key={label} className="stat-card" style={{ padding: "16px 14px", borderRadius: 14 }}>
-            <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>{label}</div>
-            <div className="font-display" style={{ fontSize: 24, fontWeight: 700, color: "var(--gold)", marginBottom: 2 }}>{value}</div>
-            <div style={{ fontSize: 9, color: "var(--text-disabled)", letterSpacing: 1 }}>{sub}</div>
-          </div>
-        ))}
+          { label: "Total Revenue", value: formatCurrency(summary.totalRevenue), sub: "Today", delta: revenueDelta, fmt: (d: number) => formatCurrency(Math.abs(d)) },
+          { label: "Orders", value: String(summary.totalOrders), sub: "Completed", delta: ordersDelta, fmt: (d: number) => String(Math.abs(Math.round(d))) },
+          { label: "Avg. Order", value: formatCurrency(summary.avgOrderValue), sub: "Per ticket", delta: avgDelta, fmt: (d: number) => `${Math.abs(d).toFixed(1)}%` },
+          { label: "Active", value: String(orders.filter(o => o.status === "preparing" || o.status === "ready").length), sub: "In kitchen", delta: 0, fmt: () => '' },
+        ].map(({ label, value, sub, delta, fmt }) => {
+          const isPositive = delta >= 0;
+          const showDelta = label !== "Active" && yesterdaySummary;
+          return (
+            <div key={label} className="stat-card" style={{ padding: "16px 14px", borderRadius: 14, position: "relative" }}>
+              <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>{label}</div>
+              <div className="font-display" style={{ fontSize: 24, fontWeight: 700, color: "var(--gold)", marginBottom: 2 }}>{value}</div>
+              <div style={{ fontSize: 9, color: "var(--text-disabled)", letterSpacing: 1, display: "flex", alignItems: "center", gap: 4 }}>
+                {sub}
+                {showDelta && delta !== 0 && (
+                  <span style={{
+                    fontSize: 7, fontWeight: 700, padding: "1px 4px", borderRadius: 3,
+                    color: isPositive ? "var(--success)" : "var(--danger)",
+                    background: isPositive ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                  }}>
+                    {isPositive ? '↑' : '↓'} {fmt(delta)}
+                  </span>
+                )}
+                {showDelta && delta === 0 && (
+                  <span style={{ fontSize: 7, color: "var(--text-disabled)", fontWeight: 500 }}>— vs yesterday</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
         {[
@@ -306,6 +401,33 @@ return (
           </div>
         ))}
       </div>
+
+      {/* Hourly Sales Chart */}
+      {hourlyData.length > 0 && (() => {
+        const maxRev = Math.max(...hourlyData.map(h => h.revenue), 1);
+        return (
+          <div className="card-glass" style={{ padding: "12px 14px", borderRadius: 12 }}>
+            <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 10 }}>Hourly Sales</div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 70 }}>
+              {hourlyData.map((h) => (
+                <div key={h.hour} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                  <div
+                    title={`${h.hour > 12 ? (h.hour - 12) + 'PM' : h.hour + 'AM'}: ${formatCurrency(h.revenue)} (${h.count} orders)`}
+                    style={{
+                      width: "100%", maxWidth: 24, borderRadius: "3px 3px 0 0",
+                      height: Math.max(2, (h.revenue / maxRev) * 60),
+                      background: h.revenue > 0 ? "var(--gold)" : "var(--border-subtle)",
+                      opacity: h.revenue > 0 ? 1 : 0.3,
+                      transition: "height 0.3s",
+                    }}
+                  />
+                  <span style={{ fontSize: 6, color: "var(--text-disabled)", lineHeight: 1 }}>{h.hour > 12 ? h.hour - 12 : h.hour}{h.hour >= 12 ? 'p' : 'a'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {/* Top Items */}

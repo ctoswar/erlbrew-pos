@@ -1,9 +1,22 @@
-import React, { useState, useEffect } from "react";
-import { InventoryItem } from "../types";
+import React, { useState, useEffect, useCallback } from "react";
+import { InventoryItem, InventoryMovement, MovementType } from "../types";
 import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete } from "../utils/api";
 
 const CATEGORIES = ["Cups", "Lids", "Supplies", "Milk", "Coffee", "Syrups", "Powders", "Tea", "Other"];
 const UNITS = ["pcs", "kg", "g", "L", "ml", "boxes", "packs"];
+
+const MOVEMENT_LABELS: Record<MovementType, string> = {
+  sale: 'Sold',
+  restock: 'Restocked',
+  adjustment: 'Adjusted',
+  void: 'Void Restore',
+};
+const MOVEMENT_COLORS: Record<MovementType, string> = {
+  sale: 'var(--danger)',
+  restock: 'var(--success)',
+  adjustment: 'var(--gold)',
+  void: '#e8a020',
+};
 
 const EMPTY_FORM = {
   id: "",
@@ -26,6 +39,24 @@ export const AdminInventory: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("All");
+
+  // Movement history state
+  const [movementItemId, setMovementItemId] = useState<string | null>(null);
+  const [movementItemName, setMovementItemName] = useState("");
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
+  const [movementsLoading, setMovementsLoading] = useState(false);
+  const [showAllMovements, setShowAllMovements] = useState(false);
+  const [allMovements, setAllMovements] = useState<InventoryMovement[]>([]);
+  const [allMovementsLoading, setAllMovementsLoading] = useState(false);
+
+  // Restock/adjust modal
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [adjustItemId, setAdjustItemId] = useState("");
+  const [adjustItemName, setAdjustItemName] = useState("");
+  const [adjustType, setAdjustType] = useState<MovementType>('restock');
+  const [adjustQty, setAdjustQty] = useState("");
+  const [adjustNotes, setAdjustNotes] = useState("");
+  const [adjustSaving, setAdjustSaving] = useState(false);
 
   const loadItems = () => {
     setLoading(true);
@@ -157,6 +188,71 @@ export const AdminInventory: React.FC = () => {
     }
   };
 
+  // ── Movement History ──────────────────────────────────────────────────────
+
+  const loadMovements = useCallback(async (itemId: string) => {
+    setMovementsLoading(true);
+    try {
+      const data = await apiAdminGet<InventoryMovement[]>(`/inventory/movements?itemId=${itemId}&limit=50`);
+      setMovements(data);
+    } catch {
+      setMovements([]);
+    } finally {
+      setMovementsLoading(false);
+    }
+  }, []);
+
+  const openMovements = (itemId: string, itemName: string) => {
+    setMovementItemId(itemId);
+    setMovementItemName(itemName);
+    loadMovements(itemId);
+  };
+
+  const openAllMovements = async () => {
+    setShowAllMovements(true);
+    setAllMovementsLoading(true);
+    try {
+      const data = await apiAdminGet<InventoryMovement[]>('/inventory/movements?limit=200');
+      setAllMovements(data);
+    } catch {
+      setAllMovements([]);
+    } finally {
+      setAllMovementsLoading(false);
+    }
+  };
+
+  // ── Manual Restock/Adjust ─────────────────────────────────────────────────
+
+  const openAdjustModal = (itemId: string, itemName: string) => {
+    setAdjustItemId(itemId);
+    setAdjustItemName(itemName);
+    setAdjustType('restock');
+    setAdjustQty("");
+    setAdjustNotes("");
+    setShowAdjustModal(true);
+  };
+
+  const handleManualAdjust = async () => {
+    const qty = parseFloat(adjustQty);
+    if (!qty || qty <= 0) return;
+    setAdjustSaving(true);
+    try {
+      await apiAdminPost('/inventory/movements', {
+        inventory_item_id: adjustItemId,
+        movement_type: adjustType,
+        quantity: qty,
+        notes: adjustNotes || null,
+      });
+      setShowAdjustModal(false);
+      loadItems();
+      if (movementItemId === adjustItemId) loadMovements(adjustItemId);
+    } catch (e: any) {
+      setError(`Failed: ${e.message}`);
+    } finally {
+      setAdjustSaving(false);
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
       {/* Header */}
@@ -170,6 +266,9 @@ export const AdminInventory: React.FC = () => {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 1 }}>{items.length} items</span>
+          <button onClick={openAllMovements} className="btn btn-outline" style={{ fontSize: 9, padding: "7px 10px", letterSpacing: 1 }}>
+            📋 Movement Log
+          </button>
           <button onClick={openAddForm} className="btn btn-gold" style={{ fontSize: 9, padding: "7px 14px", letterSpacing: 1 }}>
             + Add Item
           </button>
@@ -216,6 +315,8 @@ export const AdminInventory: React.FC = () => {
                 onEdit={() => openEditForm(item)}
                 onDelete={() => setDeleteConfirm(item.id)}
                 onAdjustStock={(delta) => handleAdjustStock(item.id, item.stock, delta)}
+                onShowHistory={() => openMovements(item.id, item.name)}
+                onManualAdjust={() => openAdjustModal(item.id, item.name)}
                 deleteConfirm={deleteConfirm === item.id}
                 onConfirmDelete={() => handleDelete(item.id)}
                 onCancelDelete={() => setDeleteConfirm(null)}
@@ -226,6 +327,178 @@ export const AdminInventory: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* ── Movement History Modal (per item) ──────────────────────────────── */}
+      {movementItemId && (
+        <>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998 }} onClick={() => setMovementItemId(null)} />
+          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
+            <div className="animate-scaleIn card-glass" style={{ padding: "1.5rem", width: "100%", maxWidth: 600, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div>
+                  <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
+                    Movement History
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{movementItemName}</div>
+                </div>
+                <button onClick={() => setMovementItemId(null)} style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: 16, cursor: "pointer", padding: 4 }}>✕</button>
+              </div>
+              <div className="scroll-area" style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+                {movementsLoading ? (
+                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-disabled)", fontSize: 10 }}>Loading...</div>
+                ) : movements.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-disabled)", fontSize: 10 }}>No movements recorded for this item.</div>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9 }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                        <th style={{ padding: "6px 8px", textAlign: "left", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Type</th>
+                        <th style={{ padding: "6px 8px", textAlign: "right", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Qty</th>
+                        <th style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Before</th>
+                        <th style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>After</th>
+                        <th style={{ padding: "6px 8px", textAlign: "right", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {movements.map((m) => (
+                        <tr key={m.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                          <td style={{ padding: "6px 8px" }}>
+                            <span style={{ color: MOVEMENT_COLORS[m.movement_type], fontWeight: 600 }}>{MOVEMENT_LABELS[m.movement_type]}</span>
+                            {m.reference_id && <span style={{ color: "var(--text-faint)", marginLeft: 4 }}>#{m.reference_id.slice(0, 8).toUpperCase()}</span>}
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>{m.quantity} {m.unit}</td>
+                          <td style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-muted)" }}>{m.stock_before}</td>
+                          <td style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-muted)" }}>{m.stock_after}</td>
+                          <td style={{ padding: "6px 8px", textAlign: "right", color: "var(--text-faint)", whiteSpace: "nowrap" }}>
+                            {new Date(m.created_at).toLocaleTimeString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── All Movements Modal ─────────────────────────────────────────────── */}
+      {showAllMovements && (
+        <>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998 }} onClick={() => setShowAllMovements(false)} />
+          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
+            <div className="animate-scaleIn card-glass" style={{ padding: "1.5rem", width: "100%", maxWidth: 700, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div>
+                  <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
+                    📋 Full Movement Log
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)" }}>All stock changes across inventory</div>
+                </div>
+                <button onClick={() => setShowAllMovements(false)} style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: 16, cursor: "pointer", padding: 4 }}>✕</button>
+              </div>
+              <div className="scroll-area" style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+                {allMovementsLoading ? (
+                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-disabled)", fontSize: 10 }}>Loading...</div>
+                ) : allMovements.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-disabled)", fontSize: 10 }}>No movements recorded yet.</div>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9 }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                        <th style={{ padding: "6px 8px", textAlign: "left", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Item</th>
+                        <th style={{ padding: "6px 8px", textAlign: "left", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Type</th>
+                        <th style={{ padding: "6px 8px", textAlign: "right", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Qty</th>
+                        <th style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Before</th>
+                        <th style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>After</th>
+                        <th style={{ padding: "6px 8px", textAlign: "left", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Ref</th>
+                        <th style={{ padding: "6px 8px", textAlign: "right", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allMovements.map((m) => (
+                        <tr key={m.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                          <td style={{ padding: "6px 8px", fontWeight: 600, color: "var(--text-primary)" }}>{m.inventory_name}</td>
+                          <td style={{ padding: "6px 8px" }}>
+                            <span style={{ color: MOVEMENT_COLORS[m.movement_type], fontWeight: 600 }}>{MOVEMENT_LABELS[m.movement_type]}</span>
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>{m.quantity} {m.unit}</td>
+                          <td style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-muted)" }}>{m.stock_before}</td>
+                          <td style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-muted)" }}>{m.stock_after}</td>
+                          <td style={{ padding: "6px 8px", textAlign: "left", color: "var(--text-faint)" }}>
+                            {m.reference_id ? `#${m.reference_id.slice(0, 8)}` : m.notes ? m.notes.slice(0, 24) : '—'}
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "right", color: "var(--text-faint)", whiteSpace: "nowrap" }}>
+                            {new Date(m.created_at).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Manual Restock/Adjust Modal ─────────────────────────────────────── */}
+      {showAdjustModal && (
+        <>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998 }} onClick={() => setShowAdjustModal(false)} />
+          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
+            <div className="animate-scaleIn card-glass" style={{ padding: "1.5rem", width: "100%", maxWidth: 360 }}>
+              <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
+                {adjustType === 'restock' ? 'Restock' : 'Adjust'} Inventory
+              </div>
+              <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 16 }}>{adjustItemName}</div>
+
+              <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                <button onClick={() => setAdjustType('restock')} style={{
+                  flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 9, fontWeight: 700, cursor: "pointer",
+                  border: `1.5px solid ${adjustType === 'restock' ? 'var(--success)' : 'var(--border-default)'}`,
+                  background: adjustType === 'restock' ? 'rgba(122,201,122,0.1)' : 'transparent',
+                  color: adjustType === 'restock' ? 'var(--success)' : 'var(--text-secondary)',
+                }}>+ Restock</button>
+                <button onClick={() => setAdjustType('adjustment')} style={{
+                  flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 9, fontWeight: 700, cursor: "pointer",
+                  border: `1.5px solid ${adjustType === 'adjustment' ? 'var(--gold)' : 'var(--border-default)'}`,
+                  background: adjustType === 'adjustment' ? 'rgba(201,135,58,0.1)' : 'transparent',
+                  color: adjustType === 'adjustment' ? 'var(--gold)' : 'var(--text-secondary)',
+                }}>− Adjustment</button>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1.5, marginBottom: 5, fontWeight: 700, textTransform: "uppercase" }}>
+                  Quantity
+                </div>
+                <input type="number" value={adjustQty} onChange={(e) => setAdjustQty(e.target.value)}
+                  placeholder="0" min="0" step="1" autoFocus
+                  style={{ width: "100%", boxSizing: "border-box" }} />
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1.5, marginBottom: 5, fontWeight: 700, textTransform: "uppercase" }}>
+                  Notes (optional)
+                </div>
+                <input value={adjustNotes} onChange={(e) => setAdjustNotes(e.target.value)}
+                  placeholder="e.g. Weekly delivery" style={{ width: "100%", boxSizing: "border-box" }} />
+              </div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setShowAdjustModal(false)} className="btn btn-outline" style={{ flex: 1, fontSize: 10, padding: "11px 0" }}>
+                  Cancel
+                </button>
+                <button onClick={handleManualAdjust} disabled={adjustSaving || !adjustQty || parseFloat(adjustQty) <= 0}
+                  className="btn btn-gold" style={{ flex: 1, fontSize: 10, padding: "11px 0" }}>
+                  {adjustSaving ? "Saving..." : adjustType === 'restock' ? "Restock" : "Adjust"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Add/Edit Modal */}
       {showForm && (
@@ -310,6 +583,8 @@ interface InventoryCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onAdjustStock: (delta: number) => void;
+  onShowHistory: () => void;
+  onManualAdjust: () => void;
   deleteConfirm: boolean;
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
@@ -318,7 +593,7 @@ interface InventoryCardProps {
 }
 
 const InventoryCard: React.FC<InventoryCardProps> = ({
-  item, onEdit, onDelete, onAdjustStock,
+  item, onEdit, onDelete, onAdjustStock, onShowHistory, onManualAdjust,
   deleteConfirm, onConfirmDelete, onCancelDelete,
   stockStatus, stockStatusColor,
 }) => (
@@ -379,15 +654,28 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
         </div>
       </div>
     ) : (
-      <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
+      <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+        <button onClick={onManualAdjust} className="btn-ghost" style={{
+          flex: 1, fontSize: 7, padding: "5px 0", borderRadius: 8,
+          border: "1px solid var(--border-medium)", letterSpacing: 0.8, textTransform: "uppercase",
+          color: "var(--gold)",
+        }}>
+          + Restock
+        </button>
+        <button onClick={onShowHistory} className="btn-ghost" style={{
+          flex: 1, fontSize: 7, padding: "5px 0", borderRadius: 8,
+          border: "1px solid var(--border-medium)", letterSpacing: 0.8, textTransform: "uppercase",
+        }}>
+          History
+        </button>
         <button onClick={onEdit} className="btn-ghost" style={{
-          flex: 1, fontSize: 8, padding: "6px 0", borderRadius: 8,
-          border: "1px solid var(--border-medium)", letterSpacing: 1, textTransform: "uppercase",
+          flex: 0.7, fontSize: 7, padding: "5px 0", borderRadius: 8,
+          border: "1px solid var(--border-medium)", letterSpacing: 0.8, textTransform: "uppercase",
         }}>
           Edit
         </button>
         <button onClick={onDelete} className="btn-ghost" style={{
-          padding: "6px 10px", borderRadius: 8, border: "1px solid var(--danger-border)",
+          padding: "5px 8px", borderRadius: 8, border: "1px solid var(--danger-border)",
           color: "var(--danger)", fontSize: 8, letterSpacing: 1,
         }}>
           ✕

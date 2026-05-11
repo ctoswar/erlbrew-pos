@@ -533,6 +533,45 @@ export async function uploadMenuItemImage(id: string, file: File): Promise<{ ima
   return res.json();
 }
 
+// ── Cash Drawer Transactions ──────────────────────────────────────────────────
+
+export interface CashDrawerTransaction {
+  id: number;
+  drawer_id: number;
+  transaction_type: 'cash_in' | 'cash_out' | 'sale' | 'payout';
+  amount: number;
+  balance_before: number;
+  balance_after: number;
+  reason: string | null;
+  staff_name: string | null;
+  created_at: string;
+}
+
+export async function getCashDrawerTransactions(): Promise<CashDrawerTransaction[]> {
+  const res = await fetch(getApiUrl('/orders/cash-drawer/transactions'), { credentials: 'include' });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createCashDrawerTransaction(data: {
+  transaction_type: 'cash_in' | 'cash_out';
+  amount: number;
+  reason?: string;
+  staff_name?: string;
+}): Promise<CashDrawerTransaction> {
+  const res = await fetch(getApiUrl('/orders/cash-drawer/transactions'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed' }));
+    throw new Error(err.error || `API failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function updateCashDrawer(id: number, data: {
   closing_amount?: number;
   cash_payouts?: number;

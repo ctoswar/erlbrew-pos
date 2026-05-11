@@ -89,6 +89,24 @@ export interface InventoryItem {
   created_at?: string;
 }
 
+export type MovementType = 'sale' | 'restock' | 'adjustment' | 'void';
+
+export interface InventoryMovement {
+  id: number;
+  inventory_item_id: string;
+  movement_type: MovementType;
+  quantity: number;
+  stock_before: number;
+  stock_after: number;
+  reference_type: string | null;
+  reference_id: string | null;
+  notes: string | null;
+  created_at: string;
+  inventory_name: string;
+  inventory_category: string;
+  unit: string;
+}
+
 export interface DailySummary {
   date: string;
   totalRevenue: number;

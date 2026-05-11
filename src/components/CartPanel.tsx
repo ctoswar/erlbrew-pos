@@ -51,6 +51,7 @@ export const CartPanel: React.FC<Props> = ({
   const subtotal = calcSubtotal(cart);
   const grand = calcGrand(subtotal, discount);
   const isEmpty = cart.length === 0;
+  const canCheckout = !isEmpty && (orderType !== "takeout" || customerName.trim().length > 0);
 
   return (
     <aside
@@ -129,7 +130,7 @@ export const CartPanel: React.FC<Props> = ({
         )}
 
         {/* Order Type Tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: orderType === "dine-in" ? 10 : 0 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           {(["dine-in", "takeout"] as OrderType[]).map((t) => (
             <button
               key={t}
@@ -155,37 +156,40 @@ export const CartPanel: React.FC<Props> = ({
           ))}
         </div>
 
-        {/* Customer Name */}
-        {orderType === "dine-in" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span
-              style={{
-                fontSize: 9,
-                color: "var(--text-muted)",
-                letterSpacing: 1.5,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Name
-            </span>
-            <input
-              type="text"
-              value={customerName}
-              onChange={(e) => onCustomerNameChange(e.target.value)}
-              placeholder="Customer name…"
-              style={{
-                flex: 1,
-                fontSize: 12,
-                padding: "6px 10px",
-                borderRadius: 8,
-                border: "1.5px solid var(--border-default)",
-                background: "var(--bg-base)",
-                color: "var(--text-primary)",
-                outline: "none",
-              }}
-            />
+        {/* Customer Name — required for takeout, optional for dine-in */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span
+            style={{
+              fontSize: 9,
+              color: "var(--text-muted)",
+              letterSpacing: 1.5,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {orderType === "takeout" ? "Name *" : "Name"}
+          </span>
+          <input
+            type="text"
+            value={customerName}
+            onChange={(e) => onCustomerNameChange(e.target.value)}
+            placeholder={orderType === "takeout" ? "Customer name (required)" : "Customer name…"}
+            style={{
+              flex: 1,
+              fontSize: 12,
+              padding: "6px 10px",
+              borderRadius: 8,
+              border: `1.5px solid ${orderType === "takeout" && !customerName.trim() ? "var(--danger-border)" : "var(--border-default)"}`,
+              background: "var(--bg-base)",
+              color: "var(--text-primary)",
+              outline: "none",
+            }}
+          />
+        </div>
+        {orderType === "takeout" && !customerName.trim() && (
+          <div style={{ fontSize: 8.5, color: "var(--danger)", marginTop: 4, letterSpacing: 0.5 }}>
+            Name required for takeout orders
           </div>
         )}
       </div>
@@ -390,7 +394,7 @@ export const CartPanel: React.FC<Props> = ({
         <button
           className="btn btn-gold"
           onClick={onCheckout}
-          disabled={isEmpty}
+          disabled={!canCheckout}
           style={{
             width: "100%",
             fontSize: 10.5,
@@ -398,7 +402,7 @@ export const CartPanel: React.FC<Props> = ({
             borderRadius: 12,
             letterSpacing: 1.5,
             fontWeight: 700,
-            opacity: isEmpty ? 0.3 : 1,
+            opacity: canCheckout ? 1 : 0.3,
           }}
         >
           Proceed to Checkout →

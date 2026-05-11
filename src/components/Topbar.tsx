@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { Staff, Screen } from "../types";
 import { useClock } from "../hooks/useClock";
 import { useTheme } from "../hooks/useTheme";
 import { useFontSize, FONT_SIZE_LABELS, type FontSize } from "../hooks/useFontSize";
 import { formatTime } from "../utils";
+import { apiPost } from "../utils/api";
 
 interface Props {
   staff: Staff;
@@ -25,6 +26,19 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
   const time = useClock();
   const { theme, setThemeByName } = useTheme();
   const { fontSize, setFontSize } = useFontSize();
+  const [drawerStatus, setDrawerStatus] = useState<'idle' | 'opening' | 'ok' | 'error'>('idle');
+
+  const handleOpenDrawer = useCallback(async () => {
+    setDrawerStatus('opening');
+    try {
+      await apiPost('/open-drawer', {});
+      setDrawerStatus('ok');
+      setTimeout(() => setDrawerStatus('idle'), 2000);
+    } catch {
+      setDrawerStatus('error');
+      setTimeout(() => setDrawerStatus('idle'), 3000);
+    }
+  }, []);
 
   const navItems: { screen: Screen; label: string; badge?: number; adminOnly?: boolean }[] = [
     { screen: "pos", label: "ORDER" },
@@ -178,6 +192,24 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
         </button>
 
         <div style={{ width: 1, height: 16, background: "rgba(201,135,58,0.12)", flexShrink: 0 }} />
+
+        {/* Cash Drawer quick-open */}
+        <button
+          onClick={handleOpenDrawer}
+          disabled={drawerStatus !== 'idle'}
+          className="btn-ghost"
+          title="Open cash drawer"
+          style={{
+            fontSize: 10,
+            padding: "4px 6px",
+            opacity: drawerStatus === 'ok' ? 1 : 0.7,
+            color: drawerStatus === 'ok' ? 'var(--success)' : drawerStatus === 'error' ? 'var(--danger)' : 'var(--gold-dim)',
+            cursor: drawerStatus !== 'idle' ? 'default' : 'pointer',
+            transition: 'color 0.2s',
+          }}
+        >
+          {drawerStatus === 'opening' ? '⟳' : drawerStatus === 'ok' ? '✓' : '💰'}
+        </button>
 
         {/* Staff pill */}
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>

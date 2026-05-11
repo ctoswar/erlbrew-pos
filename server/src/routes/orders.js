@@ -1,6 +1,7 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import { logInventoryMovement } from './inventory.js';
 
 export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   const router = express.Router();
@@ -300,11 +301,26 @@ await pool.query(
             const qtyOrdered = itemQtyMap[recipe.menu_item_id] || 0;
             const deduction = recipe.quantity * qtyOrdered;
             if (deduction > 0) {
-              const newStock = Number(recipe.stock) - deduction;
-              await conn.query(
+              const stockBefore = Number(recipe.stock);
+              const newStock = stockBefore - deduction;
+              const [updateResult] = await conn.query(
                 "UPDATE inventory SET stock = ? WHERE id = ? AND stock >= ?",
                 [newStock, recipe.inventory_item_id, deduction]
               );
+              // Only log movement if the update actually changed rows (means stock was sufficient)
+              if (updateResult.affectedRows > 0) {
+                const stockAfter = Math.max(0, newStock);
+                await logInventoryMovement(pool, {
+                  inventory_item_id: recipe.inventory_item_id,
+                  movement_type: 'sale',
+                  quantity: deduction,
+                  stock_before: stockBefore,
+                  stock_after: stockAfter,
+                  reference_type: 'order',
+                  reference_id: id,
+                  notes: null,
+                });
+              }
               // If stock went below threshold, log it (could notify via webhook later)
               if (newStock <= Number(recipe.low_stock_threshold)) {
                 console.warn(`[LOW STOCK] ${recipe.inventory_item_id}: ${newStock} remaining`);
@@ -325,6 +341,32 @@ await pool.query(
     }
 
     res.json({ id, subtotal, tax, total, status: 'preparing' });
+
+    // ── Log cash drawer sale transaction if cash payment ────────────────────
+    if (pay_method === 'cash' && total > 0) {
+      try {
+        const today = toMysqlDate(new Date());
+        const [drawers] = await pool.query(
+          'SELECT id, opening_float, cash_sales, cash_payouts FROM cash_drawer WHERE shift_date = ? AND status = "open" LIMIT 1',
+          [today]
+        );
+        if (drawers.length) {
+          const drawer = drawers[0];
+          const balanceBefore = Number(drawer.opening_float) + Number(drawer.cash_sales) - Number(drawer.cash_payouts);
+          const balanceAfter = balanceBefore + total;
+          await pool.query(
+            `INSERT INTO cash_drawer_transactions (drawer_id, transaction_type, amount, balance_before, balance_after, reason, staff_name)
+             VALUES (?, 'sale', ?, ?, ?, ?, ?)`,
+            [drawer.id, total, balanceBefore, balanceAfter, `Order #${id.slice(0, 8).toUpperCase()}`, staff_name || null]
+          );
+          // Update cash_sales on the drawer
+          const newSales = Number(drawer.cash_sales) + total;
+          await pool.query('UPDATE cash_drawer SET cash_sales = ? WHERE id = ?', [newSales, drawer.id]);
+        }
+      } catch (e) {
+        console.error('Failed to log cash sale transaction:', e);
+      }
+    }
 
     // Broadcast new order to all SSE clients
     if (broadcastEvent) {
@@ -553,6 +595,47 @@ res.status(500).json({ error: 'DB error' });
     }
     try {
       await pool.query('UPDATE orders SET status = ?, void_reason = ? WHERE id = ?', ['voided', reason.trim(), id]);
+
+      // Restore inventory — reverse the order's recipe deductions
+      try {
+        const [orderItems] = await pool.query(
+          'SELECT menu_item_id, qty FROM order_items WHERE order_id = ?', [id]
+        );
+        if (orderItems.length > 0) {
+          const itemQtyMap = {};
+          for (const oi of orderItems) { itemQtyMap[oi.menu_item_id] = (itemQtyMap[oi.menu_item_id] || 0) + Number(oi.qty); }
+          const menuItemIds = Object.keys(itemQtyMap);
+
+          const [recipes] = await pool.query(
+            `SELECT r.menu_item_id, r.inventory_item_id, r.quantity, i.stock
+             FROM recipes r JOIN inventory i ON i.id = r.inventory_item_id
+             WHERE r.menu_item_id IN (?)`, [menuItemIds]
+          );
+
+          for (const recipe of recipes) {
+            const qtyOrdered = itemQtyMap[recipe.menu_item_id] || 0;
+            const restoreQty = recipe.quantity * qtyOrdered;
+            if (restoreQty > 0) {
+              const stockBefore = Number(recipe.stock);
+              const stockAfter = stockBefore + restoreQty;
+              await pool.query('UPDATE inventory SET stock = ? WHERE id = ?', [stockAfter, recipe.inventory_item_id]);
+              await logInventoryMovement(pool, {
+                inventory_item_id: recipe.inventory_item_id,
+                movement_type: 'void',
+                quantity: restoreQty,
+                stock_before: stockBefore,
+                stock_after: stockAfter,
+                reference_type: 'order',
+                reference_id: id,
+                notes: `Void restored stock: ${reason.trim()}`,
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Inventory restore on void failed (order still voided):', e);
+      }
+
       if (broadcastEvent) {
         broadcastEvent('order:voided', { id, reason: reason.trim() });
       }
@@ -776,6 +859,77 @@ res.status(500).json({ error: 'DB error' });
       `, [closing, payouts, expected, variance, status, notes || '', id]);
       const [updated] = await pool.query('SELECT * FROM cash_drawer WHERE id = ?', [id]);
       res.json(updated[0]);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // GET /api/orders/cash-drawer/transactions — list transactions for today's drawer
+  router.get('/cash-drawer/transactions', async (req, res) => {
+    try {
+      const today = toMysqlDate(new Date());
+      const [drawers] = await pool.query(
+        'SELECT id FROM cash_drawer WHERE shift_date = ? ORDER BY id DESC LIMIT 1',
+        [today]
+      );
+      if (!drawers.length) return res.json([]);
+      const [rows] = await pool.query(
+        'SELECT * FROM cash_drawer_transactions WHERE drawer_id = ? ORDER BY created_at DESC LIMIT 200',
+        [drawers[0].id]
+      );
+      res.json(rows);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // POST /api/orders/cash-drawer/transactions — record a cash in/out entry
+  router.post('/cash-drawer/transactions', async (req, res) => {
+    try {
+      const { transaction_type, amount, reason, staff_name } = req.body;
+      if (!transaction_type || !['cash_in', 'cash_out'].includes(transaction_type)) {
+        return res.status(400).json({ error: 'transaction_type must be cash_in or cash_out' });
+      }
+      if (!amount || typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({ error: 'amount must be a positive number' });
+      }
+
+      const today = toMysqlDate(new Date());
+      const [drawers] = await pool.query(
+        'SELECT id, opening_float, cash_sales, cash_payouts FROM cash_drawer WHERE shift_date = ? AND status = "open" LIMIT 1',
+        [today]
+      );
+      if (!drawers.length) {
+        return res.status(400).json({ error: 'No open cash drawer for today. Open a shift first.' });
+      }
+
+      const drawer = drawers[0];
+      const balanceBefore = Number(drawer.opening_float) + Number(drawer.cash_sales) - Number(drawer.cash_payouts);
+      const balanceAfter = transaction_type === 'cash_in'
+        ? balanceBefore + amount
+        : balanceBefore - amount;
+
+      await pool.query(
+        `INSERT INTO cash_drawer_transactions (drawer_id, transaction_type, amount, balance_before, balance_after, reason, staff_name)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [drawer.id, transaction_type, amount, balanceBefore, balanceAfter, reason || null, staff_name || null]
+      );
+
+      // Update drawer running totals
+      if (transaction_type === 'cash_out') {
+        const newPayouts = Number(drawer.cash_payouts) + amount;
+        await pool.query('UPDATE cash_drawer SET cash_payouts = ? WHERE id = ?', [newPayouts, drawer.id]);
+      }
+
+      // Fetch the inserted transaction
+      const [rows] = await pool.query(
+        'SELECT * FROM cash_drawer_transactions WHERE drawer_id = ? ORDER BY created_at DESC LIMIT 1',
+        [drawer.id]
+      );
+
+      res.json(rows[0]);
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });

@@ -162,6 +162,25 @@ async function initDb() {
     await addCol('closed_at', 'DATETIME DEFAULT NULL');
     console.log('cash_drawer table ready');
 
+    // Cash drawer transaction log
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS cash_drawer_transactions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        drawer_id INT NOT NULL,
+        transaction_type ENUM('cash_in', 'cash_out', 'sale', 'payout') NOT NULL,
+        amount DECIMAL(10,2) NOT NULL,
+        balance_before DECIMAL(10,2) DEFAULT 0,
+        balance_after DECIMAL(10,2) DEFAULT 0,
+        reason VARCHAR(256) DEFAULT NULL,
+        staff_name VARCHAR(128) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (drawer_id) REFERENCES cash_drawer(id) ON DELETE CASCADE,
+        INDEX idx_drawer (drawer_id),
+        INDEX idx_created (created_at)
+      )
+    `);
+    console.log('cash_drawer_transactions table ready');
+
 await pool.query(`
       CREATE TABLE IF NOT EXISTS company_settings (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -176,6 +195,28 @@ await pool.query(`
 
     // Add rfid_alt column for tablet RFID reader compatibility (reversed byte order)
     await pool.query(`ALTER TABLE staff ADD COLUMN rfid_alt VARCHAR(64) DEFAULT NULL AFTER rfid`).catch(() => {});
+
+    // Inventory movement audit log
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS inventory_movements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        inventory_item_id VARCHAR(32) NOT NULL,
+        movement_type ENUM('sale', 'restock', 'adjustment', 'void') NOT NULL,
+        quantity DECIMAL(10,2) NOT NULL,
+        stock_before DECIMAL(10,2) NOT NULL,
+        stock_after DECIMAL(10,2) NOT NULL,
+        reference_type VARCHAR(32) DEFAULT NULL,
+        reference_id VARCHAR(64) DEFAULT NULL,
+        notes VARCHAR(256) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (inventory_item_id) REFERENCES inventory(id) ON DELETE RESTRICT,
+        INDEX idx_item (inventory_item_id),
+        INDEX idx_type (movement_type),
+        INDEX idx_created (created_at),
+        INDEX idx_reference (reference_type, reference_id)
+      )
+    `);
+    console.log('inventory_movements table ready');
 
     // Add image column to menu_items
     await pool.query(`ALTER TABLE menu_items ADD COLUMN image VARCHAR(512) DEFAULT NULL AFTER emoji`).catch(() => {});
@@ -298,7 +339,7 @@ app.use('/api/menu', menuRoutes(pool));
 // Orders: public creates and reads, admin status updates (auth applied inline)
 const ordersExports = ordersRoutes(pool, gs, broadcastEvent);
 app.use('/api/orders', ordersExports.router);
-// Inventory: admin only
+// Inventory + movements: admin only
 app.use('/api/inventory', inventoryRoutes(pool));
 app.use('/api/recipes', recipesRouter(pool));
 app.use('/api/clock', clockRouter(pool, gs));

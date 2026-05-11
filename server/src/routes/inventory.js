@@ -1,6 +1,20 @@
 import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 
+// Helper: log a stock movement to the audit trail
+export async function logInventoryMovement(pool, { inventory_item_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, notes }) {
+  try {
+    await pool.query(
+      `INSERT INTO inventory_movements
+        (inventory_item_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [inventory_item_id, movement_type, quantity, stock_before, stock_after, reference_type || null, reference_id || null, notes || null]
+    );
+  } catch (e) {
+    console.error('Failed to log inventory movement:', e);
+  }
+}
+
 export default function inventoryRouter(pool) {
   const router = Router();
 
@@ -104,9 +118,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Invalid id' });
     }
     try {
-      const [existing] = await pool.query('SELECT id FROM inventory WHERE id = ?', [id]);
+      const [existing] = await pool.query('SELECT id, stock FROM inventory WHERE id = ?', [id]);
       if (!existing.length) return res.status(404).json({ error: 'Item not found' });
 
+      const oldStock = Number(existing[0].stock);
       const fields = [];
       const values = [];
       if (name !== undefined) { fields.push('name = ?'); values.push(name); }
@@ -135,6 +150,24 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
       values.push(id);
       await pool.query(`UPDATE inventory SET ${fields.join(', ')} WHERE id = ?`, values);
+
+      // Log stock adjustment if stock value changed
+      if (stock !== undefined && Number(stock) !== oldStock) {
+        const newStock = Number(stock);
+        const diff = newStock - oldStock;
+        const movementType = diff > 0 ? 'restock' : 'adjustment';
+        await logInventoryMovement(pool, {
+          inventory_item_id: id,
+          movement_type: movementType,
+          quantity: Math.abs(diff),
+          stock_before: oldStock,
+          stock_after: newStock,
+          reference_type: 'manual',
+          reference_id: null,
+          notes: `Manual stock change via edit: ${oldStock} → ${newStock}`,
+        });
+      }
+
       res.json({ ok: true });
     } catch (e) {
       console.error(e);
@@ -190,6 +223,109 @@ router.put('/:id', authMiddleware, async (req, res) => {
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // ── Inventory Movements Audit Trail ───────────────────────────────────────────
+
+  // GET /api/inventory/movements — list movements with filters
+  router.get('/movements', async (req, res) => {
+    try {
+      const { itemId, type, start, end, limit } = req.query;
+      const where = [];
+      const params = [];
+
+      if (itemId) {
+        where.push('im.inventory_item_id = ?');
+        params.push(itemId);
+      }
+      if (type) {
+        where.push('im.movement_type = ?');
+        params.push(type);
+      }
+      if (start) {
+        where.push('im.created_at >= ?');
+        params.push(start);
+      }
+      if (end) {
+        where.push('im.created_at < DATE_ADD(?, INTERVAL 1 DAY)');
+        params.push(end);
+      }
+
+      const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+      const limitClause = limit ? `LIMIT ${Number(limit)}` : 'LIMIT 500';
+
+      const [rows] = await pool.query(`
+        SELECT im.id, im.inventory_item_id, im.movement_type, im.quantity,
+               im.stock_before, im.stock_after, im.reference_type, im.reference_id,
+               im.notes, im.created_at,
+               i.name AS inventory_name, i.category AS inventory_category, i.unit
+        FROM inventory_movements im
+        JOIN inventory i ON i.id = im.inventory_item_id
+        ${whereClause}
+        ORDER BY im.created_at DESC
+        ${limitClause}
+      `, params);
+
+      res.json(rows);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // POST /api/inventory/movements — manual stock adjustment (admin only)
+  router.post('/movements', authMiddleware, adminMiddleware, async (req, res) => {
+    const { inventory_item_id, movement_type, quantity, notes } = req.body;
+
+    if (!inventory_item_id || !movement_type || quantity === undefined) {
+      return res.status(400).json({ error: 'inventory_item_id, movement_type, and quantity are required' });
+    }
+    if (!['restock', 'adjustment'].includes(movement_type)) {
+      return res.status(400).json({ error: 'movement_type must be "restock" or "adjustment"' });
+    }
+    if (typeof quantity !== 'number' || quantity <= 0) {
+      return res.status(400).json({ error: 'quantity must be a positive number' });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // Get current stock
+      const [inv] = await conn.query('SELECT id, stock FROM inventory WHERE id = ?', [inventory_item_id]);
+      if (!inv.length) {
+        await conn.rollback();
+        return res.status(404).json({ error: 'Inventory item not found' });
+      }
+
+      const stockBefore = Number(inv[0].stock);
+      const stockAfter = movement_type === 'restock'
+        ? stockBefore + quantity
+        : Math.max(0, stockBefore - quantity);
+      const actualQty = movement_type === 'restock' ? quantity : Math.min(quantity, stockBefore);
+
+      // Update stock
+      await conn.query('UPDATE inventory SET stock = ? WHERE id = ?', [stockAfter, inventory_item_id]);
+
+      // Log movement
+      await logInventoryMovement(pool, {
+        inventory_item_id,
+        movement_type,
+        quantity: actualQty,
+        stock_before: stockBefore,
+        stock_after: stockAfter,
+        notes: notes || null,
+      });
+
+      await conn.commit();
+      res.json({ ok: true, stock_before: stockBefore, stock_after: stockAfter });
+    } catch (e) {
+      await conn.rollback();
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    } finally {
+      conn.release();
     }
   });
 

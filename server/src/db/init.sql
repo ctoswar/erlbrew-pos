@@ -260,6 +260,41 @@ CREATE TABLE IF NOT EXISTS cash_drawer (
   INDEX idx_shift_date (shift_date)
 );
 
+-- Inventory movement audit log (tracks all stock changes)
+CREATE TABLE IF NOT EXISTS inventory_movements (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  inventory_item_id VARCHAR(32) NOT NULL,
+  movement_type ENUM('sale', 'restock', 'adjustment', 'void') NOT NULL,
+  quantity DECIMAL(10,2) NOT NULL,
+  stock_before DECIMAL(10,2) NOT NULL,
+  stock_after DECIMAL(10,2) NOT NULL,
+  reference_type VARCHAR(32) DEFAULT NULL,
+  reference_id VARCHAR(64) DEFAULT NULL,
+  notes VARCHAR(256) DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (inventory_item_id) REFERENCES inventory(id) ON DELETE RESTRICT,
+  INDEX idx_item (inventory_item_id),
+  INDEX idx_type (movement_type),
+  INDEX idx_created (created_at),
+  INDEX idx_reference (reference_type, reference_id)
+);
+
+-- Cash drawer transaction log (cash in/out entries per shift)
+CREATE TABLE IF NOT EXISTS cash_drawer_transactions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  drawer_id INT NOT NULL,
+  transaction_type ENUM('cash_in', 'cash_out', 'sale', 'payout') NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  balance_before DECIMAL(10,2) DEFAULT 0,
+  balance_after DECIMAL(10,2) DEFAULT 0,
+  reason VARCHAR(256) DEFAULT NULL,
+  staff_name VARCHAR(128) DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (drawer_id) REFERENCES cash_drawer(id) ON DELETE CASCADE,
+  INDEX idx_drawer (drawer_id),
+  INDEX idx_created (created_at)
+);
+
 -- Seed default company settings
 INSERT INTO company_settings (setting_key, setting_value) VALUES
   ('company_name', 'Erlbrew Cafe'),

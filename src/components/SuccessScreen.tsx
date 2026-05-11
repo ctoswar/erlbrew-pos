@@ -4,14 +4,15 @@ import { formatCurrency } from "../utils";
 import { ReceiptPreview } from "./ReceiptPreview";
 import { openCashDrawer } from "../utils/receiptUtils";
 
+const AUTO_CLOSE_DELAY = 15000;
+
 interface Props {
   order: Order;
   onDone: () => void;
+  onRepeat?: () => void;
 }
 
-const AUTO_CLOSE_DELAY = 15000;
-
-export const SuccessScreen: React.FC<Props> = ({ order, onDone }) => {
+export const SuccessScreen: React.FC<Props> = ({ order, onDone, onRepeat }) => {
   const [showPreview, setShowPreview] = useState(false);
   const [countdown, setCountdown] = useState(AUTO_CLOSE_DELAY / 1000);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -62,9 +63,12 @@ export const SuccessScreen: React.FC<Props> = ({ order, onDone }) => {
         <div style={{ fontSize: 10, color: "var(--text-disabled)", letterSpacing: 2, marginBottom: 2 }}>Sent to kitchen…</div>
         <div style={{ marginTop: 8, fontSize: 9, color: "var(--text-faint)" }}>Auto-return in {countdown}s</div>
 
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
           <button className="btn btn-gold" onClick={() => setShowPreview(true)} style={{ fontSize: 9, padding: "9px 18px" }}>&#x1F5A8; Print Receipt</button>
           <button className="btn btn-outline" onClick={handlePrintAndDone} style={{ fontSize: 9, padding: "9px 18px" }}>Print &amp; Done</button>
+          {onRepeat && (
+            <button className="btn btn-outline" onClick={onRepeat} style={{ fontSize: 9, padding: "9px 18px" }}>&#x1F501; Repeat Order</button>
+          )}
           <button className="btn btn-outline" onClick={onDone} style={{ fontSize: 9, padding: "9px 18px" }}>New Order</button>
         </div>
       </div>

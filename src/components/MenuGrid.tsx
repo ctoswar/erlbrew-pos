@@ -15,12 +15,12 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [modifierItem, setModifierItem] = useState<MenuItem | null>(null);
 
-  const handleItemTap = (item: MenuItem) => {
-    if (item.modifiers && item.modifiers.length > 0) {
-      setModifierItem(item);
-    } else {
-      onAddItem(item);
-    }
+  const handleItemTap = (item: MenuItem, mods?: CartItemModifier[]) => {
+    onAddItem(item, mods);
+  };
+
+  const openModifierModal = (item: MenuItem) => {
+    setModifierItem(item);
   };
 
   useEffect(() => {
@@ -116,13 +116,14 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
             }}
           >
             {items.map((item) => (
-              <MenuCard
-                key={`${item.id}-${(item.modifiers || []).map((m) => m.id || m.name).join("-")}`}
-                item={item}
-                cartItem={cart.find((ci) => ci.item.id === item.id)}
-                onAdd={handleItemTap}
-              />
-            ))}
+                <MenuCard
+                  key={`${item.id}-${(item.modifiers || []).map((m) => m.id || m.name).join("-")}`}
+                  item={item}
+                  cartItem={cart.find((ci) => ci.item.id === item.id)}
+                  onAdd={handleItemTap}
+                  onOpenModal={openModifierModal}
+                />
+              ))}
           </div>
         )}
       </div>
@@ -146,16 +147,26 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
 interface MenuCardProps {
   item: MenuItem;
   cartItem?: CartItem;
-  onAdd: (item: MenuItem) => void;
+  onAdd: (item: MenuItem, modifiers?: CartItemModifier[]) => void;
+  onOpenModal: (item: MenuItem) => void;
 }
 
-const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd }) => {
+const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd, onOpenModal }) => {
   const [hovered, setHovered] = useState(false);
   const hasImage = !!item.image;
+  const modifiers = item.modifiers || [];
+
+  const handleCardClick = () => {
+    if (modifiers.length === 0) {
+      onAdd(item);
+    } else {
+      onOpenModal(item);
+    }
+  };
 
   return (
     <div
-      onClick={() => onAdd(item)}
+      onClick={handleCardClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{

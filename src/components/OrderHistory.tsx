@@ -132,7 +132,7 @@ export const OrderHistory: React.FC = () => {
                       {formatTime(o.createdAt)}
                     </td>
                     <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.staff?.name?.split(" ")[0] ?? '—'}</td>
-                    <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.type === "dine-in" ? o.table || "Dine-in" : "Takeout"}</td>
+                    <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.type === "dine-in" ? o.customerName || "Dine-in" : "Takeout"}</td>
                     <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)" }}>{o.items.reduce((s, ci) => s + (ci?.qty ?? 0), 0)}</td>
                     <td style={{ padding: "7px 8px 7px 0", color: "var(--gold)", fontWeight: 700 }}>{formatCurrency(o.total)}</td>
                     <td style={{ padding: "7px 8px 7px 0", color: "var(--text-muted)", fontSize: 10, textTransform: "capitalize" }}>{o.payMethod}</td>

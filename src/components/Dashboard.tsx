@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Order } from "../types";
+import { Order, CartItem } from "../types";
 import { buildDailySummary, formatCurrency, formatTime } from "../utils";
 import { apiAdminGet, apiGet, resetCogs, resetInventoryCosts } from "../utils/api";
 import { Receipt } from "./Receipt";
@@ -15,9 +15,10 @@ interface CogsData {
 interface Props {
   orders: Order[];
   staffName: string;
+  onRepeatOrder?: (items: CartItem[]) => void;
 }
 
-export const Dashboard: React.FC<Props> = ({ orders, staffName }) => {
+export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder }) => {
   const [cogsData, setCogsData] = useState<CogsData | null>(null);
   const [reprintOrder, setReprintOrder] = useState<Order | null>(null);
   const [_syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'ok' | 'error'>('idle');
@@ -528,8 +529,8 @@ return (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
             <thead>
               <tr>
-                {["Order", "Time", "Staff", "Type", "Items", "Total", "Ref", "Status", ""].map(h => (
-                  <th key={h} style={{ textAlign: "left", fontSize: 7, color: "var(--text-disabled)", letterSpacing: 1.5, textTransform: "uppercase", padding: "0 6px 6px 0", fontWeight: 400 }}>{h}</th>
+                {["Order", "Time", "Staff", "Type", "Items", "Total", "Ref", "Status", "", ""].map((h, i) => (
+                  <th key={i} style={{ textAlign: "left", fontSize: 7, color: "var(--text-disabled)", letterSpacing: 1.5, textTransform: "uppercase", padding: "0 6px 6px 0", fontWeight: 400 }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -558,6 +559,15 @@ return (
                       color: "var(--text-muted)", fontSize: 7, padding: "2px 6px", cursor: "pointer",
                       letterSpacing: 0.5, textTransform: "uppercase",
                     }}>🖨</button>
+                  </td>
+                  <td style={{ padding: "5px 0 5px 0" }}>
+                    {onRepeatOrder && (
+                      <button onClick={() => onRepeatOrder(o.items)} style={{
+                        background: "none", border: "1px solid var(--border-default)", borderRadius: 5,
+                        color: "var(--gold)", fontSize: 7, padding: "2px 6px", cursor: "pointer",
+                        letterSpacing: 0.5, textTransform: "uppercase",
+                      }} title="Repeat order">🔁</button>
+                    )}
                   </td>
                 </tr>
               ))}

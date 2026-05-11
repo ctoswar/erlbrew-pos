@@ -20,6 +20,12 @@ interface Props {
   onOpenDiscount: () => void;
   onRemoveDiscount: () => void;
   onAddNote: (id: string, notes: string, modifiers?: CartItemModifier[]) => void;
+  splitMode?: boolean;
+  splitSelections?: Set<string>;
+  onToggleSplitItem?: (key: string) => void;
+  onStartSplit?: () => void;
+  onCancelSplit?: () => void;
+  onSplitConfirm?: (selectedKeys: string[]) => void;
 }
 
 export const CartPanel: React.FC<Props> = ({
@@ -35,6 +41,12 @@ export const CartPanel: React.FC<Props> = ({
   onOpenDiscount,
   onRemoveDiscount,
   onAddNote,
+  splitMode = false,
+  splitSelections,
+  onToggleSplitItem,
+  onStartSplit,
+  onCancelSplit,
+  onSplitConfirm,
 }) => {
   const subtotal = calcSubtotal(cart);
   const grand = calcGrand(subtotal, discount);
@@ -83,6 +95,38 @@ export const CartPanel: React.FC<Props> = ({
             </button>
           )}
         </div>
+
+        {/* Split Mode Toggle */}
+        {!isEmpty && onStartSplit && (
+          <div style={{ marginBottom: 8 }}>
+            {splitMode ? (
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  onClick={() => onCancelSplit?.()}
+                  style={{
+                    flex: 1, padding: "6px 0", borderRadius: 8, border: "1px solid var(--danger)",
+                    background: "transparent", color: "var(--danger)", fontSize: 8, fontWeight: 700,
+                    cursor: "pointer", letterSpacing: 0.5, textTransform: "uppercase",
+                  }}
+                >
+                  Cancel Split
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onStartSplit}
+                style={{
+                  width: "100%", padding: "6px 0", borderRadius: 8,
+                  border: "1px dashed var(--border-medium)",
+                  background: "transparent", color: "var(--text-muted)", fontSize: 8, fontWeight: 700,
+                  cursor: "pointer", letterSpacing: 0.5, textTransform: "uppercase",
+                }}
+              >
+                + Split Order
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Order Type Tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: orderType === "dine-in" ? 10 : 0 }}>
@@ -185,17 +229,62 @@ export const CartPanel: React.FC<Props> = ({
             </span>
           </div>
         ) : (
-          cart.map((ci) => (
-            <CartItemRow
-              key={cartItemKey(ci)}
-              item={ci.item}
-              qty={ci.qty}
-              notes={ci.notes}
-              modifiers={ci.modifiers}
-              onUpdateQty={(delta) => onUpdateQty(ci.item.id, delta, ci.modifiers)}
-              onAddNote={(notes) => onAddNote(ci.item.id, notes, ci.modifiers)}
-            />
-          ))
+          <>
+            {splitMode && (
+              <div style={{ padding: "4px 1rem 8px", fontSize: 8, color: "var(--text-muted)", letterSpacing: 0.5 }}>
+                Select items to move to a separate order
+              </div>
+            )}
+            {cart.map((ci) => {
+              const key = cartItemKey(ci);
+              const isSelected = splitSelections?.has(key) ?? false;
+              return splitMode ? (
+                <div
+                  key={key}
+                  onClick={() => onToggleSplitItem?.(key)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "10px 1rem",
+                    borderBottom: "1px solid rgba(201,135,58,0.06)",
+                    cursor: "pointer",
+                    background: isSelected ? "rgba(201,135,58,0.08)" : "transparent",
+                    transition: "background 0.12s",
+                  }}
+                >
+                  <div style={{
+                    width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                    border: `1.5px solid ${isSelected ? "var(--gold)" : "var(--border-medium)"}`,
+                    background: isSelected ? "var(--gold)" : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 10, color: "var(--bg-sidebar)",
+                  }}>
+                    {isSelected ? "✓" : ""}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {ci.qty}× {ci.item.name}
+                    </div>
+                    <div style={{ fontSize: 8, color: "var(--text-muted)" }}>
+                      {formatCurrency(ci.item.price)} each
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: "var(--gold)", fontVariantNumeric: "tabular-nums" }}>
+                    {formatCurrency((ci.item.price + (ci.modifiers || []).reduce((s, m) => s + m.price, 0)) * ci.qty)}
+                  </div>
+                </div>
+              ) : (
+                <CartItemRow
+                  key={key}
+                  item={ci.item}
+                  qty={ci.qty}
+                  notes={ci.notes}
+                  modifiers={ci.modifiers}
+                  onUpdateQty={(delta) => onUpdateQty(ci.item.id, delta, ci.modifiers)}
+                  onAddNote={(notes) => onAddNote(ci.item.id, notes, ci.modifiers)}
+                />
+              );
+            })}
+          </>
         )}
       </div>
 
@@ -250,6 +339,28 @@ export const CartPanel: React.FC<Props> = ({
             </span>
           </div>
         </div>
+
+        {/* Split Mode: Confirm Move */}
+        {splitMode && onSplitConfirm && (
+          <button
+            onClick={() => {
+              const selected = cart.filter((ci) => splitSelections?.has(cartItemKey(ci)));
+              if (!selected.length) return;
+              onSplitConfirm(Array.from(splitSelections || []));
+            }}
+            disabled={!splitSelections?.size}
+            style={{
+              width: "100%", padding: "8px 0", borderRadius: 9, marginBottom: 8,
+              background: splitSelections?.size ? "rgba(201,135,58,0.12)" : "transparent",
+              border: `1px solid ${splitSelections?.size ? "var(--gold)" : "var(--border-subtle)"}`,
+              color: splitSelections?.size ? "var(--gold)" : "var(--text-disabled)",
+              fontSize: 9, fontWeight: 700, cursor: splitSelections?.size ? "pointer" : "default",
+              letterSpacing: 0.5, textTransform: "uppercase",
+            }}
+          >
+            Move {splitSelections?.size || 0} Item{splitSelections?.size !== 1 ? 's' : ''} to New Order
+          </button>
+        )}
 
         {/* Discount button */}
         <button

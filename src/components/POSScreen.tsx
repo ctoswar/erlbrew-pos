@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Staff, Screen, OrderType, PayMethod, Order } from "../types";
+import { Staff, Screen, OrderType, PayMethod, Order, CartItem } from "../types";
 import { useCart } from "../hooks/useCart";
 import { useOrders } from "../hooks/useOrders";
 import { useKitchenEvents } from "../hooks/useKitchenEvents";
@@ -36,6 +36,14 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
   const [isTablet, setIsTablet] = useState(() => window.innerWidth >= MOBILE_BREAKPOINT && window.innerWidth < TABLET_BREAKPOINT);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
+  const [splitItems, setSplitItems] = useState<CartItem[]>([]);
+  const [splitMode, setSplitMode] = useState(false);
+  const [splitSelections, setSplitSelections] = useState<Set<string>>(new Set());
+
+  function cartItemKey(ci: CartItem): string {
+    const modKey = (ci.modifiers || []).map((m) => m.name).sort().join("|");
+    return modKey ? `${ci.item.id}::${modKey}` : ci.item.id;
+  }
 
   // Track viewport width for responsive layout
   useEffect(() => {
@@ -103,8 +111,86 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   };
 
   const handleOrderDone = () => {
+    // Check if there are split items waiting
+    if (splitItems.length > 0) {
+      // Re-populate cart with split items
+      splitItems.forEach((ci) => {
+        addItem(ci.item, ci.modifiers);
+        for (let i = 1; i < ci.qty; i++) {
+          addItem(ci.item, ci.modifiers);
+        }
+      });
+      setSplitItems([]);
+      setSplitMode(false);
+      setScreen("pos");
+      setLastOrder(null);
+      return;
+    }
     setScreen("pos");
     setLastOrder(null);
+  };
+
+  const handleStartSplit = () => {
+    setSplitMode(true);
+    setSplitSelections(new Set());
+  };
+
+  const handleCancelSplit = () => {
+    setSplitMode(false);
+    setSplitSelections(new Set());
+  };
+
+  const handleToggleSplitItem = (key: string) => {
+    setSplitSelections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const handleSplitConfirm = (selectedKeys: string[]) => {
+    const selectedSet = new Set(selectedKeys);
+    const remaining: CartItem[] = [];
+    const moved: CartItem[] = [];
+    cart.forEach((ci) => {
+      if (selectedSet.has(cartItemKey(ci))) {
+        moved.push(ci);
+      } else {
+        remaining.push(ci);
+      }
+    });
+    if (moved.length === 0 || remaining.length === 0) return;
+
+    // Clear cart and re-add remaining items
+    clearCart();
+    remaining.forEach((ci) => {
+      addItem(ci.item, ci.modifiers);
+      for (let i = 1; i < ci.qty; i++) {
+        addItem(ci.item, ci.modifiers);
+      }
+    });
+    // Store moved items for later
+    setSplitItems(moved);
+    setSplitMode(false);
+    setSplitSelections(new Set());
+  };
+
+  const handleRepeatOrder = () => {
+    if (!lastOrder) return;
+    // Re-populate cart with items from last order
+    lastOrder.items.forEach((ci) => {
+      addItem(ci.item, ci.modifiers);
+      // Match the qty — addItem adds 1, so add (qty - 1) more
+      for (let i = 1; i < ci.qty; i++) {
+        addItem(ci.item, ci.modifiers);
+      }
+    });
+    // Restore customer name and order type
+    setCustomerName(lastOrder.customerName || "");
+    setOrderType(lastOrder.type);
+    setLastOrder(null);
+    setScreen("pos");
   };
 
   const handleBack = () => {
@@ -160,6 +246,12 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
             onOpenDiscount={() => setShowDiscountModal(true)}
             onRemoveDiscount={removeDiscount}
             onAddNote={addNote}
+            splitMode={splitMode}
+            splitSelections={splitSelections}
+            onToggleSplitItem={handleToggleSplitItem}
+            onStartSplit={handleStartSplit}
+            onCancelSplit={handleCancelSplit}
+            onSplitConfirm={handleSplitConfirm}
           />
         </div>
       </div>
@@ -217,6 +309,12 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
           onOpenDiscount={() => setShowDiscountModal(true)}
           onRemoveDiscount={removeDiscount}
           onAddNote={addNote}
+          splitMode={splitMode}
+          splitSelections={splitSelections}
+          onToggleSplitItem={handleToggleSplitItem}
+          onStartSplit={handleStartSplit}
+          onCancelSplit={handleCancelSplit}
+          onSplitConfirm={handleSplitConfirm}
         />
       </div>
     );
@@ -250,11 +348,19 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
           />
         );
       case "success":
-        return lastOrder ? <SuccessScreen order={lastOrder} onDone={handleOrderDone} /> : null;
+        return lastOrder ? <SuccessScreen order={lastOrder} onDone={handleOrderDone} onRepeat={handleRepeatOrder} /> : null;
       case "kitchen":
         return <KitchenBoard orders={orders} onUpdateStatus={updateStatus} onVoidOrder={voidOrder} onRefundOrder={refundOrder} />;
 case "dashboard":
-  return <Dashboard orders={orders} staffName={staff.name} />;
+  return <Dashboard orders={orders} staffName={staff.name} onRepeatOrder={(items) => {
+    items.forEach((ci) => {
+      addItem(ci.item, ci.modifiers);
+      for (let i = 1; i < ci.qty; i++) {
+        addItem(ci.item, ci.modifiers);
+      }
+    });
+    handleNavigate("pos");
+  }} />;
 case "admin":
       return <AdminScreen />;
     case "time":

@@ -21,25 +21,10 @@ const NAV_ICONS: Record<string, string> = {
   admin: "⚙",
 };
 
-const NAV_LABELS: Record<string, string> = {
-  pos: "Order",
-  time: "Time",
-  kitchen: "Kitchen",
-  dashboard: "Dashboard",
-  admin: "Admin",
-};
-
 export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNavigate, onLogout }) => {
   const time = useClock();
   const { theme, setThemeByName } = useTheme();
   const { fontSize, setFontSize } = useFontSize();
-
-  const fontScaleMap: Record<FontSize, number> = {
-    small: 0.85,
-    normal: 1,
-    large: 1.2,
-    "extra-large": 1.35,
-  };
 
   const navItems: { screen: Screen; label: string; badge?: number; adminOnly?: boolean }[] = [
     { screen: "pos", label: "ORDER" },
@@ -51,7 +36,6 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
 
   const visibleNavItems = navItems.filter((n) => !n.adminOnly || staff.role === "Manager");
   const isOrderRelated = screen === "pos" || screen === "checkout" || screen === "payment" || screen === "success";
-  const scale = fontScaleMap[fontSize];
 
   const handleLogout = () => {
     onLogout();

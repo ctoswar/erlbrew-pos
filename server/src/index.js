@@ -195,6 +195,52 @@ await pool.query(`
       }
       console.log('Menu items seeded');
     }
+
+    // Auto-seed menu_modifiers if empty
+    const [modRows] = await pool.query('SELECT COUNT(*) AS cnt FROM menu_modifiers');
+    if (modRows[0].cnt === 0) {
+      console.log('Seeding menu_modifiers...');
+      const MODIFIER_SEED = [
+        // Espresso drinks (m5, m6, m7, m8)
+        ['m5', 'Extra Shot', 0.75, false],
+        ['m5', 'Soy Milk', 0.50, false],
+        ['m5', 'Breve (Half & Half)', 0.50, false],
+        ['m6', 'Extra Shot', 0.75, false],
+        ['m6', 'Soy Milk', 0.50, false],
+        ['m6', 'Oat Milk', 0.50, true],
+        ['m7', 'Extra Shot', 0.75, false],
+        ['m7', 'Extra Spiced', 0.50, false],
+        ['m8', 'Extra Shot', 0.75, false],
+        ['m8', 'Soy Milk', 0.50, false],
+        // Signature Brews (m1, m2, m3, m4)
+        ['m1', 'Extra Shot', 0.75, false],
+        ['m1', 'Soy Milk', 0.50, false],
+        ['m1', 'Oat Milk', 0.50, true],
+        ['m1', 'Extra Sea Salt', 0.25, false],
+        ['m2', 'Extra Matcha Shot', 1.00, false],
+        ['m2', 'Macadamia Milk', 0.50, true],
+        ['m2', 'Oat Milk', 0.50, false],
+        ['m3', 'Extra Honey', 0.50, false],
+        ['m3', 'Oat Milk', 0.50, true],
+        ['m3', 'Almond Milk', 0.50, false],
+        ['m4', 'With Sweet Cream', 0.75, false],
+        ['m4', 'With Oat Milk', 0.50, false],
+        // Cold Drinks (m13, m14, m15)
+        ['m13', 'Add Mint', 0.50, false],
+        ['m13', 'Add Ginger', 0.50, false],
+        ['m14', 'Add Mint', 0.50, false],
+        ['m14', 'Extra Tart', 0.25, false],
+        ['m15', 'Extra Sweet Cream', 0.75, false],
+        ['m15', 'Soy Milk', 0.50, false],
+      ];
+      for (const [menuId, name, price, isDefault] of MODIFIER_SEED) {
+        await pool.query(
+          'INSERT INTO menu_modifiers (menu_item_id, name, price, is_default) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name)',
+          [menuId, name, price, isDefault]
+        );
+      }
+      console.log('Menu modifiers seeded');
+    }
   } catch (e) {
     console.error('DB connection failed', e);
   }

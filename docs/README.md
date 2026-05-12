@@ -12,6 +12,7 @@
 9. [Environment Variables](#9-environment-variables)
 10. [Print Server & Hardware Integration](#10-print-server--hardware-integration)
 11. [Bug Fixes Applied](#11-bug-fixes-applied)
+12. [Recent Feature Changes](#12-recent-feature-changes)
 
 ---
 
@@ -89,9 +90,10 @@ src/
 │   ├── CustomerDisplay.tsx    # Second-monitor: live cart + order status
 │   ├── AdminScreen.tsx        # Admin tab hub
 │   ├── AdminMenu.tsx           # Add/edit/delete menu items
-│   ├── AdminInventory.tsx     # Stock levels, low-stock alerts
+│   ├── AdminInventory.tsx     # Stock levels, low-stock alerts + movement history
 │   ├── AdminStaff.tsx          # Add/edit/delete staff
 │   ├── AdminPrintSettings.tsx # Print server URL config
+│   ├── CashDrawerScreen.tsx   # Cash drawer management: open, cash in/out, close, reconcile
 │   ├── IngredientEditor.tsx   # Link inventory items → menu item (recipes)
 │   ├── DiscountModal.tsx      # PWD/Senior/Custom discount picker
 │   ├── TimeKeeping.tsx        # Clock-in/out status board
@@ -108,8 +110,8 @@ server/src/
 ├── routes/
 │   ├── staff.js               # Login, CRUD staff, RFID lookup
 │   ├── menu.js                # CRUD menu items
-│   ├── orders.js              # Place orders, update status, COGS, all orders
-│   ├── inventory.js           # CRUD inventory stock
+│   ├── orders.js              # Place orders, update status, COGS, cash drawer + transactions, Z-reports
+│   ├── inventory.js           # CRUD inventory stock + inventory movement log (sale/restock/adjustment/void)
 │   ├── recipes.js             # Link inventory → menu item (recipes)
 │   └── clock.js               # Clock in/out via RFID, time records
 └── services/
@@ -257,7 +259,9 @@ apiAdminDelete<T>(path)
    ├── Calculates subtotal server-side
    ├── INSERT into orders + order_items tables
    ├── Auto-deducts inventory (per recipes: qty × inventory_item qty)
+   │   ├── Logs inventory_movements (type: "sale") with before/after stock snapshots
    │   └── Skips silently if not enough stock (order still succeeds)
+   ├── Logs cash drawer sale transaction if pay_method = "cash" (auto-updates cash_sales)
    └── Appends row to Google Sheets "Orders" tab (best-effort)
        └── Writes: timestamp, order_id, staff_name, item list, subtotal, tax, total, pay_method, status
 
@@ -285,14 +289,19 @@ apiAdminDelete<T>(path)
 ```
 Server uses `total` directly from payload when discount fields are present.
 
-### 4.4 Inventory Auto-Deduction
+### 4.4 Inventory Auto-Deduction & Movement Log
 
 When `POST /api/orders` is called:
 1. Fetch all `recipes` for ordered menu items in one query
 2. For each recipe: `newStock = currentStock − (recipe.quantity × orderedQty)`
 3. UPDATE inventory only if `stock >= deduction`
-4. Log `[LOW STOCK]` warning if `newStock <= low_stock_threshold`
-5. On failure: order still succeeds (best-effort deduction)
+4. Log `inventory_movements` entry with `movement_type = 'sale'`, `stock_before`, `stock_after`, `reference_id = order_id`
+5. Log `[LOW STOCK]` warning if `newStock <= low_stock_threshold`
+6. On failure: order still succeeds (best-effort deduction and logging)
+
+**Inventory restoration on void:** When an order is voided (`POST /api/orders/:id/void`), all deducted inventory is restored and logged as `movement_type = 'void'`.
+
+**Admin UI:** Admins can view movement history per item or globally via the "History" button on inventory cards or the "Movement Log" button in the inventory header. Manual restock/adjustment is done via the "+ Restock" button, which logs entries as `restock` or `adjustment` types.
 
 ---
 
@@ -333,6 +342,13 @@ When `POST /api/orders` is called:
 | `DELETE` | `/api/inventory/:id` | Delete inventory item |
 | `PUT` | `/api/recipes/:menuItemId` | Set recipes for menu item |
 | `GET` | `/api/clock/:staffId` | Staff time records |
+| `GET` | `/api/inventory/movements` | Inventory movement log (filters: itemId, type, start, end, limit) |
+| `POST` | `/api/inventory/movements` | Manual restock or adjustment (admin only, with reason) |
+| `GET` | `/api/orders/cash-drawer` | Today's open cash drawer or empty stub |
+| `POST` | `/api/orders/cash-drawer` | Open a new cash drawer shift with opening float |
+| `PUT` | `/api/orders/cash-drawer/:id` | Update/close cash drawer (save progress, close shift) |
+| `GET` | `/api/orders/cash-drawer/transactions` | Cash drawer transaction log (sales, cash in/out, payouts) |
+| `POST` | `/api/orders/cash-drawer/transactions` | Record a cash in/out transaction with reason |
 
 ### Response Shapes
 
@@ -438,6 +454,47 @@ When `POST /api/orders` is called:
 | `menu_item_id` | VARCHAR(64) FK → menu_items.id | |
 | `inventory_item_id` | VARCHAR(64) FK → inventory.id | |
 | `quantity` | DECIMAL(10,2) | How much of inventory item is used per serving |
+
+### `inventory_movements` (audit log)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INT PRIMARY KEY AUTO_INCREMENT | |
+| `inventory_item_id` | VARCHAR(32) FK → inventory.id | |
+| `movement_type` | ENUM('sale','restock','adjustment','void') | |
+| `quantity` | DECIMAL(10,2) | Absolute quantity changed |
+| `stock_before` | DECIMAL(10,2) | Snapshot before change |
+| `stock_after` | DECIMAL(10,2) | Snapshot after change |
+| `reference_type` | VARCHAR(32) | e.g. "order" |
+| `reference_id` | VARCHAR(64) | e.g. order UUID |
+| `notes` | VARCHAR(256) | Optional reason |
+| `created_at` | TIMESTAMP | |
+
+### `cash_drawer`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INT AUTO_INCREMENT PRIMARY KEY | |
+| `shift_date` | DATE NOT NULL | |
+| `status` | ENUM('open','closed') | |
+| `opening_float` | DECIMAL(10,2) | Cash put in at start of shift |
+| `cash_sales` | DECIMAL(10,2) | Auto-summed from cash orders |
+| `cash_payouts` | DECIMAL(10,2) | Money taken out during shift |
+| `closing_amount` | DECIMAL(10,2) | Physical cash counted at end |
+| `expected_amount` | DECIMAL(10,2) | float + sales - payouts |
+| `variance` | DECIMAL(10,2) | closing - expected |
+| `notes` | TEXT | |
+
+### `cash_drawer_transactions`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INT AUTO_INCREMENT PRIMARY KEY | |
+| `drawer_id` | INT FK → cash_drawer.id | |
+| `transaction_type` | ENUM('cash_in','cash_out','sale','payout') | |
+| `amount` | DECIMAL(10,2) | |
+| `balance_before` | DECIMAL(10,2) | Running balance before entry |
+| `balance_after` | DECIMAL(10,2) | Running balance after entry |
+| `reason` | VARCHAR(256) | Description or order reference |
+| `staff_name` | VARCHAR(128) | Who performed the transaction |
+| `created_at` | TIMESTAMP | |
 
 ### `time_records`
 | Column | Type | Notes |
@@ -551,8 +608,21 @@ POST /api/open-drawer
 → Forwards to https://192.168.75.101:9100/open-drawer
 ```
 
-### Cash Drawer
-Triggered automatically on `handleConfirmPayment` in POSScreen. Fire-and-forget — errors logged but not shown to staff.
+### Cash Drawer Management
+
+**Quick-open button** on the Topbar (💰 icon) lets staff pop the drawer from any screen — no need to navigate to Admin.
+
+**Full management** in Admin → Cash Drawer tab:
+- **Open shift** with an opening float
+- **+ Cash In / − Cash Out** — record money added to or taken from the drawer with reason
+- **Cash Payouts** — running total of cash taken out
+- **Expected Cash** — auto-calculated: `float + sales − payouts`
+- **Actual Cash** — manual count at end of shift
+- **Variance** — colored indicator (green = balanced, red = >₱50 off)
+- **Save Progress** / **Close & Balance** — end-of-day reconciliation
+- **Transaction Log** — full history of every movement (sale, cash in, cash out) with timestamps and running balance
+
+Cash sales are auto-logged as `sale` transactions when cash orders are placed via the POS. The cash drawer `cash_sales` field is automatically updated.
 
 ### Receipt Printing
 Receipt.tsx renders a hidden `<pre>` element with 80mm thermal print layout. On `onPrint` callback (wired to SuccessScreen), `window.open()` writes HTML and calls `window.print()`.
@@ -603,3 +673,12 @@ The following bugs were identified and fixed during development:
 | Manager | All screens + Admin panel (menu, inventory, staff, recipes) |
 
 Admin routes (`/admin`) are shown to all roles via `staff.role` check in Topbar. API-level protection is handled by `authMiddleware` — any authenticated staff can access admin routes; client-side hides admin tab for non-managers.
+
+## 12. Recent Feature Changes
+
+| Feature | What Changed |
+|---------|-------------|
+| Inventory Movement Log | New `inventory_movements` table. Sales auto-logged on order placement, voids restore and log. Manual restock/adjustment via Admin UI. Movement history per-item and global views in Admin Inventory. |
+| Cash Drawer Transactions | New `cash_drawer_transactions` table. Cash sales auto-logged. Cash in/out with reasons via Admin UI. Full transaction history with running balance. |
+| Cash Drawer Quick Access | 💰 button on Topbar to open physical drawer from any screen. |
+| Takeout Name Required | Name input now shows for both dine-in and takeout. Takeout requires a name to proceed to checkout. |

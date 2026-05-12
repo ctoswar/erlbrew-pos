@@ -221,35 +221,20 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
   const [serverMsg, setServerMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const clearServerOrders = async () => {
-    if (!confirm('DELETE ALL orders from SERVER? This cannot be undone. Are you sure?')) return;
-    if (!confirm('This will permanently delete ALL orders. Type "DELETE" to confirm.')) return;
+    if (!confirm('FRESH START — Delete EVERYTHING except staff accounts? This cannot be undone. Are you sure?')) return;
+    if (!confirm('This will delete ALL orders, inventory, menu items, recipes, time records, invoices, Z-reports, and cash drawer data. Staff accounts will be preserved. Type "DELETE" to confirm.')) return;
     try {
       const result = await clearAllOrders();
       setServerMsg({ text: result.message, type: 'success' });
       // Clear local data too
       localStorage.removeItem(STORAGE_KEY_ORDERS);
-      setOrders([]);
-      // Re-sync to confirm
-      syncData();
-    } catch (e: any) {
-      setServerMsg({ text: e.message || 'Failed to delete orders', type: 'error' });
-    }
-    setTimeout(() => setServerMsg(null), 4000);
-  };
-
-  const clearServerInventory = async () => {
-    if (!confirm('DELETE ALL inventory from SERVER? This cannot be undone. Are you sure?')) return;
-    if (!confirm('This will permanently delete ALL inventory items. Type "DELETE" to confirm.')) return;
-    try {
-      const result = await clearAllInventory();
-      setServerMsg({ text: result.message, type: 'success' });
-      // Clear local data too
       localStorage.removeItem(STORAGE_KEY_INVENTORY);
+      setOrders([]);
       setInventory([]);
       // Re-sync to confirm
       syncData();
     } catch (e: any) {
-      setServerMsg({ text: e.message || 'Failed to delete inventory', type: 'error' });
+      setServerMsg({ text: e.message || 'Failed to delete orders', type: 'error' });
     }
     setTimeout(() => setServerMsg(null), 4000);
   };
@@ -582,9 +567,9 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
 
               {/* Clear Server Data - DANGER ZONE */}
               <div style={{ background: 'var(--bg-surface)', borderRadius: 12, padding: 24, border: '2px solid var(--danger)', gridColumn: 'span 2' }}>
-                <h3 style={{ fontSize: 13, color: 'var(--danger)', marginBottom: 8 }}>☠️ Clear Server Data (Permanent)</h3>
+                <h3 style={{ fontSize: 13, color: 'var(--danger)', marginBottom: 8 }}>☠️ Fresh Start — Delete Everything (Except Staff)</h3>
                 <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>
-                  Permanently DELETE all orders or inventory from the SERVER database. This CANNOT be undone. Use for fresh production start only.
+                  Permanently DELETE ALL transaction data, inventory, menu items, recipes, time records, invoices, and Z-reports from the server. Staff accounts are preserved. This CANNOT be undone. Use for fresh production start only.
                 </p>
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                   <button
@@ -600,22 +585,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
                       fontWeight: 700,
                     }}
                   >
-                    Delete All Orders
-                  </button>
-                  <button
-                    onClick={clearServerInventory}
-                    style={{
-                      padding: '10px 20px',
-                      fontSize: 11,
-                      borderRadius: 8,
-                      border: '1px solid var(--danger)',
-                      background: 'var(--danger)',
-                      color: '#fff',
-                      cursor: 'pointer',
-                      fontWeight: 700,
-                    }}
-                  >
-                    Delete All Inventory
+                    🗑️ Fresh Start (Keep Staff Only)
                   </button>
                 </div>
                 {serverMsg && (

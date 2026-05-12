@@ -421,30 +421,60 @@ await pool.query(
 });
 
 // Delete / void order (admin only — removes from kitchen board)
-router.delete('/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  if (typeof id !== 'string' || id.length < 1) {
-    return res.status(400).json({ error: 'Invalid order id' });
-  }
-  try {
-    // Broadcast void before actual deletion so clients can react
-    if (broadcastEvent) {
-      try {
-        const [rows] = await pool.query('SELECT id FROM orders WHERE id = ?', [id]);
-        if (rows[0]) {
-          broadcastEvent('order:voided', { id });
-        }
-      } catch (e) { /* non-fatal */ }
+// Clear all orders + related data (admin only - for fresh start)
+  // MUST be defined BEFORE /:id or Express will match 'all' as an id param
+  router.delete('/all', authMiddleware, adminMiddleware, async (req, res) => {
+    console.log('[DELETE /orders/all] HIT! User:', req.user?.name, 'Role:', req.user?.role);
+    try {
+      await pool.query('SET FOREIGN_KEY_CHECKS = 0');
+      await pool.query('DELETE FROM order_item_modifiers');
+      await pool.query('DELETE FROM order_items');
+      await pool.query('DELETE FROM orders');
+      await pool.query('DELETE FROM supplier_invoice_items');
+      await pool.query('DELETE FROM supplier_invoices');
+      await pool.query('DELETE FROM cash_drawer_transactions');
+      await pool.query('DELETE FROM cash_drawer');
+      await pool.query('DELETE FROM inventory_movements');
+      await pool.query('DELETE FROM z_reports');
+      await pool.query('DELETE FROM time_records');
+      await pool.query('DELETE FROM recipes');
+      await pool.query('DELETE FROM menu_modifiers');
+      await pool.query('DELETE FROM menu_items');
+      await pool.query('DELETE FROM inventory');
+      await pool.query('DELETE FROM company_settings');
+      await pool.query('SET FOREIGN_KEY_CHECKS = 1');
+      return res.json({ ok: true, message: 'Fresh start complete — all data cleared except staff accounts. Re-seed menu items and inventory on next restart.' });
+    } catch (e) {
+      await pool.query('SET FOREIGN_KEY_CHECKS = 1').catch(() => {});
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
     }
-    await pool.query('DELETE FROM order_items WHERE order_id = ?', [id]);
-    await pool.query('DELETE FROM orders WHERE id = ?', [id]);
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: 'DB error' });
-  }
-});
+  });
 
-  // New: Cost of Goods Sold (COGS) endpoint
+  router.delete('/:id', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    if (typeof id !== 'string' || id.length < 1) {
+      return res.status(400).json({ error: 'Invalid order id' });
+    }
+    try {
+      // Broadcast void before actual deletion so clients can react
+      if (broadcastEvent) {
+        try {
+          const [rows] = await pool.query('SELECT id FROM orders WHERE id = ?', [id]);
+          if (rows[0]) {
+            broadcastEvent('order:voided', { id });
+          }
+        } catch (e) { /* non-fatal */ }
+      }
+      await pool.query('DELETE FROM order_items WHERE order_id = ?', [id]);
+      await pool.query('DELETE FROM orders WHERE id = ?', [id]);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+  
+    // New: Cost of Goods Sold (COGS) endpoint
   router.get('/cogs', authMiddleware, async (req, res) => {
     try {
       const { start, end } = req.query;
@@ -574,17 +604,6 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       res.status(500).json({ error: 'DB error' });
     }
   });
-
-  // Clear all orders (admin only - for fresh start)
-  router.delete('/all', authMiddleware, adminMiddleware, async (req, res) => {
-    try {
-      await req.db.execute(`DELETE FROM orders`);
-      return res.json({ ok: true, message: 'All orders deleted' });
-    } catch (e) {
-      console.error(e);
-res.status(500).json({ error: 'DB error' });
-  }
-});
 
   // POST /api/orders/:id/void — admin only
   router.post('/:id/void', async (req, res) => {

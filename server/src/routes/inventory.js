@@ -215,11 +215,13 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
   });
 
-  // Clear all inventory (admin only - for fresh start)
+  // Clear all inventory + related data (admin only - for fresh start)
   router.delete('/all', authMiddleware, adminMiddleware, async (req, res) => {
     try {
-      await pool.query(`DELETE FROM inventory`);
-      return res.json({ ok: true, message: 'All inventory items deleted' });
+      await pool.query('DELETE FROM inventory_movements');
+      await pool.query('DELETE FROM recipes');
+      await pool.query('DELETE FROM inventory');
+      return res.json({ ok: true, message: 'All inventory items, recipes, and movement logs cleared. Auto-seed on restart.' });
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });

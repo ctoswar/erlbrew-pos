@@ -186,8 +186,9 @@ export async function clearAllOrders(): Promise<{ ok: boolean; message: string }
     credentials: 'include',
   });
   if (!res.ok) {
-    if (res.status === 403) throw new Error('Admin access required');
-    throw new Error(`API /orders/all failed: ${res.status}`);
+    const body = await res.text().catch(() => '');
+    if (res.status === 403) throw new Error('Admin access required — you must be logged in as Manager');
+    throw new Error(`API /orders/all failed: ${res.status} — ${body}`);
   }
   return res.json();
 }

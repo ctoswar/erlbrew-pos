@@ -32,6 +32,7 @@ return null;
 
 export default function staffRouter(pool){
   // Auto clock-in when staff logs in with RFID
+  // Only clocks IN — never clocks out. Logout should not be a clock-out action.
   async function autoClockIn(staffId, rfid) {
     const now = taipeiNow();
     const today = now.toISOString().slice(0, 10);
@@ -41,12 +42,8 @@ export default function staffRouter(pool){
       [staffId, today]
     );
     if (open.length) {
-      const clockOutTime = toMysqlDatetime(taipeiNow());
-      await pool.query(
-        'UPDATE time_records SET clock_out = ?, total_hours = TIMESTAMPDIFF(MINUTE, clock_in, ?) / 60.0 WHERE id = ?',
-        [clockOutTime, clockOutTime, open[0].id]
-      );
-      return 'clock_out';
+      // Already clocked in — do nothing, don't clock them out
+      return null;
     } else {
       await pool.query(
         'INSERT INTO time_records (staff_id, rfid, clock_in) VALUES (?, ?, ?)',

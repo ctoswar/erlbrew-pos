@@ -107,9 +107,7 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
           const clockMsg =
             data.clockAction === "clock_in"
               ? " ✓ Clocked in!"
-              : data.clockAction === "clock_out"
-                ? " ✓ Clocked out!"
-                : "";
+              : "";
           setMsg({ text: `Welcome, ${selectedStaff.name}${clockMsg}`, type: "success" });
           setTimeout(() => {
             setLoading(false);

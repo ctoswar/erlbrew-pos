@@ -128,23 +128,28 @@ export function useOrders() {
 
     const syncFromServer = () => {
       apiGet('/orders/today').then((data: any) => {
-        if (Array.isArray(data) && data.length > 0) {
-          const serverOrders = data.map(serverOrderToOrder);
-          setOrders(prev => {
-            const existingIds = new Set(prev.map(o => o.id));
-            const newOrders = serverOrders.filter(o => !existingIds.has(o.id));
-            // Also update status for existing orders from server
-            const updated = prev.map(local => {
-              const server = serverOrders.find(s => s.id === local.id);
-              if (server && server.status !== local.status) {
-                return { ...local, status: server.status, completedAt: server.completedAt };
-              }
-              return local;
+        if (Array.isArray(data)) {
+          if (data.length > 0) {
+            const serverOrders = data.map(serverOrderToOrder);
+            setOrders(prev => {
+              const existingIds = new Set(prev.map(o => o.id));
+              const newOrders = serverOrders.filter(o => !existingIds.has(o.id));
+              // Also update status for existing orders from server
+              const updated = prev.map(local => {
+                const server = serverOrders.find(s => s.id === local.id);
+                if (server && server.status !== local.status) {
+                  return { ...local, status: server.status, completedAt: server.completedAt };
+                }
+                return local;
+              });
+              return newOrders.length > 0 || updated !== prev
+                ? [...updated, ...newOrders]
+                : prev;
             });
-            return newOrders.length > 0 || updated !== prev
-              ? [...updated, ...newOrders]
-              : prev;
-          });
+          } else {
+            // Server returned empty — clear local stale data
+            setOrders([]);
+          }
         }
       }).catch((err) => console.error("Failed to sync today's orders:", err));
     };

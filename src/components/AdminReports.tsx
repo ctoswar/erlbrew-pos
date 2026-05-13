@@ -127,7 +127,9 @@ export const AdminReports: React.FC = () => {
     const { start, end } = getDateRange();
     setLoading(true);
     try {
-      const orders = await apiGet<any[]>(`/orders?start=${start}&end=${end}`);
+      // Use /orders/history which supports start/end filtering (returns { orders: [], total })
+      const result = await apiGet<any>(`/orders/history?start=${start}&end=${end}`);
+      const orders = Array.isArray(result) ? result : (result.orders || []);
 
       // Group by date
       const byDate: Record<string, RevenueDataPoint> = {};
@@ -175,8 +177,9 @@ export const AdminReports: React.FC = () => {
     const { start, end } = getDateRange();
     setLoading(true);
     try {
-      // Get orders and group by staff
-      const orders = await apiGet<any[]>(`/orders?start=${start}&end=${end}`);
+      // Get orders and group by staff — use /orders/history for date filtering
+      const result = await apiGet<any>(`/orders/history?start=${start}&end=${end}`);
+      const orders = Array.isArray(result) ? result : (result.orders || []);
       const staffMap: Record<string, { name: string; orders: number; revenue: number }> = {};
 
       orders.forEach((o: any) => {

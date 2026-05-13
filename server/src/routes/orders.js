@@ -81,6 +81,17 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   // GET all orders (public - for kitchen/dashboard)
   router.get('/', async (req, res) => {
     try {
+      const { start, end } = req.query;
+      let where = '';
+      const params = [];
+      if (start) {
+        where += 'WHERE o.created_at >= ? ';
+        params.push(start);
+      }
+      if (end) {
+        where += where ? 'AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY) ' : 'WHERE o.created_at < DATE_ADD(?, INTERVAL 1 DAY) ';
+        params.push(end);
+      }
       const [rows] = await pool.query(`
         SELECT o.id, o.status, o.subtotal, o.tax, o.total,
                o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number,
@@ -88,8 +99,9 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
                s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
         FROM orders o
         LEFT JOIN staff s ON o.staff_id = s.id
+        ${where}
         ORDER BY o.created_at DESC
-      `);
+      `, params.length ? params : undefined);
       // Log for first order with reference
       const orderWithRef = rows.find(r => r.reference_number);
       if (orderWithRef) {

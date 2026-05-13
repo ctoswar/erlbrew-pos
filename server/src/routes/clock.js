@@ -169,6 +169,58 @@ router.get('/', async (req, res) => {
     }
   });
 
+  // GET /api/clock/summary/:month — all staff who clocked in on each day of a month
+  // MUST be before /:staffId or Express matches 'summary' as staffId
+  // e.g. GET /api/clock/summary/2026-05 — returns { "2026-05-01": [staff_id,...], "2026-05-02": [...] }
+  router.get('/summary/:month', async (req, res) => {
+    const { month } = req.params;
+    try {
+      const [records] = await pool.query(`
+        SELECT DISTINCT DATE(tr.clock_in) AS date, tr.staff_id, s.name, s.initials, s.color
+        FROM time_records tr
+        JOIN staff s ON s.id = tr.staff_id
+        WHERE DATE(tr.clock_in) LIKE CONCAT(?, '%')
+        ORDER BY date, s.name
+      `, [month]);
+
+      const byDate = {};
+      for (const r of records) {
+        if (!byDate[r.date]) byDate[r.date] = [];
+        byDate[r.date].push({
+          staff_id: r.staff_id,
+          name: r.name,
+          initials: r.initials,
+          color: r.color,
+        });
+      }
+      res.json(byDate);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'Failed to fetch summary' });
+    }
+  });
+
+  // GET /api/clock/calendar/:date — all time records for a specific date
+  // MUST be before /:staffId or Express matches 'calendar' as staffId
+  // e.g. GET /api/clock/calendar/2026-05-13 — returns staff_id, name, clock_in, clock_out, total_hours
+  router.get('/calendar/:date', async (req, res) => {
+    const { date } = req.params;
+    try {
+      const [records] = await pool.query(`
+        SELECT tr.id, tr.staff_id, tr.clock_in, tr.clock_out, tr.total_hours,
+               s.name, s.role, s.initials, s.color
+        FROM time_records tr
+        JOIN staff s ON s.id = tr.staff_id
+        WHERE DATE(tr.clock_in) = ?
+        ORDER BY s.name, tr.clock_in
+      `, [date]);
+      res.json(records);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'Failed to fetch date records' });
+    }
+  });
+
   // GET /api/clock/:staffId — specific employee's time records (auth required)
   router.get('/:staffId', authMiddleware, async (req, res) => {
     const { staffId } = req.params;

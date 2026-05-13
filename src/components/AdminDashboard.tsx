@@ -229,6 +229,8 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
       // Clear local data too
       localStorage.removeItem(STORAGE_KEY_ORDERS);
       localStorage.removeItem(STORAGE_KEY_INVENTORY);
+      localStorage.removeItem('erlbrew_local_orders');
+      localStorage.removeItem('erlbrew_pending_queue');
       setOrders([]);
       setInventory([]);
       // Re-sync to confirm

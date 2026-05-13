@@ -224,64 +224,8 @@ await pool.query(`
     await pool.query(`UPDATE staff SET rfid_alt = REVERSE(rfid) WHERE rfid IS NOT NULL AND rfid_alt IS NULL`).catch(() => {});
     console.log('staff rfid_alt column ready');
 
-    // Auto-seed menu_items if empty
-    const [rows] = await pool.query('SELECT COUNT(*) AS cnt FROM menu_items');
-    if (rows[0].cnt === 0) {
-      console.log('Seeding menu_items...');
-      for (const item of MENU_SEED) {
-        await pool.query(
-          'INSERT INTO menu_items (id, name, category, price, badge, description, emoji, popular) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name)',
-          item
-        );
-      }
-      console.log('Menu items seeded');
-    }
-
-    // Auto-seed menu_modifiers if empty
-    const [modRows] = await pool.query('SELECT COUNT(*) AS cnt FROM menu_modifiers');
-    if (modRows[0].cnt === 0) {
-      console.log('Seeding menu_modifiers...');
-      const MODIFIER_SEED = [
-        // Espresso drinks (m5, m6, m7, m8)
-        ['m5', 'Extra Shot', 0.75, false],
-        ['m5', 'Soy Milk', 0.50, false],
-        ['m5', 'Breve (Half & Half)', 0.50, false],
-        ['m6', 'Extra Shot', 0.75, false],
-        ['m6', 'Soy Milk', 0.50, false],
-        ['m6', 'Oat Milk', 0.50, true],
-        ['m7', 'Extra Shot', 0.75, false],
-        ['m7', 'Extra Spiced', 0.50, false],
-        ['m8', 'Extra Shot', 0.75, false],
-        ['m8', 'Soy Milk', 0.50, false],
-        // Signature Brews (m1, m2, m3, m4)
-        ['m1', 'Extra Shot', 0.75, false],
-        ['m1', 'Soy Milk', 0.50, false],
-        ['m1', 'Oat Milk', 0.50, true],
-        ['m1', 'Extra Sea Salt', 0.25, false],
-        ['m2', 'Extra Matcha Shot', 1.00, false],
-        ['m2', 'Macadamia Milk', 0.50, true],
-        ['m2', 'Oat Milk', 0.50, false],
-        ['m3', 'Extra Honey', 0.50, false],
-        ['m3', 'Oat Milk', 0.50, true],
-        ['m3', 'Almond Milk', 0.50, false],
-        ['m4', 'With Sweet Cream', 0.75, false],
-        ['m4', 'With Oat Milk', 0.50, false],
-        // Cold Drinks (m13, m14, m15)
-        ['m13', 'Add Mint', 0.50, false],
-        ['m13', 'Add Ginger', 0.50, false],
-        ['m14', 'Add Mint', 0.50, false],
-        ['m14', 'Extra Tart', 0.25, false],
-        ['m15', 'Extra Sweet Cream', 0.75, false],
-        ['m15', 'Soy Milk', 0.50, false],
-      ];
-      for (const [menuId, name, price, isDefault] of MODIFIER_SEED) {
-        await pool.query(
-          'INSERT INTO menu_modifiers (menu_item_id, name, price, is_default) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name)',
-          [menuId, name, price, isDefault]
-        );
-      }
-      console.log('Menu modifiers seeded');
-    }
+    // Seed menu_items from DB init if they ever existed
+    // Auto-seed removed — use init.sql or Fresh Start is the only way to reset
   } catch (e) {
     console.error('DB connection failed', e);
   }

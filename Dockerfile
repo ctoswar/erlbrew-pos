@@ -5,7 +5,7 @@
 FROM node:18-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 COPY . .
 # Pass API URL at build time — leave empty so nginx proxies /api to backend
 ARG VITE_API_URL=

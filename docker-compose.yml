@@ -5,9 +5,7 @@ services:
     container_name: erlbw-api
     restart: unless-stopped
     expose:
-      - "3001"                     # Internal port (not published to host)
-    ports:
-      - "3001:3001"                # Still accessible on host for dev/debug
+      - "3001"                     # Internal port (nginx proxy only)
     env_file:
       - ./server/.env
     environment:
@@ -15,8 +13,10 @@ services:
       # CORS: allow the frontend container by Docker DNS name
       # Also allow by IP range for direct tablet access on LAN
       CORS_ORIGINS: http://erlbrew-pos,http://localhost,http://192.168.75.101:3004
-      # MySQL is on the Docker host bridge — reachable via host IP
-      DATABASE_URL: mysql://root:gameclub11@192.168.75.101:3306/erlbrew_pos
+      # MySQL is published to host port 3306 — connect via Docker gateway IP
+      # Find gateway: docker network inspect bridge | grep Gateway
+      # Common values: 172.17.0.1 (default bridge) or host.docker.internal
+      DATABASE_URL: mysql://root:gameclub11@172.17.0.1:3306/erlbrew_pos
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/menu"]
       interval: 30s

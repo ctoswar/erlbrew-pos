@@ -5,12 +5,12 @@ import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete, uploadMenuItemI
 import { IngredientEditor } from "./IngredientEditor";
 import { ModifierEditor } from "./ModifierEditor";
 
-const CATEGORIES = ["Signature Brews", "Espresso", "Pastries", "Cold Drinks"];
+const CATEGORIES = ["ICED COFFEE", "NON-COFFEE", "BLENDED", "PASTRIES", "FRUIT SODA", "HOT COFFEE"];
 
 const EMPTY_FORM = {
   id: "",
   name: "",
-  category: "Signature Brews",
+  category: "ICED COFFEE",
   price: "",
   badge: "",
   description: "",

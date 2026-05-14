@@ -123,7 +123,7 @@ const handler = (e: StorageEvent) => {
               Your order will appear here as items are added by the cashier.
             </div>
             <div style={{ marginTop: 32, display: "flex", gap: 12, justifyContent: "center" }}>
-              {["Signature Brews", "Espresso", "Cold Drinks", "Pastries"].map((cat) => (
+              {["ICED COFFEE", "HOT COFFEE", "BLENDED", "PASTRIES", "FRUIT SODA", "NON-COFFEE"].map((cat) => (
                 <span key={cat} style={{
                   background: "rgba(201,135,58,0.1)",
                   border: "1px solid rgba(201,135,58,0.25)",

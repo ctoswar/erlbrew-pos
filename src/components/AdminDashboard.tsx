@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Order, Staff, InventoryItem } from "../types";
 import { formatCurrency } from "../utils";
-import { apiGet, clearAllOrders, clearAllInventory } from "../utils/api";
+import { apiGet, clearAllOrders } from "../utils/api";
 import { AdminStaff } from "./AdminStaff";
 import { AdminMenu } from "./AdminMenu";
 import { AdminPrintSettings } from "./AdminPrintSettings";

@@ -142,22 +142,22 @@ INSERT INTO staff (rfid, pin, name, role, initials, color, password_hash) VALUES
 
 -- Seed 16 menu items (example) -- replace with real data as needed
 INSERT INTO menu_items (id, name, category, price, badge, description, emoji, popular) VALUES
-  ('m1','Smoked Sea Salt Mocha','Signature Brews',6.75,'SIGNATURE','Single-origin dark chocolate, espresso, steamed oat milk, topped with house-smoked Maldon sea salt.','☕',TRUE),
-  ('m2','Velvet Matcha Latte','Signature Brews',6.25,'SIGNATURE','Ceremonial grade Uji matcha whisked with Madagascar vanilla bean and creamy macadamia milk.','🍵',TRUE),
-  ('m3','Honey Lavender Cortado','Signature Brews',5.50,'SIGNATURE','Local wildflower honey, dried culinary lavender, and a double shot of our house Heritage roast.','🌼',FALSE),
-  ('m4','Cold Brew Reserve','Signature Brews',5.75,'HAND-POURED','24-hour slow steeped concentrate. Served over a single clear ice sphere.','🧊',FALSE),
-  ('m5','Heritage Double Espresso','Espresso',4.00,'CLASSIC','Two shots of our house Heritage blend. Clean, balanced, with a honey-toned finish.','☕',FALSE),
-  ('m6','Flat White','Espresso',4.75,'CLASSIC','Velvety micro-foam poured over a ristretto double shot.','☕',FALSE),
-  ('m7','Spiced Americano','Espresso',4.25,'SEASONAL','Cardamom and Ceylon cinnamon infused hot water, finished with a Heritage espresso shot.','🫖',FALSE),
-  ('m8','Macchiato Lungo','Espresso',4.50,'CLASSIC','Long pull espresso with a delicate cloud of steamed milk.','☕',FALSE),
-  ('m9','Kouign-Amann','Pastries',4.25,'BAKED DAILY','Buttery, caramelized Breton pastry. Crisp outside, tender within.','🥐',TRUE),
-  ('m10','Cardamom Knot','Pastries',3.75,'BAKED DAILY','Soft brioche twisted with house-ground cardamom sugar.','🍞',FALSE),
-  ('m11','Almond Financier','Pastries',3.50,'BAKED DAILY','Brown butter almond cake with flaked Marcona almonds on top.','🧁',FALSE),
-  ('m12','Seasonal Tart','Pastries',5.00,'SEASONAL','Chefs daily selection using locally sourced seasonal produce.','🥧',FALSE),
-  ('m13','Hibiscus Fizz','Cold Drinks',5.25,'HOUSE-MADE','Dried hibiscus flowers steeped overnight with citrus zest, topped with sparkling water.','🌺',FALSE),
-  ('m14','Cascara Lemonade','Cold Drinks',5.50,'RARE','Coffee cherry husks brewed into sweet tea blended with fresh Meyer lemon.','🍋',FALSE),
-  ('m15','Oat Horchata Cold Brew','Cold Drinks',6.00,'SIGNATURE','House oat horchata swirled through our cold brew concentrate.','🥤',TRUE),
-  ('m16','Still Water','Cold Drinks',1.50,'', 'Filtered still water.','💧',FALSE);
+  ('m1','Smoked Sea Salt Mocha','ICED COFFEE',6.75,'SIGNATURE','Single-origin dark chocolate, espresso, steamed oat milk, topped with house-smoked Maldon sea salt.','☕',TRUE),
+  ('m2','Velvet Matcha Latte','ICED COFFEE',6.25,'SIGNATURE','Ceremonial grade Uji matcha whisked with Madagascar vanilla bean and creamy macadamia milk.','🍵',TRUE),
+  ('m3','Honey Lavender Cortado','ICED COFFEE',5.50,'SIGNATURE','Local wildflower honey, dried culinary lavender, and a double shot of our house Heritage roast.','🌼',FALSE),
+  ('m4','Cold Brew Reserve','ICED COFFEE',5.75,'HAND-POURED','24-hour slow steeped concentrate. Served over a single clear ice sphere.','🧊',FALSE),
+  ('m5','Heritage Double Espresso','HOT COFFEE',4.00,'CLASSIC','Two shots of our house Heritage blend. Clean, balanced, with a honey-toned finish.','☕',FALSE),
+  ('m6','Flat White','HOT COFFEE',4.75,'CLASSIC','Velvety micro-foam poured over a ristretto double shot.','☕',FALSE),
+  ('m7','Spiced Americano','HOT COFFEE',4.25,'SEASONAL','Cardamom and Ceylon cinnamon infused hot water, finished with a Heritage espresso shot.','🫖',FALSE),
+  ('m8','Macchiato Lungo','HOT COFFEE',4.50,'CLASSIC','Long pull espresso with a delicate cloud of steamed milk.','☕',FALSE),
+  ('m9','Kouign-Amann','PASTRIES',4.25,'BAKED DAILY','Buttery, caramelized Breton pastry. Crisp outside, tender within.','🥐',TRUE),
+  ('m10','Cardamom Knot','PASTRIES',3.75,'BAKED DAILY','Soft brioche twisted with house-ground cardamom sugar.','🍞',FALSE),
+  ('m11','Almond Financier','PASTRIES',3.50,'BAKED DAILY','Brown butter almond cake with flaked Marcona almonds on top.','🧁',FALSE),
+  ('m12','Seasonal Tart','PASTRIES',5.00,'SEASONAL','Chefs daily selection using locally sourced seasonal produce.','🥧',FALSE),
+  ('m13','Hibiscus Fizz','FRUIT SODA',5.25,'HOUSE-MADE','Dried hibiscus flowers steeped overnight with citrus zest, topped with sparkling water.','🌺',FALSE),
+  ('m14','Cascara Lemonade','FRUIT SODA',5.50,'RARE','Coffee cherry husks brewed into sweet tea blended with fresh Meyer lemon.','🍋',FALSE),
+  ('m15','Oat Horchata Cold Brew','BLENDED',6.00,'SIGNATURE','House oat horchata swirled through our cold brew concentrate.','🥤',TRUE),
+  ('m16','Still Water','NON-COFFEE',1.50,'','Filtered still water.','💧',FALSE);
 
 -- Supplier invoices table
 CREATE TABLE IF NOT EXISTS supplier_invoices (

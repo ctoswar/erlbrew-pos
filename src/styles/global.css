@@ -141,7 +141,8 @@
   input[type="date"],
   input[type="email"],
   input[type="password"],
-  textarea {
+  textarea,
+  select {
     font-family: 'DM Sans', sans-serif;
     background: rgb(var(--color-input));
     border: 1.5px solid rgb(var(--color-border-default));
@@ -154,14 +155,19 @@
     transition: border-color 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out), background 0.25s var(--ease-out);
     letter-spacing: -0.01em;
   }
-  input:focus, textarea:focus {
+  input:focus, textarea:focus, select:focus {
     border-color: rgb(var(--color-accent));
     box-shadow: 0 0 0 3px rgba(196,149,106,0.12), var(--shadow-inner);
     background: rgb(var(--color-surface));
   }
   input::placeholder, textarea::placeholder { color: rgb(var(--color-text-disabled)); }
-  input:hover:not(:focus), textarea:hover:not(:focus) {
+  input:hover:not(:focus), textarea:hover:not(:focus), select:hover:not(:focus) {
     border-color: rgb(var(--color-border-medium));
+  }
+  /* Dropdown options: force dark text on light native dropdown background */
+  select option {
+    background: #faf8f5;
+    color: #2a1f15;
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { InventoryItem, InventoryMovement, MovementType } from "../types";
 import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete } from "../utils/api";
 
@@ -16,6 +16,13 @@ const MOVEMENT_COLORS: Record<MovementType, string> = {
   restock: 'var(--success)',
   adjustment: 'var(--gold)',
   void: '#e8a020',
+};
+
+const MOVEMENT_ICONS: Record<MovementType, string> = {
+  sale: '↓',
+  restock: '↑',
+  adjustment: '↔',
+  void: '↩',
 };
 
 const EMPTY_FORM = {
@@ -39,6 +46,7 @@ export const AdminInventory: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Movement history state
   const [movementItemId, setMovementItemId] = useState<string | null>(null);
@@ -69,7 +77,24 @@ export const AdminInventory: React.FC = () => {
   useEffect(() => { loadItems(); }, []);
 
   const categories = ["All", ...CATEGORIES];
-  const filtered = activeCategory === "All" ? items : items.filter((i) => i.category === activeCategory);
+
+  // Computed stats
+  const stats = useMemo(() => {
+    const total = items.length;
+    const lowStock = items.filter(i => i.stock > 0 && i.stock <= (i.low_stock_threshold || 10)).length;
+    const outOfStock = items.filter(i => i.stock <= 0).length;
+    return { total, lowStock, outOfStock };
+  }, [items]);
+
+  // Filtered items (category + search)
+  const filtered = useMemo(() => {
+    let result = activeCategory === "All" ? items : items.filter((i) => i.category === activeCategory);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(i => i.name.toLowerCase().includes(q) || i.id.toLowerCase().includes(q));
+    }
+    return result;
+  }, [items, activeCategory, searchQuery]);
 
   const getStockStatus = (item: InventoryItem) => {
     if (item.stock <= 0) return "out";
@@ -255,51 +280,87 @@ export const AdminInventory: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden min-h-0">
-      {/* Header */}
-      <div className="glass-panel flex items-center justify-between px-4 py-3 border-b border-erl-accent/10 flex-shrink-0 rounded-none">
-        <div className="font-display text-sm font-bold text-erl-text-primary tracking-wide">
-          Inventory
+      {/* ── Header ─────────────────────────────────────────── */}
+      <div className="glass-panel flex items-center justify-between px-5 py-3.5 border-b border-erl-accent/10 flex-shrink-0 rounded-none">
+        <div className="flex items-center gap-3">
+          <h2 className="font-display text-base font-bold text-erl-text-primary tracking-wide">
+            Inventory
+          </h2>
+          <span className="text-[11px] text-erl-text-faint tracking-wide tabular-nums">{items.length} items</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[9px] text-erl-text-faint tracking-wide">{items.length} items</span>
-          <button onClick={openAllMovements} className="btn btn-outline text-[9px] px-2.5 py-[7px] tracking-wide">
-            📋 Movement Log
+        <div className="flex items-center gap-2.5">
+          <button onClick={openAllMovements} className="btn btn-outline text-[11px] px-4 py-2 tracking-wide">
+            Movement Log
           </button>
-          <button onClick={openAddForm} className="btn btn-accent text-[9px] px-3.5 py-[7px] tracking-wide">
+          <button onClick={openAddForm} className="btn btn-accent text-[11px] px-4 py-2 tracking-wide">
             + Add Item
           </button>
         </div>
       </div>
 
-      {/* Category filter tabs */}
-      <div className="flex gap-1.5 px-4 py-3 overflow-x-auto flex-shrink-0 scrollbar-none">
-        {categories.map((cat) => {
-          const count = cat === "All" ? items.length : items.filter((i) => i.category === cat).length;
-          const isActive = activeCategory === cat;
-          return (
-            <button key={cat} onClick={() => setActiveCategory(cat)} className={`
-              px-3.5 py-[5px] rounded-full flex-shrink-0 text-[9px] font-bold tracking-wide cursor-pointer uppercase whitespace-nowrap
-              ${isActive ? "bg-erl-accent text-erl-sidebar border-[1.5px] border-erl-accent" : "bg-transparent text-erl-secondary border-[1.5px] border-erl-border-default"}
-            `}>
-              {cat} <span className="opacity-70">({count})</span>
-            </button>
-          );
-        })}
+      {/* ── Stats Row ──────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3 px-5 pt-4 flex-shrink-0">
+        <StatCard label="Total Items" value={stats.total} icon="📦" accent />
+        <StatCard label="Low Stock" value={stats.lowStock} icon="⚠️" warn={stats.lowStock > 0} />
+        <StatCard label="Out of Stock" value={stats.outOfStock} icon="🚫" danger={stats.outOfStock > 0} />
       </div>
 
-      {/* Items grid */}
-      <div className="scroll-area flex-1 px-4 py-2 overflow-y-auto min-h-0">
+      {/* ── Search + Category Filter ──────────────────────── */}
+      <div className="flex flex-col gap-2.5 px-5 pt-4 flex-shrink-0">
+        {/* Search */}
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-erl-text-faint text-sm pointer-events-none">⌕</span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search items by name or ID…"
+            className="w-full box-border pl-9 !py-2.5 !text-[13px] !rounded-xl"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-erl-text-faint hover:text-erl-text-primary transition-colors text-sm cursor-pointer bg-transparent border-none">
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Category pills */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
+          {categories.map((cat) => {
+            const count = cat === "All" ? items.length : items.filter((i) => i.category === cat).length;
+            if (count === 0 && cat !== "All") return null;
+            const isActive = activeCategory === cat;
+            return (
+              <button key={cat} onClick={() => setActiveCategory(cat)} className={`
+                px-3.5 py-1.5 rounded-full flex-shrink-0 text-[11px] font-semibold tracking-wide cursor-pointer transition-all duration-200
+                ${isActive
+                  ? "bg-erl-accent text-erl-base shadow-sm"
+                  : "bg-erl-surface/60 text-erl-text-secondary border border-erl-border-default hover:border-erl-border-medium hover:text-erl-text-primary"
+                }
+              `}>
+                {cat} <span className={`ml-0.5 ${isActive ? "opacity-70" : "opacity-50"}`}>({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Items Grid ─────────────────────────────────────── */}
+      <div className="scroll-area flex-1 px-5 py-3 overflow-y-auto min-h-0">
         {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-shimmer w-[120px] h-3.5 rounded mx-auto mb-2" />
-            <div className="animate-shimmer w-20 h-2.5 rounded mx-auto" />
+          <div className="flex flex-col items-center py-16 gap-3">
+            <div className="animate-shimmer w-28 h-4 rounded-md" />
+            <div className="animate-shimmer w-20 h-3 rounded-md" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center text-erl-text-disabled py-12 text-[11px] tracking-wide">
-            No inventory items in this category
+          <div className="flex flex-col items-center py-16 gap-2">
+            <span className="text-2xl">📭</span>
+            <div className="text-[13px] text-erl-text-disabled tracking-wide">
+              {searchQuery ? "No items match your search" : "No inventory items in this category"}
+            </div>
           </div>
         ) : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2.5">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
             {filtered.map((item) => (
               <InventoryCard
                 key={item.id}
@@ -320,54 +381,42 @@ export const AdminInventory: React.FC = () => {
         )}
       </div>
 
-      {/* Movement History Modal */}
+      {/* ── Movement History Modal ──────────────────────────── */}
       {movementItemId && (
         <>
-          <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setMovementItemId(null)} />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] animate-fade-in-overlay" onClick={() => setMovementItemId(null)} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="animate-scale-in card-glass p-6 w-full max-w-[600px] max-h-[85vh] flex flex-col">
-              <div className="flex justify-between items-center mb-3.5">
+            <div className="animate-scale-in card-glass p-0 w-full max-w-[640px] max-h-[85vh] flex flex-col overflow-hidden rounded-2xl">
+              {/* Modal header */}
+              <div className="flex justify-between items-center px-6 py-4 border-b border-erl-border-subtle">
                 <div>
-                  <div className="font-display text-sm font-bold text-erl-text-primary">
+                  <div className="font-display text-[15px] font-bold text-erl-text-primary">
                     Movement History
                   </div>
-                  <div className="text-[10px] text-erl-muted">{movementItemName}</div>
+                  <div className="text-[12px] text-erl-text-muted mt-0.5">{movementItemName}</div>
                 </div>
-                <button onClick={() => setMovementItemId(null)} className="bg-none border-none text-erl-muted text-base cursor-pointer p-1">✕</button>
+                <button onClick={() => setMovementItemId(null)} className="w-8 h-8 rounded-lg flex items-center justify-center text-erl-text-muted hover:text-erl-text-primary hover:bg-erl-surface transition-colors cursor-pointer bg-transparent border-none text-base">
+                  ✕
+                </button>
               </div>
-              <div className="scroll-area flex-1 overflow-y-auto min-h-0">
+
+              {/* Modal body */}
+              <div className="scroll-area flex-1 overflow-y-auto min-h-0 px-6 py-3">
                 {movementsLoading ? (
-                  <div className="text-center py-8 text-erl-text-disabled text-[10px]">Loading...</div>
+                  <div className="text-center py-10">
+                    <div className="animate-shimmer w-24 h-4 rounded-md mx-auto mb-2" />
+                    <div className="animate-shimmer w-16 h-3 rounded-md mx-auto" />
+                  </div>
                 ) : movements.length === 0 ? (
-                  <div className="text-center py-8 text-erl-text-disabled text-[10px]">No movements recorded for this item.</div>
+                  <div className="text-center py-10 text-erl-text-disabled">
+                    <p className="text-[13px]">No movements recorded for this item.</p>
+                  </div>
                 ) : (
-                  <table className="w-full border-collapse text-[9px]">
-                    <thead>
-                      <tr className="border-b border-erl-border-subtle">
-                        <th className="px-2 py-1.5 text-left text-erl-text-faint tracking-wide font-semibold">Type</th>
-                        <th className="px-2 py-1.5 text-right text-erl-text-faint tracking-wide font-semibold">Qty</th>
-                        <th className="px-2 py-1.5 text-center text-erl-text-faint tracking-wide font-semibold">Before</th>
-                        <th className="px-2 py-1.5 text-center text-erl-text-faint tracking-wide font-semibold">After</th>
-                        <th className="px-2 py-1.5 text-right text-erl-text-faint tracking-wide font-semibold">Time</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {movements.map((m) => (
-                        <tr key={m.id} className="border-b border-erl-border-subtle">
-                          <td className="px-2 py-1.5">
-                            <span className="font-semibold" style={{ color: MOVEMENT_COLORS[m.movement_type] }}>{MOVEMENT_LABELS[m.movement_type]}</span>
-                            {m.reference_id && <span className="text-erl-text-faint ml-1">#{m.reference_id.slice(0, 8).toUpperCase()}</span>}
-                          </td>
-                          <td className="px-2 py-1.5 text-right font-bold">{m.quantity} {m.unit}</td>
-                          <td className="px-2 py-1.5 text-center text-erl-muted">{m.stock_before}</td>
-                          <td className="px-2 py-1.5 text-center text-erl-muted">{m.stock_after}</td>
-                          <td className="px-2 py-1.5 text-right text-erl-text-faint whitespace-nowrap">
-                            {new Date(m.created_at).toLocaleTimeString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="flex flex-col gap-2">
+                    {movements.map((m) => (
+                      <MovementRow key={m.id} movement={m} showItemName={false} />
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -375,59 +424,65 @@ export const AdminInventory: React.FC = () => {
         </>
       )}
 
-      {/* All Movements Modal */}
+      {/* ── All Movements Modal ─────────────────────────────── */}
       {showAllMovements && (
         <>
-          <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setShowAllMovements(false)} />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] animate-fade-in-overlay" onClick={() => setShowAllMovements(false)} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="animate-scale-in card-glass p-6 w-full max-w-[700px] max-h-[85vh] flex flex-col">
-              <div className="flex justify-between items-center mb-3.5">
+            <div className="animate-scale-in card-glass p-0 w-full max-w-[740px] max-h-[85vh] flex flex-col overflow-hidden rounded-2xl">
+              {/* Modal header */}
+              <div className="flex justify-between items-center px-6 py-4 border-b border-erl-border-subtle">
                 <div>
-                  <div className="font-display text-sm font-bold text-erl-text-primary">
-                    📋 Full Movement Log
+                  <div className="font-display text-[15px] font-bold text-erl-text-primary">
+                    Full Movement Log
                   </div>
-                  <div className="text-[10px] text-erl-muted">All stock changes across inventory</div>
+                  <div className="text-[12px] text-erl-text-muted mt-0.5">All stock changes across inventory</div>
                 </div>
-                <button onClick={() => setShowAllMovements(false)} className="bg-none border-none text-erl-muted text-base cursor-pointer p-1">✕</button>
+                <button onClick={() => setShowAllMovements(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-erl-text-muted hover:text-erl-text-primary hover:bg-erl-surface transition-colors cursor-pointer bg-transparent border-none text-base">
+                  ✕
+                </button>
               </div>
+
+              {/* Table header */}
+              <div className="grid grid-cols-[1fr_90px_70px_60px_60px_100px] gap-2 px-6 py-2 text-[11px] font-bold text-erl-text-faint uppercase tracking-wider border-b border-erl-border-subtle">
+                <div>Item</div>
+                <div>Type</div>
+                <div className="text-right">Qty</div>
+                <div className="text-center">Before</div>
+                <div className="text-center">After</div>
+                <div className="text-right">Time</div>
+              </div>
+
+              {/* Modal body */}
               <div className="scroll-area flex-1 overflow-y-auto min-h-0">
                 {allMovementsLoading ? (
-                  <div className="text-center py-8 text-erl-text-disabled text-[10px]">Loading...</div>
+                  <div className="text-center py-10">
+                    <div className="animate-shimmer w-24 h-4 rounded-md mx-auto mb-2" />
+                    <div className="animate-shimmer w-16 h-3 rounded-md mx-auto" />
+                  </div>
                 ) : allMovements.length === 0 ? (
-                  <div className="text-center py-8 text-erl-text-disabled text-[10px]">No movements recorded yet.</div>
+                  <div className="text-center py-10 text-erl-text-disabled">
+                    <p className="text-[13px]">No movements recorded yet.</p>
+                  </div>
                 ) : (
-                  <table className="w-full border-collapse text-[9px]">
-                    <thead>
-                      <tr className="border-b border-erl-border-subtle">
-                        <th className="px-2 py-1.5 text-left text-erl-text-faint tracking-wide font-semibold">Item</th>
-                        <th className="px-2 py-1.5 text-left text-erl-text-faint tracking-wide font-semibold">Type</th>
-                        <th className="px-2 py-1.5 text-right text-erl-text-faint tracking-wide font-semibold">Qty</th>
-                        <th className="px-2 py-1.5 text-center text-erl-text-faint tracking-wide font-semibold">Before</th>
-                        <th className="px-2 py-1.5 text-center text-erl-text-faint tracking-wide font-semibold">After</th>
-                        <th className="px-2 py-1.5 text-left text-erl-text-faint tracking-wide font-semibold">Ref</th>
-                        <th className="px-2 py-1.5 text-right text-erl-text-faint tracking-wide font-semibold">Time</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {allMovements.map((m) => (
-                        <tr key={m.id} className="border-b border-erl-border-subtle">
-                          <td className="px-2 py-1.5 font-semibold text-erl-text-primary">{m.inventory_name}</td>
-                          <td className="px-2 py-1.5">
-                            <span className="font-semibold" style={{ color: MOVEMENT_COLORS[m.movement_type] }}>{MOVEMENT_LABELS[m.movement_type]}</span>
-                          </td>
-                          <td className="px-2 py-1.5 text-right font-bold">{m.quantity} {m.unit}</td>
-                          <td className="px-2 py-1.5 text-center text-erl-muted">{m.stock_before}</td>
-                          <td className="px-2 py-1.5 text-center text-erl-muted">{m.stock_after}</td>
-                          <td className="px-2 py-1.5 text-left text-erl-text-faint">
-                            {m.reference_id ? `#${m.reference_id.slice(0, 8)}` : m.notes ? m.notes.slice(0, 24) : '—'}
-                          </td>
-                          <td className="px-2 py-1.5 text-right text-erl-text-faint whitespace-nowrap">
-                            {new Date(m.created_at).toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="px-6 py-2">
+                    {allMovements.map((m) => (
+                      <div key={m.id} className="grid grid-cols-[1fr_90px_70px_60px_60px_100px] gap-2 py-2.5 border-b border-erl-border-subtle/50 text-[12px] items-center">
+                        <div className="font-medium text-erl-text-primary truncate">{m.inventory_name}</div>
+                        <div>
+                          <span className="font-semibold text-[11px]" style={{ color: MOVEMENT_COLORS[m.movement_type] }}>
+                            {MOVEMENT_ICONS[m.movement_type]} {MOVEMENT_LABELS[m.movement_type]}
+                          </span>
+                        </div>
+                        <div className="text-right font-bold tabular-nums">{m.quantity} {m.unit}</div>
+                        <div className="text-center text-erl-text-muted tabular-nums">{m.stock_before}</div>
+                        <div className="text-center text-erl-text-muted tabular-nums">{m.stock_after}</div>
+                        <div className="text-right text-erl-text-faint text-[11px] whitespace-nowrap tabular-nums">
+                          {new Date(m.created_at).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -435,52 +490,59 @@ export const AdminInventory: React.FC = () => {
         </>
       )}
 
-      {/* Manual Restock/Adjust Modal */}
+      {/* ── Manual Restock/Adjust Modal ─────────────────────── */}
       {showAdjustModal && (
         <>
-          <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setShowAdjustModal(false)} />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] animate-fade-in-overlay" onClick={() => setShowAdjustModal(false)} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="animate-scale-in card-glass p-6 w-full max-w-[360px]">
-              <div className="font-display text-sm font-bold text-erl-text-primary mb-1">
-                {adjustType === 'restock' ? 'Restock' : 'Adjust'} Inventory
-              </div>
-              <div className="text-[10px] text-erl-muted mb-4">{adjustItemName}</div>
-
-              <div className="flex gap-1.5 mb-3.5">
-                <button onClick={() => setAdjustType('restock')} className={`
-                  flex-1 py-[7px] rounded-lg text-[9px] font-bold cursor-pointer
-                  ${adjustType === 'restock' ? "border-[1.5px] border-erl-success bg-erl-success/10 text-erl-success" : "border-[1.5px] border-erl-border-default bg-transparent text-erl-secondary"}
-                `}>+ Restock</button>
-                <button onClick={() => setAdjustType('adjustment')} className={`
-                  flex-1 py-[7px] rounded-lg text-[9px] font-bold cursor-pointer
-                  ${adjustType === 'adjustment' ? "border-[1.5px] border-erl-accent bg-erl-accent/10 text-erl-accent" : "border-[1.5px] border-erl-border-default bg-transparent text-erl-secondary"}
-                `}>− Adjustment</button>
-              </div>
-
-              <div className="mb-3">
-                <div className="text-[9px] text-erl-accent-muted tracking-widest mb-[5px] font-bold uppercase">
-                  Quantity
+            <div className="animate-scale-in card-glass p-0 w-full max-w-[400px] overflow-hidden rounded-2xl">
+              {/* Modal header */}
+              <div className="px-6 pt-5 pb-4 border-b border-erl-border-subtle">
+                <div className="font-display text-base font-bold text-erl-text-primary">
+                  {adjustType === 'restock' ? 'Resupply Stock' : 'Adjust Stock'}
                 </div>
-                <input type="number" value={adjustQty} onChange={(e) => setAdjustQty(e.target.value)}
-                  placeholder="0" min="0" step="1" autoFocus
-                  className="w-full box-border" />
+                <div className="text-[12px] text-erl-text-muted mt-1">{adjustItemName}</div>
               </div>
 
-              <div className="mb-3.5">
-                <div className="text-[9px] text-erl-accent-muted tracking-widest mb-[5px] font-bold uppercase">
-                  Notes (optional)
+              <div className="px-6 py-5 flex flex-col gap-4">
+                {/* Type toggle */}
+                <div className="flex gap-2">
+                  <button onClick={() => setAdjustType('restock')} className={`
+                    flex-1 py-2.5 rounded-xl text-[12px] font-bold cursor-pointer transition-all duration-200
+                    ${adjustType === 'restock'
+                      ? "bg-erl-success/15 border-[1.5px] border-erl-success text-erl-success"
+                      : "border-[1.5px] border-erl-border-default bg-transparent text-erl-text-secondary hover:border-erl-border-medium"
+                    }
+                  `}>↑ Restock</button>
+                  <button onClick={() => setAdjustType('adjustment')} className={`
+                    flex-1 py-2.5 rounded-xl text-[12px] font-bold cursor-pointer transition-all duration-200
+                    ${adjustType === 'adjustment'
+                      ? "bg-erl-accent/15 border-[1.5px] border-erl-accent text-erl-accent"
+                      : "border-[1.5px] border-erl-border-default bg-transparent text-erl-text-secondary hover:border-erl-border-medium"
+                    }
+                  `}>↔ Adjust</button>
                 </div>
-                <input value={adjustNotes} onChange={(e) => setAdjustNotes(e.target.value)}
-                  placeholder="e.g. Weekly delivery" className="w-full box-border" />
+
+                <FormSection label="Quantity">
+                  <input type="number" value={adjustQty} onChange={(e) => setAdjustQty(e.target.value)}
+                    placeholder="0" min="0" step="1" autoFocus
+                    className="w-full box-border text-center text-[18px] font-bold !py-3" />
+                </FormSection>
+
+                <FormSection label="Notes" hint="optional">
+                  <input value={adjustNotes} onChange={(e) => setAdjustNotes(e.target.value)}
+                    placeholder="e.g. Weekly delivery" className="w-full box-border" />
+                </FormSection>
               </div>
 
-              <div className="flex gap-2">
-                <button onClick={() => setShowAdjustModal(false)} className="btn btn-outline flex-1 text-[10px] py-2.5">
+              {/* Modal footer */}
+              <div className="flex gap-3 px-6 py-4 border-t border-erl-border-subtle">
+                <button onClick={() => setShowAdjustModal(false)} className="btn btn-outline flex-1 text-[12px] py-2.5">
                   Cancel
                 </button>
                 <button onClick={handleManualAdjust} disabled={adjustSaving || !adjustQty || parseFloat(adjustQty) <= 0}
-                  className="btn btn-accent flex-1 text-[10px] py-2.5">
-                  {adjustSaving ? "Saving..." : adjustType === 'restock' ? "Restock" : "Adjust"}
+                  className="btn btn-accent flex-1 text-[12px] py-2.5">
+                  {adjustSaving ? "Saving…" : adjustType === 'restock' ? "Confirm Restock" : "Confirm Adjustment"}
                 </button>
               </div>
             </div>
@@ -488,69 +550,90 @@ export const AdminInventory: React.FC = () => {
         </>
       )}
 
-      {/* Add/Edit Modal */}
+      {/* ── Add/Edit Modal ──────────────────────────────────── */}
       {showForm && (
         <>
-          <div className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay" onClick={closeForm} />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] animate-fade-in-overlay" onClick={closeForm} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="animate-scale-in card-glass p-6 w-full max-w-[420px] max-h-[90vh] overflow-y-auto">
-              <div className="font-display text-base font-bold text-erl-text-primary mb-4">
-                {editingId ? "Edit Inventory Item" : "Add Inventory Item"}
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <FormField label="Item ID" hint="Short code, e.g. cup-s">
-                  <input value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))}
-                    placeholder="cup-s" disabled={!!editingId} />
-                </FormField>
-                <FormField label="Name">
-                  <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    placeholder="Medium Cup (12oz)" />
-                </FormField>
-                <FormField label="Category">
-                  <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
-                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </FormField>
-                <FormField label="Unit">
-                  <select value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}>
-                    {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                </FormField>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <FormField label="Current Stock">
-                    <input type="number" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
-                      placeholder="0" min="0" step="1" />
-                  </FormField>
-                  <FormField label="Low Stock Alert">
-                    <input type="number" value={form.low_stock_threshold} onChange={(e) => setForm((f) => ({ ...f, low_stock_threshold: e.target.value }))}
-                      placeholder="10" min="0" />
-                  </FormField>
+            <div className="animate-scale-in card-glass p-0 w-full max-w-[460px] max-h-[90vh] flex flex-col overflow-hidden rounded-2xl">
+              {/* Modal header */}
+              <div className="px-6 pt-5 pb-4 border-b border-erl-border-subtle">
+                <div className="font-display text-lg font-bold text-erl-text-primary">
+                  {editingId ? "Edit Item" : "New Inventory Item"}
                 </div>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <FormField label="Purchase Cost" hint="₱ per unit">
-                    <input type="number" value={form.purchase_cost} onChange={(e) => setForm((f) => ({ ...f, purchase_cost: e.target.value }))}
-                      placeholder="0.00" min="0" step="0.01" />
-                  </FormField>
-                  <FormField label="Unit Cost" hint="₱ per serving">
-                    <input type="number" value={form.unit_cost} onChange={(e) => setForm((f) => ({ ...f, unit_cost: e.target.value }))}
-                      placeholder="0.00" min="0" step="0.01" />
-                  </FormField>
+                <div className="text-[12px] text-erl-text-muted mt-0.5">
+                  {editingId ? "Update item details below" : "Fill in the details to add a new item"}
                 </div>
               </div>
 
+              {/* Form body */}
+              <div className="scroll-area flex-1 overflow-y-auto min-h-0 px-6 py-5">
+                <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormSection label="Item ID" hint="e.g. cup-s">
+                      <input value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))}
+                        placeholder="cup-s" disabled={!!editingId}
+                        className={editingId ? "opacity-50 cursor-not-allowed" : ""} />
+                    </FormSection>
+                    <FormSection label="Name">
+                      <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                        placeholder="Medium Cup (12oz)" />
+                    </FormSection>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormSection label="Category">
+                      <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
+                        {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </FormSection>
+                    <FormSection label="Unit">
+                      <select value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}>
+                        {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </FormSection>
+                  </div>
+
+                  <div className="h-px bg-erl-border-subtle" />
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormSection label="Current Stock">
+                      <input type="number" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
+                        placeholder="0" min="0" step="1" />
+                    </FormSection>
+                    <FormSection label="Low Stock Threshold">
+                      <input type="number" value={form.low_stock_threshold} onChange={(e) => setForm((f) => ({ ...f, low_stock_threshold: e.target.value }))}
+                        placeholder="10" min="0" />
+                    </FormSection>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormSection label="Purchase Cost" hint="₱/unit">
+                      <input type="number" value={form.purchase_cost} onChange={(e) => setForm((f) => ({ ...f, purchase_cost: e.target.value }))}
+                        placeholder="0.00" min="0" step="0.01" />
+                    </FormSection>
+                    <FormSection label="Unit Cost" hint="₱/serving">
+                      <input type="number" value={form.unit_cost} onChange={(e) => setForm((f) => ({ ...f, unit_cost: e.target.value }))}
+                        placeholder="0.00" min="0" step="0.01" />
+                    </FormSection>
+                  </div>
+                </div>
+              </div>
+
+              {/* Error */}
               {error && (
-                <div className="mt-3 px-3 py-2 bg-erl-danger-bg border border-erl-danger-border rounded-lg text-[11px] text-erl-danger">
+                <div className="mx-6 px-4 py-2.5 bg-erl-danger-bg border border-erl-danger-border rounded-xl text-[12px] text-erl-danger">
                   {error}
                 </div>
               )}
 
-              <div className="flex gap-2 mt-4">
-                <button onClick={closeForm} className="btn btn-outline flex-1 text-[10px] py-2.5">
+              {/* Modal footer */}
+              <div className="flex gap-3 px-6 py-4 border-t border-erl-border-subtle mt-2">
+                <button onClick={closeForm} className="btn btn-outline flex-1 text-[12px] py-2.5">
                   Cancel
                 </button>
-                <button onClick={handleSave} disabled={saving} className="btn btn-accent flex-1 text-[10px] py-2.5">
-                  {saving ? "Saving..." : editingId ? "Update Item" : "Add Item"}
+                <button onClick={handleSave} disabled={saving} className="btn btn-accent flex-1 text-[12px] py-2.5">
+                  {saving ? "Saving…" : editingId ? "Update Item" : "Add Item"}
                 </button>
               </div>
             </div>
@@ -561,8 +644,88 @@ export const AdminInventory: React.FC = () => {
   );
 };
 
-// Inventory Card
+// ── Sub-components ──────────────────────────────────────────
 
+/** Summary stat card */
+const StatCard: React.FC<{
+  label: string;
+  value: number;
+  icon: string;
+  accent?: boolean;
+  warn?: boolean;
+  danger?: boolean;
+}> = ({ label, value, icon, accent, warn, danger }) => (
+  <div className={`
+    rounded-xl px-4 py-3 flex items-center gap-3 border transition-all duration-200
+    ${accent
+      ? "bg-erl-accent/8 border-erl-accent/20"
+      : danger
+        ? "bg-erl-danger/8 border-erl-danger-border/50"
+        : warn
+          ? "bg-erl-accent/6 border-erl-border-default"
+          : "bg-erl-surface border-erl-border-subtle"
+    }
+  `}>
+    <span className="text-[18px]">{icon}</span>
+    <div className="flex flex-col">
+      <span className={`
+        text-xl font-bold tabular-nums leading-tight
+        ${accent ? "text-erl-accent" : danger ? "text-erl-danger" : warn ? "text-erl-accent" : "text-erl-text-primary"}
+      `}>
+        {value}
+      </span>
+      <span className="text-[10px] text-erl-text-faint tracking-wider uppercase font-semibold">{label}</span>
+    </div>
+  </div>
+);
+
+/** Movement row for modal list view */
+const MovementRow: React.FC<{ movement: InventoryMovement; showItemName?: boolean }> = ({ movement: m, showItemName }) => {
+  const isPositive = m.movement_type === 'restock' || m.movement_type === 'void';
+  return (
+    <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-erl-surface/80 transition-colors">
+      {/* Icon */}
+      <div className={`
+        w-8 h-8 rounded-lg flex items-center justify-center text-[13px] font-bold flex-shrink-0
+        ${isPositive
+          ? "bg-erl-success/10 text-erl-success"
+          : "bg-erl-danger/10 text-erl-danger"
+        }
+      `}>
+        {MOVEMENT_ICONS[m.movement_type]}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          {showItemName && (
+            <span className="text-[12px] font-medium text-erl-text-primary truncate">{m.inventory_name}</span>
+          )}
+          <span className="text-[12px] font-semibold" style={{ color: MOVEMENT_COLORS[m.movement_type] }}>
+            {MOVEMENT_LABELS[m.movement_type]}
+          </span>
+          {m.reference_id && (
+            <span className="text-[11px] text-erl-text-faint">#{m.reference_id.slice(0, 8).toUpperCase()}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-erl-text-faint">
+          <span>{m.stock_before} → {m.stock_after}</span>
+          <span className={isPositive ? "text-erl-success" : "text-erl-danger"}>
+            {isPositive ? "+" : ""}{m.quantity} {m.unit}
+          </span>
+          {m.notes && <span className="truncate">· {m.notes}</span>}
+        </div>
+      </div>
+
+      {/* Time */}
+      <div className="text-[11px] text-erl-text-faint whitespace-nowrap tabular-nums flex-shrink-0">
+        {new Date(m.created_at).toLocaleTimeString()}
+      </div>
+    </div>
+  );
+};
+
+/** Inventory Card */
 interface InventoryCardProps {
   item: InventoryItem;
   onEdit: () => void;
@@ -581,81 +744,132 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
   item, onEdit, onDelete, onAdjustStock, onShowHistory, onManualAdjust,
   deleteConfirm, onConfirmDelete, onCancelDelete,
   stockStatus, stockStatusColor,
-}) => (
-  <div className="card px-3 py-2.5 flex flex-col gap-1.5">
-    <div className="flex justify-between items-start">
-      <div className="text-[11px] font-bold text-erl-text-primary leading-tight flex-1 mr-2">{item.name}</div>
-      <span className="pill text-[7px] px-1.5 py-[2px] tracking-wider uppercase flex-shrink-0"
-        style={{ color: stockStatusColor, background: "rgba(0,0,0,0.3)" }}>
-        {stockStatus === "out" ? "OUT" : stockStatus === "low" ? "LOW" : "OK"}
-      </span>
-    </div>
+}) => {
+  // Progress bar: how full is stock relative to 2x threshold (capped)
+  const maxStock = Math.max(item.low_stock_threshold * 2, 1);
+  const fillPct = Math.min(100, Math.max(0, (item.stock / maxStock) * 100));
 
-    <div className="text-[9px] text-erl-accent-muted tracking-wide">{item.category}</div>
-
-    {/* Stock row with quick +/- buttons */}
-    <div className="flex items-center gap-1.5 mt-0.5">
-      <button onClick={() => onAdjustStock(-1)} className="btn-ghost w-[26px] h-[26px] text-base flex items-center justify-center border border-erl-border-default rounded-md p-0">−</button>
-      <div className="flex-1 text-center">
-        <span className="text-lg font-bold" style={{ color: stockStatusColor }}>{item.stock}</span>
-        <span className="text-[10px] text-erl-muted ml-1">{item.unit}</span>
+  return (
+    <div className={`
+      group rounded-2xl border transition-all duration-200 overflow-hidden
+      ${stockStatus === "out"
+        ? "border-erl-danger/30 bg-erl-danger/5"
+        : stockStatus === "low"
+          ? "border-erl-accent/25 bg-erl-surface"
+          : "border-erl-border-subtle bg-erl-surface/60"
+      }
+      hover:border-erl-border-medium hover:shadow-md
+    `}>
+      {/* Card header */}
+      <div className="flex items-start justify-between px-4 pt-4 pb-2">
+        <div className="flex-1 min-w-0 mr-3">
+          <div className="text-[13px] font-bold text-erl-text-primary leading-tight truncate">{item.name}</div>
+          <div className="text-[11px] text-erl-accent-muted tracking-wide mt-0.5">{item.category} · {item.id}</div>
+        </div>
+        <span className={`
+          pill text-[10px] px-2.5 py-1 flex-shrink-0 tracking-wider
+          ${stockStatus === "out"
+            ? "bg-erl-danger/15 text-erl-danger border-erl-danger/30"
+            : stockStatus === "low"
+              ? "bg-erl-accent/15 text-erl-accent border-erl-accent/30"
+              : "bg-erl-success/10 text-erl-success border-erl-success/20"
+          }
+        `}>
+          {stockStatus === "out" ? "OUT" : stockStatus === "low" ? "LOW" : "IN STOCK"}
+        </span>
       </div>
-      <button onClick={() => onAdjustStock(1)} className="btn-ghost w-[26px] h-[26px] text-base text-erl-accent flex items-center justify-center border border-erl-border-default rounded-md p-0">+</button>
-    </div>
 
-    <div className="text-[8.5px] text-erl-text-faint tracking-wide">
-      Alert below: {item.low_stock_threshold} {item.unit}
-    </div>
+      {/* Stock display */}
+      <div className="px-4 pb-2">
+        <div className="flex items-baseline gap-1.5 mb-2">
+          <span className="text-2xl font-bold tabular-nums leading-none" style={{ color: stockStatusColor }}>
+            {item.stock}
+          </span>
+          <span className="text-[12px] text-erl-text-muted">{item.unit}</span>
+          <span className="text-[11px] text-erl-text-faint ml-auto">
+            Alert at {item.low_stock_threshold}
+          </span>
+        </div>
 
-    {(item.purchase_cost != null || item.unit_cost != null) && (
-      <div className="flex gap-2 mt-0.5">
-        {item.purchase_cost != null && (
-          <div className="text-[8.5px] text-erl-muted">
-            Cost: <span className="text-erl-secondary font-semibold">₱{Number(item.purchase_cost).toFixed(2)}</span>
-          </div>
-        )}
-        {item.unit_cost != null && (
-          <div className="text-[8.5px] text-erl-muted">
-            Unit: <span className="text-erl-secondary font-semibold">₱{Number(item.unit_cost).toFixed(2)}</span>
-          </div>
-        )}
-      </div>
-    )}
-
-    {deleteConfirm ? (
-      <div className="flex flex-col gap-[5px] mt-1">
-        <div className="text-[9px] text-erl-danger text-center font-semibold">Delete this item?</div>
-        <div className="flex gap-[5px]">
-          <button onClick={onCancelDelete} className="btn btn-outline flex-1 text-[8px] py-1.5 rounded-md">No</button>
-          <button onClick={onConfirmDelete} className="btn btn-danger flex-1 text-[8px] py-1.5 rounded-md bg-erl-danger border-none text-white">Yes, Delete</button>
+        {/* Stock progress bar */}
+        <div className="h-1.5 rounded-full bg-erl-border-subtle/60 overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${fillPct}%`,
+              background: stockStatus === "out"
+                ? "var(--danger)"
+                : stockStatus === "low"
+                  ? "linear-gradient(90deg, var(--accent), var(--accent-light))"
+                  : "var(--success)",
+            }}
+          />
         </div>
       </div>
-    ) : (
-      <div className="flex gap-1 mt-1">
-        <button onClick={onManualAdjust} className="btn-ghost flex-1 text-[7px] py-[5px] rounded-lg border border-erl-border-medium tracking-wider uppercase text-erl-accent">
-          + Restock
-        </button>
-        <button onClick={onShowHistory} className="btn-ghost flex-1 text-[7px] py-[5px] rounded-lg border border-erl-border-medium tracking-wider uppercase">
-          History
-        </button>
-        <button onClick={onEdit} className="btn-ghost flex-[0.7] text-[7px] py-[5px] rounded-lg border border-erl-border-medium tracking-wider uppercase">
-          Edit
-        </button>
-        <button onClick={onDelete} className="btn-ghost px-2 py-[5px] rounded-lg border border-erl-danger-border text-erl-danger text-[8px] tracking-wide">
-          ✕
-        </button>
+
+      {/* Quick +/- controls */}
+      <div className="flex items-center gap-2 px-4 py-2">
+        <button
+          onClick={() => onAdjustStock(-1)}
+          className="w-8 h-8 rounded-lg border border-erl-border-default bg-erl-surface text-erl-text-secondary flex items-center justify-center text-base cursor-pointer transition-all hover:border-erl-border-medium hover:bg-erl-elevated hover:text-erl-text-primary active:scale-95"
+        >−</button>
+        <button
+          onClick={() => onAdjustStock(1)}
+          className="w-8 h-8 rounded-lg border border-erl-border-default bg-erl-surface text-erl-accent flex items-center justify-center text-base cursor-pointer transition-all hover:border-erl-accent/40 hover:bg-erl-accent/10 active:scale-95"
+        >+</button>
+
+        {/* Cost info */}
+        {(item.purchase_cost != null || item.unit_cost != null) && (
+          <div className="flex gap-3 ml-auto text-[11px] text-erl-text-faint">
+            {item.purchase_cost != null && (
+              <span>Purchase <span className="text-erl-text-secondary font-semibold">₱{Number(item.purchase_cost).toFixed(2)}</span></span>
+            )}
+            {item.unit_cost != null && (
+              <span>Unit <span className="text-erl-text-secondary font-semibold">₱{Number(item.unit_cost).toFixed(2)}</span></span>
+            )}
+          </div>
+        )}
       </div>
-    )}
-  </div>
-);
 
-// Form Field
+      {/* Divider + Actions */}
+      {deleteConfirm ? (
+        <div className="border-t border-erl-danger/20 bg-erl-danger/5 px-4 py-3">
+          <div className="text-[12px] text-erl-danger text-center font-semibold mb-2">Delete this item?</div>
+          <div className="flex gap-2">
+            <button onClick={onCancelDelete} className="btn btn-outline flex-1 text-[11px] py-2 rounded-lg">
+              Cancel
+            </button>
+            <button onClick={onConfirmDelete} className="btn btn-danger flex-1 text-[11px] py-2 rounded-lg !bg-erl-danger !text-white !border-erl-danger">
+              Delete
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="border-t border-erl-border-subtle/60 px-3 py-2.5 flex gap-1.5">
+          <button onClick={onManualAdjust} className="flex-1 py-[7px] rounded-lg text-[11px] font-semibold cursor-pointer transition-all border border-erl-border-medium text-erl-accent bg-transparent hover:bg-erl-accent/10 hover:border-erl-accent/40">
+            + Restock
+          </button>
+          <button onClick={onShowHistory} className="flex-1 py-[7px] rounded-lg text-[11px] font-semibold cursor-pointer transition-all border border-erl-border-default text-erl-text-secondary bg-transparent hover:bg-erl-surface hover:border-erl-border-medium hover:text-erl-text-primary">
+            History
+          </button>
+          <button onClick={onEdit} className="py-[7px] px-3 rounded-lg text-[11px] font-semibold cursor-pointer transition-all border border-erl-border-default text-erl-text-secondary bg-transparent hover:bg-erl-surface hover:border-erl-border-medium hover:text-erl-text-primary">
+            Edit
+          </button>
+          <button onClick={onDelete} className="py-[7px] px-2.5 rounded-lg text-[11px] cursor-pointer transition-all border border-erl-danger-border text-erl-danger bg-transparent hover:bg-erl-danger/10">
+            ✕
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
-const FormField: React.FC<{ label: string; hint?: string; children: React.ReactNode }> = ({ label, hint, children }) => (
-  <div>
-    <div className="text-[9px] text-erl-accent-muted tracking-widest mb-[5px] uppercase font-bold">
+/** Form section wrapper with label */
+const FormSection: React.FC<{ label: string; hint?: string; children: React.ReactNode }> = ({ label, hint, children }) => (
+  <div className="flex flex-col gap-1.5">
+    <div className="text-[11px] text-erl-text-muted tracking-wider uppercase font-semibold">
       {label}
-      {hint && <span className="font-normal text-erl-text-faint normal-case ml-1">{hint}</span>}
+      {hint && <span className="font-normal text-erl-text-faint normal-case ml-1.5 not-italic">{hint}</span>}
     </div>
     {children}
   </div>

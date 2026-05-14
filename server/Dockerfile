@@ -9,8 +9,8 @@ RUN apk add --no-cache dumb-init
 # Copy package files first for layer caching
 COPY package*.json ./
 
-# Clean install — bcryptjs is pure JS, no native compilation needed
-RUN npm install --no-package-lock && npm cache clean --force
+# Install dependencies deterministically
+RUN npm ci --only=production && npm cache clean --force
 
 # Copy application code
 COPY . .

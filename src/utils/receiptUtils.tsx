@@ -8,11 +8,17 @@ function loadCompanySettings() {
     const s = localStorage.getItem('erlbrew_company_settings');
     if (s) {
       const data = JSON.parse(s);
+      const addr = data.company_address || '';
+      // Split long addresses into two lines
+      const addr1 = addr.length > 30 ? addr.substring(0, addr.lastIndexOf(',', 30)).trim() : addr;
+      const addr2 = addr.length > 30 ? addr.substring(addr.lastIndexOf(',', 30) + 1).trim() : '';
+
       return {
         name: data.company_name || 'ERLBREW CAFE',
-        addr1: data.company_address || 'Unit 1, Ground Floor',
-        addr2: data.company_address2 || '123 Main St, BGC, Taguig',
+        addr1: addr1 || 'Unit 1, Ground Floor',
+        addr2: addr2 || (addr.length <= 30 ? '' : '123 Main St, BGC, Taguig'),
         tel: data.company_phone || '(02) 8888-8888',
+        logo: data.company_logo || '',
         tin: '000-000-000-000',
         birCorNo: 'COR-2024-00-00000',
         atpNo: 'ATP-2024-00-00000',
@@ -27,8 +33,9 @@ function loadCompanySettings() {
   return {
     name: 'ERLBREW CAFE',
     addr1: 'Unit 1, Ground Floor',
-    addr2: '123 Main St, BGC, Taguig',
+    addr2: '',
     tel: '(02) 8888-8888',
+    logo: '',
     tin: '000-000-000-000',
     birCorNo: 'COR-2024-00-00000',
     atpNo: 'ATP-2024-00-00000',
@@ -40,7 +47,23 @@ function loadCompanySettings() {
   };
 }
 
-export function getStoreInfo() {
+export interface StoreInfo {
+  name: string;
+  addr1: string;
+  addr2: string;
+  tel: string;
+  logo: string;
+  tin: string;
+  birCorNo: string;
+  atpNo: string;
+  atpDate: string;
+  serial: string;
+  ptuNo: string;
+  machineNo: string;
+  posAccNo: string;
+}
+
+export function getStoreInfo(): StoreInfo {
   return loadCompanySettings();
 }
 
@@ -73,7 +96,7 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
   // 1. Store Header
   if (settings.showStoreHeader) {
     lines.push(padCenter(STORE.name));
-    lines.push(padCenter(STORE.addr1));
+    if (STORE.addr1) lines.push(padCenter(STORE.addr1));
     if (STORE.addr2) lines.push(padCenter(STORE.addr2));
     if (STORE.tel) lines.push(padCenter(`Tel: ${STORE.tel}`));
     lines.push(ln("="));
@@ -81,7 +104,7 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
 
   // 2. BIR Info
   if (settings.showBIRInfo) {
-    lines.push(padCenter("OFFICIAL RECEIPT"));
+    lines.push(padCenter("ACKNOWLEDGMENT RECEIPT"));
     lines.push(ln("="));
     lines.push(`ATP No  : ${STORE.atpNo}`);
     lines.push(`ATP Date: ${STORE.atpDate}`);
@@ -105,11 +128,13 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
   lines.push("QTY  ITEM              AMOUNT");
   lines.push(ln("-"));
   order.items.forEach((ci) => {
+    const modifierTotal = (ci.modifiers || []).reduce((s, m) => s + m.price, 0);
+    const lineTotal = (ci.item.price + modifierTotal) * ci.qty;
     const qtyStr = String(ci.qty).padStart(3);
-    const amtStr = formatCurrency(ci.item.price * ci.qty).replace("₱", "").trim();
+    const amtStr = formatCurrency(lineTotal).replace("₱", "").trim();
     const name = ci.item.name.length > 17 ? ci.item.name.substring(0, 16) + "…" : ci.item.name;
     lines.push(`${qtyStr}  ${padRight(name, 17)} ${padLeft(amtStr, 8)}`);
-    if (ci.qty > 1) lines.push(`     @ ${formatCurrency(ci.item.price).replace("₱", "").trim()} ea`);
+    if (ci.qty > 1) lines.push(`     @ ${formatCurrency(ci.item.price + modifierTotal).replace("₱", "").trim()} ea`);
     if (ci.modifiers && ci.modifiers.length > 0) {
       ci.modifiers.forEach(m => {
         const modLine = `     + ${m.name}${m.price > 0 ? ' (' + formatCurrency(m.price).replace("₱", "").trim() + ')' : ''}`;
@@ -132,24 +157,28 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
   // 6. Payment
   const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : "E-WALLET";
   lines.push(`Payment : ${payLabel}`);
+  if (order.payMethod === "ewallet" && order.referenceNumber) {
+    lines.push(`Ref No  : ${order.referenceNumber}`);
+  }
   if (order.payMethod === "cash" && order.cashTendered) {
     lines.push(`${padRight("Tendered:", W - 9)}${padLeft(formatCurrency(order.cashTendered).replace("₱", "").trim(), 9)}`);
     lines.push(`${padRight("Change:", W - 9)}${padLeft(formatCurrency(order.cashTendered - order.total).replace("₱", "").trim(), 9)}`);
   }
+
+  // 7. QR Code (optional)
   if (settings.showQRCode) {
     lines.push(ln("-"));
     lines.push(padCenter("[ QR CODE ]"));
     lines.push(padCenter("Scan to Pay"));
   }
 
+  // 8. Footer
   if (settings.showCustomerCopy) {
     lines.push(ln("-"));
     lines.push(padCenter("Thank you for dining with us!"));
     lines.push(padCenter("Please come again!"));
     lines.push(" ");
     lines.push(padCenter("** CUSTOMER COPY **"));
-    lines.push(" ");
-    lines.push(padCenter(`Min. Wage Dist.: ${formatCurrency(0)}`));
   }
 
   lines.push(" ");
@@ -204,7 +233,7 @@ export function renderReceiptLines(order: Order, settings: PrintSettings): React
         color: isDouble ? "#222" : "#111",
         fontWeight: isDouble ? 700 : 400,
         padding: isDouble ? "2px 0" : "0",
-        textAlign: isCentered ? "center" : "left",
+        textAlign: isCentered ? "center" as const : "left" as const,
         letterSpacing: isDouble ? 1 : 0,
       }}>
         {line}

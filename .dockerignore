@@ -2,6 +2,7 @@
 # NEVER include .env in Docker image — pass via env_file in docker-compose
 server/.env
 server/node_modules
+server/.env.*
 node_modules
 dist
 .git
@@ -10,3 +11,6 @@ dist
 *.md
 .env*
 .github
+# Don't include server source in frontend build context
+server/src
+server/uploads

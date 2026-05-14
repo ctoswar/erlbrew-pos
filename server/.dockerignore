@@ -1,0 +1,8 @@
+# ── Erlbrew POS Server .dockerignore ────────────────────────────────────────
+node_modules
+.env
+.env.*
+*.log
+*.err
+.git
+uploads/

@@ -9,14 +9,13 @@ services:
     ports:
       - "3001:3001"                # Still accessible on host for dev/debug
     env_file:
-      - ./server/.env
+      - ./server/.env              # All secrets come from .env — no hardcoded credentials
     environment:
       PORT: 3001
       # CORS: allow the frontend container by Docker DNS name
       # Also allow by IP range for direct tablet access on LAN
-      CORS_ORIGINS: http://erlbrew-pos,http://localhost,http://192.168.75.101:3004
-      # MySQL is on the Docker host bridge — reachable via host IP
-      DATABASE_URL: mysql://root:gameclub11@192.168.75.101:3306/erlbrew_pos
+      # Override or append in your .env as needed
+      CORS_ORIGINS: http://erlbrew-pos,http://localhost:3000,http://localhost:3004
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/menu"]
       interval: 30s

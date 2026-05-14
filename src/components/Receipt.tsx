@@ -1,6 +1,8 @@
 import React, { useRef, useEffect } from "react";
 import { Order, CartItem } from "../types";
 import { formatCurrency } from "../utils";
+import { getStoreInfo } from "../utils/receiptUtils";
+import { loadPrintSettings } from "./AdminPrintSettings";
 
 interface Props {
   order: Order;
@@ -11,44 +13,6 @@ const PAPER_MM = 80;
 const FONT = "'Courier New', 'Lucida Console', monospace";
 const FONT_SIZE = 11;
 const W = 32;
-
-// Load company settings from localStorage (set by AdminPrintSettings)
-function getStoreInfo() {
-  try {
-    const s = localStorage.getItem('erlbrew_company_settings');
-    if (s) {
-      const data = JSON.parse(s);
-      return {
-        name: data.company_name || 'ERLBREW CAFE',
-        addr1: data.company_address || 'Unit 1, Ground Floor',
-        addr2: data.company_address2 || '123 Main St, BGC, Taguig',
-        tel: data.company_phone || '(02) 8888-8888',
-        tin: '000-000-000-000',
-        birCorNo: 'COR-2024-00-00000',
-        atpNo: 'ATP-2024-00-00000',
-        atpDate: 'Jan 01, 2024',
-        serial: 'ERL-2024-00001',
-        ptuNo: 'PTU-2024-00-00000',
-        machineNo: 'POS-01',
-        posAccNo: 'ACC-2024-0001',
-      };
-    }
-  } catch {}
-  return {
-    name: 'ERLBREW CAFE',
-    addr1: 'Unit 1, Ground Floor',
-    addr2: '123 Main St, BGC, Taguig',
-    tel: '(02) 8888-8888',
-    tin: '000-000-000-000',
-    birCorNo: 'COR-2024-00-00000',
-    atpNo: 'ATP-2024-00-00000',
-    atpDate: 'Jan 01, 2024',
-    serial: 'ERL-2024-00001',
-    ptuNo: 'PTU-2024-00-00000',
-    machineNo: 'POS-01',
-    posAccNo: 'ACC-2024-0001',
-  };
-}
 
 function padCenter(text: string, width = W): string {
   const s = text.length <= width ? text : text.substring(0, width - 2) + "..";
@@ -66,6 +30,7 @@ function ln(char = "-") { return char.repeat(W); }
 
 export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   const printRef = useRef<HTMLDivElement>(null);
+  const settings = loadPrintSettings();
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-PH", { month: "short", day: "2-digit", year: "numeric" });
@@ -79,24 +44,34 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   const lines: string[] = [];
   const STORE = getStoreInfo();
 
+  // Resolve address lines
+  const addressLines = STORE.addr1
+    ? STORE.addr1.length > 30
+      ? [STORE.addr1.substring(0, STORE.addr1.lastIndexOf(',', 30)).trim(), STORE.addr1.substring(STORE.addr1.lastIndexOf(',', 30) + 1).trim()]
+      : [STORE.addr1]
+    : [];
+
   // 1. Store Header
-  lines.push(padCenter(STORE.name));
-  lines.push(padCenter(STORE.addr1));
-  if (STORE.addr2) lines.push(padCenter(STORE.addr2));
-  if (STORE.tel) lines.push(padCenter(`Tel: ${STORE.tel}`));
-  lines.push(ln("="));
+  if (settings.showStoreHeader) {
+    lines.push(padCenter(STORE.name));
+    addressLines.forEach(line => lines.push(padCenter(line)));
+    if (STORE.tel) lines.push(padCenter(`Tel: ${STORE.tel}`));
+    lines.push(ln("="));
+  }
 
   // 2. BIR Accreditations
-  lines.push(padCenter("OFFICIAL RECEIPT"));
-  lines.push(ln("="));
-  lines.push(`ATP No  : ${STORE.atpNo}`);
-  lines.push(`ATP Date: ${STORE.atpDate}`);
-  lines.push(`COR No  : ${STORE.birCorNo}`);
-  lines.push(`Serial  : ${STORE.serial}`);
-  lines.push(`PTU No  : ${STORE.ptuNo}`);
-  lines.push(`Machine : ${STORE.machineNo}`);
-  lines.push(`Accr No : ${STORE.posAccNo}`);
-  lines.push(ln("-"));
+  if (settings.showBIRInfo) {
+    lines.push(padCenter("ACKNOWLEDGMENT RECEIPT"));
+    lines.push(ln("="));
+    lines.push(`ATP No  : ${STORE.atpNo}`);
+    lines.push(`ATP Date: ${STORE.atpDate}`);
+    lines.push(`COR No  : ${STORE.birCorNo}`);
+    lines.push(`Serial  : ${STORE.serial}`);
+    lines.push(`PTU No  : ${STORE.ptuNo}`);
+    lines.push(`Machine : ${STORE.machineNo}`);
+    lines.push(`Accr No : ${STORE.posAccNo}`);
+    lines.push(ln("-"));
+  }
 
   // 3. Transaction Info
   lines.push(`Date: ${dateStr}`);
@@ -157,12 +132,22 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
     lines.push(`${padRight("Change:", 22)}${padLeft(formatCurrency(tendered - total).replace("₱","").trim(), 9)}`);
   }
 
-  // 7. Footer
-  lines.push(ln("-"));
-  lines.push(padCenter("Thank you for dining with us!"));
-  lines.push(padCenter("Please come again!"));
-  lines.push(" ");
-  lines.push(padCenter("** CUSTOMER COPY **"));
+  // 7. QR Code (optional)
+  if (settings.showQRCode) {
+    lines.push(ln("-"));
+    lines.push(padCenter("[ QR CODE ]"));
+    lines.push(padCenter("Scan to Pay"));
+  }
+
+  // 8. Footer
+  if (settings.showCustomerCopy) {
+    lines.push(ln("-"));
+    lines.push(padCenter("Thank you for dining with us!"));
+    lines.push(padCenter("Please come again!"));
+    lines.push(" ");
+    lines.push(padCenter("** CUSTOMER COPY **"));
+  }
+
   lines.push(" ");
   lines.push(" ");
 

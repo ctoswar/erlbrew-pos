@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { formatCurrency } from "../utils";
-import { apiGet } from "../utils/api";
+import { apiAdminGet, getSalesReport, getStaffReport, DailySalesReport, SalesReportSummary, StaffReport } from "../utils/api";
 import {
   LineChart,
   Line,
@@ -9,16 +9,12 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  BarChart,
+  Bar,
+  Legend,
 } from "recharts";
 
 type DateRange = "today" | "this_week" | "this_month" | "last_month" | "last_2_weeks" | "custom" | "jan" | "feb" | "mar" | "apr" | "may" | "jun" | "jul" | "aug" | "sep" | "oct" | "nov" | "dec" | "year_to_date";
-
-interface RevenueDataPoint {
-  date: string;
-  revenue: number;
-  orders: number;
-  profit: number;
-}
 
 export const AdminReports: React.FC = () => {
   const [activeReport, setActiveReport] = useState<"sales" | "inventory" | "staff">("sales");
@@ -31,21 +27,22 @@ export const AdminReports: React.FC = () => {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [loading, setLoading] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
-  const [printType, setPrintType] = useState<"summary" | "items" | "stock">("summary");
+  const [printType, setPrintType] = useState<"summary" | "items" | "staff" | "stock">("summary");
 
   // Sales report data
-  const [salesData, setSalesData] = useState<RevenueDataPoint[]>([]);
-  const [salesSummary, setSalesSummary] = useState({ totalRevenue: 0, totalOrders: 0, avgOrder: 0, totalCOGS: 0, grossProfit: 0 });
+  const [salesData, setSalesData] = useState<DailySalesReport[]>([]);
+  const [salesSummary, setSalesSummary] = useState<SalesReportSummary>({ totalRevenue: 0, totalOrders: 0, avgOrder: 0, totalCOGS: 0, grossProfit: 0 });
 
   // Inventory report data
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [inventoryHistory, setInventoryHistory] = useState<any[]>([]);
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState<string | null>(null);
 
   // Staff report data
-  const [staffStats, setStaffStats] = useState<any[]>([]);
+  const [staffStats, setStaffStats] = useState<StaffReport[]>([]);
 
   const fmt = (d: Date) => d.toISOString().split("T")[0];
 
-  // Use refs to avoid circular dependency with getDateRange
   const customStartRef = useRef(startDate);
   const customEndRef = useRef(endDate);
 
@@ -94,7 +91,6 @@ export const AdminReports: React.FC = () => {
         const startOfYear = new Date(currentYear, 0, 1);
         return { start: fmt(startOfYear), end: fmt(today) };
       }
-      // Monthly filters - January (0) to December (11)
       case "jan": return getMonthDates(0);
       case "feb": return getMonthDates(1);
       case "mar": return getMonthDates(2);
@@ -114,7 +110,6 @@ export const AdminReports: React.FC = () => {
     }
   }, [dateRange]);
 
-  // Update start/end when preset changes
   useEffect(() => {
     if (dateRange !== "custom") {
       const { start, end } = getDateRange();
@@ -127,33 +122,9 @@ export const AdminReports: React.FC = () => {
     const { start, end } = getDateRange();
     setLoading(true);
     try {
-      // Use /orders/history which supports start/end filtering (returns { orders: [], total })
-      const result = await apiGet<any>(`/orders/history?start=${start}&end=${end}`);
-      const orders = Array.isArray(result) ? result : (result.orders || []);
-
-      // Group by date
-      const byDate: Record<string, RevenueDataPoint> = {};
-      orders.forEach((o: any) => {
-        const date = new Date(o.created_at || o.createdAt).toISOString().split("T")[0];
-        if (!byDate[date]) byDate[date] = { date, revenue: 0, orders: 0, profit: 0 };
-        byDate[date].revenue += Number(o.total) || 0;
-        byDate[date].orders += 1;
-        // Rough estimate
-        byDate[date].profit += (Number(o.total) || 0) * 0.3;
-      });
-
-      const data = Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
-      setSalesData(data);
-
-      const totalRevenue = data.reduce((s, d) => s + d.revenue, 0);
-      const totalOrders = data.reduce((s, d) => s + d.orders, 0);
-      setSalesSummary({
-        totalRevenue,
-        totalOrders,
-        avgOrder: totalOrders > 0 ? totalRevenue / totalOrders : 0,
-        totalCOGS: totalRevenue * 0.3,
-        grossProfit: totalRevenue * 0.7,
-      });
+      const result = await getSalesReport(start, end);
+      setSalesData(result.data);
+      setSalesSummary(result.summary);
     } catch (e) {
       console.error("Failed to fetch sales data", e);
     } finally {
@@ -164,7 +135,7 @@ export const AdminReports: React.FC = () => {
   const fetchInventoryData = useCallback(async () => {
     setLoading(true);
     try {
-      const items = await apiGet<any[]>("/inventory");
+      const items = await apiAdminGet<any[]>("/inventory");
       setInventoryItems(items);
     } catch (e) {
       console.error("Failed to fetch inventory", e);
@@ -173,32 +144,27 @@ export const AdminReports: React.FC = () => {
     }
   }, []);
 
+  const fetchInventoryHistory = useCallback(async (itemId?: string) => {
+    try {
+      const { start, end } = getDateRange();
+      const qs = new URLSearchParams();
+      qs.append("start", start);
+      qs.append("end", end);
+      if (itemId) qs.append("itemId", itemId);
+      qs.append("limit", "500");
+      const rows = await apiAdminGet<any[]>(`/inventory/movements?${qs.toString()}`);
+      setInventoryHistory(rows || []);
+    } catch (e) {
+      console.error("Failed to fetch inventory history", e);
+    }
+  }, [getDateRange]);
+
   const fetchStaffData = useCallback(async () => {
     const { start, end } = getDateRange();
     setLoading(true);
     try {
-      // Get orders and group by staff — use /orders/history for date filtering
-      const result = await apiGet<any>(`/orders/history?start=${start}&end=${end}`);
-      const orders = Array.isArray(result) ? result : (result.orders || []);
-      const staffMap: Record<string, { name: string; orders: number; revenue: number }> = {};
-
-      orders.forEach((o: any) => {
-        const staffName = o.staff?.name || "Unknown";
-        if (!staffMap[staffName]) staffMap[staffName] = { name: staffName, orders: 0, revenue: 0 };
-        staffMap[staffName].orders += 1;
-        staffMap[staffName].revenue += Number(o.total) || 0;
-      });
-
-      // Also get time records
-      const timeRecords = await apiGet<any[]>(`/clock?start=${start}&end=${end}`).catch(() => []);
-
-      setStaffStats(
-        Object.values(staffMap).map(s => {
-          const staffTime = timeRecords.filter((t: any) => t.staff_name === s.name);
-          const totalHours = staffTime.reduce((sum: number, t: any) => sum + (Number(t.total_hours) || 0), 0);
-          return { ...s, hoursWorked: totalHours };
-        }).sort((a, b) => b.revenue - a.revenue)
-      );
+      const result = await getStaffReport(start, end);
+      setStaffStats(result);
     } catch (e) {
       console.error("Failed to fetch staff data", e);
     } finally {
@@ -208,9 +174,52 @@ export const AdminReports: React.FC = () => {
 
   useEffect(() => {
     if (activeReport === "sales") fetchSalesData();
-    else if (activeReport === "inventory") fetchInventoryData();
+    else if (activeReport === "inventory") { fetchInventoryData(); fetchInventoryHistory(selectedInventoryItem || undefined); }
     else if (activeReport === "staff") fetchStaffData();
-  }, [activeReport, fetchSalesData, fetchInventoryData, fetchStaffData]);
+  }, [activeReport, fetchSalesData, fetchInventoryData, fetchStaffData, selectedInventoryItem]);
+
+  // Export CSV
+  const exportCSV = (filename: string, rows: string[][]) => {
+    const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportSalesCSV = () => {
+    const rows = [
+      ["Date", "Orders", "Revenue", "COGS", "Profit"],
+      ...salesData.map(d => [d.date, String(d.orders), String(d.revenue), String(d.cogs), String(d.profit)]),
+      ["", "", "", "", ""],
+      ["Summary", "", "", "", ""],
+      ["Total Revenue", String(salesSummary.totalRevenue), "", "", ""],
+      ["Total Orders", String(salesSummary.totalOrders), "", "", ""],
+      ["Avg Order", String(salesSummary.avgOrder), "", "", ""],
+      ["Total COGS", String(salesSummary.totalCOGS), "", "", ""],
+      ["Gross Profit", String(salesSummary.grossProfit), "", "", ""],
+    ];
+    exportCSV(`sales-report-${startDate}-to-${endDate}.csv`, rows);
+  };
+
+  const exportStaffCSV = () => {
+    const rows = [
+      ["Staff", "Orders", "Revenue", "Avg/Order", "Hours Worked"],
+      ...staffStats.map(s => [s.name, String(s.orders), String(s.revenue), s.orders > 0 ? String(s.revenue / s.orders) : "0", String(s.hoursWorked.toFixed(1))]),
+    ];
+    exportCSV(`staff-report-${startDate}-to-${endDate}.csv`, rows);
+  };
+
+  const exportInventoryCSV = () => {
+    const rows = [
+      ["Item", "Category", "Stock", "Unit", "Purchase Cost", "Unit Cost", "Low Stock Threshold"],
+      ...inventoryItems.map(i => [i.name, i.category, String(i.stock), i.unit, String(i.purchase_cost ?? ""), String(i.unit_cost ?? ""), String(i.low_stock_threshold ?? 10)]),
+    ];
+    exportCSV(`inventory-report-${new Date().toISOString().split("T")[0]}.csv`, rows);
+  };
 
   const lowStockItems = inventoryItems.filter((i: any) => i.stock <= (i.low_stock_threshold || 10));
   const outOfStockItems = inventoryItems.filter((i: any) => i.stock <= 0);
@@ -231,13 +240,18 @@ export const AdminReports: React.FC = () => {
             </button>
           ))}
         </div>
-        {/* Print Button */}
-        <button onClick={() => setShowPrintModal(true)} className={`
-          px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase
-          border-[1.5px] border-erl-accent bg-erl-accent/10 text-erl-accent
-        `}>
-          🖨 Print
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => {
+            if (activeReport === "sales") exportSalesCSV();
+            else if (activeReport === "staff") exportStaffCSV();
+            else exportInventoryCSV();
+          }} className="px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-erl-success bg-erl-success/10 text-erl-success">
+            📥 Export CSV
+          </button>
+          <button onClick={() => setShowPrintModal(true)} className="px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-erl-accent bg-erl-accent/10 text-erl-accent">
+            🖨 Print
+          </button>
+        </div>
       </div>
 
       {/* Date Range Selector (only for Sales and Staff reports) */}
@@ -260,7 +274,6 @@ export const AdminReports: React.FC = () => {
               </button>
             ))}
           </div>
-          {/* Monthly Filter */}
           <div className="flex items-center gap-3 flex-wrap">
             <div className="text-[9px] text-erl-muted tracking-wide">MONTH:</div>
             {(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"] as const).map((month) => (
@@ -278,7 +291,6 @@ export const AdminReports: React.FC = () => {
               Year to Date
             </button>
           </div>
-          {/* Custom Date Range */}
           {dateRange === "custom" && (
             <div className="flex items-center gap-2">
               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
@@ -300,22 +312,25 @@ export const AdminReports: React.FC = () => {
             {/* SALES REPORT */}
             {activeReport === "sales" && (
               <div>
-                {/* Line Chart */}
+                {/* Charts */}
                 <div className="bg-erl-surface rounded-xl p-4 mb-4">
                   <div className="text-[10px] text-erl-muted tracking-widest uppercase mb-3">
-                    Revenue Over Time
+                    Revenue vs Profit
                   </div>
                   {salesData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={200}>
+                    <ResponsiveContainer width="100%" height={220}>
                       <LineChart data={salesData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
                         <XAxis dataKey="date" tick={{ fontSize: 8, fill: "var(--text-muted)" }} />
-                        <YAxis tick={{ fontSize: 8, fill: "var(--text-muted)" }} tickFormatter={(v) => `₱${v.toLocaleString()}`} />
+                        <YAxis tick={{ fontSize: 8, fill: "var(--text-muted)" }} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
                         <Tooltip
-                          formatter={(value: any) => [formatCurrency(value), ""]}
+                          formatter={(value: any, name: any) => [formatCurrency(value), name]}
                           contentStyle={{ background: "var(--bg-elevated)", border: "1px solid var(--border-medium)", borderRadius: 8, fontSize: 10 }}
                         />
-                        <Line type="monotone" dataKey="revenue" stroke="var(--gold)" strokeWidth={2} dot={{ fill: "var(--gold)", r: 3 }} name="Revenue" />
+                        <Legend wrapperStyle={{ fontSize: 10 }} />
+                        <Line type="monotone" dataKey="revenue" stroke="var(--gold)" strokeWidth={2} dot={{ fill: "var(--gold)", r: 2 }} name="Revenue" />
+                        <Line type="monotone" dataKey="profit" stroke="var(--success)" strokeWidth={2} dot={{ fill: "var(--success)", r: 2 }} name="Profit" />
+                        <Line type="monotone" dataKey="cogs" stroke="var(--danger)" strokeWidth={1.5} dot={{ fill: "var(--danger)", r: 2 }} name="COGS" strokeDasharray="4 4" />
                       </LineChart>
                     </ResponsiveContainer>
                   ) : (
@@ -329,9 +344,9 @@ export const AdminReports: React.FC = () => {
                     { label: "Total Revenue", value: formatCurrency(salesSummary.totalRevenue), color: "text-erl-accent" },
                     { label: "Total Orders", value: String(salesSummary.totalOrders), color: "text-erl-text-primary" },
                     { label: "Avg Order", value: formatCurrency(salesSummary.avgOrder), color: "text-erl-success" },
-                    { label: "COGS (est.)", value: formatCurrency(salesSummary.totalCOGS), color: "text-erl-secondary" },
+                    { label: "COGS", value: formatCurrency(salesSummary.totalCOGS), color: "text-erl-danger" },
                     { label: "Gross Profit", value: formatCurrency(salesSummary.grossProfit), color: salesSummary.grossProfit >= 0 ? "text-erl-success" : "text-erl-danger" },
-                    { label: "Date Range", value: `${startDate} to ${endDate}`, color: "text-erl-muted" },
+                    { label: "Margin", value: salesSummary.totalRevenue > 0 ? `${((salesSummary.grossProfit / salesSummary.totalRevenue) * 100).toFixed(1)}%` : "0%", color: "text-erl-muted" },
                   ].map(({ label, value, color }) => (
                     <div key={label} className="bg-erl-surface rounded-[10px] p-3">
                       <div className={labelStyle}>{label}</div>
@@ -352,6 +367,8 @@ export const AdminReports: React.FC = () => {
                           <th className="px-3 py-2 text-left text-erl-muted font-semibold">Date</th>
                           <th className="px-3 py-2 text-right text-erl-muted font-semibold">Orders</th>
                           <th className="px-3 py-2 text-right text-erl-muted font-semibold">Revenue</th>
+                          <th className="px-3 py-2 text-right text-erl-muted font-semibold">COGS</th>
+                          <th className="px-3 py-2 text-right text-erl-muted font-semibold">Profit</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -360,6 +377,8 @@ export const AdminReports: React.FC = () => {
                             <td className="px-3 py-2 text-erl-secondary">{d.date}</td>
                             <td className="px-3 py-2 text-right text-erl-muted">{d.orders}</td>
                             <td className="px-3 py-2 text-right text-erl-accent font-semibold">{formatCurrency(d.revenue)}</td>
+                            <td className="px-3 py-2 text-right text-erl-danger">{formatCurrency(d.cogs)}</td>
+                            <td className="px-3 py-2 text-right text-erl-success font-semibold">{formatCurrency(d.profit)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -387,6 +406,41 @@ export const AdminReports: React.FC = () => {
                     <div className={labelStyle}>Out of Stock</div>
                   </div>
                 </div>
+
+                {/* Inventory History Chart */}
+                {inventoryHistory.length > 0 && (
+                  <div className="bg-erl-surface rounded-xl p-4 mb-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-[10px] text-erl-muted tracking-widest uppercase">Stock Movements</div>
+                      <select
+                        value={selectedInventoryItem || ""}
+                        onChange={(e) => setSelectedInventoryItem(e.target.value || null)}
+                        className="text-[9px] bg-erl-base border border-erl-border-default rounded-md px-2 py-1 text-erl-text-primary outline-none cursor-pointer"
+                      >
+                        <option value="">All items</option>
+                        {inventoryItems.map(i => (
+                          <option key={i.id} value={i.id}>{i.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={inventoryHistory.slice().reverse()}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                        <XAxis dataKey="created_at" tick={{ fontSize: 8, fill: "var(--text-muted)" }} tickFormatter={(v) => v ? v.slice(0, 10) : ""} />
+                        <YAxis tick={{ fontSize: 8, fill: "var(--text-muted)" }} />
+                        <Tooltip
+                          contentStyle={{ background: "var(--bg-elevated)", border: "1px solid var(--border-medium)", borderRadius: 8, fontSize: 10 }}
+                          formatter={(_value: any, _name: any, props: any) => {
+                            const row = props?.payload;
+                            return [`${row?.quantity || 0} ${row?.unit || ''}`, row?.movement_type || ''];
+                          }}
+                          labelFormatter={(label: any) => `Date: ${label?.slice(0, 10) || ""}`}
+                        />
+                        <Bar dataKey="quantity" fill="var(--gold)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
 
                 {/* Low Stock Alert Table */}
                 {lowStockItems.length > 0 && (
@@ -470,7 +524,6 @@ export const AdminReports: React.FC = () => {
             {/* STAFF REPORT */}
             {activeReport === "staff" && (
               <div>
-                {/* Staff Summary Table */}
                 <div className="bg-erl-surface rounded-xl overflow-hidden">
                   <div className="px-3.5 py-2.5 border-b border-erl-border-subtle text-[9px] font-semibold text-erl-muted tracking-widest uppercase">
                     Staff Performance ({startDate} to {endDate})
@@ -483,25 +536,34 @@ export const AdminReports: React.FC = () => {
                         <th className="px-3 py-2 text-right text-erl-muted font-semibold">Revenue</th>
                         <th className="px-3 py-2 text-right text-erl-muted font-semibold">Avg/Order</th>
                         <th className="px-3 py-2 text-right text-erl-muted font-semibold">Hours</th>
+                        <th className="px-3 py-2 text-right text-erl-muted font-semibold">Revenue/Hr</th>
                       </tr>
                     </thead>
                     <tbody>
                       {staffStats.map((s) => (
-                        <tr key={s.name} className="border-t border-erl-border-subtle">
-                          <td className="px-3 py-2 text-erl-text-primary font-medium">{s.name}</td>
+                        <tr key={s.staff_id} className="border-t border-erl-border-subtle">
+                          <td className="px-3 py-2 text-erl-text-primary font-medium">
+                            <span className="inline-block w-5 h-5 rounded-full text-[8px] font-bold text-white text-center leading-5 mr-2" style={{ background: s.color || '#888' }}>
+                              {s.initials || '?'}
+                            </span>
+                            {s.name}
+                          </td>
                           <td className="px-3 py-2 text-right text-erl-muted">{s.orders}</td>
                           <td className="px-3 py-2 text-right text-erl-accent font-semibold">{formatCurrency(s.revenue)}</td>
                           <td className="px-3 py-2 text-right text-erl-secondary">
                             {s.orders > 0 ? formatCurrency(s.revenue / s.orders) : "-"}
                           </td>
                           <td className="px-3 py-2 text-right text-erl-muted">
-                            {s.hoursWorked ? `${s.hoursWorked.toFixed(1)}h` : "-"}
+                            {s.hoursWorked > 0 ? `${s.hoursWorked.toFixed(1)}h` : "-"}
+                          </td>
+                          <td className="px-3 py-2 text-right text-erl-success font-semibold">
+                            {s.hoursWorked > 0 ? formatCurrency(s.revenue / s.hoursWorked) : "-"}
                           </td>
                         </tr>
                       ))}
                       {staffStats.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="p-6 text-center text-erl-muted">
+                          <td colSpan={6} className="p-6 text-center text-erl-muted">
                             No staff data for this period
                           </td>
                         </tr>
@@ -524,6 +586,7 @@ export const AdminReports: React.FC = () => {
         salesData={salesData}
         salesSummary={salesSummary}
         inventoryItems={inventoryItems}
+        staffStats={staffStats}
         startDate={startDate}
         endDate={endDate}
       />
@@ -534,14 +597,15 @@ export const AdminReports: React.FC = () => {
 const PrintModal: React.FC<{
   show: boolean;
   onClose: () => void;
-  printType: "summary" | "items" | "stock";
-  setPrintType: (t: "summary" | "items" | "stock") => void;
-  salesData: RevenueDataPoint[];
-  salesSummary: { totalRevenue: number; totalOrders: number; avgOrder: number; totalCOGS: number; grossProfit: number };
+  printType: "summary" | "items" | "staff" | "stock";
+  setPrintType: (t: "summary" | "items" | "staff" | "stock") => void;
+  salesData: DailySalesReport[];
+  salesSummary: SalesReportSummary;
   inventoryItems: any[];
+  staffStats: StaffReport[];
   startDate: string;
   endDate: string;
-}> = ({ show, onClose, printType, setPrintType, salesData, salesSummary, inventoryItems, startDate, endDate }) => {
+}> = ({ show, onClose, printType, setPrintType, salesData, salesSummary, inventoryItems, staffStats, startDate, endDate }) => {
   if (!show) return null;
 
   const handlePrint = () => {
@@ -600,6 +664,7 @@ const PrintModal: React.FC<{
             {([
               ["summary", "Sales Summary", "Revenue, orders, profit overview"],
               ["items", "Item Sales", "Best selling items breakdown"],
+              ["staff", "Staff Report", "Staff performance summary"],
               ["stock", "Current Stock", "All inventory items with stock levels"],
             ] as const).map(([value, label, desc]) => (
               <button key={value} onClick={() => setPrintType(value)} className={`
@@ -627,7 +692,7 @@ const PrintModal: React.FC<{
       <div id="print-area" className="hidden">
         <div className="header">
           <h1>{(() => { try { const s = localStorage.getItem('erlbrew_company_settings'); return s ? JSON.parse(s).company_name || 'Erlbrew Café POS' : 'Erlbrew Café POS'; } catch { return 'Erlbrew Café POS'; } })()}</h1>
-          <h2>{printType === "summary" ? "Sales Summary Report" : printType === "items" ? "Item Sales Report" : "Current Stock Report"}</h2>
+          <h2>{printType === "summary" ? "Sales Summary Report" : printType === "items" ? "Item Sales Report" : printType === "staff" ? "Staff Performance Report" : "Current Stock Report"}</h2>
           <div className="date-range">Period: {startDate} to {endDate} | Generated: {new Date().toLocaleString()}</div>
         </div>
 
@@ -651,7 +716,7 @@ const PrintModal: React.FC<{
                 <div className="value">{formatCurrency(salesSummary.grossProfit)}</div>
               </div>
               <div className="summary-card">
-                <div className="label">COGS (est.)</div>
+                <div className="label">COGS</div>
                 <div className="value">{formatCurrency(salesSummary.totalCOGS)}</div>
               </div>
               <div className="summary-card">
@@ -665,7 +730,8 @@ const PrintModal: React.FC<{
                   <th>Date</th>
                   <th style={{ textAlign: "right" }}>Orders</th>
                   <th style={{ textAlign: "right" }}>Revenue</th>
-                  <th style={{ textAlign: "right" }}>Profit (est.)</th>
+                  <th style={{ textAlign: "right" }}>COGS</th>
+                  <th style={{ textAlign: "right" }}>Profit</th>
                 </tr>
               </thead>
               <tbody>
@@ -674,11 +740,12 @@ const PrintModal: React.FC<{
                     <td>{d.date}</td>
                     <td style={{ textAlign: "right" }}>{d.orders}</td>
                     <td style={{ textAlign: "right" }}>{formatCurrency(d.revenue)}</td>
+                    <td style={{ textAlign: "right" }}>{formatCurrency(d.cogs)}</td>
                     <td style={{ textAlign: "right" }}>{formatCurrency(d.profit)}</td>
                   </tr>
                 ))}
                 {salesData.length === 0 && (
-                  <tr><td colSpan={4} style={{ textAlign: "center", color: "#999" }}>No sales data</td></tr>
+                  <tr><td colSpan={5} style={{ textAlign: "center", color: "#999" }}>No sales data</td></tr>
                 )}
               </tbody>
             </table>
@@ -693,7 +760,7 @@ const PrintModal: React.FC<{
                 <th>Date</th>
                 <th style={{ textAlign: "right" }}>Orders</th>
                 <th style={{ textAlign: "right" }}>Revenue</th>
-                <th style={{ textAlign: "right" }}>Profit (est.)</th>
+                <th style={{ textAlign: "right" }}>Profit</th>
               </tr>
             </thead>
             <tbody>
@@ -711,6 +778,52 @@ const PrintModal: React.FC<{
               )}
             </tbody>
           </table>
+        )}
+
+        {printType === "staff" && (
+          <>
+            <div className="summary-cards">
+              <div className="summary-card">
+                <div className="label">Total Staff</div>
+                <div className="value">{staffStats.length}</div>
+              </div>
+              <div className="summary-card">
+                <div className="label">Total Orders</div>
+                <div className="value">{staffStats.reduce((s, x) => s + x.orders, 0)}</div>
+              </div>
+              <div className="summary-card">
+                <div className="label">Total Revenue</div>
+                <div className="value">{formatCurrency(staffStats.reduce((s, x) => s + x.revenue, 0))}</div>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Staff</th>
+                  <th style={{ textAlign: "right" }}>Orders</th>
+                  <th style={{ textAlign: "right" }}>Revenue</th>
+                  <th style={{ textAlign: "right" }}>Avg/Order</th>
+                  <th style={{ textAlign: "right" }}>Hours</th>
+                  <th style={{ textAlign: "right" }}>Revenue/Hr</th>
+                </tr>
+              </thead>
+              <tbody>
+                {staffStats.map(s => (
+                  <tr key={s.staff_id}>
+                    <td>{s.name}</td>
+                    <td style={{ textAlign: "right" }}>{s.orders}</td>
+                    <td style={{ textAlign: "right" }}>{formatCurrency(s.revenue)}</td>
+                    <td style={{ textAlign: "right" }}>{s.orders > 0 ? formatCurrency(s.revenue / s.orders) : "-"}</td>
+                    <td style={{ textAlign: "right" }}>{s.hoursWorked > 0 ? `${s.hoursWorked.toFixed(1)}h` : "-"}</td>
+                    <td style={{ textAlign: "right" }}>{s.hoursWorked > 0 ? formatCurrency(s.revenue / s.hoursWorked) : "-"}</td>
+                  </tr>
+                ))}
+                {staffStats.length === 0 && (
+                  <tr><td colSpan={6} style={{ textAlign: "center", color: "#999" }}>No staff data</td></tr>
+                )}
+              </tbody>
+            </table>
+          </>
         )}
 
         {printType === "stock" && (

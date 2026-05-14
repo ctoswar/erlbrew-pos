@@ -180,7 +180,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
          SELECT o.id, o.status, o.subtotal, o.tax, o.total,
                 o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number, o.discount_json,
                 o.created_at, o.completed_at,
-                s.name AS staff_name, s.initials AS staff_initials,
+                s.id AS staff_id, s.name AS staff_name, s.initials AS staff_initials,
                 s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
          FROM orders o
          LEFT JOIN staff s ON o.staff_id = s.id
@@ -624,6 +624,157 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       }
 
       res.status(400).json({ error: 'Provide start/end dates or resetAll=true' });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // GET /api/orders/reports/sales — daily sales with real COGS, zero-filled
+  router.get('/reports/sales', authMiddleware, async (req, res) => {
+    try {
+      const { start, end } = req.query;
+      const today = new Date().toISOString().slice(0, 10);
+      const startStr = start || today;
+      const endStr = end || today;
+
+      // Check if purchase_cost columns exist
+      let costColumnsExist = false;
+      try {
+        const [cols] = await pool.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory'
+            AND COLUMN_NAME IN ('purchase_cost', 'unit_cost')
+        `);
+        costColumnsExist = Array.isArray(cols) && cols.length >= 2;
+      } catch (_) { costColumnsExist = false; }
+
+      // Daily aggregation query
+      let sql;
+      if (costColumnsExist) {
+        sql = `
+          SELECT
+            DATE(o.created_at) AS date,
+            COALESCE(SUM(o.total), 0) AS revenue,
+            COUNT(*) AS orders,
+            COALESCE(SUM(oi.qty * r.quantity * i.purchase_cost), 0) AS cogs
+          FROM orders o
+          LEFT JOIN order_items oi ON o.id = oi.order_id
+          LEFT JOIN recipes r ON oi.menu_item_id = r.menu_item_id
+          LEFT JOIN inventory i ON r.inventory_item_id = i.id
+          WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)
+            AND o.status = 'completed'
+          GROUP BY DATE(o.created_at)
+          ORDER BY DATE(o.created_at)
+        `;
+      } else {
+        sql = `
+          SELECT
+            DATE(o.created_at) AS date,
+            COALESCE(SUM(o.total), 0) AS revenue,
+            COUNT(*) AS orders,
+            0 AS cogs
+          FROM orders o
+          WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)
+            AND o.status = 'completed'
+          GROUP BY DATE(o.created_at)
+          ORDER BY DATE(o.created_at)
+        `;
+      }
+
+      const [rows] = await pool.query(sql, [startStr, endStr]);
+
+      // Zero-fill missing dates
+      const result = [];
+      const startDate = new Date(startStr);
+      const endDate = new Date(endStr);
+      const rowMap = new Map((rows || []).map(r => [r.date.toISOString ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10), r]));
+
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().slice(0, 10);
+        const row = rowMap.get(dateStr);
+        const revenue = Number(row?.revenue) || 0;
+        const cogs = Number(row?.cogs) || 0;
+        result.push({
+          date: dateStr,
+          revenue,
+          orders: Number(row?.orders) || 0,
+          cogs,
+          profit: revenue - cogs,
+        });
+      }
+
+      const totalRevenue = result.reduce((s, r) => s + r.revenue, 0);
+      const totalOrders = result.reduce((s, r) => s + r.orders, 0);
+      const totalCOGS = result.reduce((s, r) => s + r.cogs, 0);
+
+      res.json({
+        data: result,
+        summary: {
+          totalRevenue,
+          totalOrders,
+          avgOrder: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+          totalCOGS,
+          grossProfit: totalRevenue - totalCOGS,
+        },
+      });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // GET /api/orders/reports/staff — staff performance with real data
+  router.get('/reports/staff', authMiddleware, async (req, res) => {
+    try {
+      const { start, end } = req.query;
+      const today = new Date().toISOString().slice(0, 10);
+      const startStr = start || today;
+      const endStr = end || today;
+
+      // Staff sales aggregation
+      const [salesRows] = await pool.query(`
+        SELECT
+          s.id AS staff_id,
+          s.name AS staff_name,
+          s.initials,
+          s.color,
+          COUNT(o.id) AS orders,
+          COALESCE(SUM(o.total), 0) AS revenue
+        FROM staff s
+        LEFT JOIN orders o ON o.staff_id = s.id
+          AND o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)
+          AND o.status = 'completed'
+        GROUP BY s.id
+        ORDER BY revenue DESC
+      `, [startStr, endStr]);
+
+      // Staff hours from time_records
+      const [timeRows] = await pool.query(`
+        SELECT
+          s.id AS staff_id,
+          COALESCE(SUM(
+            TIMESTAMPDIFF(MINUTE, t.clock_in, COALESCE(t.clock_out, NOW())) / 60
+          ), 0) AS hours_worked
+        FROM staff s
+        LEFT JOIN time_records t ON t.staff_id = s.id
+          AND DATE(t.clock_in) >= ? AND DATE(t.clock_in) <= ?
+        GROUP BY s.id
+      `, [startStr, endStr]);
+
+      const timeMap = new Map((timeRows || []).map(r => [r.staff_id, Number(r.hours_worked) || 0]));
+
+      const result = (salesRows || []).map(r => ({
+        staff_id: r.staff_id,
+        name: r.staff_name,
+        initials: r.initials,
+        color: r.color,
+        orders: Number(r.orders) || 0,
+        revenue: Number(r.revenue) || 0,
+        hoursWorked: timeMap.get(r.staff_id) || 0,
+      }));
+
+      res.json(result);
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });

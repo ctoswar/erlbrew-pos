@@ -35,7 +35,7 @@ export function useKitchenEvents() {
     const es = new EventSource('/api/events');
     eventSourceRef.current = es;
 
-    es.addEventListener('order:created', (e: MessageEvent) => {
+    es.addEventListener('order:created', (_e: MessageEvent) => {
       playNotificationSound();
       syncOrders();
     });

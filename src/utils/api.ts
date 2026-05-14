@@ -698,3 +698,49 @@ export async function updateCustomer(id: number, data: Partial<Customer>): Promi
   if (!res.ok) throw new Error(`API failed: ${res.status}`);
   return res.json();
 }
+
+// --- Reports ---
+
+export interface DailySalesReport {
+  date: string;
+  revenue: number;
+  orders: number;
+  cogs: number;
+  profit: number;
+}
+
+export interface SalesReportSummary {
+  totalRevenue: number;
+  totalOrders: number;
+  avgOrder: number;
+  totalCOGS: number;
+  grossProfit: number;
+}
+
+export async function getSalesReport(start: string, end: string): Promise<{ data: DailySalesReport[]; summary: SalesReportSummary }> {
+  const res = await fetch(getApiUrl(`/orders/reports/sales?start=${start}&end=${end}`), {
+    headers: { ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+export interface StaffReport {
+  staff_id: number;
+  name: string;
+  initials: string;
+  color: string;
+  orders: number;
+  revenue: number;
+  hoursWorked: number;
+}
+
+export async function getStaffReport(start: string, end: string): Promise<StaffReport[]> {
+  const res = await fetch(getApiUrl(`/orders/reports/staff?start=${start}&end=${end}`), {
+    headers: { ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}

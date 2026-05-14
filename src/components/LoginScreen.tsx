@@ -1,8 +1,28 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Staff } from "../types";
 import { useClock } from "../hooks/useClock";
 import { formatTime, formatDate } from "../utils";
 import { apiPost, setAuthToken } from "../utils/api";
+
+function useFullscreen() {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const toggle = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  return { isFullscreen, toggle };
+}
 
 interface CompanyInfo {
   company_name: string;
@@ -18,6 +38,7 @@ interface Props {
 
 export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
   const time = useClock();
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
   const [company] = useState<CompanyInfo>(() => {
     try {
       const s = localStorage.getItem("erlbrew_company_settings");
@@ -142,7 +163,7 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
       <div className="absolute top-[-8%] right-[-5%] w-[600px] h-[600px] rounded-full bg-erl-accent/[0.025] blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[15%] w-[500px] h-[500px] rounded-full bg-erl-accent/[0.015] blur-[100px] pointer-events-none" />
 
-      {/* ── Left Brand Sidebar ── */}
+      {/* Left Brand Sidebar */}
       <aside className="glass-panel hidden md:flex w-[240px] shrink-0 flex-col items-center justify-center p-8 relative overflow-hidden border-r border-erl-accent/[0.06]">
         {/* Radial decorative glow */}
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_50%_30%,rgba(196,149,106,0.06)_0%,transparent_60%),radial-gradient(ellipse_at_50%_75%,rgba(196,149,106,0.03)_0%,transparent_50%)]" />
@@ -195,12 +216,12 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
         <div className="absolute bottom-[8%] left-[15%] w-[70%] h-px bg-gradient-to-r from-transparent via-erl-accent/10 to-transparent" />
       </aside>
 
-      {/* ── Main Content ── */}
+      {/* Main Content */}
       <main className="flex-1 flex items-center justify-center p-8 overflow-y-auto relative">
         {/* Center glow */}
         <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-erl-accent/[0.02] blur-[120px] pointer-events-none" />
 
-        {/* ── Step 1: RFID Scan ── */}
+        {/* Step 1: RFID Scan */}
         {step === "rfid" && (
           <div
             className="animate-scale-in card-glass py-10 px-10 w-[380px] text-center relative cursor-pointer"
@@ -372,6 +393,14 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
           </div>
         )}
       </main>
+
+      <button
+        onClick={toggleFullscreen}
+        className="fixed bottom-4 right-4 z-50 btn-ghost text-sm py-2 px-3 rounded-xl transition-all duration-200 opacity-40 hover:opacity-100"
+        title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+      >
+        {isFullscreen ? "✕" : "⛶"}
+      </button>
     </div>
   );
 };

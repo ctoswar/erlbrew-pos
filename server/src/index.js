@@ -15,6 +15,8 @@ import clockRouter from './routes/clock.js';
 import supplierInvoiceRoutes from './routes/supplierInvoices.js';
 import companySettingsRoutes from './routes/companySettings.js';
 import uploadRouter from './routes/upload.js';
+import auditRoutes from './routes/audit.js';
+import customersRoutes from './routes/customers.js';
 import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
@@ -221,6 +223,48 @@ await pool.query(`
     `);
     console.log('inventory_movements table ready');
 
+    // Audit log for admin actions
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        staff_id VARCHAR(32) DEFAULT NULL,
+        staff_name VARCHAR(128) DEFAULT NULL,
+        action VARCHAR(64) NOT NULL,
+        entity_type VARCHAR(32) DEFAULT NULL,
+        entity_id VARCHAR(64) DEFAULT NULL,
+        details JSON DEFAULT NULL,
+        ip_address VARCHAR(45) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_action (action),
+        INDEX idx_entity (entity_type, entity_id),
+        INDEX idx_staff (staff_id),
+        INDEX idx_created (created_at)
+      )
+    `);
+    console.log('audit_logs table ready');
+
+    // Customer CRM
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        phone VARCHAR(32) UNIQUE NOT NULL,
+        name VARCHAR(128) DEFAULT NULL,
+        email VARCHAR(128) DEFAULT NULL,
+        notes TEXT DEFAULT NULL,
+        total_orders INT DEFAULT 0,
+        total_spent DECIMAL(12,2) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_phone (phone),
+        INDEX idx_name (name)
+      )
+    `);
+    console.log('customers table ready');
+
+    // Link orders to customers
+    await pool.query(`ALTER TABLE orders ADD COLUMN customer_id INT DEFAULT NULL AFTER customer_name`).catch(() => {});
+    await pool.query(`ALTER TABLE orders ADD FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL`).catch(() => {});
+
     // Add image column to menu_items
     await pool.query(`ALTER TABLE menu_items ADD COLUMN image VARCHAR(512) DEFAULT NULL AFTER emoji`).catch(() => {});
 
@@ -241,7 +285,6 @@ initDb();
 // Initialize Google Sheets client (on demand)
 const gs = googleSheetsClientInit(pool);
 
-// ── SSE: Real-time event broadcaster ─────────────────────────────────────────
 const sseClients = new Set();
 
 function broadcastEvent(event, data) {
@@ -296,8 +339,10 @@ app.use('/api/clock', clockRouter(pool, gs));
 app.use('/api/supplier-invoices', supplierInvoiceRoutes(pool));
 app.use('/api/company-settings', companySettingsRoutes(pool));
 app.use('/api', uploadRouter(pool));
+app.use('/api/audit-logs', auditRoutes(pool));
+app.use('/api/customers', customersRoutes(pool));
 
-// ── Google Sheets sync: write Dashboard to Sheet3 ──────────────────────────
+// Google Sheets sync: write Dashboard to Sheet3
 app.post('/api/sheets/sync-dashboard', async (req, res) => {
   if (!gs) return res.status(503).json({ error: 'Sheets not configured' });
   try {
@@ -394,7 +439,7 @@ o.customer_name, o.table_name, o.type, o.pay_method,
   }
 });
 
-// ── Print proxy: browser → backend → Pi Bluetooth print server ─────────────────
+// Print proxy: browser → backend → Pi Bluetooth print server
 // Use https.request directly for self-signed cert support (native fetch agent option unreliable)
 function printServerRequest(urlStr, options = {}) {
   return new Promise((resolve, reject) => {
@@ -470,8 +515,7 @@ const server = app.listen(PORT, () => {
   console.log(`API server listening on port ${PORT}`);
 });
 
-// ── Midnight Z-Report cron job ───────────────────────────────────────────────
-// Runs at 00:00:00 every day, generates a Z-Report for the previous day
+// Midnight Z-Report cron job — runs at 00:00:00 every day
 cron.schedule('0 0 0 * * *', async () => {
   // Calculate yesterday's date string
   const yd = new Date(Date.now() - 86400000);

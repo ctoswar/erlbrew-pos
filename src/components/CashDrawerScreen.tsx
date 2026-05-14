@@ -134,7 +134,7 @@ export const CashDrawerScreen: React.FC = () => {
     }
   };
 
-  // ── Cash In/Out ──────────────────────────────────────────────────────────────
+  // Cash In/Out
 
   const openTxModal = (type: 'cash_in' | 'cash_out') => {
     setTxType(type);
@@ -343,7 +343,7 @@ export const CashDrawerScreen: React.FC = () => {
         )}
       </div>
 
-      {/* ── Transaction History ────────────────────────────────────────────── */}
+      {/* Transaction History */}
       <div className="card-glass mt-1 p-4">
         <div className="flex justify-between items-center mb-2.5">
           <span className="text-[10px] font-bold text-erl-text-primary tracking-wide">
@@ -399,7 +399,7 @@ export const CashDrawerScreen: React.FC = () => {
         )}
       </div>
 
-      {/* ── Cash In/Out Modal ──────────────────────────────────────────────── */}
+      {/* Cash In/Out Modal */}
       {showTxModal && (
         <>
           <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setShowTxModal(false)} />

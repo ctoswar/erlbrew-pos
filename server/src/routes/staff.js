@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import express from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import { logAudit } from '../services/audit.js';
 
 // Simple input-validation helper (shared-style per task spec)
 function validate(req, res, rules){
@@ -112,6 +113,7 @@ router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
     }
     try {
       const [r] = await pool.query('INSERT INTO staff (rfid, rfid_alt, pin, name, role, initials, color) VALUES (?, ?, ?, ?, ?, ?, ?)', [rfid, rfid_alt || null, pin, name, role, initials, color]);
+      await logAudit(pool, req, { action: 'staff_create', entityType: 'staff', entityId: String(r.insertId), details: { name, role } });
       res.json({ id: r.insertId });
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
@@ -154,6 +156,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
       values.push(id);
       await pool.query(`UPDATE staff SET ${fields.join(', ')} WHERE id = ?`, values);
     const [rows] = await pool.query('SELECT id, rfid, rfid_alt, name, role, initials, color FROM staff WHERE id = ?', [id]);
+    await logAudit(pool, req, { action: 'staff_update', entityType: 'staff', entityId: id, details: { name, role } });
     res.json(rows[0]);
   } catch (e) {
     if (e.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'RFID already assigned to another staff member' });

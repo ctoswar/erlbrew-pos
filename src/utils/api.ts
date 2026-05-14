@@ -82,8 +82,8 @@ export async function apiAdminGet<T>(path: string): Promise<T> {
   return res.json();
 }
 
-export async function apiAdminPost<T>(path: string, body: unknown): Promise<T> {
-  const token = getAuthToken();
+export async function apiAdminPost<T>(path: string, body: unknown, tokenOverride?: string): Promise<T> {
+  const token = tokenOverride || getAuthToken();
   const res = await fetch(getApiUrl(path), {
     method: 'POST',
     headers: {
@@ -488,8 +488,6 @@ export async function getZReports(limit = 10): Promise<ZReport[]> {
   return res.json();
 }
 
-// ── Cash Drawer ──────────────────────────────────────────────────────────────
-
 export interface CashDrawer {
   id: number | null;
   shift_date: string;
@@ -533,8 +531,6 @@ export async function uploadMenuItemImage(id: string, file: File): Promise<{ ima
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
   return res.json();
 }
-
-// ── Cash Drawer Transactions ──────────────────────────────────────────────────
 
 export interface CashDrawerTransaction {
   id: number;
@@ -582,6 +578,120 @@ export async function updateCashDrawer(id: number, data: {
   const res = await fetch(getApiUrl(`/orders/cash-drawer/${id}`), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+// --- Audit Logs ---
+
+export interface AuditLog {
+  id: number;
+  staff_id: string | null;
+  staff_name: string | null;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  details: Record<string, unknown> | null;
+  ip_address: string | null;
+  created_at: string;
+}
+
+export async function getAuditLogs(params?: {
+  startDate?: string;
+  endDate?: string;
+  action?: string;
+  staffId?: string;
+  entityType?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ logs: AuditLog[]; total: number }> {
+  const qs = new URLSearchParams();
+  if (params?.startDate) qs.append('startDate', params.startDate);
+  if (params?.endDate) qs.append('endDate', params.endDate);
+  if (params?.action) qs.append('action', params.action);
+  if (params?.staffId) qs.append('staffId', params.staffId);
+  if (params?.entityType) qs.append('entityType', params.entityType);
+  if (params?.limit) qs.append('limit', String(params.limit));
+  if (params?.offset) qs.append('offset', String(params.offset));
+  const res = await fetch(getApiUrl(`/audit-logs?${qs.toString()}`), {
+    headers: { ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+// --- Customers ---
+
+export interface Customer {
+  id: number;
+  phone: string;
+  name: string | null;
+  email: string | null;
+  notes: string | null;
+  total_orders: number;
+  total_spent: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getCustomers(search?: string, limit = 50): Promise<Customer[]> {
+  const qs = new URLSearchParams();
+  if (search) qs.append('search', search);
+  qs.append('limit', String(limit));
+  const res = await fetch(getApiUrl(`/customers?${qs.toString()}`), {
+    headers: { ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getTopCustomers(limit = 10): Promise<Customer[]> {
+  const res = await fetch(getApiUrl(`/customers/top?limit=${limit}`), {
+    headers: { ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getCustomer(id: number): Promise<Customer> {
+  const res = await fetch(getApiUrl(`/customers/${id}`), {
+    headers: { ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getCustomerOrders(id: number): Promise<any[]> {
+  const res = await fetch(getApiUrl(`/customers/${id}/orders`), {
+    headers: { ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createCustomer(data: { phone: string; name?: string; email?: string; notes?: string }): Promise<Customer> {
+  const res = await fetch(getApiUrl('/customers'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  return res.json();
+}
+
+export async function updateCustomer(id: number, data: Partial<Customer>): Promise<Customer> {
+  const res = await fetch(getApiUrl(`/customers/${id}`), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) },
     credentials: 'include',
     body: JSON.stringify(data),
   });

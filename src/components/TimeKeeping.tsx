@@ -155,7 +155,7 @@ export const TimeKeeping: React.FC = () => {
         <div className="text-xs text-erl-text-faint tracking-wide font-medium">{todayDateStr}</div>
       </div>
 
-      {/* ── Body ── */}
+      {/* Body */}
       <div className="scroll-area flex-1 p-5 flex flex-col gap-5 overflow-y-auto min-h-0">
 
         {tab === "today" && (
@@ -231,7 +231,7 @@ export const TimeKeeping: React.FC = () => {
 
         {tab === "calendar" && (
           <>
-            {/* ── Calendar Navigation ── */}
+            {/* Calendar Navigation */}
             <div className="flex items-center justify-between mb-3">
               <button onClick={prevMonth} className="w-9 h-9 rounded-xl border border-erl-border-default bg-transparent text-erl-text-secondary cursor-pointer flex items-center justify-center hover:border-erl-accent/30 hover:text-erl-accent transition-all duration-200 text-sm">
                 ◀
@@ -244,7 +244,7 @@ export const TimeKeeping: React.FC = () => {
               </button>
             </div>
 
-            {/* ── Calendar Grid ── */}
+            {/* Calendar Grid */}
             <div className="card-glass overflow-hidden">
               {/* Day headers */}
               <div className="grid grid-cols-7 border-b border-erl-border-subtle bg-erl-base/50">
@@ -301,7 +301,7 @@ export const TimeKeeping: React.FC = () => {
               </div>
             </div>
 
-            {/* ── Day Detail Table ── */}
+            {/* Day Detail Table */}
             {selectedDate && (
               <div className="card-glass overflow-hidden">
                 <div className="px-4 py-3 border-b border-erl-border-subtle flex justify-between items-center">

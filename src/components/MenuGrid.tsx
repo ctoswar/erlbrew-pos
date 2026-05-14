@@ -116,7 +116,7 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
   );
 };
 
-/* ── Menu Card ────────────────────────────────────────────────────────────── */
+/* Menu Card */
 
 interface MenuCardProps {
   item: MenuItem;

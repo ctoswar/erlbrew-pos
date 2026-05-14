@@ -531,7 +531,6 @@ export const AdminReports: React.FC = () => {
   );
 };
 
-// Print Modal Component
 const PrintModal: React.FC<{
   show: boolean;
   onClose: () => void;

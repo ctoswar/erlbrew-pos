@@ -14,12 +14,14 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onVoid
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [scannedName, setScannedName] = useState<string | null>(null);
   const [step, setStep] = useState<"reason" | "auth">(action === "refund" ? "reason" : "reason");
   const rfidRef = useRef<HTMLInputElement>(null);
   const isRefund = action === "refund";
 
   // Force focus on hidden RFID input when modal opens
   useEffect(() => {
+    if (step !== "auth") return;
     rfidRef.current?.focus();
     const interval = setInterval(() => {
       if (document.activeElement !== rfidRef.current) {
@@ -27,7 +29,31 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onVoid
       }
     }, 500);
     return () => clearInterval(interval);
-  }, []);
+  }, [step]);
+
+  // Look up RFID on scan to show who was scanned
+  const lookupRfid = async (value: string) => {
+    const trimmed = value.replace(/[\x00-\x1f]/g, '').trim().toUpperCase();
+    if (!trimmed) return;
+    try {
+      const res = await fetch(`/api/staff/rfid/${encodeURIComponent(trimmed)}`);
+      if (res.ok) {
+        const staff = await res.json();
+        if (staff?.name) {
+          setScannedName(staff.name);
+          setError("");
+        } else {
+          setScannedName(null);
+          setError("Card not registered. See admin.");
+        }
+      } else {
+        setScannedName(null);
+        setError("Card not recognized. Try again.");
+      }
+    } catch {
+      setScannedName(null);
+    }
+  };
 
   const pressPin = (key: string) => {
     if (key === "CLR") { setPin(""); return; }
@@ -61,11 +87,11 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onVoid
         setLoading(false);
         return;
       }
-      // Authorize void or refund on server
+      // Authorize void or refund on server — pass manager token explicitly
       if (isRefund) {
-        await apiAdminPost(`/orders/${orderId}/refund`, { reason });
+        await apiAdminPost(`/orders/${orderId}/refund`, { reason }, loginData.token);
       } else {
-        await apiAdminPost(`/orders/${orderId}/void`, { reason });
+        await apiAdminPost(`/orders/${orderId}/void`, { reason }, loginData.token);
       }
       onVoidSuccess();
     } catch {
@@ -120,7 +146,8 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onVoid
         {/* Step 2: RFID */}
         <div className="mb-2.5 relative">
           <input ref={rfidRef} value={rfid}
-            onChange={(e) => setRfid(e.target.value.replace(/[\x00-\x1f]/g, '').toUpperCase())}
+            onChange={(e) => { const v = e.target.value.replace(/[\x00-\x1f]/g, '').toUpperCase(); setRfid(v); setScannedName(null); }}
+            onKeyDown={(e) => { if (e.key === "Enter" && rfid.trim()) lookupRfid(rfid); }}
             className="fixed top-0 left-0 w-px h-px opacity-0 -z-[1]" autoFocus />
           <div onClick={() => rfidRef.current?.focus()} className="flex flex-col items-center gap-1.5 cursor-pointer py-1.5">
             <div className="relative w-[110px] h-[74px]">
@@ -131,6 +158,9 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onVoid
                 style={{ animation: "scanLine 2.2s ease-in-out infinite" }} />
             </div>
             <div className="text-[8px] text-erl-text-faint tracking-wide">Scan manager card</div>
+            {scannedName && (
+              <div className="text-[10px] text-erl-accent font-semibold tracking-wide">{scannedName}</div>
+            )}
           </div>
         </div>
 

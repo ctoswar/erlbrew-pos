@@ -138,7 +138,7 @@ export const AdminPrintSettings: React.FC = () => {
 
   return (
     <div className="px-8 py-6 overflow-y-auto flex-1">
-      {/* ── Theme Toggle ─────────────────────────────────────── */}
+      {/* Theme Toggle */}
       <div className="mb-6 p-3.5 bg-erl-surface rounded-xl flex items-center justify-between">
         <div>
           <div className="text-[11px] font-bold text-erl-text-primary tracking-wide">
@@ -170,7 +170,7 @@ export const AdminPrintSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Font Size ──────────────────────────────────────── */}
+      {/* Font Size */}
       <div className="mb-6 p-3.5 bg-erl-surface rounded-xl flex items-center justify-between">
         <div>
           <div className="text-[11px] font-bold text-erl-text-primary tracking-wide">
@@ -196,7 +196,7 @@ export const AdminPrintSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Company Info & Logo ────────────────────────────── */}
+      {/* Company Info & Logo */}
       <div className="mb-7">
         <div className="text-[11px] font-bold tracking-widest uppercase text-erl-accent mb-1">
           Company Information
@@ -290,7 +290,7 @@ export const AdminPrintSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Paper Size ─────────────────────────────────────── */}
+      {/* Paper Size */}
       <div className="flex items-center justify-between py-2.5 border-b border-erl-border-subtle text-[11px] text-erl-text-primary">
         <div>
           <div className="font-semibold text-erl-text-primary">Paper Size</div>
@@ -312,7 +312,7 @@ export const AdminPrintSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Copies ─────────────────────────────────────────── */}
+      {/* Copies */}
       <div className="flex items-center justify-between py-2.5 border-b border-erl-border-subtle text-[11px] text-erl-text-primary">
         <div>
           <div className="font-semibold text-erl-text-primary">Print Copies</div>
@@ -333,7 +333,7 @@ export const AdminPrintSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Print Via ────────────────────────────────────────── */}
+      {/* Print Via */}
       <div className="flex items-center justify-between py-2.5 border-b border-erl-border-subtle text-[11px] text-erl-text-primary">
         <div>
           <div className="font-semibold text-erl-text-primary">Print Method</div>
@@ -355,7 +355,7 @@ export const AdminPrintSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Bluetooth Print Server URL ───────────────────────── */}
+      {/* Bluetooth Print Server URL */}
       {settings.printVia === "bluetooth" && (
         <div className="flex flex-col items-stretch gap-1.5 py-2.5 border-b border-erl-border-subtle text-[11px] text-erl-text-primary">
           <div>
@@ -389,7 +389,7 @@ export const AdminPrintSettings: React.FC = () => {
         </div>
       )}
 
-      {/* ── GCash Reference Number ─────────────────────────────────── */}
+      {/* GCash Reference Number */}
       <div className="flex items-center justify-between py-2.5 border-b border-erl-border-subtle text-[11px] text-erl-text-primary">
         <div>
           <div className="font-semibold text-erl-text-primary">GCash Reference Number</div>
@@ -404,7 +404,7 @@ export const AdminPrintSettings: React.FC = () => {
         />
       </div>
 
-      {/* ── Toggle rows ─────────────────────────────────────── */}
+      {/* Toggle rows */}
       {([
         ["showStoreHeader", "Store Header", "Cafe name, address, TIN on receipt"],
         ["showBIRInfo", "BIR Accreditation Info", "ATP No., COR No., Serial, PTU, Machine"],
@@ -430,7 +430,7 @@ export const AdminPrintSettings: React.FC = () => {
         </div>
       ))}
 
-      {/* ── Preview hint ─────────────────────────────────────── */}
+      {/* Preview hint */}
       <div className="mt-6 p-3 bg-erl-surface rounded-[10px] border border-erl-border-subtle text-[9px] text-erl-muted leading-relaxed">
         💡 <strong className="text-erl-secondary">Tip:</strong> After placing an order, tap
         "Print Receipt" to preview and print. The settings above control what appears on the printed receipt.

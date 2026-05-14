@@ -83,7 +83,7 @@ export const AdminInventory: React.FC = () => {
     return "var(--success)";
   };
 
-  // ── Form ─────────────────────────────────────────────────────────────────────
+  // Form
 
   const openAddForm = () => {
     setForm({ ...EMPTY_FORM });
@@ -188,7 +188,7 @@ export const AdminInventory: React.FC = () => {
     }
   };
 
-  // ── Movement History ──────────────────────────────────────────────────────
+  // Movement History
 
   const loadMovements = useCallback(async (itemId: string) => {
     setMovementsLoading(true);
@@ -221,7 +221,7 @@ export const AdminInventory: React.FC = () => {
     }
   };
 
-  // ── Manual Restock/Adjust ─────────────────────────────────────────────────
+  // Manual Restock/Adjust
 
   const openAdjustModal = (itemId: string, itemName: string) => {
     setAdjustItemId(itemId);
@@ -320,7 +320,7 @@ export const AdminInventory: React.FC = () => {
         )}
       </div>
 
-      {/* ── Movement History Modal (per item) ──────────────────────────────── */}
+      {/* Movement History Modal */}
       {movementItemId && (
         <>
           <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setMovementItemId(null)} />
@@ -375,7 +375,7 @@ export const AdminInventory: React.FC = () => {
         </>
       )}
 
-      {/* ── All Movements Modal ─────────────────────────────────────────────── */}
+      {/* All Movements Modal */}
       {showAllMovements && (
         <>
           <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setShowAllMovements(false)} />
@@ -435,7 +435,7 @@ export const AdminInventory: React.FC = () => {
         </>
       )}
 
-      {/* ── Manual Restock/Adjust Modal ─────────────────────────────────────── */}
+      {/* Manual Restock/Adjust Modal */}
       {showAdjustModal && (
         <>
           <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setShowAdjustModal(false)} />
@@ -561,7 +561,7 @@ export const AdminInventory: React.FC = () => {
   );
 };
 
-// ── Inventory Card ─────────────────────────────────────────────────────────────
+// Inventory Card
 
 interface InventoryCardProps {
   item: InventoryItem;
@@ -649,7 +649,7 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
   </div>
 );
 
-// ── Form Field ─────────────────────────────────────────────────────────────────
+// Form Field
 
 const FormField: React.FC<{ label: string; hint?: string; children: React.ReactNode }> = ({ label, hint, children }) => (
   <div>

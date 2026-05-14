@@ -46,7 +46,6 @@ export function getStoreInfo() {
 
 const MONO = "'Courier New', 'Lucida Console', monospace";
 
-// ── Build receipt lines array (shared by preview and print window) ──────────────
 export function buildReceiptLines(order: Order, settings: PrintSettings, discountAmount?: number, discountLabel?: string): string[] {
   const W = settings.paperSize === "58mm" ? 26 : 32;
 
@@ -158,7 +157,6 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
   return lines;
 }
 
-// ── Open a clean print window with the receipt ──────────────────────────────────
 export function openPrintWindow(order: Order, settings: PrintSettings, discountAmount?: number, discountLabel?: string): void {
   const lines = buildReceiptLines(order, settings, discountAmount, discountLabel);
   const W_PX = settings.paperSize === "58mm" ? 226 : 302;
@@ -192,7 +190,6 @@ export function openPrintWindow(order: Order, settings: PrintSettings, discountA
   win.document.close();
 }
 
-// ── Render receipt lines as React elements (used by AdminPrintSettings preview) ─
 export function renderReceiptLines(order: Order, settings: PrintSettings): React.ReactElement[] {
   const lines = buildReceiptLines(order, settings);
   return lines.map((line, i) => {
@@ -216,9 +213,7 @@ export function renderReceiptLines(order: Order, settings: PrintSettings): React
   });
 }
 
-// ── Print via backend proxy (same-origin → no CORS issues) ─────────────────
-// Backend proxies to Pi at http://192.168.75.101:9100 via /api/print and /api/open-drawer
-
+// Backend proxies to Pi at /api/print and /api/open-drawer
 export async function printViaBluetooth(order: Order, settings: PrintSettings, discountAmount?: number, discountLabel?: string): Promise<void> {
   const baseUrl = (import.meta.env.VITE_API_URL as string) || '';
   const lines = buildReceiptLines(order, settings, discountAmount, discountLabel);
@@ -238,7 +233,7 @@ export async function printViaBluetooth(order: Order, settings: PrintSettings, d
   }
 }
 
-// ── Open cash drawer via backend proxy ─────────────────────────────────────
+// Open cash drawer via backend proxy
 export async function openCashDrawer(): Promise<void> {
   const baseUrl = (import.meta.env.VITE_API_URL as string) || '';
   const res = await fetch(`${baseUrl}/api/open-drawer`, {

@@ -65,7 +65,7 @@ export const CustomerDisplay: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0d0600] via-[#1e0e06] to-[#0d0600] text-[#f5e6d0] font-sans flex flex-col">
-      {/* ── Header ────────────────────────────────────────────────────────── */}
+      {/* Header */}
       <div className="px-12 pt-7 pb-5 border-b border-erl-accent/20 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
           <span className="text-4xl">☕</span>
@@ -88,7 +88,7 @@ export const CustomerDisplay: React.FC = () => {
         )}
       </div>
 
-      {/* ── Body ──────────────────────────────────────────────────────────── */}
+      {/* Body */}
       <div className="flex-1 flex items-center justify-center px-12">
         {isEmpty ? (
           /* Empty state */
@@ -172,7 +172,7 @@ export const CustomerDisplay: React.FC = () => {
         )}
       </div>
 
-      {/* ── Footer ────────────────────────────────────────────────────────── */}
+      {/* Footer */}
       <div className="px-12 py-4 border-t border-erl-accent/10 flex justify-between items-center flex-shrink-0">
         <div className="text-[11px] text-[#f5e6d0]/25">
           Powered by Erlbrew POS

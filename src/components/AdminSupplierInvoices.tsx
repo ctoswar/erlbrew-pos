@@ -175,7 +175,7 @@ export const AdminSupplierInvoices: React.FC = () => {
       if (editingId) {
         await updateSupplierInvoice(editingId, payload);
       } else {
-        await createSupplierInvoice(payload as any);
+        await createSupplierInvoice(payload as Omit<SupplierInvoice, 'id'>);
       }
       closeForm();
       loadInvoices();
@@ -380,7 +380,7 @@ Erlbrew Café`;
                   </div>
                   <div>
                     <div className={labelClass}>Status</div>
-                    <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as any }))} className={inputClass}>
+                    <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as SupplierInvoice['status'] }))} className={inputClass}>
                       <option value="pending">Pending</option>
                       <option value="partial">Partial</option>
                       <option value="paid">Paid</option>

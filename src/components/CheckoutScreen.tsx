@@ -7,9 +7,12 @@ interface Props {
   discount: Discount | null;
   orderType: OrderType;
   customerName: string;
+  customerPhone: string;
   staffName: string;
   onBack: () => void;
   onContinue: () => void;
+  onCustomerNameChange: (name: string) => void;
+  onCustomerPhoneChange: (phone: string) => void;
 }
 
 export const CheckoutScreen: React.FC<Props> = ({
@@ -17,9 +20,12 @@ export const CheckoutScreen: React.FC<Props> = ({
   discount,
   orderType,
   customerName,
+  customerPhone,
   staffName,
   onBack,
   onContinue,
+  onCustomerNameChange,
+  onCustomerPhoneChange,
 }) => {
   const subtotal = calcSubtotal(cart);
   const grand = calcGrand(subtotal, discount);
@@ -105,12 +111,37 @@ export const CheckoutScreen: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Meta */}
-        <div className="flex gap-2 mb-6">
-          <MetaBox label="Type" value={orderType === "dine-in" ? "Dine In" : "Takeout"} />
-          {orderType === "dine-in" && <MetaBox label="Customer" value={customerName || "Dine-in"} />}
-          <MetaBox label="Staff" value={staffName.split(" ")[0]} />
-          <MetaBox label="Items" value={String(cart.reduce((s, ci) => s + ci.qty, 0))} />
+        {/* Customer info */}
+        <div className="flex flex-col gap-2 mb-4">
+          <div className="flex gap-2">
+            <MetaBox label="Type" value={orderType === "dine-in" ? "Dine In" : "Takeout"} />
+            <MetaBox label="Staff" value={staffName.split(" ")[0]} />
+            <MetaBox label="Items" value={String(cart.reduce((s, ci) => s + ci.qty, 0))} />
+          </div>
+          <div className="flex gap-2">
+            {orderType === "dine-in" && (
+              <div className="flex-1">
+                <div className="text-[8px] text-erl-text-muted tracking-[2px] uppercase mb-1 font-bold">Customer Name</div>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => onCustomerNameChange(e.target.value)}
+                  placeholder="Customer name"
+                  className="w-full bg-erl-surface border border-erl-border-default rounded-xl px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent transition-colors"
+                />
+              </div>
+            )}
+            <div className="flex-1">
+              <div className="text-[8px] text-erl-text-muted tracking-[2px] uppercase mb-1 font-bold">Phone (optional)</div>
+              <input
+                type="tel"
+                value={customerPhone}
+                onChange={(e) => onCustomerPhoneChange(e.target.value)}
+                placeholder="e.g. 09171234567"
+                className="w-full bg-erl-surface border border-erl-border-default rounded-xl px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent transition-colors"
+              />
+            </div>
+          </div>
         </div>
 
         <button

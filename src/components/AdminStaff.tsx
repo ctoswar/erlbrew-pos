@@ -60,7 +60,7 @@ export const AdminStaff: React.FC = () => {
     setTimeout(() => setMsg(null), 2500);
   };
 
-  // ── Save name ──────────────────────────────────────────────────────────────
+  // Save name
   const saveName = async (id: number) => {
     if (!editName.trim()) { showMsg("Name cannot be empty", false); return; }
     setSaving(true);
@@ -74,7 +74,7 @@ export const AdminStaff: React.FC = () => {
     } finally { setSaving(false); }
   };
 
-  // ── Save RFID ──────────────────────────────────────────────────────────────
+  // Save RFID
   const saveRfid = async (id: number) => {
     setSaving(true);
     try {
@@ -87,7 +87,7 @@ export const AdminStaff: React.FC = () => {
     } finally { setSaving(false); }
   };
 
-  // ── Save RFID Alt (tablet reader) ────────────────────────────────────────
+  // Save RFID Alt (tablet reader)
   const saveRfidAlt = async (id: number) => {
     setSaving(true);
     try {
@@ -100,7 +100,7 @@ export const AdminStaff: React.FC = () => {
     } finally { setSaving(false); }
   };
 
-  // ── Save password ──────────────────────────────────────────────────────────
+  // Save password
   const savePassword = async (id: number) => {
     if (editPw.length < 4) { showMsg("PIN must be at least 4 digits", false); return; }
     setSaving(true);
@@ -114,7 +114,7 @@ export const AdminStaff: React.FC = () => {
     } finally { setSaving(false); }
   };
 
-  // ── Add new staff ────────────────────────────────────────────────────────────
+  // Add new staff
   const saveNewStaff = async () => {
     if (!addForm.rfid.trim()) { showMsg("RFID is required", false); return; }
     if (!addForm.name.trim()) { showMsg("Name is required", false); return; }
@@ -240,10 +240,9 @@ export const AdminStaff: React.FC = () => {
         ) : (
           <div className="flex flex-col gap-4">
 
-            {/* ── Add Staff Form ── */}
+            {/* Add Staff Form */}
             {showAddForm && (
               <div className="card-glass p-6 border border-erl-accent/20 relative overflow-hidden">
-                {/* Decorative accent line */}
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-erl-accent/40 to-transparent" />
                 
                 <div className="flex items-center gap-2 mb-5">
@@ -342,14 +341,14 @@ export const AdminStaff: React.FC = () => {
               </div>
             )}
 
-            {/* ── Staff Cards ── */}
+            {/* Staff Cards */}
             {staff.map((s) => (
               <div key={s.id} className="card-glass overflow-hidden transition-all duration-300 hover:border-erl-accent/20">
                 {/* Card top accent bar */}
                 <div className="h-[3px]" style={{ background: `linear-gradient(90deg, ${s.color || '#c4956a'}, transparent)` }} />
                 
                 <div className="p-5">
-                  {/* ── Row 1: Avatar + Name + Role pill ── */}
+                  {/* Row 1: Avatar + Name + Role pill */}
                   <div className="flex items-center gap-4 mb-4">
                     <div
                       className="w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold text-white flex-shrink-0 shadow-lg"
@@ -393,7 +392,7 @@ export const AdminStaff: React.FC = () => {
                     )}
                   </div>
 
-                  {/* ── Row 2: RFID Badge ── */}
+                  {/* Row 2: RFID Badge */}
                   <div className="flex items-center gap-3 mb-3 pl-1">
                     <span className="text-[10px] text-erl-text-faint tracking-[0.15em] uppercase font-semibold w-[52px] flex-shrink-0">RFID</span>
                     {editingRfidId === s.id ? (
@@ -422,7 +421,7 @@ export const AdminStaff: React.FC = () => {
                     )}
                   </div>
 
-                  {/* ── Row 3: Alt RFID ── */}
+                  {/* Row 3: Alt RFID */}
                   <div className="flex items-center gap-3 mb-3 pl-1">
                     <span className="text-[10px] text-erl-text-faint tracking-[0.15em] uppercase font-semibold w-[52px] flex-shrink-0">Alt</span>
                     {editingRfidAltId === s.id ? (
@@ -451,7 +450,7 @@ export const AdminStaff: React.FC = () => {
                     )}
                   </div>
 
-                  {/* ── Row 4: PIN ── */}
+                  {/* Row 4: PIN */}
                   <div className="flex items-center gap-3 pl-1">
                     <span className="text-[10px] text-erl-text-faint tracking-[0.15em] uppercase font-semibold w-[52px] flex-shrink-0">PIN</span>
                     {changingPwId === s.id ? (

@@ -12,7 +12,6 @@ async function resolveTabName(sheets, spreadsheetId) {
   return cachedTabName;
 }
 
-// ── TimeClock tab resolver (separate cache) ─────────────────────────────────
 let cachedClockTabName = null;
 
 async function resolveClockTabName(sheets, spreadsheetId) {
@@ -42,7 +41,6 @@ async function loadMenuItemNames(pool) {
   }
 }
 
-// ── Sheet3 tab resolver ─────────────────────────────────────────────────────
 let cachedSheet3TabName = null;
 
 async function resolveSheet3TabName(sheets, spreadsheetId) {
@@ -161,7 +159,7 @@ export function googleSheetsClientInit(pool) {
 
       const tabName = await ensureSheet3Exists(sheets, spreadsheetId);
 
-      // ── Compute summary (same logic as frontend buildDailySummary) ──────────
+      // Compute summary (same logic as frontend buildDailySummary)
       const completed = (orders || []).filter((o) => o.status === 'completed');
       const totalRevenue = completed.reduce((s, o) => s + fmt(o.total), 0);
       const totalOrders = completed.length;
@@ -207,7 +205,6 @@ export function googleSheetsClientInit(pool) {
 
       const now = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
 
-      // ── Build all rows for Sheet3 ─────────────────────────────────────────
       const rows = [];
 
       // Title

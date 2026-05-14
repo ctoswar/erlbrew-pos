@@ -1,10 +1,30 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Staff, Screen } from "../types";
 import { useClock } from "../hooks/useClock";
 import { useTheme } from "../hooks/useTheme";
 import { useFontSize, FONT_SIZE_LABELS, type FontSize } from "../hooks/useFontSize";
 import { formatTime } from "../utils";
 import { apiPost } from "../utils/api";
+
+function useFullscreen() {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const toggle = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  return { isFullscreen, toggle };
+}
 
 interface Props {
   staff: Staff;
@@ -27,6 +47,7 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
   const { theme, setThemeByName } = useTheme();
   const { fontSize, setFontSize } = useFontSize();
   const [drawerStatus, setDrawerStatus] = useState<'idle' | 'opening' | 'ok' | 'error'>('idle');
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
 
   const handleOpenDrawer = useCallback(async () => {
     setDrawerStatus('opening');
@@ -104,6 +125,14 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
           title={theme === "brown" ? "Switch to light theme" : "Switch to dark theme"}
         >
           {theme === "brown" ? "☁" : "☕"}
+        </button>
+
+        <button
+          onClick={toggleFullscreen}
+          className="btn-ghost text-sm py-1.5 px-2.5 rounded-xl transition-all duration-200 opacity-60 hover:opacity-100"
+          title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+        >
+          {isFullscreen ? "✕" : "⛶"}
         </button>
 
         <div className="w-px h-5 bg-erl-accent/[0.08] shrink-0" />

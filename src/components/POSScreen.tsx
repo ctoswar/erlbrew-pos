@@ -31,6 +31,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>("dine-in");
   const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
   const [isTablet, setIsTablet] = useState(() => window.innerWidth >= MOBILE_BREAKPOINT && window.innerWidth < TABLET_BREAKPOINT);
@@ -92,9 +93,10 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   };
 
   const handleConfirmPayment = (method: PayMethod, cashTendered?: number, referenceNumber?: string) => {
-    const order = placeOrder(cart, staff, orderType, customerName, method, cashTendered, discount, referenceNumber);
+    const order = placeOrder(cart, staff, orderType, customerName, customerPhone, method, cashTendered, discount, referenceNumber);
     setLastOrder(order);
     clearCart();
+    setCustomerPhone("");
     setMobileCartOpen(false);
     openCashDrawer().catch((err) => console.error("Failed to open cash drawer:", err));
     setScreen("success");
@@ -264,9 +266,12 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
             discount={discount}
             orderType={orderType}
             customerName={customerName}
+            customerPhone={customerPhone}
             staffName={staff.name}
             onBack={handleBack}
             onContinue={() => setScreen("payment")}
+            onCustomerNameChange={setCustomerName}
+            onCustomerPhoneChange={setCustomerPhone}
           />
         );
       case "payment":

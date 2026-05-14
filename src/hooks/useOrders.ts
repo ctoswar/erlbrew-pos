@@ -252,7 +252,7 @@ export function useOrders() {
   }, [orders]);
 
   const placeOrder = useCallback(
-    (cart: CartItem[], staff: Staff, type: OrderType, customerName: string | undefined, payMethod: PayMethod, cashTendered?: number, discount?: Discount | null, referenceNumber?: string): Order => {
+    (cart: CartItem[], staff: Staff, type: OrderType, customerName: string | undefined, customerPhone: string | undefined, payMethod: PayMethod, cashTendered?: number, discount?: Discount | null, referenceNumber?: string): Order => {
       const subtotal = calcSubtotal(cart);
       const tax = calcTax(subtotal);
       const total = calcGrand(subtotal, discount);
@@ -269,6 +269,7 @@ export function useOrders() {
         staff_name: staff?.name,
         type,
         customer_name: customerName || null,
+        customer_phone: customerPhone || null,
         pay_method: payMethod,
         items,
       };

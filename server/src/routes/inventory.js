@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import { logAudit } from '../services/audit.js';
 
 // Helper: log a stock movement to the audit trail
 export async function logInventoryMovement(pool, { inventory_item_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, notes }) {
@@ -100,6 +101,7 @@ router.post('/', authMiddleware, async (req, res) => {
       } catch (_) { /* migration not applied — skip cost columns */ }
 
       await pool.query(sql, vals);
+      await logAudit(pool, req, { action: 'inventory_create', entityType: 'inventory', entityId: id, details: { name, category, stock } });
       res.json({ ok: true });
     } catch (e) {
       if (e.code === 'ER_DUP_ENTRY') {
@@ -142,33 +144,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
       } catch (_) { costFieldsExist = false; }
 
       if (costFieldsExist) {
-        if (purchase_cost !== undefined) { fields.push('purchase_cost = ?'); values.push(Number(purchase_cost)); }
-        if (unit_cost !== undefined) { fields.push('unit_cost = ?'); values.push(Number(unit_cost)); }
+        await pool.query('UPDATE inventory SET purchase_cost = 0, unit_cost = 0');
       }
-
-      if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
-
-      values.push(id);
-      await pool.query(`UPDATE inventory SET ${fields.join(', ')} WHERE id = ?`, values);
-
-      // Log stock adjustment if stock value changed
-      if (stock !== undefined && Number(stock) !== oldStock) {
-        const newStock = Number(stock);
-        const diff = newStock - oldStock;
-        const movementType = diff > 0 ? 'restock' : 'adjustment';
-        await logInventoryMovement(pool, {
-          inventory_item_id: id,
-          movement_type: movementType,
-          quantity: Math.abs(diff),
-          stock_before: oldStock,
-          stock_after: newStock,
-          reference_type: 'manual',
-          reference_id: null,
-          notes: `Manual stock change via edit: ${oldStock} → ${newStock}`,
-        });
-      }
-
-      res.json({ ok: true });
+      await logAudit(pool, req, { action: 'inventory_reset_costs', entityType: 'inventory', entityId: 'all' });
+      res.json({ ok: true, message: 'All inventory costs reset to 0' });
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });
@@ -183,6 +162,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
     try {
       await pool.query('DELETE FROM inventory WHERE id = ?', [id]);
+      await logAudit(pool, req, { action: 'inventory_delete', entityType: 'inventory', entityId: id });
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
@@ -227,8 +207,6 @@ router.put('/:id', authMiddleware, async (req, res) => {
       res.status(500).json({ error: 'DB error' });
     }
   });
-
-  // ── Inventory Movements Audit Trail ───────────────────────────────────────────
 
   // GET /api/inventory/movements — list movements with filters
   router.get('/movements', authMiddleware, async (req, res) => {

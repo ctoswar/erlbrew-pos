@@ -261,7 +261,7 @@ export const AdminMenu: React.FC = () => {
   );
 };
 
-// ── Admin Item Card ───────────────────────────────────────────────────────────
+// Admin Item Card
 
 interface AdminItemCardProps {
   item: MenuItem;
@@ -358,7 +358,7 @@ const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, o
   );
 };
 
-// ── Form Field ────────────────────────────────────────────────────────────────
+// Form Field
 
 const FormField: React.FC<{ label: string; hint?: string; children: React.ReactNode }> = ({ label, hint, children }) => (
   <div>

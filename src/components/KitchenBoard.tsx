@@ -68,7 +68,7 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
   );
 };
 
-/* ── Kitchen Card ─────────────────────────────────────────────────────────── */
+/* Kitchen Card */
 
 interface KitchenCardProps {
   order: Order;

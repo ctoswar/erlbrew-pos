@@ -41,7 +41,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
     <div className="fixed inset-0 z-[1000] bg-black/75 flex items-center justify-center backdrop-blur-sm">
       {/* Preview pane */}
       <div className="bg-erl-elevated rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[95vh] min-w-[360px]">
-        {/* ── Toolbar ─────────────────────────────────────────────── */}
+        {/* Toolbar */}
         <div className="bg-erl-sidebar px-5 py-3.5 border-b border-erl-border-default flex items-center justify-between flex-shrink-0">
           <div className="text-[13px] font-bold text-erl-text-primary font-display">
             Receipt Preview
@@ -52,7 +52,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
           <button onClick={onClose} className="bg-none border-none text-erl-muted text-xl cursor-pointer px-1">✕</button>
         </div>
 
-        {/* ── Scrollable receipt paper ────────────────────────────── */}
+        {/* Scrollable receipt paper */}
         <div className="flex-1 overflow-y-auto px-5 py-4 flex justify-center bg-[#e8e4df]">
           {/* Receipt paper — class added so @media print can isolate it */}
           <div
@@ -198,7 +198,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
           </div>
         </div>
 
-        {/* ── Action buttons ───────────────────────────────────────── */}
+        {/* Action buttons */}
         <div className="bg-erl-sidebar px-5 py-3.5 border-t border-erl-border-default flex gap-2.5 justify-end flex-shrink-0">
           <button className="btn btn-outline text-[10px] px-4.5 py-2" onClick={onClose}>
             Cancel

@@ -79,14 +79,14 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   const lines: string[] = [];
   const STORE = getStoreInfo();
 
-  // ── 1. Store Header ────────────────────────────────────────────────────────
+  // 1. Store Header
   lines.push(padCenter(STORE.name));
   lines.push(padCenter(STORE.addr1));
   if (STORE.addr2) lines.push(padCenter(STORE.addr2));
   if (STORE.tel) lines.push(padCenter(`Tel: ${STORE.tel}`));
   lines.push(ln("="));
 
-  // ── 2. BIR Accreditations ──────────────────────────────────────────────────
+  // 2. BIR Accreditations
   lines.push(padCenter("OFFICIAL RECEIPT"));
   lines.push(ln("="));
   lines.push(`ATP No  : ${STORE.atpNo}`);
@@ -98,7 +98,7 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   lines.push(`Accr No : ${STORE.posAccNo}`);
   lines.push(ln("-"));
 
-  // ── 3. Transaction Info ────────────────────────────────────────────────────
+  // 3. Transaction Info
   lines.push(`Date: ${dateStr}`);
   lines.push(`Time: ${timeStr}`);
   lines.push(`Slip No: ${slipNo}`);
@@ -106,7 +106,7 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   lines.push(`Type   : ${order.type === "dine-in" ? `DINE-IN${order.customerName ? ` / ${order.customerName}` : ""}` : "TAKEOUT"}`);
   lines.push(ln("-"));
 
-  // ── 4. Line Items ──────────────────────────────────────────────────────────
+  // 4. Line Items
   lines.push("QTY  ITEM              AMOUNT");
   lines.push(ln("-"));
   items.forEach((ci) => {
@@ -136,7 +136,7 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   });
   lines.push(ln("-"));
 
-  // ── 5. Totals ─────────────────────────────────────────────────────────────
+  // 5. Totals
   lines.push(`${padRight("Subtotal:", 22)}${padLeft(formatCurrency(subtotal).replace("₱","").trim(), 9)}`);
   if (order.discount && order.discount.amount > 0) {
     lines.push(`${padRight(order.discount.label + ":", 22)}${padLeft("-" + formatCurrency(order.discount.amount).replace("₱","").trim(), 9)}`);
@@ -145,7 +145,7 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   lines.push(`${padRight("TOTAL DUE:", 22)}${padLeft(formatCurrency(total).replace("₱","").trim(), 9)}`);
   lines.push(ln("="));
 
-  // ── 6. Payment ─────────────────────────────────────────────────────────────
+  // 6. Payment
   const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : "E-WALLET";
   lines.push(`Payment : ${payLabel}`);
   if (order.payMethod === "ewallet" && order.referenceNumber) {
@@ -157,7 +157,7 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
     lines.push(`${padRight("Change:", 22)}${padLeft(formatCurrency(tendered - total).replace("₱","").trim(), 9)}`);
   }
 
-  // ── 7. Footer ──────────────────────────────────────────────────────────────
+  // 7. Footer
   lines.push(ln("-"));
   lines.push(padCenter("Thank you for dining with us!"));
   lines.push(padCenter("Please come again!"));

@@ -2,6 +2,7 @@ import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logInventoryMovement } from './inventory.js';
+import { logAudit } from '../services/audit.js';
 
 export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   const router = express.Router();
@@ -205,7 +206,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
   // Create order and append to Google Sheets (public) -> now protected by auth
   router.post('/', authMiddleware, async (req, res) => {
-    const { staff_id, staff_name, items, type, customer_name, table_name, pay_method, reference_number, subtotal, tax, total, discount_type, discount_label, discount_value, discount_amount } = req.body;
+    const { staff_id, staff_name, items, type, customer_name, customer_phone, table_name, pay_method, reference_number, subtotal, tax, total, discount_type, discount_label, discount_value, discount_amount } = req.body;
     // Validation per FIX 5
     const err = validate(req, res, {
       items: { required: true, type: 'object', array: true },
@@ -243,9 +244,25 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         ? JSON.stringify({ type: discount_type || null, label: discount_label || null, value: discount_value ?? null, amount: discount_amount ?? null })
         : null;
 
+      // Look up or create customer by phone
+      let customerId = null;
+      if (customer_phone && typeof customer_phone === 'string' && customer_phone.trim()) {
+        const normalizedPhone = customer_phone.trim();
+        const [custRows] = await pool.query('SELECT id FROM customers WHERE phone = ?', [normalizedPhone]);
+        if (custRows.length > 0) {
+          customerId = custRows[0].id;
+        } else {
+          const [newCust] = await pool.query(
+            'INSERT INTO customers (phone, name, total_orders, total_spent) VALUES (?, ?, 0, 0)',
+            [normalizedPhone, customer_name || null]
+          );
+          customerId = newCust.insertId;
+        }
+      }
+
       await pool.query(
-        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name, table_name, type, pay_method, reference_number, discount_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, staffDbId, 'preparing', orderSubtotal, orderTax, orderTotal, customer_name || null, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null, discountJson]
+        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name, customer_id, table_name, type, pay_method, reference_number, discount_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, staffDbId, 'preparing', orderSubtotal, orderTax, orderTotal, customer_name || null, customerId, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null, discountJson]
       );
       for (const it of itemsOut) {
         const [itemResult] = await pool.query(
@@ -271,7 +288,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         }
       }
 
-    // ── Auto-deduct inventory based on recipes ───────────────────────────────
+    // Auto-deduct inventory based on recipes
     try {
       const conn = await pool.getConnection();
       await conn.beginTransaction();
@@ -338,7 +355,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
     res.json({ id, subtotal: orderSubtotal, tax: orderTax, total: orderTotal, status: 'preparing' });
 
-    // ── Log cash drawer sale transaction if cash payment ────────────────────
+    // Log cash drawer sale transaction if cash payment
     if (pay_method === 'cash' && total > 0) {
       try {
         const today = toMysqlDate(new Date());
@@ -395,6 +412,18 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     return res.status(400).json({ error: `status must be one of: ${allowed.join(', ')}` });
   }
   try {
+    // If completing, update customer stats first
+    if (status === 'completed') {
+      try {
+        const [orderRows] = await pool.query('SELECT customer_id, total FROM orders WHERE id = ?', [id]);
+        if (orderRows.length > 0 && orderRows[0].customer_id) {
+          await pool.query(
+            'UPDATE customers SET total_orders = total_orders + 1, total_spent = total_spent + ? WHERE id = ?',
+            [orderRows[0].total || 0, orderRows[0].customer_id]
+          );
+        }
+      } catch (e) { /* non-fatal — don't block completion */ }
+    }
     await pool.query('UPDATE orders SET status = ?, completed_at = ? WHERE id = ?', [status, status === 'completed' ? new Date() : null, id]);
     res.json({ ok: true });
 
@@ -420,7 +449,6 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 // Clear all orders + related data (admin only - for fresh start)
   // MUST be defined BEFORE /:id or Express will match 'all' as an id param
   router.delete('/all', authMiddleware, adminMiddleware, async (req, res) => {
-    console.log('[DELETE /orders/all] HIT! User:', req.user?.name, 'Role:', req.user?.role);
     try {
       await pool.query('SET FOREIGN_KEY_CHECKS = 0');
       await pool.query('DELETE FROM order_item_modifiers');
@@ -439,6 +467,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       await pool.query('DELETE FROM inventory');
       await pool.query('DELETE FROM company_settings');
       await pool.query('SET FOREIGN_KEY_CHECKS = 1');
+      await logAudit(pool, req, { action: 'fresh_start', entityType: 'system', entityId: 'all', details: { message: 'All data cleared except staff' } });
       return res.json({ ok: true, message: 'Fresh start complete — all data cleared except staff accounts. Re-seed menu items and inventory on next restart.' });
     } catch (e) {
       await pool.query('SET FOREIGN_KEY_CHECKS = 1').catch(() => {});
@@ -654,6 +683,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       if (broadcastEvent) {
         broadcastEvent('order:voided', { id, reason: reason.trim() });
       }
+      await logAudit(pool, req, { action: 'order_void', entityType: 'order', entityId: id, details: { reason: reason.trim() } });
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
@@ -672,6 +702,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       if (broadcastEvent) {
         broadcastEvent('order:updated', { id, status: 'refunded' });
       }
+      await logAudit(pool, req, { action: 'order_refund', entityType: 'order', entityId: id, details: { reason: reason.trim() } });
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
@@ -684,7 +715,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   }
 
-  // ── Reusable Z-Report generator (used by route AND cron) ──────────────────
+  // Reusable Z-Report generator (used by route AND cron)
   // targetDate: YYYY-MM-DD string. Defaults to today if omitted.
   async function buildZReportData(pool, targetDate) {
     const now = new Date();
@@ -782,8 +813,6 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       res.status(500).json({ error: 'DB error' });
     }
   });
-
-  // ── Cash Drawer ──────────────────────────────────────────────────────────
 
   // Helper
   function toMysqlDate(d) {

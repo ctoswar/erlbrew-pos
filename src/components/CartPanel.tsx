@@ -55,21 +55,21 @@ export const CartPanel: React.FC<Props> = ({
 
   return (
     <aside className="glass-panel w-full flex flex-col h-full border-l border-erl-accent/[0.06] rounded-none">
-      {/* ── Header ── */}
-      <div className="px-6 pt-6 pb-4 border-b border-erl-accent/[0.06] flex-shrink-0">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-erl-accent/10 flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-erl-accent">
+      {/* Header */}
+      <div className="px-4 pt-3 pb-2 border-b border-erl-accent/[0.06] flex-shrink-0">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-erl-accent/10 flex items-center justify-center">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-erl-accent">
                 <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
               </svg>
             </div>
-            <span className="font-display text-lg font-bold text-erl-text-primary tracking-wide">
+            <span className="font-display text-sm font-bold text-erl-text-primary tracking-wide">
               Order
             </span>
           </div>
           {!isEmpty && (
-            <button onClick={onClearCart} className="text-[10px] text-erl-danger font-semibold tracking-wide uppercase hover:opacity-80 transition-opacity px-3 py-1.5 rounded-xl hover:bg-erl-danger/5">
+            <button onClick={onClearCart} className="text-[9px] text-erl-danger font-semibold tracking-wide uppercase hover:opacity-80 transition-opacity px-2 py-1 rounded-lg hover:bg-erl-danger/5">
               Clear All
             </button>
           )}
@@ -77,18 +77,18 @@ export const CartPanel: React.FC<Props> = ({
 
         {/* Split Mode */}
         {!isEmpty && onStartSplit && (
-          <div className="mb-4">
+          <div className="mb-2">
             {splitMode ? (
               <button
                 onClick={onCancelSplit}
-                className="w-full py-2.5 rounded-xl border border-erl-danger/30 bg-erl-danger/5 text-erl-danger text-[10px] font-bold cursor-pointer tracking-[0.12em] uppercase transition-colors hover:bg-erl-danger/10"
+                className="w-full py-1.5 rounded-lg border border-erl-danger/30 bg-erl-danger/5 text-erl-danger text-[9px] font-bold cursor-pointer tracking-[0.1em] uppercase transition-colors hover:bg-erl-danger/10"
               >
                 Cancel Split
               </button>
             ) : (
               <button
                 onClick={onStartSplit}
-                className="w-full py-2.5 rounded-xl border border-dashed border-erl-border-medium bg-transparent text-erl-text-muted text-[10px] font-bold cursor-pointer tracking-[0.12em] uppercase transition-all hover:border-erl-border-strong hover:text-erl-text-secondary hover:bg-erl-accent/[0.02]"
+                className="w-full py-1.5 rounded-lg border border-dashed border-erl-border-medium bg-transparent text-erl-text-muted text-[9px] font-bold cursor-pointer tracking-[0.1em] uppercase transition-all hover:border-erl-border-strong hover:text-erl-text-secondary hover:bg-erl-accent/[0.02]"
               >
                 + Split Order
               </button>
@@ -97,17 +97,17 @@ export const CartPanel: React.FC<Props> = ({
         )}
 
         {/* Order Type Tabs */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-1.5 mb-2">
           {(["dine-in", "takeout"] as OrderType[]).map((t) => (
             <button
               key={t}
               onClick={() => onOrderTypeChange(t)}
               className={`
-                flex-1 py-2.5 rounded-xl text-[10px] font-bold tracking-[0.12em] uppercase cursor-pointer transition-all duration-250 ease-out
+                px-3 py-1 rounded-md text-[9px] font-bold tracking-[0.08em] uppercase cursor-pointer transition-all duration-200
                 ${
                   orderType === t
-                    ? "bg-erl-accent/10 border-2 border-erl-accent/30 text-erl-accent shadow-[0_0_16px_rgba(196,149,106,0.08)]"
-                    : "border-2 border-erl-border-default bg-transparent text-erl-text-secondary hover:border-erl-border-medium hover:text-erl-text-primary hover:bg-erl-accent/[0.02]"
+                    ? "bg-erl-accent/15 text-erl-accent"
+                    : "text-erl-text-muted hover:text-erl-text-secondary"
                 }
               `}
             >
@@ -117,33 +117,34 @@ export const CartPanel: React.FC<Props> = ({
         </div>
 
         {/* Customer Name */}
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] text-erl-text-muted tracking-[0.15em] uppercase font-bold whitespace-nowrap">
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] text-erl-text-muted tracking-[0.12em] uppercase font-bold whitespace-nowrap">
             {orderType === "takeout" ? "Name *" : "Name"}
           </span>
           <input
             type="text"
             value={customerName}
             onChange={(e) => onCustomerNameChange(e.target.value)}
-            placeholder={orderType === "takeout" ? "Customer name (required)" : "Customer name…"}
+            placeholder={orderType === "takeout" ? "Required" : "Name…"}
+            style={{ padding: '4px 8px', fontSize: '12px' }}
             className={`
-              flex-1 text-xs py-2.5 px-4 rounded-xl outline-none transition-all duration-200
-              bg-erl-input text-erl-text-primary
+              flex-1 rounded outline-none transition-all duration-200
+              bg-erl-input text-erl-text-primary border
               ${orderType === "takeout" && !customerName.trim()
-                ? "border-2 border-erl-danger"
-                : "border-2 border-erl-border-default focus:border-erl-accent focus:shadow-[0_0_0_3px_rgba(196,149,106,0.1)]"
+                ? "border-erl-danger"
+                : "border-transparent focus:border-erl-accent/30"
               }
             `}
           />
         </div>
         {orderType === "takeout" && !customerName.trim() && (
-          <div className="text-[10px] text-erl-danger mt-2 tracking-wide font-semibold">
+          <div className="text-[9px] text-erl-danger mt-1 tracking-wide font-semibold">
             Name required for takeout orders
           </div>
         )}
       </div>
 
-      {/* ── Items List ── */}
+      {/* Items List */}
       <div className="scroll-area flex-1 py-2 overflow-y-auto min-h-0">
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 gap-4">
@@ -210,7 +211,7 @@ export const CartPanel: React.FC<Props> = ({
         )}
       </div>
 
-      {/* ── Footer — Totals + Checkout ── */}
+      {/* Footer — Totals + Checkout */}
       <div className="px-6 pt-5 pb-6 border-t border-erl-accent/[0.06] flex-shrink-0">
         <div className="mb-4">
           <TotalRow label="Subtotal" value={formatCurrency(subtotal)} />
@@ -287,7 +288,7 @@ export const CartPanel: React.FC<Props> = ({
   );
 };
 
-/* ── Cart Item Row ────────────────────────────────────────────────────────── */
+/* Cart Item Row */
 
 interface CartItemRowProps {
   item: CartItem["item"];
@@ -417,7 +418,7 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
   );
 };
 
-/* ── Total Row ────────────────────────────────────────────────────────────── */
+/* Total Row */
 
 const TotalRow: React.FC<{
   label: string;

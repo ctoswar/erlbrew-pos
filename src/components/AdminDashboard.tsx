@@ -13,6 +13,8 @@ import { ZReportScreen } from "./ZReportScreen";
 import { CashDrawerScreen } from "./CashDrawerScreen";
 import { TimeKeeping } from "./TimeKeeping";
 import { OrderHistory } from "./OrderHistory";
+import { AdminAuditLog } from "./AdminAuditLog";
+import { AdminCustomers } from "./AdminCustomers";
 
 const STORAGE_KEY_ORDERS = 'erlbrew_admin_orders';
 const STORAGE_KEY_INVENTORY = 'erlbrew_admin_inventory';
@@ -23,12 +25,13 @@ interface Props {
   onLogout: () => void;
 }
 
-type AdminTab = 'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer' | 'time';
+type AdminTab = 'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'audit' | 'customers';
 
 const TABS: { label: string; value: AdminTab; icon: string }[] = [
   { label: 'Dashboard', value: 'dashboard', icon: '📊' },
   { label: 'Reports', value: 'reports', icon: '📈' },
   { label: 'Order History', value: 'history', icon: '📋' },
+  { label: 'Customers', value: 'customers', icon: '👤' },
   { label: 'Menu Items', value: 'menu', icon: '☕' },
   { label: 'Staff', value: 'staff', icon: '👥' },
   { label: 'Time Keeping', value: 'time', icon: '⏱️' },
@@ -37,6 +40,7 @@ const TABS: { label: string; value: AdminTab; icon: string }[] = [
   { label: 'Cash Drawer', value: 'cashdrawer', icon: '💰' },
   { label: 'COGS', value: 'cogs', icon: '📊' },
   { label: 'Supplier Invoices', value: 'suppliers', icon: '📄' },
+  { label: 'Audit Log', value: 'audit', icon: '🔍' },
   { label: 'Settings', value: 'settings', icon: '⚙️' },
   { label: 'Backup', value: 'backup', icon: '💾' },
 ];
@@ -347,6 +351,8 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
         )}
         {activeTab === 'time' && <TimeKeeping />}
         {activeTab === 'suppliers' && <AdminSupplierInvoices />}
+        {activeTab === 'audit' && <AdminAuditLog />}
+        {activeTab === 'customers' && <AdminCustomers />}
         {activeTab === 'backup' && (
           <div>
             <h2 className="text-lg text-erl-text-primary mb-5">Backup & Restore</h2>

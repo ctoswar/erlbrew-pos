@@ -193,5 +193,5 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
     if (onPrint) onPrint();
   }, []); // eslint-disable-line
 
-  return <div ref={printRef} style={{ display: "none" }} />;
+  return <div ref={printRef} className="hidden" />;
 };

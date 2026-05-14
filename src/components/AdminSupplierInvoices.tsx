@@ -245,24 +245,8 @@ Erlbrew Café`;
     window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${emailInvoice.contact_email}&su=${subject}&body=${body}`, '_blank');
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "9px 12px",
-    fontSize: 11,
-    borderRadius: 8,
-    border: "1px solid var(--border-medium)",
-    background: "var(--bg-base)",
-    color: "var(--text-primary)",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    fontSize: 9,
-    color: "var(--gold-muted)",
-    letterSpacing: 1.5,
-    marginBottom: 5,
-    textTransform: "uppercase" as const,
-    fontWeight: 700,
-  };
+  const inputClass = "w-full px-3 py-2 text-[11px] rounded-lg border border-erl-border-medium bg-erl-base text-erl-text-primary";
+  const labelClass = "text-[9px] text-erl-accent-muted tracking-widest uppercase font-bold";
 
   const totalStats = {
     pending: invoices.filter(i => i.status === "pending").reduce((s, i) => s + Number(i.total_amount || 0), 0),
@@ -271,200 +255,103 @@ Erlbrew Café`;
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
+    <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Header */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0.9rem 1rem",
-        borderBottom: "1px solid var(--border-default)",
-        flexShrink: 0,
-      }}>
-        <div style={{ fontSize: 9, color: "var(--gold)", letterSpacing: 2, textTransform: "uppercase", fontWeight: 700 }}>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-erl-border-default flex-shrink-0">
+        <div className="text-[9px] text-erl-accent tracking-widest uppercase font-bold">
           Supplier Invoices ({invoices.length})
         </div>
-        <button onClick={openAddForm} style={{
-          background: "var(--gold)",
-          color: "var(--bg-sidebar)",
-          border: "none",
-          borderRadius: 9,
-          padding: "8px 16px",
-          fontSize: 9,
-          fontWeight: 700,
-          letterSpacing: 1,
-          cursor: "pointer",
-          textTransform: "uppercase" as const,
-        }}>
+        <button onClick={openAddForm} className="bg-erl-accent text-erl-sidebar border-none rounded-lg px-4 py-2 text-[9px] font-bold tracking-wide cursor-pointer uppercase">
           + New Invoice
         </button>
       </div>
 
       {/* Summary Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, padding: "0.8rem 1rem", borderBottom: "1px solid var(--border-subtle)", flexShrink: 0 }}>
-        <div style={{ background: "var(--bg-surface)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
-          <div style={{ fontSize: 8, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1 }}>Pending</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--gold)" }}>{formatCurrency(totalStats.pending)}</div>
+      <div className="grid grid-cols-3 gap-2.5 px-4 py-3 border-b border-erl-border-subtle flex-shrink-0">
+        <div className="bg-erl-surface rounded-lg px-3 py-2.5 text-center">
+          <div className="text-[8px] text-erl-muted uppercase tracking-wide">Pending</div>
+          <div className="text-sm font-bold text-erl-accent">{formatCurrency(totalStats.pending)}</div>
         </div>
-        <div style={{ background: "var(--bg-surface)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
-          <div style={{ fontSize: 8, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1 }}>Paid</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--success)" }}>{formatCurrency(totalStats.paid)}</div>
+        <div className="bg-erl-surface rounded-lg px-3 py-2.5 text-center">
+          <div className="text-[8px] text-erl-muted uppercase tracking-wide">Paid</div>
+          <div className="text-sm font-bold text-erl-success">{formatCurrency(totalStats.paid)}</div>
         </div>
-        <div style={{ background: "var(--bg-surface)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
-          <div style={{ fontSize: 8, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1 }}>Overdue</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--danger)" }}>{formatCurrency(totalStats.overdue)}</div>
+        <div className="bg-erl-surface rounded-lg px-3 py-2.5 text-center">
+          <div className="text-[8px] text-erl-muted uppercase tracking-wide">Overdue</div>
+          <div className="text-sm font-bold text-erl-danger">{formatCurrency(totalStats.overdue)}</div>
         </div>
       </div>
 
       {/* Status Filter */}
-      <div style={{ display: "flex", gap: 6, padding: "0.7rem 1rem", overflowX: "auto", flexShrink: 0 }}>
+      <div className="flex gap-1.5 px-4 py-3 overflow-x-auto flex-shrink-0">
         {["all", "pending", "partial", "paid", "overdue", "cancelled"].map(s => (
-          <button key={s} onClick={() => setFilterStatus(s)} style={{
-            padding: "5px 14px",
-            borderRadius: 20,
-            flexShrink: 0,
-            border: `1.5px solid ${filterStatus === s ? "var(--gold)" : "var(--border-default)"}`,
-            background: filterStatus === s ? "var(--gold)" : "transparent",
-            color: filterStatus === s ? "var(--bg-sidebar)" : "var(--text-secondary)",
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: 1,
-            cursor: "pointer",
-            textTransform: "uppercase" as const,
-          }}>
+          <button key={s} onClick={() => setFilterStatus(s)} className={`
+            px-3.5 py-[5px] rounded-full flex-shrink-0 text-[9px] font-bold tracking-wide cursor-pointer uppercase
+            ${filterStatus === s ? "bg-erl-accent text-erl-sidebar border-[1.5px] border-erl-accent" : "bg-transparent text-erl-secondary border-[1.5px] border-erl-border-default"}
+          `}>
             {s}
           </button>
         ))}
       </div>
 
       {/* Invoice List */}
-      <div className="scroll-area" style={{ flex: 1, padding: "0.5rem 1rem", overflowY: "auto" }}>
+      <div className="scroll-area flex-1 px-4 py-2 overflow-y-auto">
         {loading ? (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>Loading...</div>
+          <div className="text-center text-erl-muted py-12">Loading...</div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem", fontSize: 11 }}>
+          <div className="text-center text-erl-muted py-12 text-[11px]">
             No supplier invoices found
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="flex flex-col gap-2">
             {filtered.map(inv => (
-              <div key={inv.id} style={{
-                background: "var(--bg-surface)",
-                border: "1px solid var(--border-subtle)",
-                borderRadius: 12,
-                padding: "12px 14px",
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+              <div key={inv.id} className="bg-erl-surface border border-erl-border-subtle rounded-xl px-3.5 py-3">
+                <div className="flex justify-between items-start mb-2">
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)" }}>{inv.invoice_number}</div>
-                    <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 2 }}>{inv.supplier_name}</div>
+                    <div className="text-[11px] font-bold text-erl-text-primary">{inv.invoice_number}</div>
+                    <div className="text-[9px] text-erl-muted mt-0.5">{inv.supplier_name}</div>
                   </div>
-                  <span style={{
-                    fontSize: 8,
-                    fontWeight: 700,
-                    color: STATUS_COLORS[inv.status] || "var(--text-muted)",
-                    background: `${STATUS_COLORS[inv.status] || "var(--text-muted)"}22`,
-                    padding: "3px 8px",
-                    borderRadius: 4,
-                    letterSpacing: 1,
-                    textTransform: "uppercase" as const,
-                  }}>
+                  <span className="text-[8px] font-bold px-2 py-[3px] rounded tracking-wide uppercase"
+                    style={{ color: STATUS_COLORS[inv.status] || "var(--text-muted)", background: `${STATUS_COLORS[inv.status] || "var(--text-muted)"}22` }}>
                     {inv.status}
                   </span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ fontSize: 9, color: "var(--text-muted)" }}>
+                <div className="flex justify-between items-center">
+                  <div className="text-[9px] text-erl-muted">
                     {inv.invoice_date} {inv.due_date && `→ ${inv.due_date}`}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--gold)" }}>
+                  <div className="text-[13px] font-bold text-erl-accent">
                     {formatCurrency(inv.total_amount)}
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                  <button onClick={() => setViewingInvoice(inv)} style={{
-                    flex: 1,
-                    padding: "6px 0",
-                    borderRadius: 8,
-                    border: "1px solid var(--border-medium)",
-                    background: "transparent",
-                    color: "var(--text-secondary)",
-                    fontSize: 8,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    textTransform: "uppercase" as const,
-                  }}>
+                <div className="flex gap-1.5 mt-2.5">
+                  <button onClick={() => setViewingInvoice(inv)} className="flex-1 py-1.5 rounded-lg border border-erl-border-medium bg-transparent text-erl-secondary text-[8px] font-bold cursor-pointer uppercase">
                     View
                   </button>
-                  <button onClick={() => openEditForm(inv)} style={{
-                    flex: 1,
-                    padding: "6px 0",
-                    borderRadius: 8,
-                    border: "1px solid var(--border-medium)",
-                    background: "transparent",
-                    color: "var(--text-secondary)",
-                    fontSize: 8,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    textTransform: "uppercase" as const,
-                  }}>
+                  <button onClick={() => openEditForm(inv)} className="flex-1 py-1.5 rounded-lg border border-erl-border-medium bg-transparent text-erl-secondary text-[8px] font-bold cursor-pointer uppercase">
                     Edit
                   </button>
                   <button
                     onClick={() => handleEmailInvoice(inv)}
                     disabled={!inv.contact_email}
                     title={inv.contact_email ? `Email ${inv.contact_email}` : "No email address"}
-                    style={{
-                      flex: 1,
-                      padding: "6px 0",
-                      borderRadius: 8,
-                      border: "1px solid var(--border-medium)",
-                      background: inv.contact_email ? "rgba(201,135,58,0.1)" : "transparent",
-                      color: inv.contact_email ? "var(--gold)" : "var(--text-muted)",
-                      fontSize: 8,
-                      fontWeight: 700,
-                      cursor: inv.contact_email ? "pointer" : "not-allowed",
-                      textTransform: "uppercase" as const,
-                    }}>
+                    className={`
+                      flex-1 py-1.5 rounded-lg border border-erl-border-medium text-[8px] font-bold uppercase cursor-pointer
+                      ${inv.contact_email ? "bg-erl-accent/10 text-erl-accent" : "bg-transparent text-erl-muted cursor-not-allowed"}
+                    `}>
                     ✉ Email
                   </button>
                   {deleteConfirm === inv.id ? (
                     <>
-                      <button onClick={() => handleDelete(inv.id!)} style={{
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        border: "none",
-                        background: "var(--danger)",
-                        color: "#fff",
-                        fontSize: 8,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                      }}>
+                      <button onClick={() => handleDelete(inv.id!)} className="px-2.5 py-1.5 rounded-lg border-none bg-erl-danger text-white text-[8px] font-bold cursor-pointer">
                         Confirm
                       </button>
-                      <button onClick={() => setDeleteConfirm(null)} style={{
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        border: "1px solid var(--border-default)",
-                        background: "transparent",
-                        color: "var(--text-muted)",
-                        fontSize: 8,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                      }}>
+                      <button onClick={() => setDeleteConfirm(null)} className="px-2.5 py-1.5 rounded-lg border border-erl-border-default bg-transparent text-erl-muted text-[8px] font-bold cursor-pointer">
                         Cancel
                       </button>
                     </>
                   ) : (
-                    <button onClick={() => setDeleteConfirm(inv.id!)} style={{
-                      padding: "6px 10px",
-                      borderRadius: 8,
-                      border: "1px solid var(--danger-border)",
-                      background: "transparent",
-                      color: "var(--danger)",
-                      fontSize: 8,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}>
+                    <button onClick={() => setDeleteConfirm(inv.id!)} className="px-2.5 py-1.5 rounded-lg border border-erl-danger-border bg-transparent text-erl-danger text-[8px] font-bold cursor-pointer">
                       ✕
                     </button>
                   )}
@@ -478,32 +365,22 @@ Erlbrew Café`;
       {/* Add/Edit Modal */}
       {showForm && (
         <>
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998, animation: "fadeInOverlay 0.2s ease" }} onClick={closeForm} />
-          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
-            <div style={{
-              background: "var(--bg-elevated)",
-              border: "1.5px solid var(--border-medium)",
-              borderRadius: 16,
-              padding: "1.5rem",
-              width: "100%",
-              maxWidth: 600,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              animation: "fadeInUp 0.2s ease",
-            }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 16, fontFamily: "'Playfair Display', serif" }}>
+          <div className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay" onClick={closeForm} />
+          <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
+            <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[600px] max-h-[90vh] overflow-y-auto animate-fade-in-up">
+              <div className="font-display text-sm font-bold text-erl-text-primary mb-4">
                 {editingId ? "Edit Invoice" : "New Supplier Invoice"}
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <div style={labelStyle}>Invoice Number *</div>
-                    <input value={form.invoice_number} onChange={e => setForm(f => ({ ...f, invoice_number: e.target.value }))} style={inputStyle} placeholder="SI-001" />
+                    <div className={labelClass}>Invoice Number *</div>
+                    <input value={form.invoice_number} onChange={e => setForm(f => ({ ...f, invoice_number: e.target.value }))} className={inputClass} placeholder="SI-001" />
                   </div>
                   <div>
-                    <div style={labelStyle}>Status</div>
-                    <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as any }))} style={inputStyle}>
+                    <div className={labelClass}>Status</div>
+                    <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as any }))} className={inputClass}>
                       <option value="pending">Pending</option>
                       <option value="partial">Partial</option>
                       <option value="paid">Paid</option>
@@ -514,77 +391,59 @@ Erlbrew Café`;
                 </div>
 
                 <div>
-                  <div style={labelStyle}>Supplier Name *</div>
-                  <input value={form.supplier_name} onChange={e => setForm(f => ({ ...f, supplier_name: e.target.value }))} style={inputStyle} placeholder="ABC Supply Co." />
+                  <div className={labelClass}>Supplier Name *</div>
+                  <input value={form.supplier_name} onChange={e => setForm(f => ({ ...f, supplier_name: e.target.value }))} className={inputClass} placeholder="ABC Supply Co." />
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                <div className="grid grid-cols-3 gap-2.5">
                   <div>
-                    <div style={labelStyle}>Contact Person</div>
-                    <input value={form.contact_person} onChange={e => setForm(f => ({ ...f, contact_person: e.target.value }))} style={inputStyle} placeholder="Juan Dela Cruz" />
+                    <div className={labelClass}>Contact Person</div>
+                    <input value={form.contact_person} onChange={e => setForm(f => ({ ...f, contact_person: e.target.value }))} className={inputClass} placeholder="Juan Dela Cruz" />
                   </div>
                   <div>
-                    <div style={labelStyle}>Phone</div>
-                    <input value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} style={inputStyle} placeholder="0917..." />
+                    <div className={labelClass}>Phone</div>
+                    <input value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} className={inputClass} placeholder="0917..." />
                   </div>
                   <div>
-                    <div style={labelStyle}>Email</div>
-                    <input value={form.contact_email} onChange={e => setForm(f => ({ ...f, contact_email: e.target.value }))} style={inputStyle} placeholder="juan@email.com" />
+                    <div className={labelClass}>Email</div>
+                    <input value={form.contact_email} onChange={e => setForm(f => ({ ...f, contact_email: e.target.value }))} className={inputClass} placeholder="juan@email.com" />
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <div style={labelStyle}>Invoice Date *</div>
-                    <input type="date" value={form.invoice_date} onChange={e => setForm(f => ({ ...f, invoice_date: e.target.value }))} style={inputStyle} />
+                    <div className={labelClass}>Invoice Date *</div>
+                    <input type="date" value={form.invoice_date} onChange={e => setForm(f => ({ ...f, invoice_date: e.target.value }))} className={inputClass} />
                   </div>
                   <div>
-                    <div style={labelStyle}>Due Date</div>
-                    <input type="date" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} style={inputStyle} />
+                    <div className={labelClass}>Due Date</div>
+                    <input type="date" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} className={inputClass} />
                   </div>
                 </div>
 
                 {/* Line Items */}
                 <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <div style={labelStyle}>Line Items</div>
-                    <button onClick={addLineItem} style={{
-                      padding: "4px 12px",
-                      fontSize: 9,
-                      borderRadius: 6,
-                      border: "1px solid var(--gold)",
-                      background: "transparent",
-                      color: "var(--gold)",
-                      cursor: "pointer",
-                      fontWeight: 700,
-                    }}>
+                  <div className="flex justify-between items-center mb-2">
+                    <div className={labelClass}>Line Items</div>
+                    <button onClick={addLineItem} className="px-3 py-1 text-[9px] rounded-md border border-erl-accent bg-transparent text-erl-accent cursor-pointer font-bold">
                       + Add Item
                     </button>
                   </div>
                   {form.items.length === 0 ? (
-                    <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 10, padding: "1rem", border: "1px dashed var(--border-medium)", borderRadius: 8 }}>
+                    <div className="text-center text-erl-muted text-[10px] py-4 border border-dashed border-erl-border-medium rounded-lg">
                       No items yet. Click "Add Item" to add line items.
                     </div>
                   ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div className="flex flex-col gap-1.5">
                       {form.items.map((item, idx) => (
-                        <div key={idx} style={{ display: "grid", gridTemplateColumns: "2fr 60px 80px 80px 30px", gap: 6, alignItems: "center" }}>
-                          <input value={item.item_description} onChange={e => updateLineItem(idx, "item_description", e.target.value)} style={inputStyle} placeholder="Description" />
-                          <input type="number" value={item.quantity} onChange={e => updateLineItem(idx, "quantity", parseFloat(e.target.value) || 0)} style={inputStyle} placeholder="Qty" />
-                          <input type="number" value={item.unit_price} onChange={e => updateLineItem(idx, "unit_price", parseFloat(e.target.value) || 0)} style={inputStyle} placeholder="Unit Price" />
-                          <div style={{ fontSize: 10, color: "var(--text-secondary)", textAlign: "right", fontWeight: 600 }}>
+                        <div key={idx} className="grid grid-cols-[2fr_60px_80px_80px_30px] gap-1.5 items-center">
+                          <input value={item.item_description} onChange={e => updateLineItem(idx, "item_description", e.target.value)} className={inputClass} placeholder="Description" />
+                          <input type="number" value={item.quantity} onChange={e => updateLineItem(idx, "quantity", parseFloat(e.target.value) || 0)} className={inputClass} placeholder="Qty" />
+                          <input type="number" value={item.unit_price} onChange={e => updateLineItem(idx, "unit_price", parseFloat(e.target.value) || 0)} className={inputClass} placeholder="Unit Price" />
+                          <div className="text-[10px] text-erl-secondary text-right font-semibold">
                             {formatCurrency(item.total_price)}
                           </div>
-                          <button onClick={() => removeLineItem(idx)} style={{
-                            width: 26,
-                            height: 26,
-                            borderRadius: 6,
-                            border: "1px solid var(--danger-border)",
-                            background: "transparent",
-                            color: "var(--danger)",
-                            cursor: "pointer",
-                            fontSize: 12,
-                          }}>
+                          <button onClick={() => removeLineItem(idx)} className="w-[26px] h-[26px] rounded-md border border-erl-danger-border bg-transparent text-erl-danger cursor-pointer text-xs">
                             ✕
                           </button>
                         </div>
@@ -594,38 +453,38 @@ Erlbrew Café`;
                 </div>
 
                 {/* Totals */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                <div className="grid grid-cols-3 gap-2.5">
                   <div>
-                    <div style={labelStyle}>Subtotal</div>
-                    <input type="number" value={form.subtotal} onChange={e => setForm(f => ({ ...f, subtotal: e.target.value }))} style={inputStyle} placeholder="0.00" />
+                    <div className={labelClass}>Subtotal</div>
+                    <input type="number" value={form.subtotal} onChange={e => setForm(f => ({ ...f, subtotal: e.target.value }))} className={inputClass} placeholder="0.00" />
                   </div>
                   <div>
-                    <div style={labelStyle}>Tax (12%)</div>
-                    <input type="number" value={form.tax_amount} onChange={e => setForm(f => ({ ...f, tax_amount: e.target.value }))} style={inputStyle} placeholder="0.00" />
+                    <div className={labelClass}>Tax (12%)</div>
+                    <input type="number" value={form.tax_amount} onChange={e => setForm(f => ({ ...f, tax_amount: e.target.value }))} className={inputClass} placeholder="0.00" />
                   </div>
                   <div>
-                    <div style={labelStyle}>Total *</div>
-                    <input type="number" value={form.total_amount} onChange={e => setForm(f => ({ ...f, total_amount: e.target.value }))} style={{ ...inputStyle, fontWeight: 700, color: "var(--gold)" }} placeholder="0.00" />
+                    <div className={labelClass}>Total *</div>
+                    <input type="number" value={form.total_amount} onChange={e => setForm(f => ({ ...f, total_amount: e.target.value }))} className={`${inputClass} font-bold text-erl-accent`} placeholder="0.00" />
                   </div>
                 </div>
 
                 <div>
-                  <div style={labelStyle}>Notes</div>
-                  <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} placeholder="Payment terms, delivery notes, etc." />
+                  <div className={labelClass}>Notes</div>
+                  <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className={`${inputClass} min-h-[60px] resize-y`} placeholder="Payment terms, delivery notes, etc." />
                 </div>
               </div>
 
               {error && (
-                <div style={{ marginTop: 12, padding: "9px 12px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", borderRadius: 8, fontSize: 11, color: "var(--danger)" }}>
+                <div className="mt-3 px-3 py-2 bg-erl-danger-bg border border-erl-danger-border rounded-lg text-[11px] text-erl-danger">
                   {error}
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-                <button onClick={closeForm} style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "1px solid var(--border-default)", background: "transparent", color: "var(--text-secondary)", fontSize: 10, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" as const }}>
+              <div className="flex gap-2 mt-4">
+                <button onClick={closeForm} className="flex-1 py-2.5 rounded-lg border border-erl-border-default bg-transparent text-erl-secondary text-[10px] font-bold tracking-wide cursor-pointer uppercase">
                   Cancel
                 </button>
-                <button onClick={handleSave} disabled={saving} style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "none", background: "var(--gold)", color: "var(--bg-sidebar)", fontSize: 10, fontWeight: 700, letterSpacing: 1, cursor: saving ? "not-allowed" : "pointer", textTransform: "uppercase" as const, opacity: saving ? 0.6 : 1 }}>
+                <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-lg border-none bg-erl-accent text-erl-sidebar text-[10px] font-bold tracking-wide cursor-pointer uppercase disabled:cursor-not-allowed disabled:opacity-60">
                   {saving ? "Saving..." : editingId ? "Update Invoice" : "Create Invoice"}
                 </button>
               </div>
@@ -637,89 +496,59 @@ Erlbrew Café`;
       {/* View Invoice Modal */}
       {viewingInvoice && (
         <>
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998 }} onClick={() => setViewingInvoice(null)} />
-          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
-            <div style={{
-              background: "var(--bg-elevated)",
-              border: "1.5px solid var(--border-medium)",
-              borderRadius: 16,
-              padding: "1.5rem",
-              width: "100%",
-              maxWidth: 500,
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+          <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setViewingInvoice(null)} />
+          <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
+            <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[500px] max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-start mb-4">
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Playfair Display', serif" }}>{viewingInvoice.invoice_number}</div>
-                  <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>{viewingInvoice.supplier_name}</div>
+                  <div className="font-display text-base font-bold text-erl-text-primary">{viewingInvoice.invoice_number}</div>
+                  <div className="text-[10px] text-erl-muted mt-1">{viewingInvoice.supplier_name}</div>
                 </div>
-                <span style={{
-                  fontSize: 8,
-                  fontWeight: 700,
-                  color: STATUS_COLORS[viewingInvoice.status] || "var(--text-muted)",
-                  background: `${STATUS_COLORS[viewingInvoice.status] || "var(--text-muted)"}22`,
-                  padding: "4px 10px",
-                  borderRadius: 4,
-                  letterSpacing: 1,
-                  textTransform: "uppercase" as const,
-                }}>
+                <span className="text-[8px] font-bold px-2.5 py-1 rounded tracking-wide uppercase"
+                  style={{ color: STATUS_COLORS[viewingInvoice.status] || "var(--text-muted)", background: `${STATUS_COLORS[viewingInvoice.status] || "var(--text-muted)"}22` }}>
                   {viewingInvoice.status}
                 </span>
               </div>
 
-              <div style={{ display: "grid", gap: 8, fontSize: 10, marginBottom: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "var(--text-muted)" }}>Invoice Date:</span>
-                  <span style={{ color: "var(--text-primary)" }}>{viewingInvoice.invoice_date}</span>
+              <div className="grid gap-2 text-[10px] mb-4">
+                <div className="flex justify-between">
+                  <span className="text-erl-muted">Invoice Date:</span>
+                  <span className="text-erl-text-primary">{viewingInvoice.invoice_date}</span>
                 </div>
                 {viewingInvoice.due_date && (
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-muted)" }}>Due Date:</span>
-                    <span style={{ color: "var(--text-primary)" }}>{viewingInvoice.due_date}</span>
+                  <div className="flex justify-between">
+                    <span className="text-erl-muted">Due Date:</span>
+                    <span className="text-erl-text-primary">{viewingInvoice.due_date}</span>
                   </div>
                 )}
                 {viewingInvoice.contact_person && (
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-muted)" }}>Contact:</span>
-                    <span style={{ color: "var(--text-primary)" }}>{viewingInvoice.contact_person}</span>
+                  <div className="flex justify-between">
+                    <span className="text-erl-muted">Contact:</span>
+                    <span className="text-erl-text-primary">{viewingInvoice.contact_person}</span>
                   </div>
                 )}
                 {viewingInvoice.contact_phone && (
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-muted)" }}>Phone:</span>
-                    <span style={{ color: "var(--text-primary)" }}>{viewingInvoice.contact_phone}</span>
+                  <div className="flex justify-between">
+                    <span className="text-erl-muted">Phone:</span>
+                    <span className="text-erl-text-primary">{viewingInvoice.contact_phone}</span>
                   </div>
                 )}
               </div>
 
-              <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 12, marginBottom: 12 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>Amount Due</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--gold)" }}>{formatCurrency(viewingInvoice.total_amount)}</div>
+              <div className="border-t border-erl-border-subtle pt-3 mb-3">
+                <div className="text-[10px] font-bold text-erl-muted mb-2 uppercase tracking-wide">Amount Due</div>
+                <div className="text-2xl font-bold text-erl-accent">{formatCurrency(viewingInvoice.total_amount)}</div>
               </div>
 
               {viewingInvoice.notes && (
-                <div style={{ fontSize: 10, color: "var(--text-muted)", padding: "10px", background: "var(--bg-base)", borderRadius: 8 }}>
+                <div className="text-[10px] text-erl-muted p-2.5 bg-erl-base rounded-lg">
                   <strong>Notes:</strong> {viewingInvoice.notes}
                 </div>
               )}
 
               <button
                 onClick={() => { setViewingInvoice(null); openEditForm(viewingInvoice); }}
-                style={{
-                  width: "100%",
-                  marginTop: 16,
-                  padding: "11px 0",
-                  borderRadius: 9,
-                  border: "1px solid var(--gold)",
-                  background: "var(--gold)",
-                  color: "var(--bg-sidebar)",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: 1,
-                  cursor: "pointer",
-                  textTransform: "uppercase" as const,
-                }}
+                className="w-full mt-4 py-2.5 rounded-lg border border-erl-accent bg-erl-accent text-erl-sidebar text-[10px] font-bold tracking-wide cursor-pointer uppercase"
               >
                 Edit Invoice
               </button>
@@ -731,125 +560,69 @@ Erlbrew Café`;
       {/* Email Invoice Modal */}
       {emailInvoice && (
         <>
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998 }} onClick={() => setEmailInvoice(null)} />
-          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
-            <div style={{
-              background: "var(--bg-elevated)",
-              border: "1.5px solid var(--border-medium)",
-              borderRadius: 16,
-              padding: "1.5rem",
-              width: "100%",
-              maxWidth: 600,
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}>
+          <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setEmailInvoice(null)} />
+          <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
+            <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[600px] max-h-[90vh] overflow-y-auto">
               {/* Header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Playfair Display', serif" }}>
+              <div className="flex justify-between items-center mb-5">
+                <div className="font-display text-sm font-bold text-erl-text-primary">
                   Send Invoice via Email
                 </div>
-                <button onClick={() => setEmailInvoice(null)} style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-muted)",
-                  cursor: "pointer",
-                  fontSize: 18,
-                  padding: 4,
-                }}>
+                <button onClick={() => setEmailInvoice(null)} className="bg-transparent border-none text-erl-muted cursor-pointer text-lg p-1">
                   ✕
                 </button>
               </div>
 
               {/* To Field */}
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1, marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>To</div>
-                <div style={{ padding: "10px 12px", background: "var(--bg-base)", borderRadius: 8, fontSize: 12, color: "var(--text-primary)", border: "1px solid var(--border-medium)" }}>
+              <div className="mb-3">
+                <div className="text-[9px] text-erl-accent-muted tracking-wide uppercase font-bold mb-1">To</div>
+                <div className="px-3 py-2.5 bg-erl-base rounded-lg text-xs text-erl-text-primary border border-erl-border-medium">
                   {emailInvoice.contact_email}
                 </div>
               </div>
 
               {/* Subject Field */}
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1, marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>Subject</div>
-                <div style={{ padding: "10px 12px", background: "var(--bg-base)", borderRadius: 8, fontSize: 12, color: "var(--text-primary)", border: "1px solid var(--border-medium)" }}>
+              <div className="mb-3">
+                <div className="text-[9px] text-erl-accent-muted tracking-wide uppercase font-bold mb-1">Subject</div>
+                <div className="px-3 py-2.5 bg-erl-base rounded-lg text-xs text-erl-text-primary border border-erl-border-medium">
                   Invoice {emailInvoice.invoice_number} from Erlbrew Café
                 </div>
               </div>
 
               {/* Message Body */}
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1, marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>Message</div>
+              <div className="mb-4">
+                <div className="text-[9px] text-erl-accent-muted tracking-wide uppercase font-bold mb-1">Message</div>
                 <textarea
                   value={emailBody}
                   onChange={e => setEmailBody(e.target.value)}
-                  style={{
-                    width: "100%",
-                    minHeight: 350,
-                    padding: 12,
-                    fontSize: 11,
-                    fontFamily: "monospace",
-                    lineHeight: 1.6,
-                    borderRadius: 8,
-                    border: "1px solid var(--border-medium)",
-                    background: "var(--bg-base)",
-                    color: "var(--text-primary)",
-                    resize: "vertical",
-                  }}
+                  className="w-full min-h-[350px] p-3 text-[11px] font-mono leading-relaxed rounded-lg border border-erl-border-medium bg-erl-base text-erl-text-primary resize-y"
                 />
               </div>
 
               {/* Invoice Summary Preview */}
-              <div style={{ padding: 12, background: "var(--bg-surface)", borderRadius: 10, marginBottom: 16, fontSize: 10 }}>
-                <div style={{ fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>Invoice Summary</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                  <div><span style={{ color: "var(--text-muted)" }}>Amount:</span> <span style={{ color: "var(--gold)", fontWeight: 700 }}>{formatCurrency(emailInvoice.total_amount)}</span></div>
-                  <div><span style={{ color: "var(--text-muted)" }}>Due:</span> {emailInvoice.due_date || "N/A"}</div>
-                  <div><span style={{ color: "var(--text-muted)" }}>Status:</span> <span style={{ fontWeight: 700, textTransform: "capitalize" }}>{emailInvoice.status}</span></div>
-                  <div><span style={{ color: "var(--text-muted)" }}>Items:</span> {emailInvoice.items?.length || 0}</div>
+              <div className="p-3 bg-erl-surface rounded-[10px] mb-4 text-[10px]">
+                <div className="font-bold text-erl-text-primary mb-2">Invoice Summary</div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div><span className="text-erl-muted">Amount:</span> <span className="text-erl-accent font-bold">{formatCurrency(emailInvoice.total_amount)}</span></div>
+                  <div><span className="text-erl-muted">Due:</span> {emailInvoice.due_date || "N/A"}</div>
+                  <div><span className="text-erl-muted">Status:</span> <span className="font-bold capitalize">{emailInvoice.status}</span></div>
+                  <div><span className="text-erl-muted">Items:</span> {emailInvoice.items?.length || 0}</div>
                 </div>
               </div>
 
               {/* Error Message */}
               {error && (
-                <div style={{ marginBottom: 12, padding: "9px 12px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", borderRadius: 8, fontSize: 11, color: "var(--danger)" }}>
+                <div className="mb-3 px-3 py-2 bg-erl-danger-bg border border-erl-danger-border rounded-lg text-[11px] text-erl-danger">
                   {error}
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => setEmailInvoice(null)} style={{
-                  flex: 1,
-                  padding: "11px 0",
-                  borderRadius: 9,
-                  border: "1px solid var(--border-default)",
-                  background: "transparent",
-                  color: "var(--text-secondary)",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: 1,
-                  cursor: "pointer",
-                  textTransform: "uppercase" as const,
-                }}>
+              <div className="flex gap-2.5">
+                <button onClick={() => setEmailInvoice(null)} className="flex-1 py-2.5 rounded-lg border border-erl-border-default bg-transparent text-erl-secondary text-[10px] font-bold tracking-wide cursor-pointer uppercase">
                   Cancel
                 </button>
-                <button onClick={handleSendViaGmail} style={{
-                  flex: 2,
-                  padding: "11px 0",
-                  borderRadius: 9,
-                  border: "none",
-                  background: "var(--gold)",
-                  color: "var(--bg-sidebar)",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: 1,
-                  cursor: "pointer",
-                  textTransform: "uppercase" as const,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                }}>
+                <button onClick={handleSendViaGmail} className="flex-[2] py-2.5 rounded-lg border-none bg-erl-accent text-erl-sidebar text-[10px] font-bold tracking-wide cursor-pointer uppercase flex items-center justify-center gap-2">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
                   </svg>

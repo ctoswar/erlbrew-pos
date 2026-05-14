@@ -1,3 +1,3 @@
-export const STAFF = [] as any[];
-export const MENU = [] as any[];
-export const CATEGORIES: any[] = [];
+export const STAFF: Record<string, unknown>[] = [];
+export const MENU: Record<string, unknown>[] = [];
+export const CATEGORIES: string[] = [];

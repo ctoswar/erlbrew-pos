@@ -136,63 +136,34 @@ export const AdminPrintSettings: React.FC = () => {
     }
   };
 
-  const rowStyle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "10px 0",
-    borderBottom: "1px solid var(--border-subtle)",
-    fontSize: 11,
-    color: "var(--text-primary)",
-  };
-
-  const labelStyle: React.CSSProperties = { fontWeight: 600, color: "var(--text-primary)" };
-  const subStyle: React.CSSProperties = { fontSize: 9, color: "var(--text-muted)", marginTop: 2 };
-
   return (
-    <div style={{ padding: "1.5rem 2rem", overflowY: "auto", flex: 1 }}>
+    <div className="px-8 py-6 overflow-y-auto flex-1">
       {/* ── Theme Toggle ─────────────────────────────────────── */}
-      <div style={{ marginBottom: 24, padding: "14px 16px", background: "var(--bg-surface)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div className="mb-6 p-3.5 bg-erl-surface rounded-xl flex items-center justify-between">
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
+          <div className="text-[11px] font-bold text-erl-text-primary tracking-wide">
             App Theme
           </div>
-          <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 2 }}>
+          <div className="text-[9px] text-erl-muted mt-0.5">
             Toggle between brown and white theme across all screens
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="flex gap-2">
           <button
             onClick={() => setThemeByName("brown")}
-            style={{
-              padding: "8px 16px",
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: 1,
-              borderRadius: 8,
-              border: `1.5px solid ${theme === "brown" ? "var(--gold)" : "var(--border-default)"}`,
-              background: theme === "brown" ? "rgba(201,135,58,0.15)" : "transparent",
-              color: theme === "brown" ? "var(--gold)" : "var(--text-muted)",
-              cursor: "pointer",
-              textTransform: "uppercase" as const,
-            }}
+            className={`
+              px-4 py-2 text-[9px] font-bold tracking-wide rounded-lg cursor-pointer uppercase
+              ${theme === "brown" ? "border-[1.5px] border-erl-accent bg-erl-accent/15 text-erl-accent" : "border-[1.5px] border-erl-border-default bg-transparent text-erl-muted"}
+            `}
           >
             ☕ Brown
           </button>
           <button
             onClick={() => setThemeByName("white")}
-            style={{
-              padding: "8px 16px",
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: 1,
-              borderRadius: 8,
-              border: `1.5px solid ${theme === "white" ? "var(--gold)" : "var(--border-default)"}`,
-              background: theme === "white" ? "rgba(201,135,58,0.15)" : "transparent",
-              color: theme === "white" ? "var(--gold)" : "var(--text-muted)",
-              cursor: "pointer",
-              textTransform: "uppercase" as const,
-            }}
+            className={`
+              px-4 py-2 text-[9px] font-bold tracking-wide rounded-lg cursor-pointer uppercase
+              ${theme === "white" ? "border-[1.5px] border-erl-accent bg-erl-accent/15 text-erl-accent" : "border-[1.5px] border-erl-border-default bg-transparent text-erl-muted"}
+            `}
           >
             ☁️ White
           </button>
@@ -200,32 +171,24 @@ export const AdminPrintSettings: React.FC = () => {
       </div>
 
       {/* ── Font Size ──────────────────────────────────────── */}
-      <div style={{ marginBottom: 24, padding: "14px 16px", background: "var(--bg-surface)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div className="mb-6 p-3.5 bg-erl-surface rounded-xl flex items-center justify-between">
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
+          <div className="text-[11px] font-bold text-erl-text-primary tracking-wide">
             Font Size
           </div>
-          <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 2 }}>
+          <div className="text-[9px] text-erl-muted mt-0.5">
             Adjust text size across all screens for better readability
           </div>
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div className="flex gap-1.5">
           {(['small', 'normal', 'large', 'extra-large'] as FontSize[]).map((size) => (
             <button
               key={size}
               onClick={() => setFontSize(size)}
-              style={{
-                width: 40,
-                height: 36,
-                fontSize: 10,
-                fontWeight: 700,
-                borderRadius: 8,
-                border: `1.5px solid ${fontSize === size ? "var(--gold)" : "var(--border-default)"}`,
-                background: fontSize === size ? "rgba(201,135,58,0.15)" : "transparent",
-                color: fontSize === size ? "var(--gold)" : "var(--text-muted)",
-                cursor: "pointer",
-                textTransform: "uppercase" as const,
-              }}
+              className={`
+                w-10 h-9 text-[10px] font-bold rounded-lg cursor-pointer uppercase
+                ${fontSize === size ? "border-[1.5px] border-erl-accent bg-erl-accent/15 text-erl-accent" : "border-[1.5px] border-erl-border-default bg-transparent text-erl-muted"}
+              `}
             >
               {FONT_SIZE_LABELS[size]}
             </button>
@@ -234,108 +197,77 @@ export const AdminPrintSettings: React.FC = () => {
       </div>
 
       {/* ── Company Info & Logo ────────────────────────────── */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "var(--gold)", marginBottom: 4 }}>
+      <div className="mb-7">
+        <div className="text-[11px] font-bold tracking-widest uppercase text-erl-accent mb-1">
           Company Information
         </div>
-        <div style={{ fontSize: 9, color: "var(--text-muted)", marginBottom: 16 }}>
+        <div className="text-[9px] text-erl-muted mb-4">
           Shown on invoices and receipts. Upload your logo to appear on printed documents.
         </div>
 
-        <div style={{ display: "flex", gap: 20, alignItems: "flex-start", marginBottom: 16 }}>
+        <div className="flex gap-5 items-start mb-4">
           {/* Logo Preview */}
-          <div style={{
-            width: 100,
-            height: 100,
-            border: "2px dashed var(--border-medium)",
-            borderRadius: 12,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "var(--bg-base)",
-            overflow: "hidden",
-            flexShrink: 0,
-          }}>
+          <div className="w-[100px] h-[100px] border-2 border-dashed border-erl-border-medium rounded-xl flex items-center justify-center bg-erl-base overflow-hidden flex-shrink-0">
             {logoPreview ? (
-              <img src={logoPreview} alt="Logo" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+              <img src={logoPreview} alt="Logo" className="max-w-full max-h-full object-contain" />
             ) : (
-              <span style={{ fontSize: 32 }}>🏪</span>
+              <span className="text-[32px]">🏪</span>
             )}
           </div>
 
           {/* Logo Upload */}
-          <div style={{ flex: 1 }}>
-            <input type="file" accept="image/*" onChange={handleLogoChange} id="logo-upload" style={{ display: "none" }} />
-            <label htmlFor="logo-upload" style={{
-              display: "inline-block",
-              padding: "8px 16px",
-              fontSize: 9,
-              borderRadius: 8,
-              border: "1px solid var(--gold)",
-              background: "rgba(201,135,58,0.15)",
-              color: "var(--gold)",
-              cursor: "pointer",
-              fontWeight: 700,
-              letterSpacing: 1,
-              marginRight: 8,
-            }}>
+          <div className="flex-1">
+            <input type="file" accept="image/*" onChange={handleLogoChange} id="logo-upload" className="hidden" />
+            <label htmlFor="logo-upload" className="inline-block px-4 py-2 text-[9px] rounded-lg border border-erl-accent bg-erl-accent/15 text-erl-accent cursor-pointer font-bold tracking-wide mr-2">
               Upload Logo
             </label>
             {logoPreview && (
-              <button onClick={() => { setCompanyInfo(c => ({ ...c, company_logo: "" })); setLogoPreview(null); }} style={{
-                padding: "8px 16px",
-                fontSize: 9,
-                borderRadius: 8,
-                border: "1px solid var(--border-default)",
-                background: "transparent",
-                color: "var(--text-muted)",
-                cursor: "pointer",
-              }}>
+              <button onClick={() => { setCompanyInfo(c => ({ ...c, company_logo: "" })); setLogoPreview(null); }} className="px-4 py-2 text-[9px] rounded-lg border border-erl-border-default bg-transparent text-erl-muted cursor-pointer">
                 Remove
               </button>
             )}
-            <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 8 }}>
+            <div className="text-[9px] text-erl-muted mt-2">
               Square PNG/JPG recommended, max 500KB
             </div>
           </div>
         </div>
 
         {/* Company Info Fields */}
-        <div style={{ display: "grid", gap: 10 }}>
+        <div className="grid gap-2.5">
           <input
             type="text"
             value={companyInfo.company_name}
             onChange={(e) => setCompanyInfo(c => ({ ...c, company_name: e.target.value }))}
             placeholder="Company Name"
-            style={{ padding: "8px 12px", fontSize: 11, borderRadius: 8, border: "1px solid var(--border-subtle)", background: "var(--bg-base)", color: "var(--text-primary)" }}
+            className="px-3 py-2 text-[11px] rounded-lg border border-erl-border-subtle bg-erl-base text-erl-text-primary"
           />
           <input
             type="text"
             value={companyInfo.company_address}
             onChange={(e) => setCompanyInfo(c => ({ ...c, company_address: e.target.value }))}
             placeholder="Business Address"
-            style={{ padding: "8px 12px", fontSize: 11, borderRadius: 8, border: "1px solid var(--border-subtle)", background: "var(--bg-base)", color: "var(--text-primary)" }}
+            className="px-3 py-2 text-[11px] rounded-lg border border-erl-border-subtle bg-erl-base text-erl-text-primary"
           />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div className="grid grid-cols-2 gap-2.5">
             <input
               type="text"
               value={companyInfo.company_phone}
               onChange={(e) => setCompanyInfo(c => ({ ...c, company_phone: e.target.value }))}
               placeholder="Phone"
-              style={{ padding: "8px 12px", fontSize: 11, borderRadius: 8, border: "1px solid var(--border-subtle)", background: "var(--bg-base)", color: "var(--text-primary)" }}
+              className="px-3 py-2 text-[11px] rounded-lg border border-erl-border-subtle bg-erl-base text-erl-text-primary"
             />
             <input
               type="email"
               value={companyInfo.company_email}
               onChange={(e) => setCompanyInfo(c => ({ ...c, company_email: e.target.value }))}
               placeholder="Email"
-              style={{ padding: "8px 12px", fontSize: 11, borderRadius: 8, border: "1px solid var(--border-subtle)", background: "var(--bg-base)", color: "var(--text-primary)" }}
+              className="px-3 py-2 text-[11px] rounded-lg border border-erl-border-subtle bg-erl-base text-erl-text-primary"
             />
           </div>
         </div>
 
         {companyError && (
-          <div style={{ marginTop: 10, padding: "8px 12px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", borderRadius: 8, fontSize: 10, color: "var(--danger)" }}>
+          <div className="mt-2.5 px-3 py-2 bg-erl-danger-bg border border-erl-danger-border rounded-lg text-[10px] text-erl-danger">
             {companyError}
           </div>
         )}
@@ -343,55 +275,36 @@ export const AdminPrintSettings: React.FC = () => {
         <button
           onClick={handleSaveCompany}
           disabled={savingCompany}
-          style={{
-            marginTop: 12,
-            padding: "8px 20px",
-            fontSize: 9,
-            borderRadius: 8,
-            border: "none",
-            background: "var(--gold)",
-            color: "var(--bg-sidebar)",
-            cursor: savingCompany ? "not-allowed" : "pointer",
-            fontWeight: 700,
-            letterSpacing: 1,
-            opacity: savingCompany ? 0.6 : 1,
-          }}
+          className="mt-3 px-5 py-2 text-[9px] rounded-lg border-none bg-erl-accent text-erl-sidebar cursor-pointer font-bold tracking-wide disabled:cursor-not-allowed disabled:opacity-60"
         >
           {savingCompany ? "Saving..." : companySaved ? "✓ Saved!" : "Save Company Info"}
         </button>
       </div>
 
-      <div style={{ marginBottom: 20, marginTop: 28 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "var(--gold)", marginBottom: 4 }}>
+      <div className="mb-5 mt-7">
+        <div className="text-[11px] font-bold tracking-widest uppercase text-erl-accent mb-1">
           Receipt Print Settings
         </div>
-        <div style={{ fontSize: 9, color: "var(--text-muted)" }}>
+        <div className="text-[9px] text-erl-muted">
           Changes apply to all future print jobs.
         </div>
       </div>
 
       {/* ── Paper Size ─────────────────────────────────────── */}
-      <div style={rowStyle}>
+      <div className="flex items-center justify-between py-2.5 border-b border-erl-border-subtle text-[11px] text-erl-text-primary">
         <div>
-          <div style={labelStyle}>Paper Size</div>
-          <div style={subStyle}>Thermal receipt width</div>
+          <div className="font-semibold text-erl-text-primary">Paper Size</div>
+          <div className="text-[9px] text-erl-muted mt-0.5">Thermal receipt width</div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="flex gap-2">
           {(["58mm", "80mm"] as const).map((size) => (
             <button
               key={size}
               onClick={() => update({ paperSize: size })}
-              style={{
-                padding: "6px 14px",
-                borderRadius: 8,
-                border: `1.5px solid ${settings.paperSize === size ? "var(--gold)" : "var(--border-default)"}`,
-                background: settings.paperSize === size ? "rgba(201,135,58,0.15)" : "transparent",
-                color: settings.paperSize === size ? "var(--gold)" : "var(--text-muted)",
-                fontSize: 9,
-                fontWeight: 700,
-                cursor: "pointer",
-                letterSpacing: 1,
-              }}
+              className={`
+                px-3.5 py-1.5 rounded-lg text-[9px] font-bold cursor-pointer tracking-wide
+                ${settings.paperSize === size ? "border-[1.5px] border-erl-accent bg-erl-accent/15 text-erl-accent" : "border-[1.5px] border-erl-border-default bg-transparent text-erl-muted"}
+              `}
             >
               {size}
             </button>
@@ -400,52 +313,41 @@ export const AdminPrintSettings: React.FC = () => {
       </div>
 
       {/* ── Copies ─────────────────────────────────────────── */}
-      <div style={rowStyle}>
+      <div className="flex items-center justify-between py-2.5 border-b border-erl-border-subtle text-[11px] text-erl-text-primary">
         <div>
-          <div style={labelStyle}>Print Copies</div>
-          <div style={subStyle}>Number of copies per receipt</div>
+          <div className="font-semibold text-erl-text-primary">Print Copies</div>
+          <div className="text-[9px] text-erl-muted mt-0.5">Number of copies per receipt</div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => update({ printCopies: Math.max(1, settings.printCopies - 1) })}
-            style={{
-              width: 28, height: 28, borderRadius: "50%", border: "1px solid var(--border-default)",
-              background: "transparent", color: "var(--gold)", fontSize: 16, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
+            className="w-7 h-7 rounded-full border border-erl-border-default bg-transparent text-erl-accent text-base cursor-pointer flex items-center justify-center"
           >−</button>
-          <span style={{ fontSize: 16, fontWeight: 700, color: "var(--gold)", minWidth: 20, textAlign: "center" }}>
+          <span className="text-base font-bold text-erl-accent min-w-[20px] text-center">
             {settings.printCopies}
           </span>
           <button
             onClick={() => update({ printCopies: Math.min(5, settings.printCopies + 1) })}
-            style={{
-              width: 28, height: 28, borderRadius: "50%", border: "1px solid var(--border-default)",
-              background: "transparent", color: "var(--gold)", fontSize: 16, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
+            className="w-7 h-7 rounded-full border border-erl-border-default bg-transparent text-erl-accent text-base cursor-pointer flex items-center justify-center"
           >+</button>
         </div>
       </div>
 
       {/* ── Print Via ────────────────────────────────────────── */}
-      <div style={rowStyle}>
+      <div className="flex items-center justify-between py-2.5 border-b border-erl-border-subtle text-[11px] text-erl-text-primary">
         <div>
-          <div style={labelStyle}>Print Method</div>
-          <div style={subStyle}>Browser opens OS dialog; Bluetooth calls print-server.py</div>
+          <div className="font-semibold text-erl-text-primary">Print Method</div>
+          <div className="text-[9px] text-erl-muted mt-0.5">Browser opens OS dialog; Bluetooth calls print-server.py</div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="flex gap-2">
           {(["browser", "bluetooth"] as const).map((method) => (
             <button
               key={method}
               onClick={() => update({ printVia: method })}
-              style={{
-                padding: "6px 14px", borderRadius: 8,
-                border: `1.5px solid ${settings.printVia === method ? "var(--gold)" : "var(--border-default)"}`,
-                background: settings.printVia === method ? "rgba(201,135,58,0.15)" : "transparent",
-                color: settings.printVia === method ? "var(--gold)" : "var(--text-muted)",
-                fontSize: 9, fontWeight: 700, cursor: "pointer", letterSpacing: 1,
-              }}
+              className={`
+                px-3.5 py-1.5 rounded-lg text-[9px] font-bold cursor-pointer tracking-wide
+                ${settings.printVia === method ? "border-[1.5px] border-erl-accent bg-erl-accent/15 text-erl-accent" : "border-[1.5px] border-erl-border-default bg-transparent text-erl-muted"}
+              `}
             >
               {method === "browser" ? "🖥 Browser" : "📡 Bluetooth"}
             </button>
@@ -455,26 +357,18 @@ export const AdminPrintSettings: React.FC = () => {
 
       {/* ── Bluetooth Print Server URL ───────────────────────── */}
       {settings.printVia === "bluetooth" && (
-        <div style={{ ...rowStyle, flexDirection: "column", alignItems: "stretch", gap: 6 }}>
+        <div className="flex flex-col items-stretch gap-1.5 py-2.5 border-b border-erl-border-subtle text-[11px] text-erl-text-primary">
           <div>
-            <div style={labelStyle}>Print Server URL</div>
-            <div style={subStyle}>Running on your Pi — e.g. https://192.168.75.101:9100</div>
+            <div className="font-semibold text-erl-text-primary">Print Server URL</div>
+            <div className="text-[9px] text-erl-muted mt-0.5">Running on your Pi — e.g. https://192.168.75.101:9100</div>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="flex gap-2">
             <input
               type="text"
               value={companyInfo.print_server_url || ""}
               onChange={(e) => setCompanyInfo(c => ({ ...c, print_server_url: e.target.value }))}
               placeholder="https://192.168.75.101:9100"
-              style={{
-                flex: 1,
-                padding: "8px 12px",
-                borderRadius: 8,
-                border: "1px solid var(--border-subtle)",
-                background: "var(--bg-base)",
-                color: "var(--text-primary)",
-                fontSize: 11,
-              }}
+              className="flex-1 px-3 py-2 rounded-lg border border-erl-border-subtle bg-erl-base text-erl-text-primary text-[11px]"
             />
             <button
               onClick={async () => {
@@ -487,18 +381,7 @@ export const AdminPrintSettings: React.FC = () => {
                   setCompanyError(e.message || "Failed to save");
                 }
               }}
-              style={{
-                padding: "8px 14px",
-                fontSize: 9,
-                borderRadius: 8,
-                border: "none",
-                background: "var(--gold)",
-                color: "var(--bg-sidebar)",
-                cursor: "pointer",
-                fontWeight: 700,
-                letterSpacing: 1,
-                whiteSpace: "nowrap",
-              }}
+              className="px-3.5 py-2 text-[9px] rounded-lg border-none bg-erl-accent text-erl-sidebar cursor-pointer font-bold tracking-wide whitespace-nowrap"
             >
               Save URL
             </button>
@@ -507,25 +390,17 @@ export const AdminPrintSettings: React.FC = () => {
       )}
 
       {/* ── GCash Reference Number ─────────────────────────────────── */}
-      <div style={rowStyle}>
+      <div className="flex items-center justify-between py-2.5 border-b border-erl-border-subtle text-[11px] text-erl-text-primary">
         <div>
-          <div style={labelStyle}>GCash Reference Number</div>
-          <div style={subStyle}>Shown on E-Wallet payment screen</div>
+          <div className="font-semibold text-erl-text-primary">GCash Reference Number</div>
+          <div className="text-[9px] text-erl-muted mt-0.5">Shown on E-Wallet payment screen</div>
         </div>
         <input
           type="text"
           value={settings.gcashNumber}
           onChange={(e) => update({ gcashNumber: e.target.value })}
           placeholder="e.g. 0917-123-4567"
-          style={{
-            flex: 1,
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid var(--border-subtle)",
-            background: "var(--bg-base)",
-            color: "var(--text-primary)",
-            fontSize: 11,
-          }}
+          className="flex-1 px-3 py-2 rounded-lg border border-erl-border-subtle bg-erl-base text-erl-text-primary text-[11px]"
         />
       </div>
 
@@ -536,47 +411,28 @@ export const AdminPrintSettings: React.FC = () => {
         ["showCustomerCopy", "Customer Copy Footer", "Thank you + customer copy note"],
         ["showQRCode", "QR Code Placeholder", "Show QR panel on receipt"],
       ] as [keyof PrintSettings, string, string][]).map(([key, label, desc]) => (
-        <div key={key} style={{ ...rowStyle, borderBottom: "none", paddingTop: 12, paddingBottom: 12 }}>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={labelStyle}>{label}</div>
-            <div style={subStyle}>{desc}</div>
+        <div key={key} className="flex items-center justify-between py-3 border-b-0">
+          <div className="flex flex-col">
+            <div className="font-semibold text-erl-text-primary text-[11px]">{label}</div>
+            <div className="text-[9px] text-erl-muted mt-0.5">{desc}</div>
           </div>
           <button
             onClick={() => toggle(key)}
-            style={{
-              width: 44,
-              height: 24,
-              borderRadius: 12,
-              border: "none",
-              background: settings[key] ? "var(--gold)" : "var(--border-medium)",
-              cursor: "pointer",
-              position: "relative",
-              transition: "background 0.2s",
-              flexShrink: 0,
-            }}
+            className="w-11 h-6 rounded-full border-none cursor-pointer relative flex-shrink-0 transition-colors duration-200"
+            style={{ background: settings[key] ? "var(--gold)" : "var(--border-medium)" }}
           >
-            <div style={{
-              position: "absolute",
-              top: 3,
-              left: settings[key] ? 23 : 3,
-              width: 18,
-              height: 18,
-              borderRadius: "50%",
-              background: settings[key] ? "var(--bg-sidebar)" : "var(--text-muted)",
-              transition: "left 0.2s",
-            }} />
+            <div className="absolute top-[3px] w-[18px] h-[18px] rounded-full transition-all duration-200"
+              style={{
+                left: settings[key] ? 23 : 3,
+                background: settings[key] ? "var(--bg-sidebar)" : "var(--text-muted)",
+              }} />
           </button>
         </div>
       ))}
 
       {/* ── Preview hint ─────────────────────────────────────── */}
-      <div style={{
-        marginTop: 24, padding: "12px 14px",
-        background: "var(--bg-surface)", borderRadius: 10,
-        border: "1px solid var(--border-subtle)",
-        fontSize: 9, color: "var(--text-muted)", lineHeight: 1.7,
-      }}>
-        💡 <strong style={{ color: "var(--text-secondary)" }}>Tip:</strong> After placing an order, tap
+      <div className="mt-6 p-3 bg-erl-surface rounded-[10px] border border-erl-border-subtle text-[9px] text-erl-muted leading-relaxed">
+        💡 <strong className="text-erl-secondary">Tip:</strong> After placing an order, tap
         "Print Receipt" to preview and print. The settings above control what appears on the printed receipt.
       </div>
     </div>

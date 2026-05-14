@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import express from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 
 // Simple input-validation helper (shared-style per task spec)
 function validate(req, res, rules){
@@ -94,7 +94,7 @@ export default function staffRouter(pool){
   });
 
 // Create staff (admin only, token required)
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
     const { rfid, rfid_alt, pin, name, role, initials, color } = req.body;
     // Validation: required fields and constraints per FIX 5
     const err = validate(req, res, {
@@ -130,8 +130,8 @@ router.get('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// PUT update staff (auth required)
-  router.put('/:id', authMiddleware, async (req, res) => {
+// PUT update staff (admin only)
+  router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
     const { rfid, rfid_alt, name, role, initials, color, password } = req.body;
     try {

@@ -14,13 +14,13 @@ interface Props {
   onLogout: () => void;
 }
 
-const NAV_ICONS: Record<string, string> = {
-  pos: "☕",
-  time: "⏱",
-  kitchen: "🍳",
-  dashboard: "📊",
-  admin: "⚙",
-};
+const NAV_ITEMS: { screen: Screen; label: string; adminOnly?: boolean }[] = [
+  { screen: "pos", label: "Order" },
+  { screen: "time", label: "Time" },
+  { screen: "kitchen", label: "Kitchen" },
+  { screen: "dashboard", label: "Dashboard" },
+  { screen: "admin", label: "Admin", adminOnly: true },
+];
 
 export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNavigate, onLogout }) => {
   const time = useClock();
@@ -40,125 +40,50 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
     }
   }, []);
 
-  const navItems: { screen: Screen; label: string; badge?: number; adminOnly?: boolean }[] = [
-    { screen: "pos", label: "ORDER" },
-    { screen: "time", label: "TIME" },
-    { screen: "kitchen", label: "KITCHEN", badge: activeOrderCount },
-    { screen: "dashboard", label: "DASHBOARD" },
-    { screen: "admin", label: "ADMIN", adminOnly: true },
-  ];
-
-  const visibleNavItems = navItems.filter((n) => !n.adminOnly || staff.role === "Manager");
+  const visibleNavItems = NAV_ITEMS.filter((n) => !n.adminOnly || staff.role === "Manager");
   const isOrderRelated = screen === "pos" || screen === "checkout" || screen === "payment" || screen === "success";
 
-  const handleLogout = () => {
-    onLogout();
-  };
-
   return (
-    <header
-      className="glass-panel"
-      style={{
-        height: 46,
-        display: "flex",
-        alignItems: "center",
-        padding: "0 14px",
-        gap: 6,
-        flexShrink: 0,
-        borderBottom: "1px solid rgba(201,135,58,0.08)",
-        position: "relative",
-        zIndex: 100,
-      }}
-    >
-      {/* Logo */}
-      <div
-        className="font-display"
-        style={{
-          fontSize: 13,
-          fontWeight: 700,
-          color: "var(--gold)",
-          letterSpacing: 2.5,
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          flexShrink: 0,
-        }}
-      >
-        ERLBREW
-        <div style={{ width: 1, height: 18, background: "rgba(201,135,58,0.2)", margin: "0 4px", flexShrink: 0 }} />
+    <header className="glass-panel h-[56px] flex items-center px-5 gap-3 shrink-0 border-b border-erl-accent/[0.06] relative z-[100]">
+      {/* Brand mark */}
+      <div className="flex items-center gap-2.5 shrink-0">
+        <div className="w-8 h-8 rounded-xl bg-erl-accent/10 flex items-center justify-center">
+          <span className="text-erl-accent text-lg leading-none">☕</span>
+        </div>
+        <div className="font-display text-sm font-bold text-erl-accent tracking-[4px]">ERLBREW</div>
+        <div className="w-px h-6 bg-erl-accent/10 shrink-0 ml-1" />
       </div>
 
       {/* Nav */}
-      <div
-        className="hide-scrollbar"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 2,
-          overflowX: "auto",
-          whiteSpace: "nowrap",
-          flex: 1,
-          minWidth: 0,
-        }}
-      >
-        {visibleNavItems.map(({ screen: s, label, badge }) => {
+      <nav className="hide-scrollbar flex items-center gap-1 overflow-x-auto whitespace-nowrap flex-1 min-w-0 ml-2">
+        {visibleNavItems.map(({ screen: s, label }) => {
           const isActive = s === "pos" ? isOrderRelated : screen === s;
+          const badge = s === "kitchen" ? activeOrderCount : undefined;
           return (
             <button
               key={s}
               onClick={() => onNavigate(s)}
-              style={{
-                position: "relative",
-                background: isActive ? "rgba(201,135,58,0.1)" : "transparent",
-                border: "none",
-                borderRadius: 8,
-                color: isActive ? "var(--gold)" : "var(--text-faint)",
-                fontSize: 8.5,
-                fontWeight: isActive ? 700 : 500,
-                letterSpacing: 1,
-                padding: "6px 10px",
-                cursor: "pointer",
-                transition: "all 0.15s var(--ease-out)",
-                flexShrink: 0,
-                display: "flex",
-                alignItems: "center",
-                gap: 3,
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) { e.currentTarget.style.color = "var(--text-secondary)"; e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) { e.currentTarget.style.color = "var(--text-faint)"; e.currentTarget.style.background = "transparent"; }
-              }}
+              className={`relative flex items-center gap-1.5 border-none rounded-xl text-xs font-semibold tracking-wide py-2 px-3.5 cursor-pointer transition-all duration-250 ease-out shrink-0 ${
+                isActive
+                  ? "bg-erl-accent/10 text-erl-accent shadow-[0_0_16px_rgba(196,149,106,0.08)]"
+                  : "bg-transparent text-erl-text-faint hover:text-erl-text-secondary hover:bg-white/[0.03]"
+              }`}
             >
-              <span style={{ fontSize: 10, lineHeight: 1 }}>{NAV_ICONS[s]}</span>
-              {label}
+              <span className="text-[13px] leading-none">{label}</span>
               {badge != null && badge > 0 ? (
-                <span
-                  style={{
-                    background: isActive ? "var(--gold)" : "rgba(201,135,58,0.3)",
-                    color: isActive ? "var(--bg-sidebar)" : "var(--gold)",
-                    borderRadius: 4,
-                    padding: "0 5px",
-                    fontSize: 7,
-                    fontWeight: 700,
-                    lineHeight: "14px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    minWidth: 14,
-                    justifyContent: "center",
-                  }}
-                >
+                <span className={`inline-flex items-center justify-center min-w-[20px] h-5 rounded-lg px-1 text-[9px] font-bold ${
+                  isActive ? "bg-erl-accent text-erl-base" : "bg-erl-accent/15 text-erl-accent"
+                }`}>
                   {badge}
                 </span>
               ) : null}
             </button>
           );
         })}
-      </div>
+      </nav>
 
       {/* Right side */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+      <div className="flex items-center gap-2.5 shrink-0">
         {/* Font size */}
         <button
           onClick={() => {
@@ -167,104 +92,62 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
             const next = sizes[(idx + 1) % sizes.length];
             setFontSize(next);
           }}
-          className="btn-ghost"
-          style={{
-            fontSize: 8,
-            color: fontSize !== "normal" ? "var(--gold)" : "var(--text-muted)",
-            padding: "4px 6px",
-            letterSpacing: 0.5,
-          }}
+          className={`btn-ghost text-[9px] py-1.5 px-2.5 tracking-wide rounded-xl transition-all duration-200 ${fontSize !== "normal" ? "text-erl-accent font-bold" : "text-erl-text-muted"}`}
         >
           {FONT_SIZE_LABELS[fontSize]}
         </button>
 
-        {/* Theme */}
+        {/* Theme toggle */}
         <button
           onClick={() => setThemeByName(theme === "brown" ? "white" : "brown")}
-          className="btn-ghost"
-          style={{
-            fontSize: 12,
-            padding: "4px 5px",
-            opacity: 0.7,
-          }}
+          className="btn-ghost text-sm py-1.5 px-2.5 rounded-xl transition-all duration-200 opacity-60 hover:opacity-100"
+          title={theme === "brown" ? "Switch to light theme" : "Switch to dark theme"}
         >
           {theme === "brown" ? "☁" : "☕"}
         </button>
 
-        <div style={{ width: 1, height: 16, background: "rgba(201,135,58,0.12)", flexShrink: 0 }} />
+        <div className="w-px h-5 bg-erl-accent/[0.08] shrink-0" />
 
-        {/* Cash Drawer quick-open */}
+        {/* Cash drawer */}
         <button
           onClick={handleOpenDrawer}
           disabled={drawerStatus !== 'idle'}
-          className="btn-ghost"
-          title="Open cash drawer"
+          className="btn-ghost text-xs py-1.5 px-2.5 rounded-xl transition-all duration-200"
           style={{
-            fontSize: 10,
-            padding: "4px 6px",
-            opacity: drawerStatus === 'ok' ? 1 : 0.7,
-            color: drawerStatus === 'ok' ? 'var(--success)' : drawerStatus === 'error' ? 'var(--danger)' : 'var(--gold-dim)',
+            opacity: drawerStatus === 'ok' ? 1 : 0.6,
+            color: drawerStatus === 'ok' ? 'var(--success)' : drawerStatus === 'error' ? 'var(--danger)' : 'var(--accent-dim)',
             cursor: drawerStatus !== 'idle' ? 'default' : 'pointer',
-            transition: 'color 0.2s',
           }}
+          title="Open cash drawer"
         >
           {drawerStatus === 'opening' ? '⟳' : drawerStatus === 'ok' ? '✓' : '💰'}
         </button>
 
         {/* Staff pill */}
-        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+        <div className="flex items-center gap-2.5 ml-0.5">
           <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-bold text-white shrink-0"
             style={{
-              width: 24,
-              height: 24,
-              borderRadius: "50%",
               background: `linear-gradient(135deg, ${staff.color}, ${staff.color}cc)`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 8,
-              fontWeight: 700,
-              color: "#fff",
-              flexShrink: 0,
-              boxShadow: "0 0 0 2px rgba(201,135,58,0.15)",
+              boxShadow: `0 3px 12px ${staff.color}30`,
             }}
           >
             {staff.initials}
           </div>
-          <div style={{ lineHeight: 1.2 }}>
-            <div style={{ fontSize: 9, color: "var(--text-primary)", fontWeight: 700 }}>
-              {staff.name.split(" ")[0]}
-            </div>
-            <div style={{ fontSize: 7, color: "var(--text-faint)", letterSpacing: 0.5 }}>
-              {staff.role}
-            </div>
+          <div className="leading-tight hidden sm:block">
+            <div className="text-xs text-erl-text-primary font-bold">{staff.name.split(" ")[0]}</div>
+            <div className="text-[9px] text-erl-text-faint tracking-wide uppercase font-semibold">{staff.role}</div>
           </div>
         </div>
 
         {/* Clock */}
-        <div
-          style={{
-            fontSize: 9,
-            color: "var(--gold-dim)",
-            letterSpacing: 0.5,
-            fontVariantNumeric: "tabular-nums",
-            flexShrink: 0,
-            marginRight: 4,
-          }}
-        >
+        <div className="text-[11px] text-erl-accent-dim tracking-wide tabular-nums shrink-0 font-medium">
           {formatTime(time)}
         </div>
 
         <button
-          className="btn-ghost"
-          onClick={handleLogout}
-          style={{
-            fontSize: 7.5,
-            padding: "5px 8px",
-            letterSpacing: 1,
-            flexShrink: 0,
-            color: "var(--text-disabled)",
-          }}
+          className="btn-ghost text-[9px] py-1.5 px-3 tracking-[0.1em] uppercase font-bold shrink-0 text-erl-text-disabled hover:text-erl-text-muted rounded-xl transition-all duration-200 hover:bg-white/[0.03]"
+          onClick={onLogout}
         >
           Logout
         </button>

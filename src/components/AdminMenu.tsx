@@ -5,12 +5,12 @@ import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete, uploadMenuItemI
 import { IngredientEditor } from "./IngredientEditor";
 import { ModifierEditor } from "./ModifierEditor";
 
-const CATEGORIES = ["ICED COFFEE", "NON-COFFEE", "BLENDED", "PASTRIES", "FRUIT SODA", "HOT COFFEE"];
+const CATEGORIES = ["Signature Brews", "Espresso", "Pastries", "Cold Drinks"];
 
 const EMPTY_FORM = {
   id: "",
   name: "",
-  category: "ICED COFFEE",
+  category: "Signature Brews",
   price: "",
   badge: "",
   description: "",
@@ -136,7 +136,7 @@ export const AdminMenu: React.FC = () => {
   const EMOJIS = ["☕", "🍵", "🌼", "🧊", "🫖", "🥐", "🍞", "🧁", "🥧", "🌺", "🍋", "🥤", "💧"];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
+    <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Ingredient editor modal */}
       {ingredientItem && (
         <IngredientEditor menuItem={ingredientItem} onClose={() => setIngredientItem(null)} />
@@ -146,37 +146,31 @@ export const AdminMenu: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="glass-panel" style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0.8rem 1rem", borderBottom: "1px solid rgba(201,135,58,0.08)", flexShrink: 0,
-        borderRadius: 0,
-      }}>
-        <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
+      <div className="glass-panel flex items-center justify-between px-4 py-3 border-b border-erl-accent/10 flex-shrink-0 rounded-none">
+        <div className="font-display text-sm font-bold text-erl-text-primary tracking-wide">
           Menu Management
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 1 }}>{items.length} items</span>
-          <button onClick={openAddForm} className="btn btn-gold" style={{
-            fontSize: 9, padding: "7px 14px", letterSpacing: 1,
-          }}>
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] text-erl-text-faint tracking-wide">{items.length} items</span>
+          <button onClick={openAddForm} className="btn btn-accent text-[9px] px-3.5 py-[7px] tracking-wide">
             + Add Item
           </button>
         </div>
       </div>
 
       {/* Grid */}
-      <div className="scroll-area" style={{ flex: 1, padding: "1rem", overflowY: "auto", minHeight: 0 }}>
+      <div className="scroll-area flex-1 p-4 overflow-y-auto min-h-0">
         {loading ? (
-          <div style={{ textAlign: "center", padding: "3rem" }}>
-            <div className="animate-shimmer" style={{ width: 120, height: 14, borderRadius: 4, margin: "0 auto 8px" }} />
-            <div className="animate-shimmer" style={{ width: 80, height: 10, borderRadius: 4, margin: "0 auto" }} />
+          <div className="text-center py-12">
+            <div className="animate-shimmer w-[120px] h-3.5 rounded mx-auto mb-2" />
+            <div className="animate-shimmer w-20 h-2.5 rounded mx-auto" />
           </div>
         ) : items.length === 0 ? (
-          <div style={{ textAlign: "center", color: "var(--text-disabled)", padding: "3rem", fontSize: 11, letterSpacing: 1 }}>
+          <div className="text-center text-erl-text-disabled py-12 text-[11px] tracking-wide">
             No menu items yet
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
             {items.map((item) => (
               <AdminItemCard
                 key={item.id}
@@ -197,23 +191,14 @@ export const AdminMenu: React.FC = () => {
       {/* Add/Edit Form Modal */}
       {showForm && (
         <>
-          <div style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998,
-            animation: "fadeInOverlay 0.2s ease",
-          }} onClick={closeForm} />
-          <div style={{
-            position: "fixed", inset: 0, display: "flex", alignItems: "center",
-            justifyContent: "center", zIndex: 999, padding: "1rem",
-          }}>
-            <div className="animate-scaleIn card-glass" style={{
-              padding: "1.5rem", width: "100%", maxWidth: 420,
-              maxHeight: "90vh", overflowY: "auto",
-            }}>
-              <div className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 18 }}>
+          <div className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay" onClick={closeForm} />
+          <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
+            <div className="animate-scale-in card-glass p-6 w-full max-w-[420px] max-h-[90vh] overflow-y-auto">
+              <div className="font-display text-base font-bold text-erl-text-primary mb-4">
                 {editingId ? "Edit Menu Item" : "Add Menu Item"}
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div className="flex flex-col gap-3">
                 <FormField label="Item ID" hint="e.g. m17 (must be unique)">
                   <input value={form.id} onChange={(e) => setField("id", e.target.value)} placeholder="m17"
                     disabled={!!editingId} />
@@ -238,39 +223,33 @@ export const AdminMenu: React.FC = () => {
                     placeholder="Short description..." />
                 </FormField>
                 <FormField label="Emoji">
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  <div className="flex flex-wrap gap-1.5">
                     {EMOJIS.map((e) => (
-                      <button key={e} onClick={() => setField("emoji", e)} style={{
-                        width: 38, height: 38, borderRadius: 8, fontSize: 20,
-                        background: form.emoji === e ? "rgba(201,135,58,0.2)" : "var(--bg-base)",
-                        border: `1.5px solid ${form.emoji === e ? "var(--gold)" : "var(--border-default)"}`,
-                        cursor: "pointer",
-                      }}>{e}</button>
+                      <button key={e} onClick={() => setField("emoji", e)} className={`
+                        w-[38px] h-[38px] rounded-lg text-xl cursor-pointer
+                        ${form.emoji === e ? "bg-erl-accent/20 border-[1.5px] border-erl-accent" : "bg-erl-base border-[1.5px] border-erl-border-default"}
+                      `}>{e}</button>
                     ))}
                     <input value={form.emoji} onChange={(e) => setField("emoji", e.target.value)} placeholder="🙂"
-                      style={{ width: 38, height: 38, borderRadius: 8, background: "var(--bg-base)", border: "1px solid var(--border-default)", color: "var(--text-primary)", fontSize: 18, textAlign: "center" }} />
+                      className="w-[38px] h-[38px] rounded-lg bg-erl-base border border-erl-border-default text-erl-text-primary text-lg text-center" />
                   </div>
                 </FormField>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "4px 0" }}>
+                <label className="flex items-center gap-2 cursor-pointer py-1">
                   <input type="checkbox" checked={form.popular} onChange={(e) => setField("popular", e.target.checked)}
-                    style={{ width: 16, height: 16, accentColor: "var(--gold)" }} />
-                  <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>Mark as Popular</span>
+                    className="w-4 h-4 accent-erl-accent" />
+                  <span className="text-[11px] text-erl-secondary">Mark as Popular</span>
                 </label>
               </div>
 
               {error && (
-                <div style={{ marginTop: 12, padding: "9px 12px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", borderRadius: 8, fontSize: 11, color: "var(--danger)" }}>
+                <div className="mt-3 px-3 py-2 bg-erl-danger-bg border border-erl-danger-border rounded-lg text-[11px] text-erl-danger">
                   {error}
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-                <button onClick={closeForm} className="btn btn-outline" style={{
-                  flex: 1, fontSize: 10, padding: "11px 0",
-                }}>Cancel</button>
-                <button onClick={handleSave} disabled={saving} className="btn btn-gold" style={{
-                  flex: 1, fontSize: 10, padding: "11px 0",
-                }}>
+              <div className="flex gap-2 mt-4">
+                <button onClick={closeForm} className="btn btn-outline flex-1 text-[10px] py-2.5">Cancel</button>
+                <button onClick={handleSave} disabled={saving} className="btn btn-accent flex-1 text-[10px] py-2.5">
                   {saving ? "Saving..." : editingId ? "Update Item" : "Add Item"}
                 </button>
               </div>
@@ -314,70 +293,64 @@ const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, o
   };
 
   return (
-  <div className="card" style={{
-    display: "flex", flexDirection: "column", cursor: "default",
-    overflow: "hidden", transition: "var(--transition-normal)",
-  }}
-    onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-md)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-sm)"; e.currentTarget.style.transform = "none"; }}
-  >
+  <div className="card flex flex-col cursor-default overflow-hidden transition-[box-shadow,transform] duration-300 ease-out hover:shadow-md hover:-translate-y-0.5">
     {/* Image area */}
     {item.image && (
-      <div style={{ width: "100%", height: 120, overflow: "hidden", background: "var(--bg-base)", position: "relative" }}>
-        <img src={item.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      <div className="w-full h-[120px] overflow-hidden bg-erl-base relative">
+        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
       </div>
     )}
     {/* Top accent bar */}
-    <div style={{ height: 3, background: "linear-gradient(90deg, var(--gold), rgba(201,135,58,0.3))", flexShrink: 0 }} />
+    <div className="h-[3px] bg-gradient-to-r from-erl-accent to-erl-accent/30 flex-shrink-0" />
 
-    <div style={{ padding: "14px 14px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="px-3.5 pt-3.5 pb-3 flex flex-col gap-2">
       {/* Emoji + badges row */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 28, lineHeight: 1 }}>{item.emoji}</span>
-        <div style={{ display: "flex", gap: 4 }}>
-          {item.popular && <span className="pill pill-gold" style={{ fontSize: 7, padding: "2px 6px", letterSpacing: 1 }}>POP</span>}
-          {item.badge && <span className="pill pill-gold" style={{ fontSize: 7, padding: "2px 6px", letterSpacing: 1, background: "transparent", border: "1px solid rgba(201,135,58,0.35)" }}>{item.badge}</span>}
+      <div className="flex justify-between items-center">
+        <span className="text-[28px] leading-none">{item.emoji}</span>
+        <div className="flex gap-1">
+          {item.popular && <span className="pill pill-gold text-[7px] px-1.5 py-[2px] tracking-wider">POP</span>}
+          {item.badge && <span className="pill pill-gold text-[7px] px-1.5 py-[2px] tracking-wider bg-transparent border border-erl-accent/35">{item.badge}</span>}
         </div>
       </div>
 
       {/* Name */}
-      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.25 }}>{item.name}</div>
+      <div className="text-[13px] font-bold text-erl-text-primary leading-tight">{item.name}</div>
 
       {/* Category + Price row */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span className="pill pill-muted" style={{ fontSize: 8, padding: "2px 6px", letterSpacing: 1, background: "var(--bg-base)" }}>{item.category}</span>
-        <span className="font-display" style={{ fontSize: 15, fontWeight: 700, color: "var(--gold)" }}>{formatCurrency(item.price)}</span>
+      <div className="flex justify-between items-center">
+        <span className="pill pill-muted text-[8px] px-1.5 py-[2px] tracking-wider bg-erl-base">{item.category}</span>
+        <span className="font-display text-[15px] font-bold text-erl-accent">{formatCurrency(item.price)}</span>
       </div>
     </div>
 
     {deleteConfirm ? (
-      <div style={{ padding: "10px 14px 12px", borderTop: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: 6 }}>
-        <div style={{ fontSize: 9, color: "var(--danger)", textAlign: "center", fontWeight: 600 }}>Delete “{item.name}”?</div>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={onCancelDelete} className="btn btn-outline" style={{ flex: 1, fontSize: 8, padding: "7px 0", borderRadius: 8 }}>Cancel</button>
-          <button onClick={onConfirmDelete} className="btn btn-danger" style={{ flex: 1, fontSize: 8, padding: "7px 0", borderRadius: 8, background: "var(--danger)", border: "none", color: "#fff", letterSpacing: 0.5 }}>Delete</button>
+      <div className="px-3.5 pt-2.5 pb-3 border-t border-erl-border-subtle flex flex-col gap-1.5">
+        <div className="text-[9px] text-erl-danger text-center font-semibold">Delete &ldquo;{item.name}&rdquo;?</div>
+        <div className="flex gap-1.5">
+          <button onClick={onCancelDelete} className="btn btn-outline flex-1 text-[8px] py-1.5 rounded-lg">Cancel</button>
+          <button onClick={onConfirmDelete} className="btn btn-danger flex-1 text-[8px] py-1.5 rounded-lg bg-erl-danger border-none text-white tracking-wide">Delete</button>
         </div>
       </div>
     ) : (
-      <div style={{ padding: "8px 14px 12px", borderTop: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: 5 }}>
-        <div style={{ display: "flex", gap: 5 }}>
-          <button onClick={onEdit} className="btn-ghost" style={{ flex: 1, fontSize: 8, padding: "6px 0", borderRadius: 8, border: "1px solid var(--border-medium)" }}>
+      <div className="px-3.5 pt-2 pb-3 border-t border-erl-border-subtle flex flex-col gap-[5px]">
+        <div className="flex gap-[5px]">
+          <button onClick={onEdit} className="btn-ghost flex-1 text-[8px] py-1.5 rounded-lg border border-erl-border-medium">
             ✏️ Edit
           </button>
-          <button onClick={onDelete} className="btn-ghost" style={{ width: 30, height: 30, fontSize: 10, borderRadius: 8, border: "1px solid var(--danger-border)", color: "var(--danger)" }}>
+          <button onClick={onDelete} className="btn-ghost w-[30px] h-[30px] text-[10px] rounded-lg border border-erl-danger-border text-erl-danger">
             🗑
           </button>
         </div>
-        <button onClick={onManageIngredients} className="btn-glass" style={{ width: "100%", fontSize: 8, padding: "6px 0", letterSpacing: 0.5 }}>
+        <button onClick={onManageIngredients} className="btn-glass w-full text-[8px] py-1.5 tracking-wide">
           🧾 Ingredients
         </button>
-        <button onClick={onManageModifiers} className="btn-glass" style={{ width: "100%", fontSize: 8, padding: "6px 0", letterSpacing: 0.5 }}>
+        <button onClick={onManageModifiers} className="btn-glass w-full text-[8px] py-1.5 tracking-wide">
           ⚡ Modifiers
         </button>
         {/* Image upload */}
-        <label className="btn-glass" style={{ width: "100%", fontSize: 8, padding: "6px 0", letterSpacing: 0.5, cursor: uploading ? "wait" : "pointer", borderStyle: "dashed", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+        <label className="btn-glass w-full text-[8px] py-1.5 tracking-wide cursor-pointer border-dashed flex items-center justify-center gap-1" style={{ cursor: uploading ? "wait" : "pointer" }}>
           {uploading ? "⟳ Uploading…" : item.image ? "🖼 Change Image" : "🖼 Add Image"}
-          <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} disabled={uploading} />
+          <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={uploading} />
         </label>
       </div>
     )}
@@ -389,8 +362,8 @@ const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, o
 
 const FormField: React.FC<{ label: string; hint?: string; children: React.ReactNode }> = ({ label, hint, children }) => (
   <div>
-    <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1.5, marginBottom: 5, textTransform: "uppercase" as const, fontWeight: 700 }}>
-      {label}{hint && <span style={{ fontWeight: 400, color: "var(--text-faint)", textTransform: "none" as const, marginLeft: 4 }}>{hint}</span>}
+    <div className="text-[9px] text-erl-accent-muted tracking-widest mb-[5px] uppercase font-bold">
+      {label}{hint && <span className="font-normal text-erl-text-faint normal-case ml-1">{hint}</span>}
     </div>
     {children}
   </div>

@@ -39,10 +39,48 @@ function removeFromQueue(localId: string) {
   writeQueue(queue);
 }
 
+// Raw server order item shape (snake_case fields from DB/API)
+interface ServerOrderItem {
+  menu_item_id?: string;
+  menu_item_name?: string;
+  name?: string;
+  category?: string;
+  price?: number;
+  badge?: string;
+  emoji?: string;
+  qty?: number;
+  notes?: string;
+  modifiers?: { name?: string; price?: number }[];
+}
+
+// Raw server order shape (snake_case fields from DB/API)
+interface ServerOrder {
+  id: string;
+  items?: ServerOrderItem[];
+  staff_rfid?: string;
+  staff_name?: string;
+  staff_role?: string;
+  staff_initials?: string;
+  staff_color?: string;
+  status?: string;
+  subtotal?: number;
+  tax?: number;
+  total?: number;
+  created_at?: string;
+  completed_at?: string | null;
+  customer_name?: string;
+  table_name?: string;
+  type?: string;
+  pay_method?: string;
+  reference_number?: string;
+  referenceNumber?: string;
+  discount_json?: string | null;
+}
+
 // Convert a server order object (snake_case) to a frontend Order
-export function serverOrderToOrder(o: any): Order {
+export function serverOrderToOrder(o: ServerOrder): Order {
   // Build CartItem[] from server order_items
-  const items: CartItem[] = (o.items || []).map((it: any) => ({
+  const items: CartItem[] = (o.items || []).map((it) => ({
     item: {
       id: it.menu_item_id || it.menu_item_id,
       name: it.menu_item_name || it.name || 'Unknown',
@@ -54,7 +92,7 @@ export function serverOrderToOrder(o: any): Order {
     } as MenuItem,
     qty: it.qty || 1,
     notes: it.notes || '',
-    modifiers: (it.modifiers || []).map((m: any) => ({ name: m.name || '', price: Number(m.price) || 0 })),
+    modifiers: (it.modifiers || []).map((m) => ({ name: m.name || '', price: Number(m.price) || 0 })),
   }));
 
   return {
@@ -72,12 +110,27 @@ export function serverOrderToOrder(o: any): Order {
     subtotal: Number(o.subtotal) || 0,
     tax: Number(o.tax) || 0,
     total: Number(o.total) || 0,
-    createdAt: new Date(o.created_at),
+    createdAt: o.created_at ? new Date(o.created_at) : new Date(),
     completedAt: o.completed_at ? new Date(o.completed_at) : undefined,
     customerName: o.customer_name || (o.type === 'dine-in' ? o.table_name : undefined) || undefined,
     type: (o.type || 'dine-in') as OrderType,
     payMethod: (o.pay_method || 'cash') as PayMethod,
     referenceNumber: o.referenceNumber || o.reference_number || undefined,
+    discount: (() => {
+      if (!o.discount_json) return undefined;
+      try {
+        const parsed = JSON.parse(o.discount_json);
+        if (parsed && typeof parsed === 'object' && parsed.label) {
+          return {
+            type: parsed.type as Discount['type'],
+            label: String(parsed.label),
+            value: Number(parsed.value) || 0,
+            amount: Number(parsed.amount) || 0,
+          };
+        }
+      } catch { /* invalid JSON */ }
+      return undefined;
+    })(),
   };
 }
 
@@ -108,7 +161,7 @@ export function useOrders() {
 
     let changed = false;
     queue.forEach((pending) => {
-      apiAdminPost('/orders', pending.payload).then((data: any) => {
+      apiAdminPost<{ id?: string }>('/orders', pending.payload).then((data) => {
         setOrders((prev) =>
           prev.map((o) => (o.id === pending.id ? { ...o, id: data.id || o.id } : o))
         );
@@ -127,7 +180,7 @@ export function useOrders() {
     syncedRef.current = true;
 
     const syncFromServer = () => {
-      apiGet('/orders/today').then((data: any) => {
+      apiGet<ServerOrder[]>('/orders/today').then((data) => {
         if (Array.isArray(data)) {
           if (data.length > 0) {
             const serverOrders = data.map(serverOrderToOrder);
@@ -243,7 +296,7 @@ export function useOrders() {
         tax,
         total,
         createdAt: new Date(),
-        customerName: type === "dine-in" ? (customerName || "Walk-in") : undefined,
+        customerName: type === "dine-in" ? (customerName || "Dine-in") : undefined,
         type,
         payMethod,
         cashTendered,
@@ -256,7 +309,7 @@ export function useOrders() {
       // Post to API with auth token — on success, replace the temp local order with server version
       const token = getAuthToken();
       if (token) {
-        apiAdminPost('/orders', payload).then((data: any) => {
+        apiAdminPost<{ id?: string; subtotal?: number; tax?: number; total?: number }>('/orders', payload).then((data) => {
           setOrders((prev) =>
             prev.map((o) => {
               if (o.id !== localOrder.id) return o;
@@ -276,7 +329,7 @@ export function useOrders() {
         });
       } else {
         // Fallback: try without auth (will fail if server requires auth)
-        apiPost('/orders', payload).then((data: any) => {
+        apiPost<{ id?: string; subtotal?: number; tax?: number; total?: number }>('/orders', payload).then((data) => {
           setOrders((prev) =>
             prev.map((o) => {
               if (o.id !== localOrder.id) return o;
@@ -320,12 +373,12 @@ export function useOrders() {
 
   const voidOrder = useCallback((id: string) => {
     // Mark as voided locally (the POST /:id/void was already called by VoidCredentialModal)
-    setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status: "voided" as OrderStatus } : o));
+    setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status: "voided" as const } : o));
   }, []);
 
   const refundOrder = useCallback((id: string) => {
     // Mark as refunded locally (the POST /:id/refund was already called by VoidCredentialModal)
-    setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status: "refunded" as OrderStatus } : o));
+    setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status: "refunded" as const } : o));
   }, []);
 
   return { orders, placeOrder, updateStatus, voidOrder, refundOrder, activeOrders, completedOrders, pendingCount };

@@ -35,94 +35,75 @@ export const ModifierModal: React.FC<Props> = ({ item, onAdd, onClose }) => {
   return (
     <>
       <div
-        style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)",
-          zIndex: 998, animation: "fadeInOverlay 0.2s ease",
-        }}
+        className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay"
         onClick={onClose}
       />
-<div style={{
-          position: "fixed", inset: 0, display: "flex", alignItems: "center",
-          justifyContent: "center", zIndex: 999, padding: "1rem",
-        }}>
-          <div className="animate-scaleIn card-glass" style={{
-            padding: "1.5rem", width: "100%", maxWidth: 360,
-            maxHeight: "90vh", overflowY: "auto",
-          }}>
-            {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-              <div>
-                <div className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
-                  {item.emoji} {item.name}
-                </div>
-                <div style={{ fontSize: 11, color: "var(--gold)", marginTop: 2, fontWeight: 600 }}>
-                  {formatCurrency(item.price)} base
-                </div>
+      <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
+        <div className="animate-scale-in card-glass p-6 w-full max-w-[360px] max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="font-display text-base font-bold text-erl-text-primary">
+                {item.emoji} {item.name}
               </div>
-              <button onClick={onClose} className="btn-ghost" style={{ fontSize: 16, padding: "2px 6px", color: "var(--text-muted)" }}>✕</button>
+              <div className="text-[11px] text-erl-accent mt-0.5 font-semibold">
+                {formatCurrency(item.price)} base
+              </div>
             </div>
+            <button onClick={onClose} className="btn-ghost text-base px-1.5 py-0.5 text-erl-muted">✕</button>
+          </div>
 
-            {/* Modifier list */}
-            {modifiers.length === 0 ? (
-              <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 12, padding: "1rem 0" }}>
-                No modifiers available for this item.
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
-                {modifiers.map((mod) => (
-                  <button key={mod.id} onClick={() => toggleModifier(mod)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 10,
-                      padding: "10px 12px", borderRadius: 10,
-                      border: `1.5px solid ${isSelected(mod) ? "var(--gold)" : "var(--border-default)"}`,
-                      background: isSelected(mod) ? "rgba(201,135,58,0.1)" : "var(--bg-surface)",
-                      cursor: "pointer", textAlign: "left",
-                      transition: "var(--transition-fast)",
-                    }}>
-                    <div style={{
-                      width: 18, height: 18, borderRadius: 4,
-                      border: `1.5px solid ${isSelected(mod) ? "var(--gold)" : "var(--border-medium)"}`,
-                      background: isSelected(mod) ? "var(--gold)" : "transparent",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0, fontSize: 10, color: "var(--bg-sidebar)",
-                    }}>
-                      {isSelected(mod) ? "✓" : ""}
+          {/* Modifier list */}
+          {modifiers.length === 0 ? (
+            <div className="text-center text-erl-muted text-xs py-4">
+              No modifiers available for this item.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 mb-4">
+              {modifiers.map((mod) => (
+                <button key={mod.id} onClick={() => toggleModifier(mod)}
+                  className={`
+                    flex items-center gap-2.5 px-3 py-2.5 rounded-lg cursor-pointer text-left transition-all duration-150
+                    ${isSelected(mod) ? "bg-erl-accent/10 border-[1.5px] border-erl-accent" : "bg-erl-surface border-[1.5px] border-erl-border-default"}
+                  `}>
+                  <div className={`
+                    w-[18px] h-[18px] rounded flex items-center justify-center flex-shrink-0 text-[10px] text-erl-sidebar
+                    ${isSelected(mod) ? "bg-erl-accent border-[1.5px] border-erl-accent" : "bg-transparent border-[1.5px] border-erl-border-medium"}
+                  `}>
+                    {isSelected(mod) ? "✓" : ""}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs font-semibold text-erl-text-primary">
+                      {mod.name}
+                      {mod.isDefault && (
+                        <span className="pill pill-gold ml-1.5 text-[7px] px-1 py-px tracking-wide">DEFAULT</span>
+                      )}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>
-                        {mod.name}
-                        {mod.isDefault && (
-                          <span className="pill pill-gold" style={{ marginLeft: 6, fontSize: 7, padding: "1px 5px", letterSpacing: 1 }}>DEFAULT</span>
-                        )}
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--gold)" }}>
-                      {mod.price > 0 ? `+${formatCurrency(mod.price)}` : "Free"}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+                  </div>
+                  <div className="text-[11px] font-semibold text-erl-accent">
+                    {mod.price > 0 ? `+${formatCurrency(mod.price)}` : "Free"}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
 
-            {/* Total + Add button */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{
-                display: "flex", justifyContent: "space-between", alignItems: "baseline",
-                padding: "8px 0", borderTop: "1px solid var(--border-subtle)",
-              }}>
-                <span style={{ fontSize: 10, color: "var(--text-secondary)", letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 700 }}>
-                  Item Total
-                </span>
-                <span className="font-display" style={{ fontSize: 18, fontWeight: 700, color: "var(--gold)" }}>
-                  {formatCurrency(totalPrice)}
-                </span>
-              </div>
-              <button className="btn btn-gold" onClick={handleAdd} style={{ width: "100%", padding: "10px 0" }}>
-                Add to Cart
-              </button>
-              <button onClick={onClose} className="btn btn-outline" style={{ width: "100%", fontSize: 10, padding: "8px 0" }}>
-                Cancel
-              </button>
+          {/* Total + Add button */}
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-baseline py-2 border-t border-erl-border-subtle">
+              <span className="text-[10px] text-erl-secondary tracking-wider uppercase font-bold">
+                Item Total
+              </span>
+              <span className="font-display text-lg font-bold text-erl-accent">
+                {formatCurrency(totalPrice)}
+              </span>
+            </div>
+            <button className="btn btn-accent w-full py-2.5" onClick={handleAdd}>
+              Add to Cart
+            </button>
+            <button onClick={onClose} className="btn btn-outline w-full text-[10px] py-2">
+              Cancel
+            </button>
           </div>
         </div>
       </div>

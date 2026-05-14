@@ -93,28 +93,18 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         params.push(end);
       }
       const [rows] = await pool.query(`
-        SELECT o.id, o.status, o.subtotal, o.tax, o.total,
-               o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number,
+         SELECT o.id, o.status, o.subtotal, o.tax, o.total,
+               o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number, o.discount_json,
                o.created_at, o.completed_at,
                s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
-        FROM orders o
-        LEFT JOIN staff s ON o.staff_id = s.id
-        ${where}
-        ORDER BY o.created_at DESC
-      `, params.length ? params : undefined);
-      // Log for first order with reference
-      const orderWithRef = rows.find(r => r.reference_number);
-      if (orderWithRef) {
-        console.log('[DEBUG GET] Order with ref found:', orderWithRef.id, 'reference_number:', orderWithRef.reference_number);
-      }
+         FROM orders o
+         LEFT JOIN staff s ON o.staff_id = s.id
+         ${where}
+         ORDER BY o.created_at DESC
+       `, params.length ? params : undefined);
       const ids = rows.map(r => r.id);
       const items = ids.length ? await fetchOrderItems(ids) : [];
       const response = attachItems(rows, items);
-      // Log first item of response
-      const firstWithRef = response.find(r => r.reference_number);
-      if (firstWithRef) {
-        console.log('[DEBUG GET] Response item with ref:', firstWithRef.id, 'reference_number:', firstWithRef.reference_number);
-      }
       res.json(response);
     } catch (e) {
       console.error(e);
@@ -126,15 +116,15 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   router.get('/today', async (req, res) => {
     try {
       const [rows] = await pool.query(`
-        SELECT o.id, o.status, o.subtotal, o.tax, o.total,
-               o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number,
-               o.created_at, o.completed_at,
-               s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
-        FROM orders o
-        LEFT JOIN staff s ON o.staff_id = s.id
-        WHERE DATE(o.created_at) = CURDATE()
-        ORDER BY o.created_at DESC
-      `);
+         SELECT o.id, o.status, o.subtotal, o.tax, o.total,
+                o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number, o.discount_json,
+                o.created_at, o.completed_at,
+                s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
+         FROM orders o
+         LEFT JOIN staff s ON o.staff_id = s.id
+         WHERE DATE(o.created_at) = CURDATE()
+         ORDER BY o.created_at DESC
+       `);
       const ids = rows.map(r => r.id);
       const items = ids.length ? await fetchOrderItems(ids) : [];
       res.json(attachItems(rows, items));
@@ -186,16 +176,16 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       );
 
       const [rows] = await pool.query(`
-        SELECT o.id, o.status, o.subtotal, o.tax, o.total,
-               o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number,
-               o.created_at, o.completed_at,
-               s.name AS staff_name, s.initials AS staff_initials,
-               s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
-        FROM orders o
-        LEFT JOIN staff s ON o.staff_id = s.id
-        ${where}
-        ORDER BY o.created_at DESC
-        LIMIT ? OFFSET ?
+         SELECT o.id, o.status, o.subtotal, o.tax, o.total,
+                o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number, o.discount_json,
+                o.created_at, o.completed_at,
+                s.name AS staff_name, s.initials AS staff_initials,
+                s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
+         FROM orders o
+         LEFT JOIN staff s ON o.staff_id = s.id
+         ${where}
+         ORDER BY o.created_at DESC
+         LIMIT ? OFFSET ?
       `, [...params, lim, off]);
 
       const ids = rows.map(r => r.id);
@@ -215,10 +205,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
   // Create order and append to Google Sheets (public) -> now protected by auth
   router.post('/', authMiddleware, async (req, res) => {
-    const { staff_id, staff_name, items, type, customer_name, table_name, pay_method, reference_number } = req.body;
-    console.log('[DEBUG] Order request - pay_method:', pay_method, 'reference_number:', JSON.stringify(reference_number));
-    console.log('[DEBUG] Full body keys:', Object.keys(req.body).join(', '));
-    console.log('[DEBUG] Full body:', JSON.stringify(req.body).substring(0, 500));
+    const { staff_id, staff_name, items, type, customer_name, table_name, pay_method, reference_number, subtotal, tax, total, discount_type, discount_label, discount_value, discount_amount } = req.body;
     // Validation per FIX 5
     const err = validate(req, res, {
       items: { required: true, type: 'object', array: true },
@@ -233,14 +220,16 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       if (typeof it.price !== 'number' || it.price < 0) return res.status(400).json({ error: 'Each item price must be a non-negative number' });
     }
     try {
-      let subtotal = 0;
+      // Server-side calculation as fallback if frontend didn't send totals
+      let computedSubtotal = 0;
       const itemsOut = items || [];
       for (const it of itemsOut) {
         const modifierTotal = (it.modifiers || []).reduce((s, m) => s + (Number(m.price) || 0), 0);
-        subtotal += ((Number(it.price) || 0) + modifierTotal) * (Number(it.qty) || 0);
+        computedSubtotal += ((Number(it.price) || 0) + modifierTotal) * (Number(it.qty) || 0);
       }
-const tax = 0;
-    const total = subtotal;
+      const orderSubtotal = typeof subtotal === 'number' && subtotal >= 0 ? subtotal : computedSubtotal;
+      const orderTax = typeof tax === 'number' && tax >= 0 ? tax : 0;
+      const orderTotal = typeof total === 'number' && total >= 0 ? total : orderSubtotal + orderTax;
       const id = uuidv4();
 
       // Look up staff id from rfid if provided
@@ -250,11 +239,14 @@ const tax = 0;
         if (staffRows.length) staffDbId = staffRows[0].id;
       }
 
-await pool.query(
-        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name, table_name, type, pay_method, reference_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, staffDbId, 'preparing', subtotal, tax, total, customer_name || null, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null]
+      const discountJson = (discount_type || discount_label || discount_value !== undefined || discount_amount !== undefined)
+        ? JSON.stringify({ type: discount_type || null, label: discount_label || null, value: discount_value ?? null, amount: discount_amount ?? null })
+        : null;
+
+      await pool.query(
+        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name, table_name, type, pay_method, reference_number, discount_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, staffDbId, 'preparing', orderSubtotal, orderTax, orderTotal, customer_name || null, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null, discountJson]
       );
-      console.log('[DEBUG] DB INSERT completed - id:', id, 'reference_number in DB:', reference_number);
       for (const it of itemsOut) {
         const [itemResult] = await pool.query(
           'INSERT INTO order_items (order_id, menu_item_id, qty, notes, price) VALUES (?, ?, ?, ?, ?)',
@@ -271,20 +263,12 @@ await pool.query(
         }
       }
 
-      // Verify the insert
-      const [verify] = await pool.query('SELECT reference_number FROM orders WHERE id = ?', [id]);
-      console.log('[DEBUG] DB verify - reference_number:', verify[0]?.reference_number);
-
       if (googleSheets) {
         try {
-          console.log('[DEBUG] About to call googleSheets.appendOrder with referenceNumber:', reference_number);
-          await googleSheets.appendOrder({ orderId: id, staffName: staff_name || '', items: itemsOut, subtotal, tax, total, payMethod: pay_method, referenceNumber: reference_number, status: 'preparing' });
-          console.log('[DEBUG] googleSheets.appendOrder SUCCESS - no error thrown');
+          await googleSheets.appendOrder({ orderId: id, staffName: staff_name || '', items: itemsOut, subtotal: orderSubtotal, tax: orderTax, total: orderTotal, payMethod: pay_method, referenceNumber: reference_number, status: 'preparing' });
         } catch (e) {
           console.error('Sheets write failed:', e.message, e.stack);
         }
-      } else {
-        console.log('[DEBUG] googleSheets is NULL/FALSE - not calling');
       }
 
     // ── Auto-deduct inventory based on recipes ───────────────────────────────
@@ -352,7 +336,7 @@ await pool.query(
       console.error('Inventory deduction error:', e);
     }
 
-    res.json({ id, subtotal, tax, total, status: 'preparing' });
+    res.json({ id, subtotal: orderSubtotal, tax: orderTax, total: orderTotal, status: 'preparing' });
 
     // ── Log cash drawer sale transaction if cash payment ────────────────────
     if (pay_method === 'cash' && total > 0) {
@@ -385,7 +369,7 @@ await pool.query(
       try {
         const [rows] = await pool.query(`
           SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.table_name, o.type, o.pay_method,
-                 o.reference_number, o.created_at,
+                 o.reference_number, o.discount_json, o.created_at,
                  s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
           FROM orders o LEFT JOIN staff s ON o.staff_id = s.id WHERE o.id = ?`, [id]);
         if (rows[0]) {
@@ -419,7 +403,7 @@ await pool.query(
       try {
         const [rows] = await pool.query(`
           SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.table_name, o.type, o.pay_method,
-                 o.reference_number, o.created_at, o.completed_at,
+                 o.reference_number, o.discount_json, o.created_at, o.completed_at,
                  s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
           FROM orders o LEFT JOIN staff s ON o.staff_id = s.id WHERE o.id = ?`, [id]);
         if (rows[0]) {
@@ -618,7 +602,7 @@ await pool.query(
   });
 
   // POST /api/orders/:id/void — admin only
-  router.post('/:id/void', async (req, res) => {
+  router.post('/:id/void', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body || {};
     if (!reason || typeof reason !== 'string' || !reason.trim()) {
@@ -677,7 +661,7 @@ await pool.query(
   });
 
   // POST /api/orders/:id/refund — admin only
-  router.post('/:id/refund', async (req, res) => {
+  router.post('/:id/refund', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body || {};
     if (!reason || typeof reason !== 'string' || !reason.trim()) {
@@ -695,12 +679,6 @@ await pool.query(
   });
 
   // Helper for MySQL DATETIME format
-  function toMysqlDT(d) {
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  }
-
-  // Helper
   function toMysqlDT(d) {
     const pad = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -743,12 +721,12 @@ await pool.query(
       SELECT COUNT(*) AS total_voids FROM orders WHERE DATE(created_at) = ${targetDate ? '?' : 'CURDATE()'} AND status = 'voided'
     `, targetDate ? [targetDate] : []);
     const [cogsRows] = await pool.query(`
-      SELECT COALESCE(SUM(oi.qty * i.unit_cost), 0) AS total_cogs
+      SELECT COALESCE(SUM(oi.qty * r.quantity * i.purchase_cost), 0) AS total_cogs
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
-      JOIN menu_items m ON oi.menu_item_id = m.id
-      JOIN inventory i ON m.id = i.id
-      WHERE DATE(o.created_at) = ${targetDate ? '?' : 'CURDATE()'} AND o.status = 'completed' AND i.unit_cost > 0
+      JOIN recipes r ON oi.menu_item_id = r.menu_item_id
+      JOIN inventory i ON r.inventory_item_id = i.id
+      WHERE DATE(o.created_at) = ${targetDate ? '?' : 'CURDATE()'} AND o.status = 'completed' AND i.purchase_cost > 0
     `, targetDate ? [targetDate] : []);
 
     const totalSales = Number(salesRows[0]?.total_sales) || 0;
@@ -773,7 +751,7 @@ await pool.query(
   }
 
   // POST /api/orders/z-report — generate Z-Report for today
-  router.post('/z-report', async (req, res) => {
+  router.post('/z-report', authMiddleware, async (req, res) => {
     try {
       const report = await buildZReportData(pool);
       const [ins] = await pool.query(`
@@ -792,7 +770,7 @@ await pool.query(
   });
 
   // GET /api/orders/z-reports — retrieve recent Z-Reports
-  router.get('/z-reports', async (req, res) => {
+  router.get('/z-reports', authMiddleware, async (req, res) => {
     const limit = parseInt(String(req.query.limit || '10'), 10);
     try {
       const [rows] = await pool.query(
@@ -814,7 +792,7 @@ await pool.query(
   }
 
   // GET /api/orders/cash-drawer — today's open drawer or null
-  router.get('/cash-drawer', async (req, res) => {
+  router.get('/cash-drawer', authMiddleware, async (req, res) => {
     try {
       const today = toMysqlDate(new Date());
       const [rows] = await pool.query(
@@ -849,7 +827,7 @@ await pool.query(
   });
 
   // POST /api/orders/cash-drawer — open (create) today's drawer
-  router.post('/cash-drawer', async (req, res) => {
+  router.post('/cash-drawer', authMiddleware, async (req, res) => {
     try {
       const today = toMysqlDate(new Date());
       const { opening_float = 0 } = req.body || {};
@@ -869,7 +847,7 @@ await pool.query(
   });
 
   // PUT /api/orders/cash-drawer/:id — update/close drawer
-  router.put('/cash-drawer/:id', async (req, res) => {
+  router.put('/cash-drawer/:id', authMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
       const { closing_amount, cash_payouts, notes, action } = req.body || {};
@@ -897,7 +875,7 @@ await pool.query(
   });
 
   // GET /api/orders/cash-drawer/transactions — list transactions for today's drawer
-  router.get('/cash-drawer/transactions', async (req, res) => {
+  router.get('/cash-drawer/transactions', authMiddleware, async (req, res) => {
     try {
       const today = toMysqlDate(new Date());
       const [drawers] = await pool.query(
@@ -917,7 +895,7 @@ await pool.query(
   });
 
   // POST /api/orders/cash-drawer/transactions — record a cash in/out entry
-  router.post('/cash-drawer/transactions', async (req, res) => {
+  router.post('/cash-drawer/transactions', authMiddleware, async (req, res) => {
     try {
       const { transaction_type, amount, reason, staff_name } = req.body;
       if (!transaction_type || !['cash_in', 'cash_out'].includes(transaction_type)) {

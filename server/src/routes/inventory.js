@@ -81,9 +81,8 @@ router.post('/', authMiddleware, async (req, res) => {
     try {
       // Only insert cost columns if they exist in the DB (migration may not be applied yet)
       const baseCols = '(id, name, category, unit, stock, low_stock_threshold)';
-      const basePlaceholders = '(?, ?, ?, ?, ?, ?)';
       const baseVals = [id, name, category, unit || 'pcs', stock ?? 0, low_stock_threshold ?? 10];
-      let sql = `INSERT INTO inventory ${baseCols} VALUES ${basePlaceholders}`;
+      let sql = `INSERT INTO inventory ${baseCols}`;
       let vals = baseVals;
 
       try {
@@ -95,7 +94,7 @@ router.post('/', authMiddleware, async (req, res) => {
         // cols is [{ COLUMN_NAME: 'purchase_cost' }, { COLUMN_NAME: 'unit_cost' }]
         const hasCost = Array.isArray(cols) && cols.length >= 2;
         if (hasCost) {
-          sql = `INSERT INTO inventory ${baseCols.replace(')', ', purchase_cost, unit_cost)')} VALUES ${basePlaceholders.replace(')', ', ?, ?)')}`;
+          sql = `INSERT INTO inventory ${baseCols.replace(')', ', purchase_cost, unit_cost)')}`;
           vals = [...baseVals, purchase_cost ?? 0, unit_cost ?? 0];
         }
       } catch (_) { /* migration not applied — skip cost columns */ }
@@ -232,7 +231,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
   // ── Inventory Movements Audit Trail ───────────────────────────────────────────
 
   // GET /api/inventory/movements — list movements with filters
-  router.get('/movements', async (req, res) => {
+  router.get('/movements', authMiddleware, async (req, res) => {
     try {
       const { itemId, type, start, end, limit } = req.query;
       const where = [];

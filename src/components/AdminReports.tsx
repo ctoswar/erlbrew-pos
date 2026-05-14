@@ -215,66 +215,36 @@ export const AdminReports: React.FC = () => {
   const lowStockItems = inventoryItems.filter((i: any) => i.stock <= (i.low_stock_threshold || 10));
   const outOfStockItems = inventoryItems.filter((i: any) => i.stock <= 0);
 
-  const labelStyle: React.CSSProperties = {
-    fontSize: 9,
-    color: "var(--gold-muted)",
-    letterSpacing: 1.5,
-    textTransform: "uppercase" as const,
-    fontWeight: 700,
-  };
+  const labelStyle = "text-[9px] text-erl-accent-muted tracking-widest uppercase font-bold";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
+    <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Report Type Tabs */}
-      <div style={{
-        display: "flex",
-        gap: 6,
-        padding: "0.75rem 1rem",
-        borderBottom: "1px solid var(--border-default)",
-        flexShrink: 0,
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}>
-        <div style={{ display: "flex", gap: 6 }}>
+      <div className="flex gap-1.5 px-4 py-3 border-b border-erl-border-default flex-shrink-0 justify-between items-center">
+        <div className="flex gap-1.5">
           {([["sales", "Sales Report"], ["inventory", "Inventory Report"], ["staff", "Staff Report"]] as const).map(([key, label]) => (
-            <button key={key} onClick={() => setActiveReport(key)} style={{
-              padding: "7px 20px",
-              borderRadius: 9,
-              border: `1.5px solid ${activeReport === key ? "var(--gold)" : "var(--border-default)"}`,
-              background: activeReport === key ? "rgba(201,135,58,0.15)" : "transparent",
-              color: activeReport === key ? "var(--gold)" : "var(--text-secondary)",
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: 1.5,
-              cursor: "pointer",
-              textTransform: "uppercase" as const,
-            }}>
+            <button key={key} onClick={() => setActiveReport(key)} className={`
+              px-5 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase
+              ${activeReport === key ? "border-[1.5px] border-erl-accent bg-erl-accent/15 text-erl-accent" : "border-[1.5px] border-erl-border-default bg-transparent text-erl-secondary"}
+            `}>
               {label}
             </button>
           ))}
         </div>
         {/* Print Button */}
-        <button onClick={() => setShowPrintModal(true)} style={{
-          padding: "7px 16px",
-          borderRadius: 9,
-          border: "1.5px solid var(--gold)",
-          background: "rgba(201,135,58,0.1)",
-          color: "var(--gold)",
-          fontSize: 9,
-          fontWeight: 700,
-          letterSpacing: 1,
-          cursor: "pointer",
-          textTransform: "uppercase" as const,
-        }}>
+        <button onClick={() => setShowPrintModal(true)} className={`
+          px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase
+          border-[1.5px] border-erl-accent bg-erl-accent/10 text-erl-accent
+        `}>
           🖨 Print
         </button>
       </div>
 
       {/* Date Range Selector (only for Sales and Staff reports) */}
       {activeReport !== "inventory" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0.7rem 1rem", borderBottom: "1px solid var(--border-subtle)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1 }}>PERIOD:</div>
+        <div className="flex flex-col gap-2 px-4 py-3 border-b border-erl-border-subtle">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="text-[9px] text-erl-muted tracking-wide">PERIOD:</div>
             {([
               ["Today", "today"],
               ["This Week", "this_week"],
@@ -282,87 +252,57 @@ export const AdminReports: React.FC = () => {
               ["This Month", "this_month"],
               ["Last Month", "last_month"],
             ] as const).map(([label, value]) => (
-              <button key={value} onClick={() => setDateRange(value)} style={{
-                padding: "4px 10px",
-                fontSize: 8,
-                borderRadius: 6,
-                border: `1px solid ${dateRange === value ? "var(--gold)" : "var(--border-subtle)"}`,
-                background: dateRange === value ? "rgba(201,135,58,0.15)" : "transparent",
-                color: dateRange === value ? "var(--gold)" : "var(--text-muted)",
-                cursor: "pointer",
-                fontWeight: dateRange === value ? 700 : 400,
-              }}>
+              <button key={value} onClick={() => setDateRange(value)} className={`
+                px-2.5 py-1 text-[8px] rounded-md cursor-pointer
+                ${dateRange === value ? "border border-erl-accent bg-erl-accent/15 text-erl-accent font-bold" : "border border-erl-border-subtle bg-transparent text-erl-muted font-normal"}
+              `}>
                 {label}
               </button>
             ))}
           </div>
           {/* Monthly Filter */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1 }}>MONTH:</div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="text-[9px] text-erl-muted tracking-wide">MONTH:</div>
             {(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"] as const).map((month) => (
-              <button key={month} onClick={() => setDateRange(month)} style={{
-                padding: "4px 8px",
-                fontSize: 8,
-                borderRadius: 6,
-                border: `1px solid ${dateRange === month ? "var(--gold)" : "var(--border-subtle)"}`,
-                background: dateRange === month ? "rgba(201,135,58,0.15)" : "transparent",
-                color: dateRange === month ? "var(--gold)" : "var(--text-muted)",
-                cursor: "pointer",
-                fontWeight: dateRange === month ? 700 : 400,
-              }}>
+              <button key={month} onClick={() => setDateRange(month)} className={`
+                px-2 py-1 text-[8px] rounded-md cursor-pointer
+                ${dateRange === month ? "border border-erl-accent bg-erl-accent/15 text-erl-accent font-bold" : "border border-erl-border-subtle bg-transparent text-erl-muted font-normal"}
+              `}>
                 {month.toUpperCase()}
               </button>
             ))}
-            <button onClick={() => setDateRange("year_to_date")} style={{
-              padding: "4px 10px",
-              fontSize: 8,
-              borderRadius: 6,
-              border: `1px solid ${dateRange === "year_to_date" ? "var(--gold)" : "var(--border-subtle)"}`,
-              background: dateRange === "year_to_date" ? "rgba(201,135,58,0.15)" : "transparent",
-              color: dateRange === "year_to_date" ? "var(--gold)" : "var(--text-muted)",
-              cursor: "pointer",
-              fontWeight: dateRange === "year_to_date" ? 700 : 400,
-            }}>
+            <button onClick={() => setDateRange("year_to_date")} className={`
+              px-2.5 py-1 text-[8px] rounded-md cursor-pointer
+              ${dateRange === "year_to_date" ? "border border-erl-accent bg-erl-accent/15 text-erl-accent font-bold" : "border border-erl-border-subtle bg-transparent text-erl-muted font-normal"}
+            `}>
               Year to Date
             </button>
           </div>
           {/* Custom Date Range */}
           {dateRange === "custom" && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{
-                padding: "4px 8px",
-                fontSize: 10,
-                borderRadius: 6,
-                border: "1px solid var(--border-subtle)",
-                background: "var(--bg-base)",
-                color: "var(--text-primary)",
-              }} />
-              <span style={{ color: "var(--text-muted)", fontSize: 10 }}>to</span>
-              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{
-                padding: "4px 8px",
-                fontSize: 10,
-                borderRadius: 6,
-                border: "1px solid var(--border-subtle)",
-                background: "var(--bg-base)",
-                color: "var(--text-primary)",
-              }} />
+            <div className="flex items-center gap-2">
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                className="px-2 py-1 text-[10px] rounded-md border border-erl-border-subtle bg-erl-base text-erl-text-primary" />
+              <span className="text-erl-muted text-[10px]">to</span>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                className="px-2 py-1 text-[10px] rounded-md border border-erl-border-subtle bg-erl-base text-erl-text-primary" />
             </div>
           )}
         </div>
       )}
 
       {/* Content */}
-      <div className="scroll-area" style={{ flex: 1, padding: "1rem", overflowY: "auto" }}>
+      <div className="scroll-area flex-1 p-4 overflow-y-auto">
         {loading ? (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>Loading...</div>
+          <div className="text-center text-erl-muted py-12">Loading...</div>
         ) : (
           <>
             {/* SALES REPORT */}
             {activeReport === "sales" && (
               <div>
                 {/* Line Chart */}
-                <div style={{ background: "var(--bg-surface)", borderRadius: 12, padding: "1rem", marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>
+                <div className="bg-erl-surface rounded-xl p-4 mb-4">
+                  <div className="text-[10px] text-erl-muted tracking-widest uppercase mb-3">
                     Revenue Over Time
                   </div>
                   {salesData.length > 0 ? (
@@ -379,47 +319,47 @@ export const AdminReports: React.FC = () => {
                       </LineChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>No sales data for this period</div>
+                    <div className="text-center text-erl-muted py-8">No sales data for this period</div>
                   )}
                 </div>
 
                 {/* Summary Cards */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+                <div className="grid grid-cols-3 gap-2.5 mb-4">
                   {[
-                    { label: "Total Revenue", value: formatCurrency(salesSummary.totalRevenue), color: "var(--gold)" },
-                    { label: "Total Orders", value: String(salesSummary.totalOrders), color: "var(--text-primary)" },
-                    { label: "Avg Order", value: formatCurrency(salesSummary.avgOrder), color: "var(--success)" },
-                    { label: "COGS (est.)", value: formatCurrency(salesSummary.totalCOGS), color: "var(--text-secondary)" },
-                    { label: "Gross Profit", value: formatCurrency(salesSummary.grossProfit), color: salesSummary.grossProfit >= 0 ? "var(--success)" : "var(--danger)" },
-                    { label: "Date Range", value: `${startDate} to ${endDate}`, color: "var(--text-muted)" },
+                    { label: "Total Revenue", value: formatCurrency(salesSummary.totalRevenue), color: "text-erl-accent" },
+                    { label: "Total Orders", value: String(salesSummary.totalOrders), color: "text-erl-text-primary" },
+                    { label: "Avg Order", value: formatCurrency(salesSummary.avgOrder), color: "text-erl-success" },
+                    { label: "COGS (est.)", value: formatCurrency(salesSummary.totalCOGS), color: "text-erl-secondary" },
+                    { label: "Gross Profit", value: formatCurrency(salesSummary.grossProfit), color: salesSummary.grossProfit >= 0 ? "text-erl-success" : "text-erl-danger" },
+                    { label: "Date Range", value: `${startDate} to ${endDate}`, color: "text-erl-muted" },
                   ].map(({ label, value, color }) => (
-                    <div key={label} style={{ background: "var(--bg-surface)", borderRadius: 10, padding: "12px" }}>
-                      <div style={labelStyle}>{label}</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color, marginTop: 4 }}>{value}</div>
+                    <div key={label} className="bg-erl-surface rounded-[10px] p-3">
+                      <div className={labelStyle}>{label}</div>
+                      <div className={`text-base font-bold mt-1 ${color}`}>{value}</div>
                     </div>
                   ))}
                 </div>
 
                 {/* Daily Breakdown Table */}
                 {salesData.length > 0 && (
-                  <div style={{ background: "var(--bg-surface)", borderRadius: 12, overflow: "hidden" }}>
-                    <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border-subtle)", fontSize: 9, fontWeight: 600, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase" }}>
+                  <div className="bg-erl-surface rounded-xl overflow-hidden">
+                    <div className="px-3.5 py-2.5 border-b border-erl-border-subtle text-[9px] font-semibold text-erl-muted tracking-widest uppercase">
                       Daily Breakdown
                     </div>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                    <table className="w-full border-collapse text-[10px]">
                       <thead>
-                        <tr style={{ background: "var(--bg-elevated)" }}>
-                          <th style={{ padding: "8px 12px", textAlign: "left", color: "var(--text-muted)", fontWeight: 600 }}>Date</th>
-                          <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Orders</th>
-                          <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Revenue</th>
+                        <tr className="bg-erl-elevated">
+                          <th className="px-3 py-2 text-left text-erl-muted font-semibold">Date</th>
+                          <th className="px-3 py-2 text-right text-erl-muted font-semibold">Orders</th>
+                          <th className="px-3 py-2 text-right text-erl-muted font-semibold">Revenue</th>
                         </tr>
                       </thead>
                       <tbody>
                         {salesData.map((d) => (
-                          <tr key={d.date} style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                            <td style={{ padding: "8px 12px", color: "var(--text-secondary)" }}>{d.date}</td>
-                            <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)" }}>{d.orders}</td>
-                            <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--gold)", fontWeight: 600 }}>{formatCurrency(d.revenue)}</td>
+                          <tr key={d.date} className="border-t border-erl-border-subtle">
+                            <td className="px-3 py-2 text-erl-secondary">{d.date}</td>
+                            <td className="px-3 py-2 text-right text-erl-muted">{d.orders}</td>
+                            <td className="px-3 py-2 text-right text-erl-accent font-semibold">{formatCurrency(d.revenue)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -433,45 +373,45 @@ export const AdminReports: React.FC = () => {
             {activeReport === "inventory" && (
               <div>
                 {/* Summary */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
-                  <div style={{ background: "var(--bg-surface)", borderRadius: 10, padding: "12px", textAlign: "center" }}>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: "var(--gold)" }}>{inventoryItems.length}</div>
-                    <div style={labelStyle}>Total Items</div>
+                <div className="grid grid-cols-3 gap-2.5 mb-4">
+                  <div className="bg-erl-surface rounded-[10px] p-3 text-center">
+                    <div className="text-xl font-bold text-erl-accent">{inventoryItems.length}</div>
+                    <div className={labelStyle}>Total Items</div>
                   </div>
-                  <div style={{ background: "var(--bg-surface)", borderRadius: 10, padding: "12px", textAlign: "center" }}>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: "#e8a020" }}>{lowStockItems.length}</div>
-                    <div style={labelStyle}>Low Stock</div>
+                  <div className="bg-erl-surface rounded-[10px] p-3 text-center">
+                    <div className="text-xl font-bold text-[#e8a020]">{lowStockItems.length}</div>
+                    <div className={labelStyle}>Low Stock</div>
                   </div>
-                  <div style={{ background: "var(--bg-surface)", borderRadius: 10, padding: "12px", textAlign: "center" }}>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: "var(--danger)" }}>{outOfStockItems.length}</div>
-                    <div style={labelStyle}>Out of Stock</div>
+                  <div className="bg-erl-surface rounded-[10px] p-3 text-center">
+                    <div className="text-xl font-bold text-erl-danger">{outOfStockItems.length}</div>
+                    <div className={labelStyle}>Out of Stock</div>
                   </div>
                 </div>
 
                 {/* Low Stock Alert Table */}
                 {lowStockItems.length > 0 && (
-                  <div style={{ background: "var(--bg-surface)", borderRadius: 12, marginBottom: 16, overflow: "hidden" }}>
-                    <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border-subtle)", fontSize: 9, fontWeight: 600, color: "#e8a020", letterSpacing: 1.5, textTransform: "uppercase" }}>
+                  <div className="bg-erl-surface rounded-xl mb-4 overflow-hidden">
+                    <div className="px-3.5 py-2.5 border-b border-erl-border-subtle text-[9px] font-semibold text-[#e8a020] tracking-widest uppercase">
                       Low Stock Alerts
                     </div>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                    <table className="w-full border-collapse text-[10px]">
                       <thead>
-                        <tr style={{ background: "var(--bg-elevated)" }}>
-                          <th style={{ padding: "8px 12px", textAlign: "left", color: "var(--text-muted)", fontWeight: 600 }}>Item</th>
-                          <th style={{ padding: "8px 12px", textAlign: "center", color: "var(--text-muted)", fontWeight: 600 }}>Category</th>
-                          <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Stock</th>
-                          <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Alert At</th>
+                        <tr className="bg-erl-elevated">
+                          <th className="px-3 py-2 text-left text-erl-muted font-semibold">Item</th>
+                          <th className="px-3 py-2 text-center text-erl-muted font-semibold">Category</th>
+                          <th className="px-3 py-2 text-right text-erl-muted font-semibold">Stock</th>
+                          <th className="px-3 py-2 text-right text-erl-muted font-semibold">Alert At</th>
                         </tr>
                       </thead>
                       <tbody>
                         {lowStockItems.map((item: any) => (
-                          <tr key={item.id} style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                            <td style={{ padding: "8px 12px", color: "var(--text-primary)", fontWeight: 500 }}>{item.name}</td>
-                            <td style={{ padding: "8px 12px", textAlign: "center", color: "var(--text-muted)" }}>{item.category}</td>
-                            <td style={{ padding: "8px 12px", textAlign: "right", color: item.stock <= 0 ? "var(--danger)" : "#e8a020", fontWeight: 600 }}>
+                          <tr key={item.id} className="border-t border-erl-border-subtle">
+                            <td className="px-3 py-2 text-erl-text-primary font-medium">{item.name}</td>
+                            <td className="px-3 py-2 text-center text-erl-muted">{item.category}</td>
+                            <td className={`px-3 py-2 text-right font-semibold ${item.stock <= 0 ? "text-erl-danger" : "text-[#e8a020]"}`}>
                               {item.stock} {item.unit}
                             </td>
-                            <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)" }}>
+                            <td className="px-3 py-2 text-right text-erl-muted">
                               {item.low_stock_threshold} {item.unit}
                             </td>
                           </tr>
@@ -482,41 +422,41 @@ export const AdminReports: React.FC = () => {
                 )}
 
                 {/* Full Inventory Table */}
-                <div style={{ background: "var(--bg-surface)", borderRadius: 12, overflow: "hidden" }}>
-                  <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border-subtle)", fontSize: 9, fontWeight: 600, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase" }}>
+                <div className="bg-erl-surface rounded-xl overflow-hidden">
+                  <div className="px-3.5 py-2.5 border-b border-erl-border-subtle text-[9px] font-semibold text-erl-muted tracking-widest uppercase">
                     All Inventory Items
                   </div>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                  <table className="w-full border-collapse text-[10px]">
                     <thead>
-                      <tr style={{ background: "var(--bg-elevated)" }}>
-                        <th style={{ padding: "8px 12px", textAlign: "left", color: "var(--text-muted)", fontWeight: 600 }}>Item</th>
-                        <th style={{ padding: "8px 12px", textAlign: "center", color: "var(--text-muted)", fontWeight: 600 }}>Category</th>
-                        <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Stock</th>
-                        <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Unit</th>
-                        <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Purchase Cost</th>
-                        <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Unit Cost</th>
+                      <tr className="bg-erl-elevated">
+                        <th className="px-3 py-2 text-left text-erl-muted font-semibold">Item</th>
+                        <th className="px-3 py-2 text-center text-erl-muted font-semibold">Category</th>
+                        <th className="px-3 py-2 text-right text-erl-muted font-semibold">Stock</th>
+                        <th className="px-3 py-2 text-right text-erl-muted font-semibold">Unit</th>
+                        <th className="px-3 py-2 text-right text-erl-muted font-semibold">Purchase Cost</th>
+                        <th className="px-3 py-2 text-right text-erl-muted font-semibold">Unit Cost</th>
                       </tr>
                     </thead>
                     <tbody>
                       {inventoryItems.map((item: any) => (
-                        <tr key={item.id} style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                          <td style={{ padding: "8px 12px", color: "var(--text-primary)", fontWeight: 500 }}>{item.name}</td>
-                          <td style={{ padding: "8px 12px", textAlign: "center", color: "var(--text-muted)" }}>{item.category}</td>
-                          <td style={{ padding: "8px 12px", textAlign: "right", color: item.stock <= (item.low_stock_threshold || 10) ? "var(--danger)" : "var(--text-secondary)" }}>
+                        <tr key={item.id} className="border-t border-erl-border-subtle">
+                          <td className="px-3 py-2 text-erl-text-primary font-medium">{item.name}</td>
+                          <td className="px-3 py-2 text-center text-erl-muted">{item.category}</td>
+                          <td className={`px-3 py-2 text-right ${item.stock <= (item.low_stock_threshold || 10) ? "text-erl-danger" : "text-erl-secondary"}`}>
                             {item.stock}
                           </td>
-                          <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)" }}>{item.unit}</td>
-                          <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-secondary)" }}>
+                          <td className="px-3 py-2 text-right text-erl-muted">{item.unit}</td>
+                          <td className="px-3 py-2 text-right text-erl-secondary">
                             {item.purchase_cost != null ? formatCurrency(item.purchase_cost) : "-"}
                           </td>
-                          <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-secondary)" }}>
+                          <td className="px-3 py-2 text-right text-erl-secondary">
                             {item.unit_cost != null ? formatCurrency(item.unit_cost) : "-"}
                           </td>
                         </tr>
                       ))}
                       {inventoryItems.length === 0 && (
                         <tr>
-                          <td colSpan={6} style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}>
+                          <td colSpan={6} className="p-6 text-center text-erl-muted">
                             No inventory items found
                           </td>
                         </tr>
@@ -531,37 +471,37 @@ export const AdminReports: React.FC = () => {
             {activeReport === "staff" && (
               <div>
                 {/* Staff Summary Table */}
-                <div style={{ background: "var(--bg-surface)", borderRadius: 12, overflow: "hidden" }}>
-                  <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border-subtle)", fontSize: 9, fontWeight: 600, color: "var(--text-muted)", letterSpacing: 1.5, textTransform: "uppercase" }}>
+                <div className="bg-erl-surface rounded-xl overflow-hidden">
+                  <div className="px-3.5 py-2.5 border-b border-erl-border-subtle text-[9px] font-semibold text-erl-muted tracking-widest uppercase">
                     Staff Performance ({startDate} to {endDate})
                   </div>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                  <table className="w-full border-collapse text-[10px]">
                     <thead>
-                      <tr style={{ background: "var(--bg-elevated)" }}>
-                        <th style={{ padding: "8px 12px", textAlign: "left", color: "var(--text-muted)", fontWeight: 600 }}>Staff</th>
-                        <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Orders</th>
-                        <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Revenue</th>
-                        <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Avg/Order</th>
-                        <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Hours</th>
+                      <tr className="bg-erl-elevated">
+                        <th className="px-3 py-2 text-left text-erl-muted font-semibold">Staff</th>
+                        <th className="px-3 py-2 text-right text-erl-muted font-semibold">Orders</th>
+                        <th className="px-3 py-2 text-right text-erl-muted font-semibold">Revenue</th>
+                        <th className="px-3 py-2 text-right text-erl-muted font-semibold">Avg/Order</th>
+                        <th className="px-3 py-2 text-right text-erl-muted font-semibold">Hours</th>
                       </tr>
                     </thead>
                     <tbody>
                       {staffStats.map((s) => (
-                        <tr key={s.name} style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                          <td style={{ padding: "8px 12px", color: "var(--text-primary)", fontWeight: 500 }}>{s.name}</td>
-                          <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)" }}>{s.orders}</td>
-                          <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--gold)", fontWeight: 600 }}>{formatCurrency(s.revenue)}</td>
-                          <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-secondary)" }}>
+                        <tr key={s.name} className="border-t border-erl-border-subtle">
+                          <td className="px-3 py-2 text-erl-text-primary font-medium">{s.name}</td>
+                          <td className="px-3 py-2 text-right text-erl-muted">{s.orders}</td>
+                          <td className="px-3 py-2 text-right text-erl-accent font-semibold">{formatCurrency(s.revenue)}</td>
+                          <td className="px-3 py-2 text-right text-erl-secondary">
                             {s.orders > 0 ? formatCurrency(s.revenue / s.orders) : "-"}
                           </td>
-                          <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)" }}>
+                          <td className="px-3 py-2 text-right text-erl-muted">
                             {s.hoursWorked ? `${s.hoursWorked.toFixed(1)}h` : "-"}
                           </td>
                         </tr>
                       ))}
                       {staffStats.length === 0 && (
                         <tr>
-                          <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}>
+                          <td colSpan={5} className="p-6 text-center text-erl-muted">
                             No staff data for this period
                           </td>
                         </tr>
@@ -616,7 +556,7 @@ const PrintModal: React.FC<{
       <!DOCTYPE html>
       <html>
         <head>
-          <title>{(() => { try { const s = localStorage.getItem('erlbrew_company_settings'); return s ? JSON.parse(s).company_name || 'Erlbrew Café POS' : 'Erlbrew Café POS'; } catch { return 'Erlbrew Café POS'; } })()}</title>
+          <title>${(() => { try { const s = localStorage.getItem('erlbrew_company_settings'); return s ? JSON.parse(s).company_name || 'Erlbrew Café POS' : 'Erlbrew Café POS'; } catch { return 'Erlbrew Café POS'; } })()}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #333; }
@@ -650,39 +590,34 @@ const PrintModal: React.FC<{
 
   return (
     <>
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998 }} onClick={onClose} />
-      <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
-        <div style={{ background: "var(--bg-elevated)", border: "1.5px solid var(--border-medium)", borderRadius: 16, padding: "1.5rem", width: 380, maxHeight: "90vh", overflowY: "auto" }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 16, fontFamily: "'Playfair Display', serif" }}>
+      <div className="fixed inset-0 bg-black/65 z-[998]" onClick={onClose} />
+      <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
+        <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-[380px] max-h-[90vh] overflow-y-auto">
+          <div className="text-sm font-bold text-erl-text-primary mb-4 font-display">
             Print Report
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+          <div className="flex flex-col gap-2.5 mb-4">
             {([
               ["summary", "Sales Summary", "Revenue, orders, profit overview"],
               ["items", "Item Sales", "Best selling items breakdown"],
               ["stock", "Current Stock", "All inventory items with stock levels"],
             ] as const).map(([value, label, desc]) => (
-              <button key={value} onClick={() => setPrintType(value)} style={{
-                padding: "12px 16px",
-                borderRadius: 10,
-                border: `2px solid ${printType === value ? "var(--gold)" : "var(--border-default)"}`,
-                background: printType === value ? "rgba(201,135,58,0.15)" : "transparent",
-                color: "var(--text-primary)",
-                cursor: "pointer",
-                textAlign: "left",
-              }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>{label}</div>
-                <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{desc}</div>
+              <button key={value} onClick={() => setPrintType(value)} className={`
+                px-4 py-3 rounded-[10px] cursor-pointer text-left
+                ${printType === value ? "border-2 border-erl-accent bg-erl-accent/15" : "border-2 border-erl-border-default bg-transparent"}
+              `}>
+                <div className="text-xs font-bold text-erl-text-primary mb-0.5">{label}</div>
+                <div className="text-[10px] text-erl-muted">{desc}</div>
               </button>
             ))}
           </div>
 
-          <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={onClose} style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "1px solid var(--border-default)", background: "transparent", color: "var(--text-secondary)", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+          <div className="flex gap-2.5">
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-erl-border-default bg-transparent text-erl-secondary text-[10px] font-bold cursor-pointer">
               Cancel
             </button>
-            <button onClick={handlePrint} style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "none", background: "var(--gold)", color: "var(--bg-sidebar)", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+            <button onClick={handlePrint} className="flex-1 py-2.5 rounded-lg border-none bg-erl-accent text-erl-sidebar text-[10px] font-bold cursor-pointer">
               Print
             </button>
           </div>
@@ -690,7 +625,7 @@ const PrintModal: React.FC<{
       </div>
 
       {/* Hidden Print Content */}
-      <div id="print-area" style={{ display: "none" }}>
+      <div id="print-area" className="hidden">
         <div className="header">
           <h1>{(() => { try { const s = localStorage.getItem('erlbrew_company_settings'); return s ? JSON.parse(s).company_name || 'Erlbrew Café POS' : 'Erlbrew Café POS'; } catch { return 'Erlbrew Café POS'; } })()}</h1>
           <h2>{printType === "summary" ? "Sales Summary Report" : printType === "items" ? "Item Sales Report" : "Current Stock Report"}</h2>

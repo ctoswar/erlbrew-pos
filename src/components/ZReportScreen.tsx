@@ -32,66 +32,63 @@ export const ZReportScreen: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: "1rem 1.2rem", display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <div className="px-5 py-4 flex flex-col gap-3.5 min-h-0">
+      <div className="flex items-center justify-between">
         <div>
-          <div style={{ fontSize: 9, color: "var(--gold)", letterSpacing: 2, fontWeight: 700, textTransform: "uppercase" }}>
+          <div className="text-[9px] text-erl-accent tracking-widest font-bold uppercase">
             Z-Report
           </div>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+          <div className="text-[11px] text-erl-muted mt-0.5">
             Generate end-of-day sales summary
           </div>
         </div>
-        <button onClick={handleGenerate} disabled={generating} className="btn btn-gold" style={{ padding: "8px 18px", fontSize: 10 }}>
+        <button onClick={handleGenerate} disabled={generating} className="btn btn-accent px-4.5 py-2 text-[10px]">
           {generating ? "Generating..." : "Generate Report"}
         </button>
       </div>
 
       {/* Last generated report */}
       {lastReport && (
-        <div className="card-glass" style={{ padding: "1rem" }}>
-          <div className="font-display" style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", marginBottom: 10 }}>
+        <div className="card-glass p-4">
+          <div className="font-display text-xs font-bold text-erl-text-primary mb-2.5">
             📊 Report — {new Date(lastReport.period_end).toLocaleTimeString()}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+          <div className="grid grid-cols-4 gap-2.5">
             <Stat label="Total Sales" value={formatCurrency(lastReport.total_sales)} gold />
             <Stat label="Orders" value={String(lastReport.total_orders)} />
             <Stat label="Cash" value={formatCurrency(lastReport.total_cash)} />
             <Stat label="Card" value={formatCurrency(lastReport.total_card)} />
             <Stat label="E-Wallet" value={formatCurrency(lastReport.total_ewallet)} />
-            <Stat label="Refunds" value={formatCurrency(lastReport.total_refunds)} color="var(--danger)" />
-            <Stat label="Voids" value={String(lastReport.total_voids)} color="var(--text-muted)" />
+            <Stat label="Refunds" value={formatCurrency(lastReport.total_refunds)} color="text-erl-danger" />
+            <Stat label="Voids" value={String(lastReport.total_voids)} color="text-erl-muted" />
             <Stat label="COGS" value={formatCurrency(lastReport.total_cogs)} />
-            <Stat label="Gross Profit" value={formatCurrency(lastReport.gross_profit)} color={lastReport.gross_profit >= 0 ? "var(--success)" : "var(--danger)"} />
+            <Stat label="Gross Profit" value={formatCurrency(lastReport.gross_profit)} color={lastReport.gross_profit >= 0 ? "text-erl-success" : "text-erl-danger"} />
           </div>
         </div>
       )}
 
       {/* Past reports */}
       <div>
-        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: 1.5, marginBottom: 8, textTransform: "uppercase" }}>
+        <div className="text-[10px] font-bold text-erl-secondary tracking-wider uppercase mb-2">
           Recent Reports
         </div>
         {loading ? (
-          <div style={{ color: "var(--text-muted)", fontSize: 11, padding: "2rem 0", textAlign: "center" }}>Loading...</div>
+          <div className="text-erl-muted text-[11px] py-8 text-center">Loading...</div>
         ) : reports.length === 0 ? (
-          <div style={{ color: "var(--text-muted)", fontSize: 11, padding: "2rem 0", textAlign: "center" }}>No reports yet</div>
+          <div className="text-erl-muted text-[11px] py-8 text-center">No reports yet</div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div className="flex flex-col gap-1.5">
             {reports.map((r) => (
-              <div key={r.id} className="card" style={{
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "8px 12px",
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)" }}>
+              <div key={r.id} className="card flex items-center gap-2.5 px-3 py-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-semibold text-erl-text-primary">
                     {r.report_date} • {new Date(r.period_start).toLocaleTimeString()} — {new Date(r.period_end).toLocaleTimeString()}
                   </div>
-                  <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
+                  <div className="text-[10px] text-erl-muted">
                     {r.total_orders} orders • {formatCurrency(r.total_sales)} sales
                   </div>
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: r.gross_profit >= 0 ? "var(--success)" : "var(--danger)" }}>
+                <div className={`text-xs font-bold ${r.gross_profit >= 0 ? "text-erl-success" : "text-erl-danger"}`}>
                   {formatCurrency(r.gross_profit)}
                 </div>
               </div>
@@ -105,8 +102,8 @@ export const ZReportScreen: React.FC = () => {
 
 const Stat: React.FC<{ label: string; value: string; color?: string; gold?: boolean }> = ({ label, value, color, gold }) => (
   <div>
-    <div style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: 1, fontWeight: 600 }}>{label}</div>
-    <div style={{ fontSize: 14, fontWeight: 700, fontFamily: gold ? "'Playfair Display', serif" : undefined, color: color || (gold ? "var(--gold)" : "var(--text-primary)") }}>
+    <div className="text-[9px] text-erl-muted tracking-wide font-semibold">{label}</div>
+    <div className={`text-sm font-bold ${gold ? "font-display text-erl-accent" : color || "text-erl-text-primary"}`}>
       {value}
     </div>
   </div>

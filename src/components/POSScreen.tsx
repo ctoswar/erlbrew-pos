@@ -24,8 +24,7 @@ interface Props {
 
 const MOBILE_BREAKPOINT = 768;
 const TABLET_BREAKPOINT = 1024;
-
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 min inactivity → auto-logout
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const [screen, setScreen] = useState<Screen>("pos");
@@ -55,7 +54,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Session timeout — reset on any user interaction
+  // Session timeout
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     const reset = () => {
@@ -71,28 +70,22 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     };
   }, [onLogout]);
 
-  // Cart visible on tablet+ throughout order flow
   const isOrderFlow = screen === "pos" || screen === "checkout" || screen === "payment";
   const showDesktopCart = !isMobile && isOrderFlow;
 
   const { cart, discount, addItem, updateQty, clearCart, applyDiscount, removeDiscount, addNote } = useCart();
 
-  // Sync cart meta to localStorage for CustomerDisplay (second monitor)
-  // Note: cart is in deps because useCart returns a new object reference on every render.
-  // This is intentional - we want to sync orderType/table changes immediately.
   useEffect(() => {
     try {
       localStorage.setItem("erlbrew_cart_meta", JSON.stringify({ orderType, customerName }));
-      const v = String(Date.now());
-      localStorage.setItem("erlbrew_cart_version", v);
+      localStorage.setItem("erlbrew_cart_version", String(Date.now()));
     } catch {}
   }, [orderType, customerName, cart]);
-  const { orders, placeOrder, updateStatus, voidOrder, refundOrder, activeOrders, pendingCount } = useOrders();
-  useKitchenEvents(); // Establish SSE connection for real-time order updates
 
-  const handleNavigate = useCallback((s: Screen) => {
-    setScreen(s);
-  }, []);
+  const { orders, placeOrder, updateStatus, voidOrder, refundOrder, activeOrders, pendingCount } = useOrders();
+  useKitchenEvents();
+
+  const handleNavigate = useCallback((s: Screen) => setScreen(s), []);
 
   const handleCheckout = () => {
     if (cart.length > 0) setScreen("checkout");
@@ -103,22 +96,15 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     setLastOrder(order);
     clearCart();
     setMobileCartOpen(false);
-
-    // Open cash drawer via Pi Bluetooth print server (fire-and-forget)
     openCashDrawer().catch((err) => console.error("Failed to open cash drawer:", err));
-
     setScreen("success");
   };
 
   const handleOrderDone = () => {
-    // Check if there are split items waiting
     if (splitItems.length > 0) {
-      // Re-populate cart with split items
       splitItems.forEach((ci) => {
         addItem(ci.item, ci.modifiers);
-        for (let i = 1; i < ci.qty; i++) {
-          addItem(ci.item, ci.modifiers);
-        }
+        for (let i = 1; i < ci.qty; i++) addItem(ci.item, ci.modifiers);
       });
       setSplitItems([]);
       setSplitMode(false);
@@ -130,15 +116,8 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     setLastOrder(null);
   };
 
-  const handleStartSplit = () => {
-    setSplitMode(true);
-    setSplitSelections(new Set());
-  };
-
-  const handleCancelSplit = () => {
-    setSplitMode(false);
-    setSplitSelections(new Set());
-  };
+  const handleStartSplit = () => { setSplitMode(true); setSplitSelections(new Set()); };
+  const handleCancelSplit = () => { setSplitMode(false); setSplitSelections(new Set()); };
 
   const handleToggleSplitItem = (key: string) => {
     setSplitSelections((prev) => {
@@ -154,23 +133,15 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     const remaining: CartItem[] = [];
     const moved: CartItem[] = [];
     cart.forEach((ci) => {
-      if (selectedSet.has(cartItemKey(ci))) {
-        moved.push(ci);
-      } else {
-        remaining.push(ci);
-      }
+      if (selectedSet.has(cartItemKey(ci))) moved.push(ci);
+      else remaining.push(ci);
     });
     if (moved.length === 0 || remaining.length === 0) return;
-
-    // Clear cart and re-add remaining items
     clearCart();
     remaining.forEach((ci) => {
       addItem(ci.item, ci.modifiers);
-      for (let i = 1; i < ci.qty; i++) {
-        addItem(ci.item, ci.modifiers);
-      }
+      for (let i = 1; i < ci.qty; i++) addItem(ci.item, ci.modifiers);
     });
-    // Store moved items for later
     setSplitItems(moved);
     setSplitMode(false);
     setSplitSelections(new Set());
@@ -178,15 +149,10 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
 
   const handleRepeatOrder = () => {
     if (!lastOrder) return;
-    // Re-populate cart with items from last order
     lastOrder.items.forEach((ci) => {
       addItem(ci.item, ci.modifiers);
-      // Match the qty — addItem adds 1, so add (qty - 1) more
-      for (let i = 1; i < ci.qty; i++) {
-        addItem(ci.item, ci.modifiers);
-      }
+      for (let i = 1; i < ci.qty; i++) addItem(ci.item, ci.modifiers);
     });
-    // Restore customer name and order type
     setCustomerName(lastOrder.customerName || "");
     setOrderType(lastOrder.type);
     setLastOrder(null);
@@ -200,39 +166,30 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
 
   const cartCount = cart.reduce((s, c) => s + c.qty, 0);
 
-  // ── Mobile cart bottom sheet ────────────────────────────────────────────────
   const renderMobileCartSheet = () => (
     <>
       <div className="cart-overlay" onClick={() => setMobileCartOpen(false)} />
       <div className="cart-bottomsheet">
-        {/* Drag handle */}
-        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
-          <div style={{ width: 38, height: 4, borderRadius: 2, background: "var(--border-medium)" }} />
+        <div className="flex justify-center pt-2.5 pb-1">
+          <div className="w-[38px] h-1 rounded-sm bg-erl-border-medium" />
         </div>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 16px 12px", borderBottom: "1px solid var(--border-subtle)" }}>
-          <div className="font-display" style={{ fontSize: 15, color: "var(--text-primary)" }}>
-            Current Order
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div className="flex items-center justify-between px-4 pb-3 border-b border-erl-border-subtle">
+          <div className="font-display text-[15px] text-erl-text-primary">Current Order</div>
+          <div className="flex gap-2 items-center">
             {cart.length > 0 && (
-                  <button
-                    className="btn btn-danger"
-                    onClick={() => { clearCart(); setMobileCartOpen(false); }}
-                  >
-                    Clear All
-                  </button>
-                )}
+              <button className="btn btn-danger" onClick={() => { clearCart(); setMobileCartOpen(false); }}>
+                Clear All
+              </button>
+            )}
             <button
               onClick={() => setMobileCartOpen(false)}
-              style={{ background: "none", border: "none", color: "var(--text-secondary)", fontSize: 20, cursor: "pointer", padding: "0 4px" }}
+              className="bg-transparent border-none text-erl-text-secondary text-xl cursor-pointer px-1"
             >
               ✕
             </button>
           </div>
         </div>
-        {/* Cart panel content (scrollable) */}
-        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", minHeight: 0 }}>
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           <CartPanel
             cart={cart}
             discount={discount}
@@ -258,44 +215,20 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     </>
   );
 
-  // ── Mobile floating cart button ─────────────────────────────────────────────
   const renderMobileCartButton = () => (
     <button
       onClick={() => setMobileCartOpen(true)}
-      style={{
-        position: "fixed",
-        bottom: 20,
-        right: 20,
-        zIndex: 900,
-        background: "var(--gold)",
-        color: "var(--bg-sidebar)",
-        border: "none",
-        borderRadius: "50%",
-        width: 60,
-        height: 60,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        boxShadow: "0 4px 20px rgba(201,135,58,0.5)",
-        cursor: "pointer",
-        fontSize: 10,
-        fontWeight: 700,
-        letterSpacing: 0.5,
-        gap: 2,
-      }}
+      className="fixed bottom-5 right-5 z-[900] w-[60px] h-[60px] rounded-full bg-erl-accent text-erl-sidebar border-none flex flex-col items-center justify-center cursor-pointer text-[10px] font-bold tracking-wide gap-0.5 shadow-[0_4px_20px_rgba(201,135,58,0.5)]"
     >
-      <span style={{ fontSize: 18 }}>🛒</span>
+      <span className="text-lg">🛒</span>
       <span>{cartCount}</span>
     </button>
   );
 
-  // ── Desktop cart panel (always visible on right) ────────────────────────────
   const renderDesktopCart = () => {
-    // Tablet: compact width; desktop: full width
     const cartWidth = isTablet ? 260 : 320;
     return (
-      <div style={{ width: cartWidth, flexShrink: 0, display: "flex", flexDirection: "column", height: "100%" }}>
+      <div className="shrink-0 flex flex-col h-full" style={{ width: cartWidth }}>
         <CartPanel
           cart={cart}
           discount={discount}
@@ -320,7 +253,6 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     );
   };
 
-  // ── Main screen router ──────────────────────────────────────────────────────
   const renderMainScreen = () => {
     switch (screen) {
       case "pos":
@@ -351,37 +283,27 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
         return lastOrder ? <SuccessScreen order={lastOrder} onDone={handleOrderDone} onRepeat={handleRepeatOrder} /> : null;
       case "kitchen":
         return <KitchenBoard orders={orders} onUpdateStatus={updateStatus} onVoidOrder={voidOrder} onRefundOrder={refundOrder} />;
-case "dashboard":
-  return <Dashboard orders={orders} staffName={staff.name} onRepeatOrder={(items) => {
-    items.forEach((ci) => {
-      addItem(ci.item, ci.modifiers);
-      for (let i = 1; i < ci.qty; i++) {
-        addItem(ci.item, ci.modifiers);
-      }
-    });
-    handleNavigate("pos");
-  }} />;
-case "admin":
-      return <AdminScreen />;
-    case "time":
-      return <TimeKeeping />;
-    default:
+      case "dashboard":
+        return <Dashboard orders={orders} staffName={staff.name} onRepeatOrder={(items) => {
+          items.forEach((ci) => {
+            addItem(ci.item, ci.modifiers);
+            for (let i = 1; i < ci.qty; i++) addItem(ci.item, ci.modifiers);
+          });
+          handleNavigate("pos");
+        }} />;
+      case "admin":
+        return <AdminScreen />;
+      case "time":
+        return <TimeKeeping />;
+      default:
         return null;
     }
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", position: "relative" }}>
-      {/* ── Left Column ── */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          maxWidth: isMobile ? "100%" : undefined,
-        }}
-      >
+    <div className="flex h-screen overflow-hidden relative">
+      {/* Left Column */}
+      <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'max-w-full' : ''}`}>
         <Topbar
           staff={staff}
           screen={screen}
@@ -389,43 +311,29 @@ case "admin":
           onNavigate={handleNavigate}
           onLogout={onLogout}
         />
-
-        {/* Screen router */}
-        <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
+        <div className="flex-1 flex overflow-hidden min-h-0">
           {renderMainScreen()}
         </div>
       </div>
 
       {/* Offline queue indicator */}
       {pendingCount > 0 && (
-        <div style={{
-          position: "fixed", bottom: 16, left: 16, zIndex: 999,
-          background: "rgba(201,135,58,0.12)", border: "1px solid var(--gold-dim)",
-          borderRadius: 10, padding: "8px 14px",
-          display: "flex", alignItems: "center", gap: 8,
-          fontSize: 10, color: "var(--gold)", fontWeight: 700,
-          backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-          animation: "fadeInUp 0.3s ease",
-        }}>
-          <span style={{ fontSize: 14 }}>📡</span>
+        <div className="fixed bottom-4 left-4 z-[999] bg-erl-accent/10 border border-erl-accent-dim rounded-[10px] px-3.5 py-2 flex items-center gap-2 text-[10px] text-erl-accent font-bold backdrop-blur-sm animate-fade-in-up">
+          <span className="text-sm">📡</span>
           <span>{pendingCount} order{pendingCount > 1 ? 's' : ''} pending sync</span>
         </div>
       )}
 
-      {/* ── Desktop cart panel (tablet+) — visible throughout order flow ── */}
+      {/* Desktop cart panel */}
       {showDesktopCart && renderDesktopCart()}
 
-      {/* ── Mobile floating cart button ── */}
-      {isMobile && cart.length > 0 && !mobileCartOpen && (
-        renderMobileCartButton()
-      )}
+      {/* Mobile floating cart button */}
+      {isMobile && cart.length > 0 && !mobileCartOpen && renderMobileCartButton()}
 
-{/* ── Mobile cart bottom sheet ── */}
-      {isMobile && mobileCartOpen && (
-        renderMobileCartSheet()
-      )}
+      {/* Mobile cart bottom sheet */}
+      {isMobile && mobileCartOpen && renderMobileCartSheet()}
 
-      {/* ── Discount modal ── */}
+      {/* Discount modal */}
       {showDiscountModal && (
         <DiscountModal
           subtotal={cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0)}
@@ -438,7 +346,6 @@ case "admin":
           onClose={() => setShowDiscountModal(false)}
         />
       )}
-
     </div>
   );
 };

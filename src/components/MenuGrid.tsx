@@ -13,7 +13,6 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("");
-  const [modifierItem, setModifierItem] = useState<MenuItem | null>(null);
 
   const handleItemTap = (item: MenuItem, mods?: CartItemModifier[]) => {
     onAddItem(item, mods);
@@ -22,6 +21,8 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
   const openModifierModal = (item: MenuItem) => {
     setModifierItem(item);
   };
+
+  const [modifierItem, setModifierItem] = useState<MenuItem | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -50,37 +51,22 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
   const items = menuItems.filter((m) => m.category === activeCategory);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
+    <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Category Tabs */}
-      <div
-        className="hide-scrollbar"
-        style={{
-          display: "flex",
-          gap: 6,
-          padding: "0.9rem 1rem 0.5rem",
-          flexShrink: 0,
-          overflowX: "auto",
-        }}
-      >
+      <div className="hide-scrollbar flex gap-2 px-6 pt-5 pb-3 flex-shrink-0 overflow-x-auto">
         {categories.map((cat: string) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            style={{
-              padding: "7px 16px",
-              borderRadius: 20,
-              border: `1.5px solid ${activeCategory === cat ? "var(--gold)" : "var(--border-default)"}`,
-              background: activeCategory === cat ? "var(--gold)" : "transparent",
-              color: activeCategory === cat ? "var(--bg-sidebar)" : "var(--text-muted)",
-              fontSize: 9.5,
-              fontWeight: activeCategory === cat ? 700 : 500,
-              letterSpacing: 1,
-              textTransform: "uppercase",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-              transition: "all 0.15s var(--ease-out)",
-            }}
+            className={`
+              px-5 py-2.5 rounded-full text-[10px] font-bold tracking-[0.15em] uppercase
+              whitespace-nowrap flex-shrink-0 cursor-pointer transition-all duration-250 ease-out
+              ${
+                activeCategory === cat
+                  ? "bg-erl-accent text-erl-base shadow-[0_4px_16px_rgba(196,149,106,0.3)]"
+                  : "bg-transparent text-erl-text-muted border border-erl-border-default hover:border-erl-border-medium hover:text-erl-text-secondary hover:bg-erl-accent/[0.03]"
+              }
+            `}
           >
             {cat}
           </button>
@@ -88,42 +74,30 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
       </div>
 
       {/* Grid */}
-      <div
-        className="scroll-area"
-        style={{
-          flex: 1,
-          padding: "0.6rem 1rem 1rem",
-          overflowY: "auto",
-          minHeight: 0,
-        }}
-      >
+      <div className="scroll-area flex-1 px-6 pb-6 pt-3 overflow-y-auto min-h-0">
         {loading ? (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>
-            <div className="animate-shimmer" style={{ width: 120, height: 14, borderRadius: 4, margin: "0 auto 8px" }} />
-            <div className="animate-shimmer" style={{ width: 80, height: 10, borderRadius: 4, margin: "0 auto" }} />
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-10 h-10 border-2 border-erl-accent/20 border-t-erl-accent rounded-full animate-spin" />
+            <span className="text-sm text-erl-text-muted tracking-wide">Loading menu...</span>
           </div>
         ) : items.length === 0 ? (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem", fontSize: 12 }}>
-            No items in this category
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-erl-accent/[0.04] border border-erl-accent/[0.08] flex items-center justify-center">
+              <span className="text-3xl opacity-30">☕</span>
+            </div>
+            <span className="text-sm text-erl-text-muted tracking-wide">No items in this category</span>
           </div>
         ) : (
-          <div
-            className="menu-grid-root"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
-              gap: 10,
-            }}
-          >
+          <div className="menu-grid-root grid grid-cols-2 gap-4">
             {items.map((item) => (
-                <MenuCard
-                  key={`${item.id}-${(item.modifiers || []).map((m) => m.id || m.name).join("-")}`}
-                  item={item}
-                  cartItem={cart.find((ci) => ci.item.id === item.id)}
-                  onAdd={handleItemTap}
-                  onOpenModal={openModifierModal}
-                />
-              ))}
+              <MenuCard
+                key={`${item.id}-${(item.modifiers || []).map((m) => m.id || m.name).join("-")}`}
+                item={item}
+                cartItem={cart.find((ci) => ci.item.id === item.id)}
+                onAdd={handleItemTap}
+                onOpenModal={openModifierModal}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -153,6 +127,7 @@ interface MenuCardProps {
 
 const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd, onOpenModal }) => {
   const [hovered, setHovered] = useState(false);
+  const [pressed, setPressed] = useState(false);
   const hasImage = !!item.image;
   const modifiers = item.modifiers || [];
 
@@ -168,113 +143,89 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd, onOpenModal 
     <div
       onClick={handleCardClick}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: hovered ? "var(--bg-elevated)" : "var(--bg-surface)",
-        border: `1.5px solid ${cartItem ? "var(--gold)" : hovered ? "var(--border-medium)" : "var(--border-subtle)"}`,
-        borderRadius: 14,
-        cursor: "pointer",
-        transition: "all 0.18s var(--ease-out)",
-        transform: hovered ? "translateY(-2px)" : "translateY(0)",
-        boxShadow: hovered ? "0 6px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(201,135,58,0.06)" : "0 1px 3px rgba(0,0,0,0.12)",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
+      onMouseLeave={() => { setHovered(false); setPressed(false); }}
+      onMouseDown={() => setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+      className={`
+        group flex flex-col overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 ease-out
+        ${
+          cartItem
+            ? "border-2 border-erl-accent/30 shadow-[0_0_0_1px_rgba(196,149,106,0.08),0_4px_20px_rgba(196,149,106,0.12)]"
+            : hovered
+            ? "border-2 border-erl-border-medium -translate-y-1 shadow-[0_12px_36px_rgba(0,0,0,0.45)]"
+            : "border-2 border-erl-border-subtle shadow-[0_2px_8px_rgba(0,0,0,0.25)]"
+        }
+        ${pressed ? "scale-[0.97]" : ""}
+        ${hovered ? "bg-erl-elevated" : "bg-erl-surface"}
+      `}
     >
       {/* Image */}
       {hasImage && (
-        <div style={{ width: "100%", height: 100, overflow: "hidden", background: "var(--bg-base)" }}>
+        <div className="w-full h-[120px] overflow-hidden bg-erl-base relative">
           <img
             src={item.image}
             alt={item.name}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              transition: "transform 0.35s var(--ease-out)",
-              transform: hovered ? "scale(1.06)" : "scale(1)",
-            }}
+            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.1]"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-erl-surface/90 via-erl-surface/30 to-transparent pointer-events-none" />
+          {/* Hover overlay */}
+          <div className="absolute inset-0 bg-erl-accent/[0.03] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+          {/* Popular badge on image */}
+          {item.popular && (
+            <div className="absolute top-2.5 right-2.5">
+              <span className="pill pill-accent text-[7px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-erl-accent animate-pulse mr-1" />
+                Popular
+              </span>
+            </div>
+          )}
         </div>
       )}
 
-      <div style={{ padding: "12px 13px 12px", display: "flex", flexDirection: "column", gap: 5, flex: 1 }}>
-        {/* Top row: emoji + badges */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 26, lineHeight: 1 }}>{item.emoji}</span>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
+      <div className="px-4 py-3.5 flex flex-col gap-2 flex-1">
+        {/* Top row: emoji + name */}
+        {!hasImage && (
+          <div className="flex items-start justify-between">
+            <span className="text-[26px] leading-none filter drop-shadow-sm">{item.emoji}</span>
             {item.popular && (
-              <span style={{
-                fontSize: 6.5,
-                fontWeight: 700,
-                letterSpacing: 1,
-                textTransform: "uppercase",
-                color: "var(--bg-sidebar)",
-                background: "var(--gold)",
-                padding: "2px 6px",
-                borderRadius: 4,
-              }}>
+              <span className="pill pill-accent text-[7px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-erl-accent animate-pulse mr-1" />
                 Popular
               </span>
             )}
-            {item.badge && (
-              <span style={{
-                fontSize: 6.5,
-                fontWeight: 700,
-                letterSpacing: 1,
-                textTransform: "uppercase",
-                color: "var(--gold)",
-                border: "1px solid var(--gold-dim)",
-                padding: "2px 5px",
-                borderRadius: 4,
-              }}>
-                {item.badge}
-              </span>
-            )}
           </div>
-        </div>
+        )}
 
         {/* Name */}
-        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.3, flex: 1 }}>
+        <div className="text-[14px] font-bold text-erl-text-primary leading-snug flex-1 font-display">
           {item.name}
         </div>
 
         {/* Description */}
-        <div style={{
-          fontSize: 9.5,
-          color: "var(--text-secondary)",
-          lineHeight: 1.4,
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}>
-          {item.description}
-        </div>
+        {item.description && (
+          <div className="text-[10px] text-erl-text-secondary leading-relaxed line-clamp-2">
+            {item.description}
+          </div>
+        )}
 
         {/* Bottom: price + qty */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: 3 }}>
-          <span className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "var(--gold)" }}>
+        <div className="flex items-center justify-between mt-auto pt-1.5">
+          <span className="font-display text-[16px] font-bold text-erl-accent tracking-tight">
             {formatCurrency(item.price)}
           </span>
           {cartItem && cartItem.qty > 0 && (
-            <div style={{
-              background: "var(--gold)",
-              color: "var(--bg-sidebar)",
-              borderRadius: "50%",
-              width: 24,
-              height: 24,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 11,
-              fontWeight: 700,
-            }}>
+            <div className="bg-erl-accent text-erl-base rounded-xl min-w-[26px] h-7 flex items-center justify-center text-[11px] font-bold px-2 shadow-[0_2px_10px_rgba(196,149,106,0.3)]">
               {cartItem.qty}
             </div>
           )}
         </div>
+
+        {/* Modifier indicator */}
+        {modifiers.length > 0 && !cartItem && (
+          <div className="text-[9px] text-erl-accent-dim tracking-wide font-medium">
+            {modifiers.length} option{modifiers.length > 1 ? 's' : ''} available
+          </div>
+        )}
       </div>
     </div>
   );

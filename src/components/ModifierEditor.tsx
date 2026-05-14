@@ -90,96 +90,58 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
 
   return (
     <>
-      <div style={{
-        position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)",
-        zIndex: 998, animation: "fadeInOverlay 0.2s ease",
-      }} onClick={onClose} />
-      <div style={{
-        position: "fixed", inset: 0, display: "flex", alignItems: "center",
-        justifyContent: "center", zIndex: 999, padding: "1rem",
-      }}>
-        <div style={{
-          background: "var(--bg-elevated)",
-          border: "1.5px solid var(--border-medium)",
-          borderRadius: 16, padding: "1.5rem",
-          width: "100%", maxWidth: 420,
-          maxHeight: "90vh", overflowY: "auto",
-          animation: "fadeInUp 0.2s ease",
-        }}>
+      <div className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay" onClick={onClose} />
+      <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
+        <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[420px] max-h-[90vh] overflow-y-auto animate-fade-in-up">
           {/* Header */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <div style={{
-                fontSize: 15, fontWeight: 700, color: "var(--text-primary)",
-                fontFamily: "'Playfair Display', serif",
-              }}>
+              <div className="font-display text-[15px] font-bold text-erl-text-primary">
                 {item.emoji} {item.name} — Modifiers
               </div>
-              <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>
+              <div className="text-[10px] text-erl-muted mt-0.5">
                 Add-ons & customizations for this item
               </div>
             </div>
-            <button onClick={onClose} style={{
-              background: "none", border: "none", color: "var(--text-muted)",
-              fontSize: 18, cursor: "pointer",
-            }}>✕</button>
+            <button onClick={onClose} className="bg-none border-none text-erl-muted text-lg cursor-pointer">✕</button>
           </div>
 
           {error && (
-            <div style={{
-              background: "rgba(220,50,50,0.12)", border: "1px solid rgba(220,50,50,0.3)",
-              borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: 11, color: "var(--error)"
-            }}>
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-3 text-[11px] text-erl-danger">
               {error}
             </div>
           )}
 
           {/* Modifier list */}
           {loading ? (
-            <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem", fontSize: 12 }}>
+            <div className="text-center text-erl-muted py-8 text-xs">
               Loading...
             </div>
           ) : modifiers.length === 0 && !showAddForm ? (
-            <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem", fontSize: 12 }}>
+            <div className="text-center text-erl-muted py-8 text-xs">
               No modifiers yet. Add some below.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+            <div className="flex flex-col gap-2 mb-3.5">
               {modifiers.map((mod) => (
-                <div key={mod.id} style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                  border: "1.5px solid var(--border-default)",
-                  background: "var(--bg-surface)",
-                }}>
+                <div key={mod.id} className="flex items-center gap-2 px-2.5 py-2 rounded-lg border-[1.5px] border-erl-border-default bg-erl-surface">
                   {editingId === mod.id ? (
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div className="flex-1 flex flex-col gap-1.5">
                       <input
                         value={form.name}
                         onChange={(e) => setForm({ ...form, name: e.target.value })}
                         placeholder="Modifier name"
-                        style={{
-                          width: "100%", padding: "5px 8px", borderRadius: 6,
-                          border: "1.5px solid var(--border-default)",
-                          background: "var(--bg-elevated)", color: "var(--text-primary)",
-                          fontSize: 12,
-                        }}
+                        className="w-full px-2 py-1 rounded-md border-[1.5px] border-erl-border-default bg-erl-elevated text-erl-text-primary text-xs"
                       />
-                      <div style={{ display: "flex", gap: 6 }}>
+                      <div className="flex gap-1.5">
                         <input
                           type="number"
                           value={form.price}
                           onChange={(e) => setForm({ ...form, price: e.target.value })}
                           placeholder="Price"
-                          style={{
-                            flex: 1, padding: "5px 8px", borderRadius: 6,
-                            border: "1.5px solid var(--border-default)",
-                            background: "var(--bg-elevated)", color: "var(--text-primary)",
-                            fontSize: 11,
-                          }}
+                          className="flex-1 px-2 py-1 rounded-md border-[1.5px] border-erl-border-default bg-erl-elevated text-erl-text-primary text-[11px]"
                         />
-                        <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "var(--text-secondary)", cursor: "pointer" }}>
+                        <label className="flex items-center gap-1 text-[10px] text-erl-secondary cursor-pointer">
                           <input
                             type="checkbox"
                             checked={form.isDefault}
@@ -188,46 +150,34 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
                           Default
                         </label>
                       </div>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => handleSaveEdit(mod.id!)} disabled={saving} style={{
-                          flex: 1, padding: "5px 0", borderRadius: 6,
-                          background: "var(--gold)", color: "var(--bg-sidebar)",
-                          border: "none", fontSize: 10, fontWeight: 700, cursor: "pointer",
-                        }}>Save</button>
-                        <button onClick={cancelEdit} style={{
-                          flex: 1, padding: "5px 0", borderRadius: 6,
-                          background: "var(--bg-elevated)", color: "var(--text-muted)",
-                          border: "1.5px solid var(--border-default)", fontSize: 10, fontWeight: 700, cursor: "pointer",
-                        }}>Cancel</button>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => handleSaveEdit(mod.id!)} disabled={saving} className="flex-1 py-1 rounded-md bg-erl-accent text-erl-sidebar text-[10px] font-bold cursor-pointer border-none">
+                          Save
+                        </button>
+                        <button onClick={cancelEdit} className="flex-1 py-1 rounded-md bg-erl-elevated text-erl-muted text-[10px] font-bold cursor-pointer border-[1.5px] border-erl-border-default">
+                          Cancel
+                        </button>
                       </div>
                     </div>
                   ) : (
                     <>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-erl-text-primary">
                           {mod.name}
                           {mod.isDefault && (
-                            <span style={{
-                              marginLeft: 6, fontSize: 8, fontWeight: 700,
-                              color: "var(--gold)", letterSpacing: 1,
-                              textTransform: "uppercase" as const,
-                            }}>DEFAULT</span>
+                            <span className="ml-1.5 text-[8px] font-bold text-erl-accent tracking-wide uppercase">DEFAULT</span>
                           )}
                         </div>
-                        <div style={{ fontSize: 10, color: "var(--gold)" }}>
+                        <div className="text-[10px] text-erl-accent">
                           {mod.price > 0 ? `+${formatCurrency(mod.price)}` : "Free"}
                         </div>
                       </div>
-                      <button onClick={() => startEdit(mod)} style={{
-                        background: "none", border: "1px solid var(--border-default)",
-                        borderRadius: 6, padding: "3px 8px", fontSize: 9, fontWeight: 700,
-                        color: "var(--text-muted)", cursor: "pointer", letterSpacing: 0.5,
-                      }}>Edit</button>
-                      <button onClick={() => handleDelete(mod.id!)} style={{
-                        background: "none", border: "1px solid rgba(220,50,50,0.3)",
-                        borderRadius: 6, padding: "3px 8px", fontSize: 9, fontWeight: 700,
-                        color: "var(--error)", cursor: "pointer", letterSpacing: 0.5,
-                      }}>Del</button>
+                      <button onClick={() => startEdit(mod)} className="bg-none border border-erl-border-default rounded-md px-2 py-[3px] text-[9px] font-bold text-erl-muted cursor-pointer tracking-wide">
+                        Edit
+                      </button>
+                      <button onClick={() => handleDelete(mod.id!)} className="bg-none border border-red-500/30 rounded-md px-2 py-[3px] text-[9px] font-bold text-erl-danger cursor-pointer tracking-wide">
+                        Del
+                      </button>
                     </>
                   )}
                 </div>
@@ -237,39 +187,25 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
 
           {/* Add modifier form / button */}
           {showAddForm ? (
-            <div style={{
-              border: "1.5px solid var(--border-medium)",
-              borderRadius: 10, padding: "12px",
-              background: "var(--bg-surface)",
-            }}>
-              <div style={{ marginBottom: 8, fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: 1 }}>
+            <div className="border-[1.5px] border-erl-border-medium rounded-[10px] p-3 bg-erl-surface">
+              <div className="mb-2 text-[11px] font-bold text-erl-secondary tracking-wide">
                 ADD NEW MODIFIER
               </div>
               <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="e.g., Extra shot, Oat milk, Whipped cream"
-                style={{
-                  width: "100%", padding: "7px 10px", borderRadius: 7,
-                  border: "1.5px solid var(--border-default)",
-                  background: "var(--bg-elevated)", color: "var(--text-primary)",
-                  fontSize: 12, marginBottom: 8,
-                }}
+                className="w-full px-2.5 py-1.5 rounded-md border-[1.5px] border-erl-border-default bg-erl-elevated text-erl-text-primary text-xs mb-2"
               />
-              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <div className="flex gap-2 mb-2">
                 <input
                   type="number"
                   value={form.price}
                   onChange={(e) => setForm({ ...form, price: e.target.value })}
                   placeholder="Additional price (0 = free)"
-                  style={{
-                    flex: 1, padding: "7px 10px", borderRadius: 7,
-                    border: "1.5px solid var(--border-default)",
-                    background: "var(--bg-elevated)", color: "var(--text-primary)",
-                    fontSize: 11,
-                  }}
+                  className="flex-1 px-2.5 py-1.5 rounded-md border-[1.5px] border-erl-border-default bg-erl-elevated text-erl-text-primary text-[11px]"
                 />
-                <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+                <label className="flex items-center gap-1 text-[11px] text-erl-secondary whitespace-nowrap">
                   <input
                     type="checkbox"
                     checked={form.isDefault}
@@ -278,23 +214,17 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
                   Default
                 </label>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div className="flex gap-2">
                 <button
                   onClick={handleAdd}
                   disabled={saving || !form.name.trim()}
-                  className="btn btn-gold"
-                  style={{ flex: 1, padding: "7px 0", fontSize: 11 }}
+                  className="btn btn-accent flex-1 py-1.5 text-[11px]"
                 >
                   {saving ? "Saving..." : "Add Modifier"}
                 </button>
                 <button
                   onClick={() => { setShowAddForm(false); setForm({ name: "", price: "", isDefault: false }); }}
-                  style={{
-                    flex: 1, padding: "7px 0", borderRadius: 8,
-                    background: "var(--bg-elevated)", color: "var(--text-muted)",
-                    border: "1.5px solid var(--border-default)",
-                    fontSize: 11, fontWeight: 700, cursor: "pointer",
-                  }}
+                  className="flex-1 py-1.5 rounded-lg bg-erl-elevated text-erl-muted text-[11px] font-bold cursor-pointer border-[1.5px] border-erl-border-default"
                 >
                   Cancel
                 </button>
@@ -303,8 +233,7 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
           ) : (
             <button
               onClick={() => { setShowAddForm(true); setEditingId(null); }}
-              className="btn btn-gold"
-              style={{ width: "100%", padding: "9px 0", fontSize: 11 }}
+              className="btn btn-accent w-full py-2 text-[11px]"
             >
               + Add Modifier
             </button>

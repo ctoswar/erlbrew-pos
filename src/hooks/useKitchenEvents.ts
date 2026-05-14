@@ -5,7 +5,7 @@ import { serverOrderToOrder } from './useOrders';
 // Play a notification sound — uses Web Audio API to avoid loading audio files
 function playNotificationSound() {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);

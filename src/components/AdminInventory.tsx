@@ -254,60 +254,52 @@ export const AdminInventory: React.FC = () => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
+    <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Header */}
-      <div className="glass-panel" style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0.8rem 1rem", borderBottom: "1px solid rgba(201,135,58,0.08)", flexShrink: 0,
-        borderRadius: 0,
-      }}>
-        <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
+      <div className="glass-panel flex items-center justify-between px-4 py-3 border-b border-erl-accent/10 flex-shrink-0 rounded-none">
+        <div className="font-display text-sm font-bold text-erl-text-primary tracking-wide">
           Inventory
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 1 }}>{items.length} items</span>
-          <button onClick={openAllMovements} className="btn btn-outline" style={{ fontSize: 9, padding: "7px 10px", letterSpacing: 1 }}>
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] text-erl-text-faint tracking-wide">{items.length} items</span>
+          <button onClick={openAllMovements} className="btn btn-outline text-[9px] px-2.5 py-[7px] tracking-wide">
             📋 Movement Log
           </button>
-          <button onClick={openAddForm} className="btn btn-gold" style={{ fontSize: 9, padding: "7px 14px", letterSpacing: 1 }}>
+          <button onClick={openAddForm} className="btn btn-accent text-[9px] px-3.5 py-[7px] tracking-wide">
             + Add Item
           </button>
         </div>
       </div>
 
       {/* Category filter tabs */}
-      <div style={{ display: "flex", gap: 6, padding: "0.7rem 1rem", overflowX: "auto", flexShrink: 0, scrollbarWidth: "none" }}>
+      <div className="flex gap-1.5 px-4 py-3 overflow-x-auto flex-shrink-0 scrollbar-none">
         {categories.map((cat) => {
           const count = cat === "All" ? items.length : items.filter((i) => i.category === cat).length;
           const isActive = activeCategory === cat;
           return (
-            <button key={cat} onClick={() => setActiveCategory(cat)} style={{
-              padding: "5px 14px", borderRadius: 20, flexShrink: 0,
-              border: `1.5px solid ${isActive ? "var(--gold)" : "var(--border-default)"}`,
-              background: isActive ? "var(--gold)" : "transparent",
-              color: isActive ? "var(--bg-sidebar)" : "var(--text-secondary)",
-              fontSize: 9, fontWeight: 700, letterSpacing: 1, cursor: "pointer",
-              textTransform: "uppercase" as const, whiteSpace: "nowrap",
-            }}>
-              {cat} <span style={{ opacity: 0.7 }}>({count})</span>
+            <button key={cat} onClick={() => setActiveCategory(cat)} className={`
+              px-3.5 py-[5px] rounded-full flex-shrink-0 text-[9px] font-bold tracking-wide cursor-pointer uppercase whitespace-nowrap
+              ${isActive ? "bg-erl-accent text-erl-sidebar border-[1.5px] border-erl-accent" : "bg-transparent text-erl-secondary border-[1.5px] border-erl-border-default"}
+            `}>
+              {cat} <span className="opacity-70">({count})</span>
             </button>
           );
         })}
       </div>
 
       {/* Items grid */}
-      <div className="scroll-area" style={{ flex: 1, padding: "0.5rem 1rem", overflowY: "auto", minHeight: 0 }}>
+      <div className="scroll-area flex-1 px-4 py-2 overflow-y-auto min-h-0">
         {loading ? (
-          <div style={{ textAlign: "center", padding: "3rem" }}>
-            <div className="animate-shimmer" style={{ width: 120, height: 14, borderRadius: 4, margin: "0 auto 8px" }} />
-            <div className="animate-shimmer" style={{ width: 80, height: 10, borderRadius: 4, margin: "0 auto" }} />
+          <div className="text-center py-12">
+            <div className="animate-shimmer w-[120px] h-3.5 rounded mx-auto mb-2" />
+            <div className="animate-shimmer w-20 h-2.5 rounded mx-auto" />
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", color: "var(--text-disabled)", padding: "3rem", fontSize: 11, letterSpacing: 1 }}>
+          <div className="text-center text-erl-text-disabled py-12 text-[11px] tracking-wide">
             No inventory items in this category
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2.5">
             {filtered.map((item) => (
               <InventoryCard
                 key={item.id}
@@ -331,45 +323,45 @@ export const AdminInventory: React.FC = () => {
       {/* ── Movement History Modal (per item) ──────────────────────────────── */}
       {movementItemId && (
         <>
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998 }} onClick={() => setMovementItemId(null)} />
-          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
-            <div className="animate-scaleIn card-glass" style={{ padding: "1.5rem", width: "100%", maxWidth: 600, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setMovementItemId(null)} />
+          <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
+            <div className="animate-scale-in card-glass p-6 w-full max-w-[600px] max-h-[85vh] flex flex-col">
+              <div className="flex justify-between items-center mb-3.5">
                 <div>
-                  <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
+                  <div className="font-display text-sm font-bold text-erl-text-primary">
                     Movement History
                   </div>
-                  <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{movementItemName}</div>
+                  <div className="text-[10px] text-erl-muted">{movementItemName}</div>
                 </div>
-                <button onClick={() => setMovementItemId(null)} style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: 16, cursor: "pointer", padding: 4 }}>✕</button>
+                <button onClick={() => setMovementItemId(null)} className="bg-none border-none text-erl-muted text-base cursor-pointer p-1">✕</button>
               </div>
-              <div className="scroll-area" style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+              <div className="scroll-area flex-1 overflow-y-auto min-h-0">
                 {movementsLoading ? (
-                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-disabled)", fontSize: 10 }}>Loading...</div>
+                  <div className="text-center py-8 text-erl-text-disabled text-[10px]">Loading...</div>
                 ) : movements.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-disabled)", fontSize: 10 }}>No movements recorded for this item.</div>
+                  <div className="text-center py-8 text-erl-text-disabled text-[10px]">No movements recorded for this item.</div>
                 ) : (
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9 }}>
+                  <table className="w-full border-collapse text-[9px]">
                     <thead>
-                      <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                        <th style={{ padding: "6px 8px", textAlign: "left", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Type</th>
-                        <th style={{ padding: "6px 8px", textAlign: "right", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Qty</th>
-                        <th style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Before</th>
-                        <th style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>After</th>
-                        <th style={{ padding: "6px 8px", textAlign: "right", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Time</th>
+                      <tr className="border-b border-erl-border-subtle">
+                        <th className="px-2 py-1.5 text-left text-erl-text-faint tracking-wide font-semibold">Type</th>
+                        <th className="px-2 py-1.5 text-right text-erl-text-faint tracking-wide font-semibold">Qty</th>
+                        <th className="px-2 py-1.5 text-center text-erl-text-faint tracking-wide font-semibold">Before</th>
+                        <th className="px-2 py-1.5 text-center text-erl-text-faint tracking-wide font-semibold">After</th>
+                        <th className="px-2 py-1.5 text-right text-erl-text-faint tracking-wide font-semibold">Time</th>
                       </tr>
                     </thead>
                     <tbody>
                       {movements.map((m) => (
-                        <tr key={m.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                          <td style={{ padding: "6px 8px" }}>
-                            <span style={{ color: MOVEMENT_COLORS[m.movement_type], fontWeight: 600 }}>{MOVEMENT_LABELS[m.movement_type]}</span>
-                            {m.reference_id && <span style={{ color: "var(--text-faint)", marginLeft: 4 }}>#{m.reference_id.slice(0, 8).toUpperCase()}</span>}
+                        <tr key={m.id} className="border-b border-erl-border-subtle">
+                          <td className="px-2 py-1.5">
+                            <span className="font-semibold" style={{ color: MOVEMENT_COLORS[m.movement_type] }}>{MOVEMENT_LABELS[m.movement_type]}</span>
+                            {m.reference_id && <span className="text-erl-text-faint ml-1">#{m.reference_id.slice(0, 8).toUpperCase()}</span>}
                           </td>
-                          <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>{m.quantity} {m.unit}</td>
-                          <td style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-muted)" }}>{m.stock_before}</td>
-                          <td style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-muted)" }}>{m.stock_after}</td>
-                          <td style={{ padding: "6px 8px", textAlign: "right", color: "var(--text-faint)", whiteSpace: "nowrap" }}>
+                          <td className="px-2 py-1.5 text-right font-bold">{m.quantity} {m.unit}</td>
+                          <td className="px-2 py-1.5 text-center text-erl-muted">{m.stock_before}</td>
+                          <td className="px-2 py-1.5 text-center text-erl-muted">{m.stock_after}</td>
+                          <td className="px-2 py-1.5 text-right text-erl-text-faint whitespace-nowrap">
                             {new Date(m.created_at).toLocaleTimeString()}
                           </td>
                         </tr>
@@ -386,50 +378,50 @@ export const AdminInventory: React.FC = () => {
       {/* ── All Movements Modal ─────────────────────────────────────────────── */}
       {showAllMovements && (
         <>
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998 }} onClick={() => setShowAllMovements(false)} />
-          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
-            <div className="animate-scaleIn card-glass" style={{ padding: "1.5rem", width: "100%", maxWidth: 700, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setShowAllMovements(false)} />
+          <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
+            <div className="animate-scale-in card-glass p-6 w-full max-w-[700px] max-h-[85vh] flex flex-col">
+              <div className="flex justify-between items-center mb-3.5">
                 <div>
-                  <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
+                  <div className="font-display text-sm font-bold text-erl-text-primary">
                     📋 Full Movement Log
                   </div>
-                  <div style={{ fontSize: 10, color: "var(--text-muted)" }}>All stock changes across inventory</div>
+                  <div className="text-[10px] text-erl-muted">All stock changes across inventory</div>
                 </div>
-                <button onClick={() => setShowAllMovements(false)} style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: 16, cursor: "pointer", padding: 4 }}>✕</button>
+                <button onClick={() => setShowAllMovements(false)} className="bg-none border-none text-erl-muted text-base cursor-pointer p-1">✕</button>
               </div>
-              <div className="scroll-area" style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+              <div className="scroll-area flex-1 overflow-y-auto min-h-0">
                 {allMovementsLoading ? (
-                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-disabled)", fontSize: 10 }}>Loading...</div>
+                  <div className="text-center py-8 text-erl-text-disabled text-[10px]">Loading...</div>
                 ) : allMovements.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-disabled)", fontSize: 10 }}>No movements recorded yet.</div>
+                  <div className="text-center py-8 text-erl-text-disabled text-[10px]">No movements recorded yet.</div>
                 ) : (
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9 }}>
+                  <table className="w-full border-collapse text-[9px]">
                     <thead>
-                      <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                        <th style={{ padding: "6px 8px", textAlign: "left", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Item</th>
-                        <th style={{ padding: "6px 8px", textAlign: "left", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Type</th>
-                        <th style={{ padding: "6px 8px", textAlign: "right", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Qty</th>
-                        <th style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Before</th>
-                        <th style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>After</th>
-                        <th style={{ padding: "6px 8px", textAlign: "left", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Ref</th>
-                        <th style={{ padding: "6px 8px", textAlign: "right", color: "var(--text-faint)", letterSpacing: 1, fontWeight: 600 }}>Time</th>
+                      <tr className="border-b border-erl-border-subtle">
+                        <th className="px-2 py-1.5 text-left text-erl-text-faint tracking-wide font-semibold">Item</th>
+                        <th className="px-2 py-1.5 text-left text-erl-text-faint tracking-wide font-semibold">Type</th>
+                        <th className="px-2 py-1.5 text-right text-erl-text-faint tracking-wide font-semibold">Qty</th>
+                        <th className="px-2 py-1.5 text-center text-erl-text-faint tracking-wide font-semibold">Before</th>
+                        <th className="px-2 py-1.5 text-center text-erl-text-faint tracking-wide font-semibold">After</th>
+                        <th className="px-2 py-1.5 text-left text-erl-text-faint tracking-wide font-semibold">Ref</th>
+                        <th className="px-2 py-1.5 text-right text-erl-text-faint tracking-wide font-semibold">Time</th>
                       </tr>
                     </thead>
                     <tbody>
                       {allMovements.map((m) => (
-                        <tr key={m.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                          <td style={{ padding: "6px 8px", fontWeight: 600, color: "var(--text-primary)" }}>{m.inventory_name}</td>
-                          <td style={{ padding: "6px 8px" }}>
-                            <span style={{ color: MOVEMENT_COLORS[m.movement_type], fontWeight: 600 }}>{MOVEMENT_LABELS[m.movement_type]}</span>
+                        <tr key={m.id} className="border-b border-erl-border-subtle">
+                          <td className="px-2 py-1.5 font-semibold text-erl-text-primary">{m.inventory_name}</td>
+                          <td className="px-2 py-1.5">
+                            <span className="font-semibold" style={{ color: MOVEMENT_COLORS[m.movement_type] }}>{MOVEMENT_LABELS[m.movement_type]}</span>
                           </td>
-                          <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>{m.quantity} {m.unit}</td>
-                          <td style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-muted)" }}>{m.stock_before}</td>
-                          <td style={{ padding: "6px 8px", textAlign: "center", color: "var(--text-muted)" }}>{m.stock_after}</td>
-                          <td style={{ padding: "6px 8px", textAlign: "left", color: "var(--text-faint)" }}>
+                          <td className="px-2 py-1.5 text-right font-bold">{m.quantity} {m.unit}</td>
+                          <td className="px-2 py-1.5 text-center text-erl-muted">{m.stock_before}</td>
+                          <td className="px-2 py-1.5 text-center text-erl-muted">{m.stock_after}</td>
+                          <td className="px-2 py-1.5 text-left text-erl-text-faint">
                             {m.reference_id ? `#${m.reference_id.slice(0, 8)}` : m.notes ? m.notes.slice(0, 24) : '—'}
                           </td>
-                          <td style={{ padding: "6px 8px", textAlign: "right", color: "var(--text-faint)", whiteSpace: "nowrap" }}>
+                          <td className="px-2 py-1.5 text-right text-erl-text-faint whitespace-nowrap">
                             {new Date(m.created_at).toLocaleString()}
                           </td>
                         </tr>
@@ -446,52 +438,48 @@ export const AdminInventory: React.FC = () => {
       {/* ── Manual Restock/Adjust Modal ─────────────────────────────────────── */}
       {showAdjustModal && (
         <>
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998 }} onClick={() => setShowAdjustModal(false)} />
-          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
-            <div className="animate-scaleIn card-glass" style={{ padding: "1.5rem", width: "100%", maxWidth: 360 }}>
-              <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
+          <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setShowAdjustModal(false)} />
+          <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
+            <div className="animate-scale-in card-glass p-6 w-full max-w-[360px]">
+              <div className="font-display text-sm font-bold text-erl-text-primary mb-1">
                 {adjustType === 'restock' ? 'Restock' : 'Adjust'} Inventory
               </div>
-              <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 16 }}>{adjustItemName}</div>
+              <div className="text-[10px] text-erl-muted mb-4">{adjustItemName}</div>
 
-              <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-                <button onClick={() => setAdjustType('restock')} style={{
-                  flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 9, fontWeight: 700, cursor: "pointer",
-                  border: `1.5px solid ${adjustType === 'restock' ? 'var(--success)' : 'var(--border-default)'}`,
-                  background: adjustType === 'restock' ? 'rgba(122,201,122,0.1)' : 'transparent',
-                  color: adjustType === 'restock' ? 'var(--success)' : 'var(--text-secondary)',
-                }}>+ Restock</button>
-                <button onClick={() => setAdjustType('adjustment')} style={{
-                  flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 9, fontWeight: 700, cursor: "pointer",
-                  border: `1.5px solid ${adjustType === 'adjustment' ? 'var(--gold)' : 'var(--border-default)'}`,
-                  background: adjustType === 'adjustment' ? 'rgba(201,135,58,0.1)' : 'transparent',
-                  color: adjustType === 'adjustment' ? 'var(--gold)' : 'var(--text-secondary)',
-                }}>− Adjustment</button>
+              <div className="flex gap-1.5 mb-3.5">
+                <button onClick={() => setAdjustType('restock')} className={`
+                  flex-1 py-[7px] rounded-lg text-[9px] font-bold cursor-pointer
+                  ${adjustType === 'restock' ? "border-[1.5px] border-erl-success bg-erl-success/10 text-erl-success" : "border-[1.5px] border-erl-border-default bg-transparent text-erl-secondary"}
+                `}>+ Restock</button>
+                <button onClick={() => setAdjustType('adjustment')} className={`
+                  flex-1 py-[7px] rounded-lg text-[9px] font-bold cursor-pointer
+                  ${adjustType === 'adjustment' ? "border-[1.5px] border-erl-accent bg-erl-accent/10 text-erl-accent" : "border-[1.5px] border-erl-border-default bg-transparent text-erl-secondary"}
+                `}>− Adjustment</button>
               </div>
 
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1.5, marginBottom: 5, fontWeight: 700, textTransform: "uppercase" }}>
+              <div className="mb-3">
+                <div className="text-[9px] text-erl-accent-muted tracking-widest mb-[5px] font-bold uppercase">
                   Quantity
                 </div>
                 <input type="number" value={adjustQty} onChange={(e) => setAdjustQty(e.target.value)}
                   placeholder="0" min="0" step="1" autoFocus
-                  style={{ width: "100%", boxSizing: "border-box" }} />
+                  className="w-full box-border" />
               </div>
 
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1.5, marginBottom: 5, fontWeight: 700, textTransform: "uppercase" }}>
+              <div className="mb-3.5">
+                <div className="text-[9px] text-erl-accent-muted tracking-widest mb-[5px] font-bold uppercase">
                   Notes (optional)
                 </div>
                 <input value={adjustNotes} onChange={(e) => setAdjustNotes(e.target.value)}
-                  placeholder="e.g. Weekly delivery" style={{ width: "100%", boxSizing: "border-box" }} />
+                  placeholder="e.g. Weekly delivery" className="w-full box-border" />
               </div>
 
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => setShowAdjustModal(false)} className="btn btn-outline" style={{ flex: 1, fontSize: 10, padding: "11px 0" }}>
+              <div className="flex gap-2">
+                <button onClick={() => setShowAdjustModal(false)} className="btn btn-outline flex-1 text-[10px] py-2.5">
                   Cancel
                 </button>
                 <button onClick={handleManualAdjust} disabled={adjustSaving || !adjustQty || parseFloat(adjustQty) <= 0}
-                  className="btn btn-gold" style={{ flex: 1, fontSize: 10, padding: "11px 0" }}>
+                  className="btn btn-accent flex-1 text-[10px] py-2.5">
                   {adjustSaving ? "Saving..." : adjustType === 'restock' ? "Restock" : "Adjust"}
                 </button>
               </div>
@@ -503,17 +491,14 @@ export const AdminInventory: React.FC = () => {
       {/* Add/Edit Modal */}
       {showForm && (
         <>
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998, animation: "fadeInOverlay 0.2s ease" }} onClick={closeForm} />
-          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
-            <div className="animate-scaleIn card-glass" style={{
-              padding: "1.5rem", width: "100%", maxWidth: 420,
-              maxHeight: "90vh", overflowY: "auto",
-            }}>
-              <div className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 18 }}>
+          <div className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay" onClick={closeForm} />
+          <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
+            <div className="animate-scale-in card-glass p-6 w-full max-w-[420px] max-h-[90vh] overflow-y-auto">
+              <div className="font-display text-base font-bold text-erl-text-primary mb-4">
                 {editingId ? "Edit Inventory Item" : "Add Inventory Item"}
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div className="flex flex-col gap-3">
                 <FormField label="Item ID" hint="Short code, e.g. cup-s">
                   <input value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))}
                     placeholder="cup-s" disabled={!!editingId} />
@@ -532,7 +517,7 @@ export const AdminInventory: React.FC = () => {
                     {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
                   </select>
                 </FormField>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div className="grid grid-cols-2 gap-2.5">
                   <FormField label="Current Stock">
                     <input type="number" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
                       placeholder="0" min="0" step="1" />
@@ -542,7 +527,7 @@ export const AdminInventory: React.FC = () => {
                       placeholder="10" min="0" />
                   </FormField>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div className="grid grid-cols-2 gap-2.5">
                   <FormField label="Purchase Cost" hint="₱ per unit">
                     <input type="number" value={form.purchase_cost} onChange={(e) => setForm((f) => ({ ...f, purchase_cost: e.target.value }))}
                       placeholder="0.00" min="0" step="0.01" />
@@ -555,16 +540,16 @@ export const AdminInventory: React.FC = () => {
               </div>
 
               {error && (
-                <div style={{ marginTop: 12, padding: "9px 12px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", borderRadius: 8, fontSize: 11, color: "var(--danger)" }}>
+                <div className="mt-3 px-3 py-2 bg-erl-danger-bg border border-erl-danger-border rounded-lg text-[11px] text-erl-danger">
                   {error}
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-                <button onClick={closeForm} className="btn btn-outline" style={{ flex: 1, fontSize: 10, padding: "11px 0" }}>
+              <div className="flex gap-2 mt-4">
+                <button onClick={closeForm} className="btn btn-outline flex-1 text-[10px] py-2.5">
                   Cancel
                 </button>
-                <button onClick={handleSave} disabled={saving} className="btn btn-gold" style={{ flex: 1, fontSize: 10, padding: "11px 0" }}>
+                <button onClick={handleSave} disabled={saving} className="btn btn-accent flex-1 text-[10px] py-2.5">
                   {saving ? "Saving..." : editingId ? "Update Item" : "Add Item"}
                 </button>
               </div>
@@ -597,87 +582,66 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
   deleteConfirm, onConfirmDelete, onCancelDelete,
   stockStatus, stockStatusColor,
 }) => (
-  <div className="card" style={{ padding: "12px 12px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3, flex: 1, marginRight: 8 }}>{item.name}</div>
-      <span className="pill" style={{
-        fontSize: 7, color: stockStatusColor, background: "rgba(0,0,0,0.3)",
-        padding: "2px 6px", letterSpacing: 1, textTransform: "uppercase", flexShrink: 0,
-      }}>
+  <div className="card px-3 py-2.5 flex flex-col gap-1.5">
+    <div className="flex justify-between items-start">
+      <div className="text-[11px] font-bold text-erl-text-primary leading-tight flex-1 mr-2">{item.name}</div>
+      <span className="pill text-[7px] px-1.5 py-[2px] tracking-wider uppercase flex-shrink-0"
+        style={{ color: stockStatusColor, background: "rgba(0,0,0,0.3)" }}>
         {stockStatus === "out" ? "OUT" : stockStatus === "low" ? "LOW" : "OK"}
       </span>
     </div>
 
-    <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 0.5 }}>{item.category}</div>
+    <div className="text-[9px] text-erl-accent-muted tracking-wide">{item.category}</div>
 
     {/* Stock row with quick +/- buttons */}
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-      <button onClick={() => onAdjustStock(-1)} className="btn-ghost" style={{
-        width: 26, height: 26, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center",
-        border: "1px solid var(--border-default)", borderRadius: 7, padding: 0,
-      }}>−</button>
-      <div style={{ flex: 1, textAlign: "center" }}>
-        <span style={{ fontSize: 18, fontWeight: 700, color: stockStatusColor }}>{item.stock}</span>
-        <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: 3 }}>{item.unit}</span>
+    <div className="flex items-center gap-1.5 mt-0.5">
+      <button onClick={() => onAdjustStock(-1)} className="btn-ghost w-[26px] h-[26px] text-base flex items-center justify-center border border-erl-border-default rounded-md p-0">−</button>
+      <div className="flex-1 text-center">
+        <span className="text-lg font-bold" style={{ color: stockStatusColor }}>{item.stock}</span>
+        <span className="text-[10px] text-erl-muted ml-1">{item.unit}</span>
       </div>
-      <button onClick={() => onAdjustStock(1)} className="btn-ghost" style={{
-        width: 26, height: 26, fontSize: 16, color: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center",
-        border: "1px solid var(--border-default)", borderRadius: 7, padding: 0,
-      }}>+</button>
+      <button onClick={() => onAdjustStock(1)} className="btn-ghost w-[26px] h-[26px] text-base text-erl-accent flex items-center justify-center border border-erl-border-default rounded-md p-0">+</button>
     </div>
 
-    <div style={{ fontSize: 8.5, color: "var(--text-faint)", letterSpacing: 0.5 }}>
+    <div className="text-[8.5px] text-erl-text-faint tracking-wide">
       Alert below: {item.low_stock_threshold} {item.unit}
     </div>
 
     {(item.purchase_cost != null || item.unit_cost != null) && (
-      <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+      <div className="flex gap-2 mt-0.5">
         {item.purchase_cost != null && (
-          <div style={{ fontSize: 8.5, color: "var(--text-muted)" }}>
-            Cost: <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>₱{Number(item.purchase_cost).toFixed(2)}</span>
+          <div className="text-[8.5px] text-erl-muted">
+            Cost: <span className="text-erl-secondary font-semibold">₱{Number(item.purchase_cost).toFixed(2)}</span>
           </div>
         )}
         {item.unit_cost != null && (
-          <div style={{ fontSize: 8.5, color: "var(--text-muted)" }}>
-            Unit: <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>₱{Number(item.unit_cost).toFixed(2)}</span>
+          <div className="text-[8.5px] text-erl-muted">
+            Unit: <span className="text-erl-secondary font-semibold">₱{Number(item.unit_cost).toFixed(2)}</span>
           </div>
         )}
       </div>
     )}
 
     {deleteConfirm ? (
-      <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 4 }}>
-        <div style={{ fontSize: 9, color: "var(--danger)", textAlign: "center", fontWeight: 600 }}>Delete this item?</div>
-        <div style={{ display: "flex", gap: 5 }}>
-          <button onClick={onCancelDelete} className="btn btn-outline" style={{ flex: 1, fontSize: 8, padding: "6px 0", borderRadius: 7 }}>No</button>
-          <button onClick={onConfirmDelete} className="btn btn-danger" style={{ flex: 1, fontSize: 8, padding: "6px 0", borderRadius: 7, background: "var(--danger)", border: "none", color: "#fff" }}>Yes, Delete</button>
+      <div className="flex flex-col gap-[5px] mt-1">
+        <div className="text-[9px] text-erl-danger text-center font-semibold">Delete this item?</div>
+        <div className="flex gap-[5px]">
+          <button onClick={onCancelDelete} className="btn btn-outline flex-1 text-[8px] py-1.5 rounded-md">No</button>
+          <button onClick={onConfirmDelete} className="btn btn-danger flex-1 text-[8px] py-1.5 rounded-md bg-erl-danger border-none text-white">Yes, Delete</button>
         </div>
       </div>
     ) : (
-      <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-        <button onClick={onManualAdjust} className="btn-ghost" style={{
-          flex: 1, fontSize: 7, padding: "5px 0", borderRadius: 8,
-          border: "1px solid var(--border-medium)", letterSpacing: 0.8, textTransform: "uppercase",
-          color: "var(--gold)",
-        }}>
+      <div className="flex gap-1 mt-1">
+        <button onClick={onManualAdjust} className="btn-ghost flex-1 text-[7px] py-[5px] rounded-lg border border-erl-border-medium tracking-wider uppercase text-erl-accent">
           + Restock
         </button>
-        <button onClick={onShowHistory} className="btn-ghost" style={{
-          flex: 1, fontSize: 7, padding: "5px 0", borderRadius: 8,
-          border: "1px solid var(--border-medium)", letterSpacing: 0.8, textTransform: "uppercase",
-        }}>
+        <button onClick={onShowHistory} className="btn-ghost flex-1 text-[7px] py-[5px] rounded-lg border border-erl-border-medium tracking-wider uppercase">
           History
         </button>
-        <button onClick={onEdit} className="btn-ghost" style={{
-          flex: 0.7, fontSize: 7, padding: "5px 0", borderRadius: 8,
-          border: "1px solid var(--border-medium)", letterSpacing: 0.8, textTransform: "uppercase",
-        }}>
+        <button onClick={onEdit} className="btn-ghost flex-[0.7] text-[7px] py-[5px] rounded-lg border border-erl-border-medium tracking-wider uppercase">
           Edit
         </button>
-        <button onClick={onDelete} className="btn-ghost" style={{
-          padding: "5px 8px", borderRadius: 8, border: "1px solid var(--danger-border)",
-          color: "var(--danger)", fontSize: 8, letterSpacing: 1,
-        }}>
+        <button onClick={onDelete} className="btn-ghost px-2 py-[5px] rounded-lg border border-erl-danger-border text-erl-danger text-[8px] tracking-wide">
           ✕
         </button>
       </div>
@@ -689,9 +653,9 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
 
 const FormField: React.FC<{ label: string; hint?: string; children: React.ReactNode }> = ({ label, hint, children }) => (
   <div>
-    <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1.5, marginBottom: 5, textTransform: "uppercase" as const, fontWeight: 700 }}>
+    <div className="text-[9px] text-erl-accent-muted tracking-widest mb-[5px] uppercase font-bold">
       {label}
-      {hint && <span style={{ fontWeight: 400, color: "var(--text-faint)", textTransform: "none" as const, marginLeft: 4 }}>{hint}</span>}
+      {hint && <span className="font-normal text-erl-text-faint normal-case ml-1">{hint}</span>}
     </div>
     {children}
   </div>

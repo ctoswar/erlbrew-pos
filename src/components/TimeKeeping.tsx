@@ -128,87 +128,102 @@ export const TimeKeeping: React.FC = () => {
   const notIn = records.filter((r) => r.status === "not_in");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
+    <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Header with tabs */}
-      <div className="glass-panel" style={{ padding: "0.7rem 1rem", borderBottom: "1px solid rgba(201,135,58,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, borderRadius: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div className="font-display" style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>Timekeeping</div>
-          <div style={{ display: "flex", gap: 4 }}>
+      <div className="glass-panel px-5 py-3.5 border-b border-erl-accent/[0.08] flex items-center justify-between flex-shrink-0 rounded-none">
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 rounded-xl bg-erl-accent/10 flex items-center justify-center">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-erl-accent">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <div className="font-display text-lg font-bold text-erl-text-primary tracking-wide">Timekeeping</div>
+          <div className="flex gap-1 bg-erl-base rounded-xl p-0.5 border border-erl-border-subtle">
             {([["today", "Today"], ["calendar", "Calendar"]] as const).map(([key, label]) => (
-              <button key={key} onClick={() => setTab(key)} style={{
-                padding: "4px 10px",
-                fontSize: 8,
-                borderRadius: 6,
-                border: `1px solid ${tab === key ? "var(--gold)" : "var(--border-subtle)"}`,
-                background: tab === key ? "rgba(201,135,58,0.15)" : "transparent",
-                color: tab === key ? "var(--gold)" : "var(--text-muted)",
-                cursor: "pointer",
-                fontWeight: tab === key ? 700 : 400,
-                letterSpacing: 0.5,
-              }}>
+              <button key={key} onClick={() => setTab(key as Tab)} className={`
+                px-3.5 py-1.5 text-xs rounded-lg cursor-pointer transition-all duration-200 font-semibold tracking-wide
+                ${tab === key
+                  ? "bg-erl-accent/15 text-erl-accent shadow-sm"
+                  : "text-erl-text-faint hover:text-erl-text-secondary"}
+              `}>
                 {label}
               </button>
             ))}
           </div>
         </div>
-        <div style={{ fontSize: 9, color: "var(--text-faint)" }}>{todayDateStr}</div>
+        <div className="text-xs text-erl-text-faint tracking-wide font-medium">{todayDateStr}</div>
       </div>
 
       {/* ── Body ── */}
-      <div className="scroll-area" style={{ flex: 1, padding: "0.8rem", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto", minHeight: 0 }}>
+      <div className="scroll-area flex-1 p-5 flex flex-col gap-5 overflow-y-auto min-h-0">
 
         {tab === "today" && (
           <>
             {/* Last tap feedback */}
             {lastTap && (
-              <div className="animate-scaleIn" style={{
-                background: lastTap.action === "clock_in" ? "var(--success-bg)" : "rgba(201,135,58,0.12)",
-                border: `1.5px solid ${lastTap.action === "clock_in" ? "var(--success)" : "var(--gold)"}`,
-                borderRadius: 12, padding: "14px 16px",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{
-                    width: 42, height: 42, borderRadius: "50%",
-                    background: lastTap.action === "clock_in" ? "var(--success)" : "var(--gold)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 18, flexShrink: 0,
-                  }}>
-                    {lastTap.action === "clock_in" ? "✅" : "🔴"}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
-                      {lastTap.action === "clock_in" ? "Clocked In" : "Clocked Out"}
+              <div className={`animate-scale-in rounded-2xl overflow-hidden transition-all duration-500 ${
+                lastTap.action === "clock_in" ? "border border-erl-success/30" : "border border-erl-accent/30"
+              }`}>
+                <div className="h-[2px]" style={{
+                  background: lastTap.action === "clock_in"
+                    ? 'linear-gradient(90deg, rgba(122,191,122,0.6), transparent)'
+                    : 'linear-gradient(90deg, rgba(196,149,106,0.6), transparent)'
+                }} />
+                <div className={`px-5 py-4 ${lastTap.action === "clock_in" ? "bg-erl-success-bg" : "bg-erl-accent/[0.06]"}`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`
+                      w-12 h-12 rounded-2xl flex items-center justify-center text-lg flex-shrink-0
+                      ${lastTap.action === "clock_in"
+                        ? "bg-erl-success/15 text-erl-success"
+                        : "bg-erl-accent/15 text-erl-accent"}
+                    `}>
+                      {lastTap.action === "clock_in" ? (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      ) : (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                      )}
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--gold)", fontWeight: 600 }}>
-                      {lastTap.staff.name} · {lastTap.staff.role}
-                    </div>
-                    {lastTap.record?.clock_in && (
-                      <div style={{ fontSize: 9, color: "var(--text-faint)", marginTop: 1 }}>
-                        {`In: ${new Date(lastTap.record.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`}
-                        {lastTap.record?.clock_out ? `  Out: ${new Date(lastTap.record.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}` : ""}
+                    <div>
+                      <div className="text-sm font-bold text-erl-text-primary">
+                        {lastTap.action === "clock_in" ? "Clocked In" : "Clocked Out"}
                       </div>
-                    )}
+                      <div className="text-sm text-erl-accent font-semibold mt-0.5">
+                        {lastTap.staff.name} · {lastTap.staff.role}
+                      </div>
+                      {lastTap.record?.clock_in && (
+                        <div className="text-xs text-erl-text-muted mt-1 font-medium">
+                          {`In: ${new Date(lastTap.record.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`}
+                          {lastTap.record?.clock_out ? `  Out: ${new Date(lastTap.record.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}` : ""}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
             {/* RFID Scan Box */}
-            <div className="card-glass" style={{ padding: "20px", textAlign: "center", border: "1.5px dashed rgba(201,135,58,0.2)" }}>
-              <div style={{ fontSize: 36, marginBottom: 8 }}>📲</div>
-              <div className="font-display" style={{ fontSize: 14, color: "var(--text-primary)", marginBottom: 4 }}>Scan your RFID Card</div>
-              <div style={{ fontSize: 9, color: "var(--text-faint)", marginBottom: 12 }}>Tap to clock in or out automatically</div>
-              <RfidInput onScan={handleTap} />
+            <div className="card-glass p-5 text-center relative">
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="text-2xl mb-2">📲</div>
+                <div className="font-display text-sm text-erl-text-primary font-bold tracking-wide mb-0.5">Scan Your Card</div>
+                <div className="text-[10px] text-erl-text-faint mb-3 tracking-wide">Tap to clock in or out</div>
+                <RfidInput onScan={handleTap} />
+              </div>
             </div>
 
             {/* Staff status groups */}
             {loading ? (
-              <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "1.5rem", fontSize: 11 }}>Loading...</div>
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <div className="w-8 h-8 border-2 border-erl-accent/30 border-t-erl-accent rounded-full animate-spin" />
+                <span className="text-sm text-erl-text-muted">Loading...</span>
+              </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <StaffGroup label="Clocked In" count={clockedIn.length} color="var(--success)" records={clockedIn} />
-                <StaffGroup label="Not Yet In" count={notIn.length} color="var(--text-faint)" records={notIn} />
-                <StaffGroup label="Clocked Out" count={clockedOut.length} color="var(--gold)" records={clockedOut} />
+              <div className="flex flex-col gap-5">
+                <StaffGroup label="Clocked In" count={clockedIn.length} color="rgb(122,191,122)" records={clockedIn} />
+                <StaffGroup label="Not Yet In" count={notIn.length} color="rgb(138,112,88)" records={notIn} />
+                <StaffGroup label="Clocked Out" count={clockedOut.length} color="rgb(196,149,106)" records={clockedOut} />
               </div>
             )}
           </>
@@ -217,39 +232,33 @@ export const TimeKeeping: React.FC = () => {
         {tab === "calendar" && (
           <>
             {/* ── Calendar Navigation ── */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <button onClick={prevMonth} style={{
-                padding: "4px 12px", fontSize: 14, borderRadius: 6,
-                border: "1px solid var(--border-subtle)", background: "transparent",
-                color: "var(--text-secondary)", cursor: "pointer",
-              }}>◀</button>
-              <div className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "var(--gold)" }}>
+            <div className="flex items-center justify-between mb-3">
+              <button onClick={prevMonth} className="w-9 h-9 rounded-xl border border-erl-border-default bg-transparent text-erl-text-secondary cursor-pointer flex items-center justify-center hover:border-erl-accent/30 hover:text-erl-accent transition-all duration-200 text-sm">
+                ◀
+              </button>
+              <div className="font-display text-lg font-bold text-erl-accent tracking-wide">
                 {monthNames[calMonth]} {calYear}
               </div>
-              <button onClick={nextMonth} style={{
-                padding: "4px 12px", fontSize: 14, borderRadius: 6,
-                border: "1px solid var(--border-subtle)", background: "transparent",
-                color: "var(--text-secondary)", cursor: "pointer",
-              }}>▶</button>
+              <button onClick={nextMonth} className="w-9 h-9 rounded-xl border border-erl-border-default bg-transparent text-erl-text-secondary cursor-pointer flex items-center justify-center hover:border-erl-accent/30 hover:text-erl-accent transition-all duration-200 text-sm">
+                ▶
+              </button>
             </div>
 
             {/* ── Calendar Grid ── */}
-            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+            <div className="card-glass overflow-hidden">
               {/* Day headers */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "1px solid var(--border-subtle)" }}>
+              <div className="grid grid-cols-7 border-b border-erl-border-subtle bg-erl-base/50">
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-                  <div key={d} style={{
-                    padding: "6px 0", textAlign: "center",
-                    fontSize: 8, fontWeight: 700, color: "var(--text-faint)",
-                    letterSpacing: 1, textTransform: "uppercase",
-                  }}>{d}</div>
+                  <div key={d} className="py-2 text-center text-[10px] font-bold text-erl-text-faint tracking-[0.15em] uppercase">
+                    {d}
+                  </div>
                 ))}
               </div>
 
               {/* Day cells */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+              <div className="grid grid-cols-7">
                 {days.map((d, i) => {
-                  if (d === null) return <div key={`e${i}`} />;
+                  if (d === null) return <div key={`e${i}`} className="min-h-[64px]" />;
                   const ds = dateStr(d);
                   const dayStaff = summary[ds] || [];
                   const isToday = ds === todayStr;
@@ -259,34 +268,29 @@ export const TimeKeeping: React.FC = () => {
                     <div
                       key={ds}
                       onClick={() => setSelectedDate(isSelected ? null : ds)}
-                      style={{
-                        padding: "6px 4px",
-                        minHeight: 60,
-                        borderRight: i % 7 !== 6 ? "1px solid var(--border-subtle)" : "none",
-                        borderBottom: days.length - i > 7 ? "1px solid var(--border-subtle)" : "none",
-                        background: isSelected ? "rgba(201,135,58,0.12)" : isToday ? "rgba(201,135,58,0.05)" : "transparent",
-                        cursor: "pointer",
-                        transition: "background 0.15s",
-                      }}
+                      className={`
+                        p-1.5 min-h-[64px] cursor-pointer transition-all duration-200 relative
+                        ${i % 7 !== 6 ? "border-r border-erl-border-subtle" : ""}
+                        ${days.length - i > 7 ? "border-b border-erl-border-subtle" : ""}
+                        ${isSelected ? "bg-erl-accent/10" : isToday ? "bg-erl-accent/[0.04]" : "hover:bg-erl-accent/[0.02]"}
+                      `}
                     >
-                      <div style={{
-                        fontSize: 9, fontWeight: isToday ? 800 : 500,
-                        color: isToday ? "var(--gold)" : "var(--text-secondary)",
-                        marginBottom: 3,
-                      }}>{d}</div>
+                      <div className={`text-xs mb-1 ${isToday ? "font-extrabold text-erl-accent" : "font-medium text-erl-text-secondary"}`}>
+                        {isToday ? (
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-erl-accent/20">{d}</span>
+                        ) : d}
+                      </div>
                       {dayStaff.length > 0 && (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-                          {dayStaff.slice(0, 5).map((s) => (
-                            <div key={s.staff_id} title={s.name} style={{
-                              width: 14, height: 14, borderRadius: "50%",
-                              background: s.color || "#555",
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              fontSize: 6, fontWeight: 700, color: "#fff",
-                            }}>{s.initials}</div>
+                        <div className="flex flex-wrap gap-0.5">
+                          {dayStaff.slice(0, 4).map((s) => (
+                            <div key={s.staff_id} title={s.name} className="w-4 h-4 rounded-full flex items-center justify-center text-[6px] font-bold text-white shadow-sm"
+                              style={{ background: s.color || "#555" }}>
+                              {s.initials}
+                            </div>
                           ))}
-                          {dayStaff.length > 5 && (
-                            <div style={{ fontSize: 7, color: "var(--text-faint)", alignSelf: "center" }}>
-                              +{dayStaff.length - 5}
+                          {dayStaff.length > 4 && (
+                            <div className="text-[8px] text-erl-text-faint self-center ml-0.5">
+                              +{dayStaff.length - 4}
                             </div>
                           )}
                         </div>
@@ -299,53 +303,46 @@ export const TimeKeeping: React.FC = () => {
 
             {/* ── Day Detail Table ── */}
             {selectedDate && (
-              <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-                <div style={{
-                  padding: "10px 14px", borderBottom: "1px solid var(--border-subtle)",
-                  fontSize: 9, fontWeight: 600, color: "var(--gold)",
-                  letterSpacing: 1.5, textTransform: "uppercase",
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                }}>
-                  <span>Records for {selectedDate}</span>
-                  {dayLoading && <span style={{ fontSize: 8, color: "var(--text-faint)" }}>Loading...</span>}
+              <div className="card-glass overflow-hidden">
+                <div className="px-4 py-3 border-b border-erl-border-subtle flex justify-between items-center">
+                  <span className="text-xs font-bold tracking-[0.15em] text-erl-accent uppercase">Records for {selectedDate}</span>
+                  {dayLoading && <span className="text-[10px] text-erl-text-faint">Loading...</span>}
                 </div>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                <table className="w-full border-collapse text-xs">
                   <thead>
-                    <tr style={{ background: "var(--bg-elevated)" }}>
-                      <th style={{ padding: "8px 12px", textAlign: "left", color: "var(--text-muted)", fontWeight: 600 }}>Staff</th>
-                      <th style={{ padding: "8px 12px", textAlign: "left", color: "var(--text-muted)", fontWeight: 600 }}>Clock In</th>
-                      <th style={{ padding: "8px 12px", textAlign: "left", color: "var(--text-muted)", fontWeight: 600 }}>Clock Out</th>
-                      <th style={{ padding: "8px 12px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Hours</th>
+                    <tr className="bg-erl-base/50">
+                      <th className="px-4 py-2.5 text-left text-erl-text-muted font-semibold text-[10px] tracking-wider uppercase">Staff</th>
+                      <th className="px-4 py-2.5 text-left text-erl-text-muted font-semibold text-[10px] tracking-wider uppercase">Clock In</th>
+                      <th className="px-4 py-2.5 text-left text-erl-text-muted font-semibold text-[10px] tracking-wider uppercase">Clock Out</th>
+                      <th className="px-4 py-2.5 text-right text-erl-text-muted font-semibold text-[10px] tracking-wider uppercase">Hours</th>
                     </tr>
                   </thead>
                   <tbody>
                     {dayLoading ? (
-                      <tr><td colSpan={4} style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)" }}>Loading...</td></tr>
+                      <tr><td colSpan={4} className="p-6 text-center text-erl-text-muted text-sm">Loading...</td></tr>
                     ) : dayRecords.length === 0 ? (
-                      <tr><td colSpan={4} style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)" }}>No time records for this date</td></tr>
+                      <tr><td colSpan={4} className="p-6 text-center text-erl-text-faint text-sm">No time records for this date</td></tr>
                     ) : (
                       dayRecords.map((rec) => {
                         const hours = rec.total_hours ? Number(rec.total_hours) : 0;
                         return (
-                          <tr key={rec.id} style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                            <td style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-                              <div style={{
-                                width: 22, height: 22, borderRadius: "50%",
-                                background: rec.color || "#555",
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                                fontSize: 7, fontWeight: 700, color: "#fff", flexShrink: 0,
-                              }}>{rec.initials}</div>
-                              <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>{rec.name}</span>
+                          <tr key={rec.id} className="border-t border-erl-border-subtle/50 hover:bg-erl-accent/[0.02] transition-colors">
+                            <td className="px-4 py-2.5 flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                                style={{ background: `linear-gradient(135deg, ${rec.color || "#555"}, ${(rec.color || "#555")}aa)` }}>
+                                {rec.initials}
+                              </div>
+                              <span className="text-erl-text-primary font-semibold">{rec.name}</span>
                             </td>
-                            <td style={{ padding: "8px 12px", color: "var(--text-secondary)" }}>
+                            <td className="px-4 py-2.5 text-erl-text-secondary font-medium">
                               {new Date(rec.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}
                             </td>
-                            <td style={{ padding: "8px 12px", color: "var(--text-secondary)" }}>
+                            <td className="px-4 py-2.5 text-erl-text-secondary font-medium">
                               {rec.clock_out
                                 ? new Date(rec.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })
-                                : <span className="animate-pulse" style={{ color: "var(--success)" }}>● In Progress</span>}
+                                : <span className="inline-flex items-center gap-1 text-erl-success"><span className="animate-pulse">●</span> Active</span>}
                             </td>
-                            <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--gold)", fontWeight: 600 }}>
+                            <td className="px-4 py-2.5 text-right text-erl-accent font-bold">
                               {hours > 0 ? `${hours.toFixed(1)}h` : "—"}
                             </td>
                           </tr>
@@ -386,50 +383,71 @@ const RfidInput: React.FC<{ onScan: (rfid: string) => void }> = ({ onScan }) => 
   }, []);
 
   return (
-    <div style={{ display: "flex", justifyContent: "center" }}>
+    <div className="flex justify-center">
       <input
         ref={inputRef}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        style={{ position: "fixed", top: 0, left: 0, width: 1, height: 1, opacity: 0, zIndex: -1 }}
+        className="fixed top-0 left-0 w-px h-px opacity-0 -z-[1]"
         autoFocus
       />
-      <div onClick={() => inputRef.current?.focus()} style={{
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
-        cursor: "pointer", padding: "4px 0",
-      }}>
-        <div style={{ position: "relative", width: 140, height: 96 }}>
-          <div style={{
-            position: "absolute", inset: 0,
-            background: "linear-gradient(145deg, rgba(201,135,58,0.18), rgba(201,135,58,0.06))",
-            border: "1.5px solid rgba(201,135,58,0.3)", borderRadius: 14, overflow: "hidden",
-          }}>
-            <div style={{
-              position: "absolute", top: 14, left: 18, width: 20, height: 14,
-              background: "linear-gradient(135deg, var(--gold), rgba(201,135,58,0.5))",
-              borderRadius: 3, opacity: 0.7,
-            }} />
-            <div style={{
-              position: "absolute", bottom: 16, left: 18, display: "flex", gap: 4,
+      <div onClick={() => inputRef.current?.focus()} className="flex flex-col items-center gap-3 cursor-pointer py-2">
+        <div className="relative w-[140px] h-[88px]">
+          {/* Subtle ambient glow */}
+          <div className="absolute -inset-2 rounded-[16px] bg-erl-accent/[0.03] blur-md animate-pulse-glow pointer-events-none" />
+
+          {/* Card body */}
+          <div
+            className="absolute inset-0 rounded-[14px] cursor-pointer transition-transform duration-300 hover:scale-[1.03]"
+            style={{
+              background: 'linear-gradient(145deg, rgba(196,149,106,0.13) 0%, rgba(196,149,106,0.04) 35%, rgba(42,27,18,0.55) 100%)',
+              border: '1.5px solid rgba(196,149,106,0.2)',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06), 0 0 40px rgba(196,149,106,0.04)',
+            }}
+          >
+            {/* Light diffusion */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] via-transparent to-transparent pointer-events-none" />
+
+            {/* Chip */}
+            <div className="absolute top-3.5 left-3.5 w-7 h-[18px] rounded-sm overflow-hidden" style={{
+              background: 'linear-gradient(135deg, #d4a87a, #8a6a4a)',
+              boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.25), 0 2px 6px rgba(0,0,0,0.35)',
             }}>
-              {[1,2,3,4].map((g) => (
-                <div key={g} style={{ display: "flex", gap: 2 }}>
-                  {[1,2,3,4].map((d) => (
-                    <div key={d} style={{ width: 3, height: 3, borderRadius: "50%", background: "var(--gold)", opacity: 0.25 }} />
+              <div className="absolute inset-[2px] border border-white/15 rounded-[1px]" />
+            </div>
+
+            {/* Contactless icon — compact SVG */}
+            <div className="absolute top-3 left-[48px]">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-erl-accent/35">
+                <path d="M2 12C2 6.5 6.5 2 12 2"/><path d="M6 12C6 8.7 8.7 6 12 6"/><path d="M10 12C10 10.9 10.9 10 12 10"/>
+              </svg>
+            </div>
+
+            {/* Card number dots */}
+            <div className="absolute bottom-[18px] left-3.5 flex gap-1.5">
+              {[1,2,3].map((g) => (
+                <div key={g} className="flex gap-[2px]">
+                  {[1,2,3].map((d) => (
+                    <div key={d} className="w-[2.5px] h-[2.5px] rounded-full bg-erl-accent/20" />
                   ))}
                 </div>
               ))}
             </div>
+
+            {/* Brand */}
+            <div className="absolute bottom-2.5 right-3">
+              <span className="text-[6px] font-bold text-erl-accent tracking-[2px] opacity-40" style={{ fontFamily: "'Playfair Display', serif" }}>TAP</span>
+            </div>
+
+            {/* Scan line */}
+            <div className="absolute left-2 right-2 h-[1.5px] bg-gradient-to-r from-transparent via-erl-accent/70 to-transparent shadow-[0_0_16px_rgba(196,149,106,0.5),0_0_32px_rgba(196,149,106,0.15)] animate-scan-line rounded-full" />
           </div>
-          <div style={{
-            position: "absolute", left: 0, right: 0, height: 2,
-            background: "linear-gradient(90deg, transparent, var(--gold), transparent)",
-            boxShadow: "0 0 8px rgba(201,135,58,0.6)",
-            animation: "scanLine 2.2s ease-in-out infinite",
-          }} />
+
+          {/* Bottom reflection — subtle */}
+          <div className="absolute -bottom-2.5 left-[20%] right-[20%] h-5 bg-gradient-to-t from-erl-accent/[0.02] to-transparent rounded-full blur-md" />
         </div>
-        <div style={{ fontSize: 11, color: "var(--text-faint)", letterSpacing: 0.5 }}>
+        <div className="text-xs text-erl-text-muted tracking-wide font-medium">
           Tap your card to clock in/out
         </div>
       </div>
@@ -445,49 +463,59 @@ const StaffGroup: React.FC<{
   records: TimeRecord[];
 }> = ({ label, count, color, records }) => (
   <div>
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-      <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, boxShadow: `0 0 6px ${color}` }} />
-      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: "var(--text-faint)", textTransform: "uppercase" }}>{label}</span>
-      <span style={{ fontSize: 9, color: "var(--text-faint)" }}>({count})</span>
+    <div className="flex items-center gap-2.5 mb-3">
+      <span className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ background: color, boxShadow: `0 0 8px ${color}40` }} />
+      <span className="text-[10px] font-bold tracking-[0.2em] text-erl-text-faint uppercase">{label}</span>
+      <span className="text-[10px] text-erl-text-faint font-semibold">({count})</span>
     </div>
     {records.length === 0 ? (
-      <div style={{ fontSize: 10, color: "var(--text-faint)", padding: "6px 0 4px", fontStyle: "italic" }}>—</div>
+      <div className="text-xs text-erl-text-faint py-3 italic px-2">No one yet</div>
     ) : (
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="flex flex-col gap-2">
         {records.map((r) => {
           const rec = r.record;
           const hours = rec?.total_hours ? parseFloat(String(rec.total_hours)) : 0;
+          const statusColor = r.status === "clocked_in" ? "rgb(122,191,122)" : r.status === "clocked_out" ? "rgb(196,149,106)" : "rgb(90,69,53)";
           return (
-            <div key={r.staff_id} className="card" style={{
-              display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
-            }}>
-              <div style={{
-                width: 34, height: 34, borderRadius: "50%",
-                background: `linear-gradient(135deg, ${r.color || "#555"}, ${(r.color || "#555")}cc)`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0,
-              }}>{r.initials}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{r.name}</div>
-                <div style={{ fontSize: 9, color: "var(--text-faint)" }}>{r.role}</div>
+            <div key={r.staff_id} className="card-glass px-4 py-3.5 flex items-center gap-3.5 transition-all duration-200 hover:border-erl-accent/15">
+              {/* Avatar */}
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                style={{
+                  background: `linear-gradient(135deg, ${r.color || "#555"}, ${(r.color || "#555")}cc)`,
+                  boxShadow: `0 3px 12px ${(r.color || "#555")}30`,
+                }}>
+                {r.initials}
               </div>
-              <div style={{ textAlign: "right" }}>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold text-erl-text-primary">{r.name}</div>
+                <div className="text-[10px] text-erl-text-faint tracking-[0.1em] uppercase font-semibold mt-0.5">{r.role}</div>
+              </div>
+
+              {/* Time */}
+              <div className="text-right flex-shrink-0">
                 {rec ? (
-                  <>
-                    <div style={{ fontSize: 10, color: "var(--text-secondary)", fontWeight: 600 }}>
+                  <div className="flex flex-col items-end gap-0.5">
+                    <div className="text-xs text-erl-text-secondary font-semibold">
                       {new Date(rec.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}
                       {rec.clock_out ? (
-                        <span style={{ color: "var(--text-faint)" }}> → {new Date(rec.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}</span>
+                        <span className="text-erl-text-faint"> → {new Date(rec.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}</span>
                       ) : (
-                        <span className="animate-pulse" style={{ color: "var(--success)", fontSize: 9, marginLeft: 4 }}>● IN</span>
+                        <span className="ml-1.5 inline-flex items-center gap-1">
+                          <span className="animate-pulse" style={{ color: statusColor }}>●</span>
+                          <span className="text-[10px] font-semibold" style={{ color: statusColor }}>Active</span>
+                        </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 9, color: "var(--gold)" }}>
-                      {hours > 0 ? `${hours.toFixed(1)}h` : "—"}
-                    </div>
-                  </>
+                    {hours > 0 && (
+                      <div className="text-[10px] text-erl-accent font-bold">
+                        {hours.toFixed(1)}h
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <div style={{ fontSize: 10, color: "var(--text-faint)" }}>—</div>
+                  <div className="text-xs text-erl-text-faint">—</div>
                 )}
               </div>
             </div>

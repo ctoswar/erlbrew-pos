@@ -40,9 +40,9 @@ export const CustomerDisplay: React.FC = () => {
 
   // Listen for cross-tab storage events (POS updating cart)
   useEffect(() => {
-const handler = (e: StorageEvent) => {
-    if (e.key === CART_KEY || e.key === "erlbrew_cart_meta" || e.key === "erlbrew_cart_version") reload();
-  };
+    const handler = (e: StorageEvent) => {
+      if (e.key === CART_KEY || e.key === "erlbrew_cart_meta" || e.key === "erlbrew_cart_version") reload();
+    };
     window.addEventListener("storage", handler);
     return () => window.removeEventListener("storage", handler);
   }, [reload]);
@@ -64,46 +64,24 @@ const handler = (e: StorageEvent) => {
   const orderLabel = orderType === "dine-in" ? (customerName || "Dine-in") : "Takeout";
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #0d0600 0%, #1e0e06 50%, #0d0600 100%)",
-      color: "#f5e6d0",
-      fontFamily: "'Lato', sans-serif",
-      display: "flex",
-      flexDirection: "column",
-    }}>
+    <div className="min-h-screen bg-gradient-to-br from-[#0d0600] via-[#1e0e06] to-[#0d0600] text-[#f5e6d0] font-sans flex flex-col">
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <div style={{
-        padding: "28px 48px 22px",
-        borderBottom: "1px solid rgba(201,135,58,0.2)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        flexShrink: 0,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <span style={{ fontSize: 36 }}>☕</span>
+      <div className="px-12 pt-7 pb-5 border-b border-erl-accent/20 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <span className="text-4xl">☕</span>
           <div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: "#C9873A", letterSpacing: 1 }}>
+            <div className="font-display text-[26px] font-bold text-erl-accent tracking-wide">
               ERLBREW CAFÉ
             </div>
-            <div style={{ fontSize: 11, color: "rgba(245,230,208,0.5)", letterSpacing: 3, marginTop: 2, textTransform: "uppercase" }}>
+            <div className="text-[11px] text-[#f5e6d0]/50 tracking-widest uppercase mt-0.5">
               Customer Display
             </div>
           </div>
         </div>
         {!isEmpty && (
-          <div style={{
-            background: "rgba(201,135,58,0.15)",
-            border: "1.5px solid rgba(201,135,58,0.4)",
-            borderRadius: 12,
-            padding: "10px 22px",
-            textAlign: "center" as const,
-          }}>
-            <div style={{ fontSize: 9, letterSpacing: 2, color: "rgba(245,230,208,0.5)", textTransform: "uppercase", marginBottom: 4 }}>
-              Order Type
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#C9873A" }}>
+          <div className="bg-erl-accent/15 border-[1.5px] border-erl-accent/40 rounded-xl px-5 py-2.5 text-center">
+            <div className="text-[9px] tracking-widest text-[#f5e6d0]/50 uppercase mb-1">Order Type</div>
+            <div className="text-[15px] font-bold text-erl-accent">
               {orderLabel}
             </div>
           </div>
@@ -111,74 +89,54 @@ const handler = (e: StorageEvent) => {
       </div>
 
       {/* ── Body ──────────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 48px" }}>
+      <div className="flex-1 flex items-center justify-center px-12">
         {isEmpty ? (
           /* Empty state */
-          <div key={"empty-" + fadeKey} style={{ textAlign: "center" as const, animation: "fadeIn 0.6s ease" }}>
-            <div style={{ fontSize: 80, marginBottom: 24 }}>🛒</div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, color: "#C9873A", marginBottom: 12 }}>
+          <div key={"empty-" + fadeKey} className="text-center animate-fade-in">
+            <div className="text-8xl mb-6">🛒</div>
+            <div className="font-display text-4xl text-erl-accent mb-3">
               Welcome!
             </div>
-            <div style={{ fontSize: 18, color: "rgba(245,230,208,0.55)", lineHeight: 1.6, maxWidth: 440 }}>
+            <div className="text-lg text-[#f5e6d0]/55 leading-relaxed max-w-[440px]">
               Your order will appear here as items are added by the cashier.
             </div>
-            <div style={{ marginTop: 32, display: "flex", gap: 12, justifyContent: "center" }}>
-              {["ICED COFFEE", "HOT COFFEE", "BLENDED", "PASTRIES", "FRUIT SODA", "NON-COFFEE"].map((cat) => (
-                <span key={cat} style={{
-                  background: "rgba(201,135,58,0.1)",
-                  border: "1px solid rgba(201,135,58,0.25)",
-                  borderRadius: 20,
-                  padding: "6px 16px",
-                  fontSize: 11,
-                  color: "rgba(245,230,208,0.4)",
-                  letterSpacing: 1,
-                }}>{cat}</span>
+            <div className="mt-8 flex gap-3 justify-center">
+              {["Signature Brews", "Espresso", "Cold Drinks", "Pastries"].map((cat) => (
+                <span key={cat} className="bg-erl-accent/10 border border-erl-accent/25 rounded-full px-4 py-1.5 text-[11px] text-[#f5e6d0]/40 tracking-wide">
+                  {cat}
+                </span>
               ))}
             </div>
           </div>
         ) : (
           /* Cart items */
-          <div key={"cart-" + fadeKey} style={{ width: "100%", maxWidth: 1100, display: "flex", gap: 48, alignItems: "flex-start", animation: "fadeIn 0.4s ease" }}>
+          <div key={"cart-" + fadeKey} className="w-full max-w-[1100px] flex gap-12 items-start animate-fade-in">
             {/* Left: item list */}
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 10, letterSpacing: 3, color: "rgba(245,230,208,0.35)", textTransform: "uppercase", marginBottom: 20 }}>
+            <div className="flex-1">
+              <div className="text-[10px] tracking-widest text-[#f5e6d0]/35 uppercase mb-5">
                 Your Order · {items.reduce((s, c) => s + c.qty, 0)} item{items.reduce((s, c) => s + c.qty, 0) !== 1 ? "s" : ""}
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div className="flex flex-col gap-3">
                 {items.map((ci) => (
-                  <div key={ci.item.id} style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 16,
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(201,135,58,0.12)",
-                    borderRadius: 14,
-                    padding: "16px 20px",
-                  }}>
-                    <div style={{
-                      width: 44, height: 44,
-                      borderRadius: 10,
-                      background: "rgba(201,135,58,0.15)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 22, flexShrink: 0,
-                    }}>
+                  <div key={ci.item.id} className="flex items-center gap-4 bg-white/[0.04] border border-erl-accent/12 rounded-[14px] px-5 py-4">
+                    <div className="w-11 h-11 rounded-[10px] bg-erl-accent/15 flex items-center justify-center text-[22px] flex-shrink-0">
                       {ci.item.emoji}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: "#f5e6d0", marginBottom: 2 }}>
+                    <div className="flex-1">
+                      <div className="text-base font-semibold text-[#f5e6d0] mb-0.5">
                         {ci.item.name}
                       </div>
                       {ci.notes && (
-                        <div style={{ fontSize: 11, color: "rgba(245,230,208,0.4)", fontStyle: "italic" }}>
+                        <div className="text-[11px] text-[#f5e6d0]/40 italic">
                           Note: {ci.notes}
                         </div>
                       )}
                     </div>
-                    <div style={{ textAlign: "right" as const }}>
-                      <div style={{ fontSize: 11, color: "rgba(245,230,208,0.4)", marginBottom: 2 }}>
+                    <div className="text-right">
+                      <div className="text-[11px] text-[#f5e6d0]/40 mb-0.5">
                         {ci.qty} × {formatCurrency(ci.item.price)}
                       </div>
-                      <div style={{ fontSize: 17, fontWeight: 700, color: "#C9873A" }}>
+                      <div className="text-[17px] font-bold text-erl-accent">
                         {formatCurrency(ci.item.price * ci.qty)}
                       </div>
                     </div>
@@ -188,32 +146,26 @@ const handler = (e: StorageEvent) => {
             </div>
 
             {/* Right: totals */}
-            <div style={{
-              width: 320, flexShrink: 0,
-              background: "rgba(201,135,58,0.08)",
-              border: "1.5px solid rgba(201,135,58,0.2)",
-              borderRadius: 20,
-              padding: "28px 28px",
-            }}>
-              <div style={{ fontSize: 10, letterSpacing: 3, color: "rgba(245,230,208,0.35)", textTransform: "uppercase", marginBottom: 20 }}>
+            <div className="w-[320px] flex-shrink-0 bg-erl-accent/8 border-[1.5px] border-erl-accent/20 rounded-[20px] px-7 py-7">
+              <div className="text-[10px] tracking-widest text-[#f5e6d0]/35 uppercase mb-5">
                 Total
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-<div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "rgba(245,230,208,0.6)" }}>
-            <span>Subtotal</span>
-            <span>{formatCurrency(subtotal)}</span>
-          </div>
-          <div style={{ height: 1, background: "rgba(201,135,58,0.2)", margin: "4px 0" }} />
-                <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'Playfair Display', serif", fontSize: 28, fontWeight: 700, color: "#C9873A" }}>
+              <div className="flex flex-col gap-3.5">
+                <div className="flex justify-between text-sm text-[#f5e6d0]/60">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(subtotal)}</span>
+                </div>
+                <div className="h-px bg-erl-accent/20 my-1" />
+                <div className="flex justify-between font-display text-[28px] font-bold text-erl-accent">
                   <span>Total</span>
                   <span>{formatCurrency(grand)}</span>
                 </div>
               </div>
 
-              <div style={{ marginTop: 24, padding: "14px 16px", background: "rgba(0,0,0,0.2)", borderRadius: 10, textAlign: "center" as const }}>
-                <div style={{ fontSize: 10, color: "rgba(245,230,208,0.35)", letterSpacing: 1, marginBottom: 4 }}>Order Type</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "#f5e6d0" }}>{orderType === "dine-in" ? `🍽️ ${customerName || "Dine-in"}` : "🥤 Takeout"}</div>
+              <div className="mt-6 px-4 py-3.5 bg-black/20 rounded-[10px] text-center">
+                <div className="text-[10px] text-[#f5e6d0]/35 tracking-wide mb-1">Order Type</div>
+                <div className="text-base font-bold text-[#f5e6d0]">{orderType === "dine-in" ? `🍽️ ${customerName || "Dine-in"}` : "🥤 Takeout"}</div>
               </div>
             </div>
           </div>
@@ -221,27 +173,15 @@ const handler = (e: StorageEvent) => {
       </div>
 
       {/* ── Footer ────────────────────────────────────────────────────────── */}
-      <div style={{
-        padding: "16px 48px",
-        borderTop: "1px solid rgba(201,135,58,0.1)",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        flexShrink: 0,
-      }}>
-        <div style={{ fontSize: 11, color: "rgba(245,230,208,0.25)" }}>
+      <div className="px-12 py-4 border-t border-erl-accent/10 flex justify-between items-center flex-shrink-0">
+        <div className="text-[11px] text-[#f5e6d0]/25">
           Powered by Erlbrew POS
         </div>
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <div className="flex gap-1.5 items-center">
           {isEmpty ? null : (
-            <div style={{
-              width: 10, height: 10, borderRadius: "50%",
-              background: "#C9873A",
-              boxShadow: "0 0 8px #C9873A",
-              animation: "pulse 2s infinite",
-            }} />
+            <div className="w-2.5 h-2.5 rounded-full bg-erl-accent shadow-[0_0_8px_#C9873A] animate-pulse" />
           )}
-          <span style={{ fontSize: 11, color: "rgba(245,230,208,0.3)" }}>
+          <span className="text-[11px] text-[#f5e6d0]/30">
             {isEmpty ? "Waiting for order…" : "Live"}
           </span>
         </div>

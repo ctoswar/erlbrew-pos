@@ -120,7 +120,6 @@ export function googleSheetsClientInit(pool) {
       });
     },
     async appendOrder({ orderId, staffName, items, subtotal, tax, total, payMethod, status, referenceNumber }) {
-      console.log('[DEBUG appendOrder] Called with - payMethod:', payMethod, 'referenceNumber:', JSON.stringify(referenceNumber), 'type:', typeof referenceNumber);
       // Refresh menu item names from DB before each append
       await loadMenuItemNames(pool);
 

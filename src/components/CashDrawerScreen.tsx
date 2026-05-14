@@ -20,8 +20,6 @@ const TX_COLORS: Record<string, string> = {
   payout: 'var(--gold)',
 };
 
-
-
 export const CashDrawerScreen: React.FC = () => {
   const [drawer, setDrawer] = useState<CashDrawer | null>(null);
   const [drawerStatus, setDrawerStatus] = useState<'idle' | 'opening' | 'saving' | 'ok' | 'error'>('idle');
@@ -171,76 +169,56 @@ export const CashDrawerScreen: React.FC = () => {
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: 140, padding: "5px 10px", borderRadius: 7,
-    border: "1.5px solid var(--border-default)", textAlign: "right",
-    background: "var(--bg-base)", color: "var(--text-primary)", fontSize: 13,
-  };
-
-  const rowLabel: React.CSSProperties = {
-    fontSize: 10, color: "var(--text-muted)", fontWeight: 600,
-  };
-
-  const sectionStyle: React.CSSProperties = {
-    padding: "1rem",
-    background: "rgba(58,37,24,0.5)", backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
-    border: "1px solid rgba(201,135,58,0.1)",
-    borderRadius: 12,
-  };
-
   return (
-    <div className="scroll-area" style={{ padding: "0.8rem 1.2rem", display: "flex", flexDirection: "column", gap: 14, maxWidth: 520, overflowY: "auto", minHeight: 0 }}>
+    <div className="scroll-area px-5 py-3 flex flex-col gap-3.5 max-w-[520px] overflow-y-auto min-h-0">
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div className="flex justify-between items-start">
         <div>
-          <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
+          <div className="font-display text-sm font-bold text-erl-text-primary tracking-wide">
             Cash Drawer
           </div>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+          <div className="text-[11px] text-erl-muted mt-0.5">
             {drawer?.shift_date ? `Shift: ${drawer.shift_date}` : 'No open drawer'}
           </div>
         </div>
-        <span className={`pill ${drawer?.status === 'open' ? 'pill-success' : 'pill-muted'}`} style={{ fontSize: 9 }}>
+        <span className={`pill text-[9px] ${drawer?.status === 'open' ? 'pill-success' : 'pill-muted'}`}>
           {drawer?.status === 'open' ? 'OPEN' : 'CLOSED'}
         </span>
       </div>
 
       {msg.text && (
-        <div style={{
-          padding: "8px 14px", borderRadius: 8, fontSize: 11,
-          background: msg.type === 'error' ? 'rgba(220,80,80,0.15)' : msg.type === 'success' ? 'rgba(80,180,80,0.15)' : 'rgba(201,135,58,0.1)',
-          color: msg.type === 'error' ? 'var(--danger)' : msg.type === 'success' ? 'var(--success)' : 'var(--gold)',
-          border: `1px solid ${msg.type === 'error' ? 'var(--danger)' : msg.type === 'success' ? 'var(--success)' : 'var(--gold)'}`,
-        }}>
+        <div className={`
+          px-3.5 py-2 rounded-lg text-[11px] border
+          ${msg.type === 'error' ? "bg-erl-danger/15 text-erl-danger border-erl-danger" : msg.type === 'success' ? "bg-erl-success/15 text-erl-success border-erl-success" : "bg-erl-accent/10 text-erl-accent border-erl-accent"}
+        `}>
           {msg.text}
         </div>
       )}
 
       {/* Stats row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+      <div className="grid grid-cols-3 gap-2.5">
         {[
           { label: "Opening Float", value: formatCurrency(drawer?.opening_float ?? 0) },
           { label: "Cash Sales", value: formatCurrency(drawer?.cash_sales ?? 0) },
           { label: "Payouts", value: formatCurrency(cashPayouts), highlighted: true },
         ].map(({ label, value, highlighted }) => (
-          <div key={label} style={{ ...sectionStyle, padding: "0.75rem" }}>
-            <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: highlighted ? "var(--gold)" : "var(--text-primary)", fontFamily: "'Playfair Display', serif" }}>{value}</div>
+          <div key={label} className="card-glass p-3">
+            <div className="text-[8px] text-erl-muted tracking-wide uppercase mb-1">{label}</div>
+            <div className={`text-[15px] font-bold font-display ${highlighted ? "text-erl-accent" : "text-erl-text-primary"}`}>{value}</div>
           </div>
         ))}
       </div>
 
       {/* Opening Float */}
-      <div style={sectionStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={rowLabel}>Opening Float</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 13, fontFamily: "'Playfair Display', serif", fontWeight: 700, color: "var(--gold)" }}>
+      <div className="card-glass p-4">
+        <div className="flex justify-between items-center">
+          <span className="text-[10px] text-erl-muted font-semibold">Opening Float</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-display font-bold text-erl-accent">
               {formatCurrency(drawer?.opening_float ?? 0)}
             </span>
             {drawer?.status === 'closed' && (
-              <span style={{ fontSize: 8, color: "var(--text-muted)" }}>• Shift ended</span>
+              <span className="text-[8px] text-erl-muted">• Shift ended</span>
             )}
           </div>
         </div>
@@ -248,73 +226,63 @@ export const CashDrawerScreen: React.FC = () => {
 
       {/* Cash In / Out Buttons */}
       {drawer?.status === 'open' && (
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => openTxModal('cash_in')} className="btn btn-outline" style={{
-            flex: 1, fontSize: 10, padding: "10px 0",
-            borderColor: "var(--success)", color: "var(--success)",
-          }}>
+        <div className="flex gap-2">
+          <button onClick={() => openTxModal('cash_in')} className="btn btn-outline flex-1 text-[10px] py-2.5 border-erl-success text-erl-success">
             + Cash In
           </button>
-          <button onClick={() => openTxModal('cash_out')} className="btn btn-outline" style={{
-            flex: 1, fontSize: 10, padding: "10px 0",
-            borderColor: "var(--danger)", color: "var(--danger)",
-          }}>
+          <button onClick={() => openTxModal('cash_out')} className="btn btn-outline flex-1 text-[10px] py-2.5 border-erl-danger text-erl-danger">
             − Cash Out
           </button>
           <button onClick={handleOpenDrawer} disabled={drawerStatus !== 'idle'}
-            className="btn btn-gold" style={{ flex: 1, fontSize: 10, padding: "10px 0" }}>
+            className="btn btn-accent flex-1 text-[10px] py-2.5">
             {drawerStatus === 'opening' ? "⟳" : "🔓 Open"}
           </button>
         </div>
       )}
 
       {/* Cash Payouts */}
-      <div style={sectionStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={rowLabel}>Cash Payouts (–)</span>
+      <div className="card-glass p-4">
+        <div className="flex justify-between items-center">
+          <span className="text-[10px] text-erl-muted font-semibold">Cash Payouts (–)</span>
           <input
             type="number"
             value={cashPayouts}
             onChange={(e) => setCashPayouts(Number(e.target.value) || 0)}
             disabled={drawer?.status === 'closed'}
-            style={inputStyle}
+            className="w-[140px] py-[5px] px-2.5 rounded-md border-[1.5px] border-erl-border-default text-right bg-erl-base text-erl-text-primary text-[13px]"
           />
         </div>
       </div>
 
       {/* Expected */}
-      <div style={sectionStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)" }}>Expected Cash</span>
-          <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Playfair Display', serif" }}>
+      <div className="card-glass p-4">
+        <div className="flex justify-between items-center">
+          <span className="text-[10px] font-bold text-erl-secondary">Expected Cash</span>
+          <span className="text-base font-bold text-erl-text-primary font-display">
             {formatCurrency(expected)}
           </span>
         </div>
       </div>
 
       {/* Actual / Variance */}
-      <div style={sectionStyle}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={rowLabel}>Actual Cash (counted)</span>
+      <div className="card-glass p-4">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] text-erl-muted font-semibold">Actual Cash (counted)</span>
             <input
               type="number"
               value={closingAmount}
               onChange={(e) => setClosingAmount(Number(e.target.value) || 0)}
               disabled={drawer?.status === 'closed'}
-              style={inputStyle}
+              className="w-[140px] py-[5px] px-2.5 rounded-md border-[1.5px] border-erl-border-default text-right bg-erl-base text-erl-text-primary text-[13px]"
             />
           </div>
-          <div style={{ height: 1, background: "var(--border-default)" }} />
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: variance === 0 ? "var(--success)" : Math.abs(variance) > 50 ? "var(--danger)" : "var(--gold)" }}>
+          <div className="h-px bg-erl-border-default" />
+          <div className="flex justify-between items-center">
+            <span className={`text-[10px] font-bold ${variance === 0 ? "text-erl-success" : Math.abs(variance) > 50 ? "text-erl-danger" : "text-erl-accent"}`}>
               {variance === 0 ? "✓ Balanced" : `Variance ${variance > 0 ? '(+)' : ''}`}
             </span>
-            <span style={{
-              fontSize: 18, fontWeight: 700,
-              color: variance === 0 ? "var(--success)" : Math.abs(variance) > 50 ? "var(--danger)" : "var(--gold)",
-              fontFamily: "'Playfair Display', serif",
-            }}>
+            <span className={`text-lg font-bold font-display ${variance === 0 ? "text-erl-success" : Math.abs(variance) > 50 ? "text-erl-danger" : "text-erl-accent"}`}>
               {variance >= 0 ? "+" : ""}{formatCurrency(variance)}
             </span>
           </div>
@@ -322,32 +290,32 @@ export const CashDrawerScreen: React.FC = () => {
       </div>
 
       {/* Notes */}
-      <div style={sectionStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={rowLabel}>Notes</span>
+      <div className="card-glass p-4">
+        <div className="flex justify-between items-center">
+          <span className="text-[10px] text-erl-muted font-semibold">Notes</span>
           <input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g. Paid supplier, petty cash..."
             disabled={drawer?.status === 'closed'}
-            style={{ ...inputStyle, textAlign: "left", width: 260, fontSize: 11 }}
+            className="py-[5px] px-2.5 rounded-md border-[1.5px] border-erl-border-default text-left bg-erl-base text-erl-text-primary text-[11px] w-[260px]"
           />
         </div>
       </div>
 
       {/* Action Buttons */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div className="flex flex-col gap-2">
         {drawer?.status === 'open' && (
           <>
             <button onClick={handleSave} disabled={drawerStatus === 'saving'}
-              className="btn btn-outline" style={{ width: "100%", fontSize: 10, padding: "10px 0", borderColor: "var(--gold)", color: "var(--gold)" }}>
+              className="btn btn-outline w-full text-[10px] py-2.5 border-erl-accent text-erl-accent">
               {drawerStatus === 'saving' ? "⟳ Saving..." : "💾 Save Progress"}
             </button>
 
             <button onClick={handleCloseDrawer} disabled={drawerStatus === 'saving' || closingAmount === 0}
-              className="btn btn-gold" style={{
-                width: "100%", fontSize: 10, padding: "11px 0",
+              className="btn btn-accent w-full text-[10px] py-2.5"
+              style={{
                 background: closingAmount === 0 ? "rgba(80,201,80,0.15)" : "var(--success)",
                 color: closingAmount === 0 ? "var(--success)" : "#fff",
               }}>
@@ -355,7 +323,7 @@ export const CashDrawerScreen: React.FC = () => {
             </button>
 
             {closingAmount === 0 && (
-              <div style={{ fontSize: 9, color: "var(--text-muted)", textAlign: "center" }}>
+              <div className="text-[9px] text-erl-muted text-center">
                 Enter actual cash count above to close drawer
               </div>
             )}
@@ -364,11 +332,11 @@ export const CashDrawerScreen: React.FC = () => {
 
         {drawer?.status === 'closed' && (
           <>
-            <div style={{ fontSize: 10, color: "var(--text-muted)", textAlign: "center", padding: "8px 0" }}>
+            <div className="text-[10px] text-erl-muted text-center py-2">
               This shift is closed. Start a new shift to open the drawer again.
             </div>
             <button onClick={handleOpenDrawer} disabled={drawerStatus !== 'idle'}
-              className="btn btn-outline" style={{ width: "100%", fontSize: 10, padding: "10px 0" }}>
+              className="btn btn-outline w-full text-[10px] py-2.5">
               {drawerStatus === 'opening' ? "⟳ Opening..." : "Start New Shift"}
             </button>
           </>
@@ -376,51 +344,51 @@ export const CashDrawerScreen: React.FC = () => {
       </div>
 
       {/* ── Transaction History ────────────────────────────────────────────── */}
-      <div style={{ ...sectionStyle, marginTop: 4 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-primary)", letterSpacing: 1 }}>
+      <div className="card-glass mt-1 p-4">
+        <div className="flex justify-between items-center mb-2.5">
+          <span className="text-[10px] font-bold text-erl-text-primary tracking-wide">
             Transaction Log
           </span>
-          <span style={{ fontSize: 8, color: "var(--text-faint)" }}>
+          <span className="text-[8px] text-erl-text-faint">
             {transactions.length} entries
           </span>
         </div>
         {txLoading ? (
-          <div style={{ textAlign: "center", padding: "1rem", color: "var(--text-disabled)", fontSize: 10 }}>Loading...</div>
+          <div className="text-center py-4 text-erl-text-disabled text-[10px]">Loading...</div>
         ) : transactions.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "1rem", color: "var(--text-disabled)", fontSize: 10 }}>
+          <div className="text-center py-4 text-erl-text-disabled text-[10px]">
             No transactions for today.
           </div>
         ) : (
-          <div style={{ maxHeight: 240, overflowY: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9 }}>
+          <div className="max-h-[240px] overflow-y-auto">
+            <table className="w-full border-collapse text-[9px]">
               <thead>
-                <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                  <th style={{ padding: "4px 6px", textAlign: "left", color: "var(--text-faint)", fontWeight: 600 }}>Type</th>
-                  <th style={{ padding: "4px 6px", textAlign: "right", color: "var(--text-faint)", fontWeight: 600 }}>Amount</th>
-                  <th style={{ padding: "4px 6px", textAlign: "right", color: "var(--text-faint)", fontWeight: 600 }}>Balance</th>
-                  <th style={{ padding: "4px 6px", textAlign: "left", color: "var(--text-faint)", fontWeight: 600 }}>Reason</th>
-                  <th style={{ padding: "4px 6px", textAlign: "right", color: "var(--text-faint)", fontWeight: 600 }}>Time</th>
+                <tr className="border-b border-erl-border-subtle">
+                  <th className="px-1.5 py-1 text-left text-erl-text-faint font-semibold">Type</th>
+                  <th className="px-1.5 py-1 text-right text-erl-text-faint font-semibold">Amount</th>
+                  <th className="px-1.5 py-1 text-right text-erl-text-faint font-semibold">Balance</th>
+                  <th className="px-1.5 py-1 text-left text-erl-text-faint font-semibold">Reason</th>
+                  <th className="px-1.5 py-1 text-right text-erl-text-faint font-semibold">Time</th>
                 </tr>
               </thead>
               <tbody>
                 {transactions.map((tx) => (
-                  <tr key={tx.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                    <td style={{ padding: "5px 6px" }}>
-                      <span style={{ color: TX_COLORS[tx.transaction_type], fontWeight: 600 }}>
+                  <tr key={tx.id} className="border-b border-erl-border-subtle">
+                    <td className="px-1.5 py-[5px]">
+                      <span className="font-semibold" style={{ color: TX_COLORS[tx.transaction_type] }}>
                         {TX_LABELS[tx.transaction_type] || tx.transaction_type}
                       </span>
                     </td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                    <td className="px-1.5 py-[5px] text-right font-bold tabular-nums">
                       {tx.transaction_type === 'cash_in' || tx.transaction_type === 'sale' ? '+' : '−'}{formatCurrency(tx.amount)}
                     </td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", color: "var(--text-muted)" }}>
+                    <td className="px-1.5 py-[5px] text-right text-erl-muted">
                       {formatCurrency(tx.balance_after)}
                     </td>
-                    <td style={{ padding: "5px 6px", textAlign: "left", color: "var(--text-faint)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <td className="px-1.5 py-[5px] text-left text-erl-text-faint max-w-[140px] truncate">
                       {tx.reason || '—'}
                     </td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", color: "var(--text-faint)", whiteSpace: "nowrap" }}>
+                    <td className="px-1.5 py-[5px] text-right text-erl-text-faint whitespace-nowrap">
                       {new Date(tx.created_at).toLocaleTimeString()}
                     </td>
                   </tr>
@@ -434,37 +402,37 @@ export const CashDrawerScreen: React.FC = () => {
       {/* ── Cash In/Out Modal ──────────────────────────────────────────────── */}
       {showTxModal && (
         <>
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 998 }} onClick={() => setShowTxModal(false)} />
-          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "1rem" }}>
-            <div className="animate-scaleIn card-glass" style={{ padding: "1.5rem", width: "100%", maxWidth: 360 }}>
-              <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 14 }}>
+          <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setShowTxModal(false)} />
+          <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
+            <div className="animate-scale-in card-glass p-6 w-full max-w-[360px]">
+              <div className="font-display text-sm font-bold text-erl-text-primary mb-3.5">
                 {txType === 'cash_in' ? 'Cash In' : 'Cash Out'}
               </div>
 
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1.5, marginBottom: 5, fontWeight: 700, textTransform: "uppercase" }}>
+              <div className="mb-3">
+                <div className="text-[9px] text-erl-accent-muted tracking-widest mb-[5px] font-bold uppercase">
                   Amount
                 </div>
                 <input type="number" value={txAmount} onChange={(e) => setTxAmount(e.target.value)}
                   placeholder="0.00" min="0" step="0.01" autoFocus
-                  style={{ width: "100%", boxSizing: "border-box" }} />
+                  className="w-full box-border" />
               </div>
 
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1.5, marginBottom: 5, fontWeight: 700, textTransform: "uppercase" }}>
+              <div className="mb-3.5">
+                <div className="text-[9px] text-erl-accent-muted tracking-widest mb-[5px] font-bold uppercase">
                   Reason
                 </div>
                 <input value={txReason} onChange={(e) => setTxReason(e.target.value)}
                   placeholder={txType === 'cash_in' ? "e.g. Cash from safe" : "e.g. Paid supplier"}
-                  style={{ width: "100%", boxSizing: "border-box" }} />
+                  className="w-full box-border" />
               </div>
 
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => setShowTxModal(false)} className="btn btn-outline" style={{ flex: 1, fontSize: 10, padding: "11px 0" }}>
+              <div className="flex gap-2">
+                <button onClick={() => setShowTxModal(false)} className="btn btn-outline flex-1 text-[10px] py-2.5">
                   Cancel
                 </button>
                 <button onClick={handleTxSubmit} disabled={txSaving || !txAmount || parseFloat(txAmount) <= 0}
-                  className="btn btn-gold" style={{ flex: 1, fontSize: 10, padding: "11px 0" }}>
+                  className="btn btn-accent flex-1 text-[10px] py-2.5">
                   {txSaving ? "Saving..." : txType === 'cash_in' ? "Record Cash In" : "Record Cash Out"}
                 </button>
               </div>

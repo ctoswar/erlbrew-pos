@@ -42,12 +42,15 @@ app.use(cors({
   origin(origin, callback) {
     // Allow no-origin requests (curl, Postman, mobile apps)
     if (!origin) return callback(null, true);
-    // In dev / local file:// access, allow everything
+    // If CORS_ORIGINS is explicitly configured, always enforce it (regardless of NODE_ENV)
+    if (corsOrigins.length > 0) {
+      if (corsOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('CORS not allowed'));
+    }
+    // Only allow dev wildcard when CORS_ORIGINS is NOT set AND not in production
     if (process.env.NODE_ENV !== 'production') return callback(null, true);
-    // In production, never allow wildcard when origins are explicitly set
-    if (corsOrigins.includes('*')) return callback(new Error('CORS wildcard (*) is not allowed in production — set CORS_ORIGINS=https://yourdomain.com'));
-    if (corsOrigins.length > 0 && corsOrigins.includes(origin)) return callback(null, true);
-    callback(new Error('CORS not allowed'));
+    // Production with no CORS_ORIGINS set — deny by default
+    callback(new Error('CORS not allowed — set CORS_ORIGINS in production'));
   },
   credentials: true,
 }));
@@ -220,6 +223,9 @@ await pool.query(`
 
     // Add image column to menu_items
     await pool.query(`ALTER TABLE menu_items ADD COLUMN image VARCHAR(512) DEFAULT NULL AFTER emoji`).catch(() => {});
+
+    // Add discount_json column to orders for discount persistence
+    await pool.query(`ALTER TABLE orders ADD COLUMN discount_json JSON DEFAULT NULL AFTER reference_number`).catch(() => {});
     // Auto-populate rfid_alt with reversed rfid for existing staff
     await pool.query(`UPDATE staff SET rfid_alt = REVERSE(rfid) WHERE rfid IS NOT NULL AND rfid_alt IS NULL`).catch(() => {});
     console.log('staff rfid_alt column ready');

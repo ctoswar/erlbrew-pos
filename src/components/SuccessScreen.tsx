@@ -35,41 +35,56 @@ export const SuccessScreen: React.FC<Props> = ({ order, onDone, onRepeat }) => {
   };
 
   return (
-    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-base)" }}>
-      <div className="animate-successPop" style={{ textAlign: "center", padding: "0 1rem" }}>
-        {/* Checkmark */}
-        <div style={{
-          width: 80, height: 80, borderRadius: "50%",
-          background: "linear-gradient(135deg, rgba(122,201,122,0.15), rgba(122,201,122,0.05))",
-          border: "2px solid rgba(122,201,122,0.3)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          margin: "0 auto 20px", fontSize: 32, color: "var(--success)",
-          boxShadow: "0 0 40px rgba(122,201,122,0.12)",
-        }}>&#x2713;</div>
+    <div className="flex-1 flex items-center justify-center bg-erl-base relative overflow-hidden">
+      {/* Ambient success glow */}
+      <div className="absolute bottom-[-20%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-erl-success/[0.03] blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-erl-accent/[0.02] blur-[100px] pointer-events-none" />
 
-        <div className="font-display" style={{ fontSize: 26, color: "var(--success)", marginBottom: 6, letterSpacing: 1 }}>Order Placed!</div>
+      <div className="animate-success-pop text-center px-6 relative max-w-md mx-auto">
+        {/* Success Mark */}
+        <div className="relative mx-auto mb-8 w-28 h-28">
+          {/* Outer glow ring */}
+          <div className="absolute -inset-4 rounded-full bg-erl-success/5 animate-pulse-slow" style={{ boxShadow: '0 0 60px rgba(122,191,122,0.1)' }} />
+          {/* Success circle */}
+          <div className="w-28 h-28 rounded-full bg-gradient-to-br from-erl-success/15 to-erl-success/[0.02] border-2 border-erl-success/25 flex items-center justify-center shadow-[0_0_60px_rgba(122,191,122,0.08)]">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-erl-success">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+        </div>
+
+        <div className="font-display text-3xl text-erl-success mb-3 tracking-wide font-bold">Order Placed!</div>
 
         {/* Order ID */}
-        <div className="card-glass animate-scaleIn" style={{ display: "inline-block", padding: "8px 22px", borderRadius: 10, marginBottom: 4 }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "var(--gold)", letterSpacing: 2, fontFamily: "'Courier New', monospace" }}>
+        <div className="animate-scale-in card-glass inline-block py-4 px-7 rounded-2xl mb-3">
+          <div className="text-[10px] text-erl-text-muted tracking-[3px] uppercase mb-1.5 font-bold">Order ID</div>
+          <div className="text-xl font-bold text-erl-accent tracking-[0.2em] font-mono">
             {order.id}
           </div>
         </div>
 
-        <div style={{ fontSize: 11, color: "var(--gold-dim)", marginBottom: 6, letterSpacing: 1 }}>
+        <div className="text-sm text-erl-accent-dim mb-2 tracking-wide font-semibold">
           {order.type === "dine-in" ? (order.customerName || "Dine-in") : "Takeout"} &middot; {formatCurrency(order.total)}
         </div>
 
-        <div style={{ fontSize: 10, color: "var(--text-disabled)", letterSpacing: 2, marginBottom: 2 }}>Sent to kitchen…</div>
-        <div style={{ marginTop: 8, fontSize: 9, color: "var(--text-faint)" }}>Auto-return in {countdown}s</div>
+        <div className="text-xs text-erl-text-disabled tracking-[2px] mb-1 font-semibold uppercase">Sent to kitchen…</div>
+        <div className="mt-2 text-xs text-erl-text-faint font-medium">Auto-return in {countdown}s</div>
 
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
-          <button className="btn btn-gold" onClick={() => setShowPreview(true)} style={{ fontSize: 9, padding: "9px 18px" }}>&#x1F5A8; Print Receipt</button>
-          <button className="btn btn-outline" onClick={handlePrintAndDone} style={{ fontSize: 9, padding: "9px 18px" }}>Print &amp; Done</button>
+        <div className="flex gap-3 justify-center mt-8 flex-wrap">
+          <button className="btn btn-accent text-[10px] py-3 px-5 shadow-lg hover:shadow-xl transition-all rounded-xl tracking-[0.1em]" onClick={() => setShowPreview(true)}>
+            🖨 Print Receipt
+          </button>
+          <button className="btn btn-outline text-[10px] py-3 px-5 rounded-xl tracking-[0.1em]" onClick={handlePrintAndDone}>
+            Print & Done
+          </button>
           {onRepeat && (
-            <button className="btn btn-outline" onClick={onRepeat} style={{ fontSize: 9, padding: "9px 18px" }}>&#x1F501; Repeat Order</button>
+            <button className="btn btn-outline text-[10px] py-3 px-5 rounded-xl tracking-[0.1em]" onClick={onRepeat}>
+              🔁 Repeat Order
+            </button>
           )}
-          <button className="btn btn-outline" onClick={onDone} style={{ fontSize: 9, padding: "9px 18px" }}>New Order</button>
+          <button className="btn btn-outline text-[10px] py-3 px-5 rounded-xl tracking-[0.1em]" onClick={onDone}>
+            New Order
+          </button>
         </div>
       </div>
 

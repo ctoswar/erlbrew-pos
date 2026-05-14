@@ -54,74 +54,41 @@ export const CartPanel: React.FC<Props> = ({
   const canCheckout = !isEmpty && (orderType !== "takeout" || customerName.trim().length > 0);
 
   return (
-    <aside
-      className="glass-panel"
-      style={{
-        width: "100%",
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        borderLeft: "1px solid rgba(201,135,58,0.08)",
-        borderRight: "none",
-        borderTop: "none",
-        borderBottom: "none",
-        borderRadius: 0,
-      }}
-    >
+    <aside className="glass-panel w-full flex flex-col h-full border-l border-erl-accent/[0.06] rounded-none">
       {/* ── Header ── */}
-      <div
-        style={{
-          padding: "1rem 1.2rem 0.9rem",
-          borderBottom: "1px solid rgba(201,135,58,0.08)",
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 12,
-          }}
-        >
-          <span
-            className="font-display"
-            style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}
-          >
-            Current Order
-          </span>
+      <div className="px-6 pt-6 pb-4 border-b border-erl-accent/[0.06] flex-shrink-0">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-erl-accent/10 flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-erl-accent">
+                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+              </svg>
+            </div>
+            <span className="font-display text-lg font-bold text-erl-text-primary tracking-wide">
+              Order
+            </span>
+          </div>
           {!isEmpty && (
-            <button onClick={onClearCart} className="btn-ghost" style={{ color: "var(--danger)", fontSize: 9 }}>
-              Clear
+            <button onClick={onClearCart} className="text-[10px] text-erl-danger font-semibold tracking-wide uppercase hover:opacity-80 transition-opacity px-3 py-1.5 rounded-xl hover:bg-erl-danger/5">
+              Clear All
             </button>
           )}
         </div>
 
-        {/* Split Mode Toggle */}
+        {/* Split Mode */}
         {!isEmpty && onStartSplit && (
-          <div style={{ marginBottom: 8 }}>
+          <div className="mb-4">
             {splitMode ? (
-              <div style={{ display: "flex", gap: 6 }}>
-                <button
-                  onClick={() => onCancelSplit?.()}
-                  style={{
-                    flex: 1, padding: "6px 0", borderRadius: 8, border: "1px solid var(--danger)",
-                    background: "transparent", color: "var(--danger)", fontSize: 8, fontWeight: 700,
-                    cursor: "pointer", letterSpacing: 0.5, textTransform: "uppercase",
-                  }}
-                >
-                  Cancel Split
-                </button>
-              </div>
+              <button
+                onClick={onCancelSplit}
+                className="w-full py-2.5 rounded-xl border border-erl-danger/30 bg-erl-danger/5 text-erl-danger text-[10px] font-bold cursor-pointer tracking-[0.12em] uppercase transition-colors hover:bg-erl-danger/10"
+              >
+                Cancel Split
+              </button>
             ) : (
               <button
                 onClick={onStartSplit}
-                style={{
-                  width: "100%", padding: "6px 0", borderRadius: 8,
-                  border: "1px dashed var(--border-medium)",
-                  background: "transparent", color: "var(--text-muted)", fontSize: 8, fontWeight: 700,
-                  cursor: "pointer", letterSpacing: 0.5, textTransform: "uppercase",
-                }}
+                className="w-full py-2.5 rounded-xl border border-dashed border-erl-border-medium bg-transparent text-erl-text-muted text-[10px] font-bold cursor-pointer tracking-[0.12em] uppercase transition-all hover:border-erl-border-strong hover:text-erl-text-secondary hover:bg-erl-accent/[0.02]"
               >
                 + Split Order
               </button>
@@ -130,44 +97,28 @@ export const CartPanel: React.FC<Props> = ({
         )}
 
         {/* Order Type Tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <div className="flex gap-2 mb-4">
           {(["dine-in", "takeout"] as OrderType[]).map((t) => (
             <button
               key={t}
               onClick={() => onOrderTypeChange(t)}
-              style={{
-                flex: 1,
-                padding: "7px 0",
-                borderRadius: 8,
-                border: `1.5px solid ${orderType === t ? "var(--gold)" : "var(--border-default)"}`,
-                background:
-                  orderType === t ? "rgba(201,135,58,0.12)" : "transparent",
-                color: orderType === t ? "var(--gold)" : "var(--text-secondary)",
-                fontSize: 9,
-                fontWeight: 700,
-                letterSpacing: 1,
-                textTransform: "uppercase",
-                cursor: "pointer",
-                transition: "all 0.15s var(--ease-out)",
-              }}
+              className={`
+                flex-1 py-2.5 rounded-xl text-[10px] font-bold tracking-[0.12em] uppercase cursor-pointer transition-all duration-250 ease-out
+                ${
+                  orderType === t
+                    ? "bg-erl-accent/10 border-2 border-erl-accent/30 text-erl-accent shadow-[0_0_16px_rgba(196,149,106,0.08)]"
+                    : "border-2 border-erl-border-default bg-transparent text-erl-text-secondary hover:border-erl-border-medium hover:text-erl-text-primary hover:bg-erl-accent/[0.02]"
+                }
+              `}
             >
               {t === "dine-in" ? "Dine In" : "Takeout"}
             </button>
           ))}
         </div>
 
-        {/* Customer Name — required for takeout, optional for dine-in */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span
-            style={{
-              fontSize: 9,
-              color: "var(--text-muted)",
-              letterSpacing: 1.5,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              whiteSpace: "nowrap",
-            }}
-          >
+        {/* Customer Name */}
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] text-erl-text-muted tracking-[0.15em] uppercase font-bold whitespace-nowrap">
             {orderType === "takeout" ? "Name *" : "Name"}
           </span>
           <input
@@ -175,67 +126,41 @@ export const CartPanel: React.FC<Props> = ({
             value={customerName}
             onChange={(e) => onCustomerNameChange(e.target.value)}
             placeholder={orderType === "takeout" ? "Customer name (required)" : "Customer name…"}
-            style={{
-              flex: 1,
-              fontSize: 12,
-              padding: "6px 10px",
-              borderRadius: 8,
-              border: `1.5px solid ${orderType === "takeout" && !customerName.trim() ? "var(--danger-border)" : "var(--border-default)"}`,
-              background: "var(--bg-base)",
-              color: "var(--text-primary)",
-              outline: "none",
-            }}
+            className={`
+              flex-1 text-xs py-2.5 px-4 rounded-xl outline-none transition-all duration-200
+              bg-erl-input text-erl-text-primary
+              ${orderType === "takeout" && !customerName.trim()
+                ? "border-2 border-erl-danger"
+                : "border-2 border-erl-border-default focus:border-erl-accent focus:shadow-[0_0_0_3px_rgba(196,149,106,0.1)]"
+              }
+            `}
           />
         </div>
         {orderType === "takeout" && !customerName.trim() && (
-          <div style={{ fontSize: 8.5, color: "var(--danger)", marginTop: 4, letterSpacing: 0.5 }}>
+          <div className="text-[10px] text-erl-danger mt-2 tracking-wide font-semibold">
             Name required for takeout orders
           </div>
         )}
       </div>
 
       {/* ── Items List ── */}
-      <div
-        className="scroll-area"
-        style={{
-          flex: 1,
-          padding: "0.5rem 0",
-          overflowY: "auto",
-          minHeight: 0,
-        }}
-      >
+      <div className="scroll-area flex-1 py-2 overflow-y-auto min-h-0">
         {isEmpty ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "3rem 1rem",
-              gap: 10,
-            }}
-          >
-            <span style={{ fontSize: 36, opacity: 0.5 }}>&#x1F6D2;</span>
-            <span
-              style={{ fontSize: 11, color: "var(--text-disabled)", letterSpacing: 1 }}
-            >
+          <div className="flex flex-col items-center justify-center py-16 px-6 gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-erl-accent/[0.04] border border-erl-accent/[0.08] flex items-center justify-center">
+              <span className="text-3xl opacity-30">🛒</span>
+            </div>
+            <span className="text-sm text-erl-text-disabled tracking-wide font-medium">
               No items yet
             </span>
-            <span
-              style={{
-                fontSize: 10,
-                color: "var(--text-faint)",
-                letterSpacing: 0.5,
-                textAlign: "center",
-              }}
-            >
-              Tap menu items to add them here
+            <span className="text-xs text-erl-text-faint tracking-wide text-center max-w-[220px] leading-relaxed">
+              Tap menu items to add them to this order
             </span>
           </div>
         ) : (
           <>
             {splitMode && (
-              <div style={{ padding: "4px 1rem 8px", fontSize: 8, color: "var(--text-muted)", letterSpacing: 0.5 }}>
+              <div className="px-6 pb-2 pt-1 text-[10px] text-erl-text-muted tracking-wide font-semibold">
                 Select items to move to a separate order
               </div>
             )}
@@ -246,33 +171,26 @@ export const CartPanel: React.FC<Props> = ({
                 <div
                   key={key}
                   onClick={() => onToggleSplitItem?.(key)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "10px 1rem",
-                    borderBottom: "1px solid rgba(201,135,58,0.06)",
-                    cursor: "pointer",
-                    background: isSelected ? "rgba(201,135,58,0.08)" : "transparent",
-                    transition: "background 0.12s",
-                  }}
+                  className={`
+                    flex items-center gap-3 px-6 py-3.5 border-b border-erl-accent/[0.03] cursor-pointer transition-all duration-200
+                    ${isSelected ? "bg-erl-accent/[0.04]" : "bg-transparent hover:bg-erl-accent/[0.02]"}
+                  `}
                 >
-                  <div style={{
-                    width: 18, height: 18, borderRadius: 4, flexShrink: 0,
-                    border: `1.5px solid ${isSelected ? "var(--gold)" : "var(--border-medium)"}`,
-                    background: isSelected ? "var(--gold)" : "transparent",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 10, color: "var(--bg-sidebar)",
-                  }}>
+                  <div className={`
+                    w-5 h-5 rounded-lg flex-shrink-0 flex items-center justify-center text-[11px] font-bold transition-all duration-200
+                    ${isSelected ? "bg-erl-accent text-erl-base" : "bg-transparent border-2 border-erl-border-medium"}
+                  `}>
                     {isSelected ? "✓" : ""}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-erl-text-primary truncate">
                       {ci.qty}× {ci.item.name}
                     </div>
-                    <div style={{ fontSize: 8, color: "var(--text-muted)" }}>
+                    <div className="text-[10px] text-erl-text-muted mt-0.5">
                       {formatCurrency(ci.item.price)} each
                     </div>
                   </div>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: "var(--gold)", fontVariantNumeric: "tabular-nums" }}>
+                  <div className="text-sm font-bold text-erl-accent tabular-nums">
                     {formatCurrency((ci.item.price + (ci.modifiers || []).reduce((s, m) => s + m.price, 0)) * ci.qty)}
                   </div>
                 </div>
@@ -293,58 +211,29 @@ export const CartPanel: React.FC<Props> = ({
       </div>
 
       {/* ── Footer — Totals + Checkout ── */}
-      <div
-        style={{
-          padding: "0.9rem 1.2rem 1rem",
-          borderTop: "1px solid rgba(201,135,58,0.08)",
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ marginBottom: 10 }}>
+      <div className="px-6 pt-5 pb-6 border-t border-erl-accent/[0.06] flex-shrink-0">
+        <div className="mb-4">
           <TotalRow label="Subtotal" value={formatCurrency(subtotal)} />
           {discount && (
             <TotalRow
               label={discount.label}
               value={`−${formatCurrency(discount.amount)}`}
-              valueColor="var(--success)"
+              valueColor="text-erl-success"
               onRemove={onRemoveDiscount}
             />
           )}
-          <div
-            style={{
-              height: 1,
-              background: "linear-gradient(90deg, transparent, var(--border-default), transparent)",
-              margin: "8px 0",
-            }}
-          />
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "baseline",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 10,
-                color: "var(--text-secondary)",
-                letterSpacing: 1.5,
-                fontWeight: 700,
-                textTransform: "uppercase",
-              }}
-            >
+          <div className="h-px bg-gradient-to-r from-transparent via-erl-border-default to-transparent my-3" />
+          <div className="flex justify-between items-baseline">
+            <span className="text-xs text-erl-text-secondary tracking-[0.15em] uppercase font-bold">
               Total
             </span>
-            <span
-              className="font-display"
-              style={{ fontSize: 24, fontWeight: 700, color: "var(--gold)" }}
-            >
+            <span className="font-display text-[28px] font-bold text-erl-accent tracking-tight">
               {formatCurrency(grand)}
             </span>
           </div>
         </div>
 
-        {/* Split Mode: Confirm Move */}
+        {/* Split confirm */}
         {splitMode && onSplitConfirm && (
           <button
             onClick={() => {
@@ -353,14 +242,13 @@ export const CartPanel: React.FC<Props> = ({
               onSplitConfirm(Array.from(splitSelections || []));
             }}
             disabled={!splitSelections?.size}
-            style={{
-              width: "100%", padding: "8px 0", borderRadius: 9, marginBottom: 8,
-              background: splitSelections?.size ? "rgba(201,135,58,0.12)" : "transparent",
-              border: `1px solid ${splitSelections?.size ? "var(--gold)" : "var(--border-subtle)"}`,
-              color: splitSelections?.size ? "var(--gold)" : "var(--text-disabled)",
-              fontSize: 9, fontWeight: 700, cursor: splitSelections?.size ? "pointer" : "default",
-              letterSpacing: 0.5, textTransform: "uppercase",
-            }}
+            className={`
+              w-full py-3 rounded-xl mb-3 text-[10px] font-bold tracking-[0.12em] uppercase transition-all duration-200
+              ${splitSelections?.size
+                ? "bg-erl-accent/8 border-2 border-erl-accent/30 text-erl-accent cursor-pointer hover:bg-erl-accent/12"
+                : "bg-transparent border-2 border-erl-border-subtle text-erl-text-disabled cursor-default"
+              }
+            `}
           >
             Move {splitSelections?.size || 0} Item{splitSelections?.size !== 1 ? 's' : ''} to New Order
           </button>
@@ -369,43 +257,30 @@ export const CartPanel: React.FC<Props> = ({
         {/* Discount button */}
         <button
           onClick={onOpenDiscount}
-          className="btn-ghost"
-          style={{
-            width: "100%",
-            marginBottom: 8,
-            padding: "8px 0",
-            borderRadius: 9,
-            background: discount
-              ? "rgba(122,201,122,0.08)"
-              : "rgba(201,135,58,0.06)",
-            border: `1.5px solid ${
-              discount ? "var(--success)" : "var(--border-default)"
-            }`,
-            color: discount ? "var(--success)" : "var(--text-muted)",
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: 1,
-            textTransform: "uppercase",
-          }}
+          className={`
+            w-full mb-3 py-3 rounded-xl text-[10px] font-bold tracking-[0.12em] uppercase transition-all duration-200
+            ${discount
+              ? "bg-erl-success/5 border-2 border-erl-success/20 text-erl-success hover:bg-erl-success/10"
+              : "bg-erl-accent/[0.03] border-2 border-erl-border-default text-erl-text-muted hover:border-erl-border-medium hover:text-erl-text-secondary"
+            }
+          `}
         >
           {discount ? `✓ ${discount.label}` : "+ Add Discount"}
         </button>
 
         <button
-          className="btn btn-gold"
+          className={`
+            btn w-full text-[11px] py-4 rounded-2xl tracking-[0.15em] font-bold
+            transition-all duration-300 ease-out
+            ${canCheckout
+              ? "bg-erl-accent text-erl-base shadow-[0_4px_20px_rgba(196,149,106,0.3),0_0_0_1px_rgba(196,149,106,0.15)] hover:bg-erl-accent-light hover:shadow-[0_6px_28px_rgba(196,149,106,0.4),0_0_0_1px_rgba(196,149,106,0.25)] hover:-translate-y-0.5 active:translate-y-0"
+              : "bg-erl-border-default text-erl-text-disabled cursor-not-allowed"
+            }
+          `}
           onClick={onCheckout}
           disabled={!canCheckout}
-          style={{
-            width: "100%",
-            fontSize: 10.5,
-            padding: "14px 0",
-            borderRadius: 12,
-            letterSpacing: 1.5,
-            fontWeight: 700,
-            opacity: canCheckout ? 1 : 0.3,
-          }}
         >
-          Proceed to Checkout →
+          {canCheckout ? "Proceed to Checkout →" : "Add Items to Checkout"}
         </button>
       </div>
     </aside>
@@ -448,292 +323,92 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
   const linePrice = (item.price + modPrice) * qty;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 10,
-        padding: "10px 1rem",
-        borderBottom: "1px solid rgba(201,135,58,0.06)",
-        transition: "background 0.15s",
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(201,135,58,0.03)")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-    >
+    <div className="flex gap-3 px-6 py-3.5 border-b border-erl-accent/[0.03] transition-all duration-200 ease-out hover:bg-erl-accent/[0.015] group">
       {/* Left: item info */}
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
         {/* Name row */}
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <span style={{ fontSize: 16, flexShrink: 0 }}>{item.emoji}</span>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--text-primary)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
+        <div className="flex items-baseline gap-2.5">
+          <span className="text-lg flex-shrink-0">{item.emoji}</span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] font-semibold text-erl-text-primary truncate">
               {item.name}
             </div>
-            <div style={{ fontSize: 9.5, color: "var(--text-muted)" }}>
+            <div className="text-[10px] text-erl-text-muted mt-0.5">
               {formatCurrency(item.price)} each
             </div>
           </div>
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: "var(--gold)",
-              whiteSpace: "nowrap",
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
+          <div className="text-[14px] font-bold text-erl-accent whitespace-nowrap tabular-nums">
             {formatCurrency(linePrice)}
           </div>
         </div>
 
         {/* Modifiers */}
         {modifiers && modifiers.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 3, paddingLeft: 24 }}>
+          <div className="flex flex-wrap gap-1.5 pl-7 mt-0.5">
             {modifiers.map((m, i) => (
               <span
                 key={i}
-                style={{
-                  fontSize: 8.5,
-                  fontWeight: 500,
-                  color: "var(--gold-dim)",
-                  background: "rgba(201,135,58,0.07)",
-                  border: "1px solid rgba(201,135,58,0.15)",
-                  borderRadius: 4,
-                  padding: "1px 6px",
-                }}
+                className="text-[9px] font-medium text-erl-accent-dim bg-erl-accent/[0.05] border border-erl-accent/10 rounded-lg px-2 py-0.5"
               >
-                {m.name}
-                {m.price > 0 ? ` +${formatCurrency(m.price)}` : ""}
+                {m.name}{m.price > 0 ? ` +${formatCurrency(m.price)}` : ""}
               </span>
             ))}
           </div>
         )}
 
-        {/* Note section */}
+        {/* Note */}
         {showNote ? (
-          <div style={{ display: "flex", gap: 5, alignItems: "center", paddingLeft: 24 }}>
+          <div className="flex gap-2 items-center pl-7 mt-1">
             <input
               ref={noteRef}
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") saveNote();
-                if (e.key === "Escape") {
-                  setShowNote(false);
-                  setNoteText(notes || "");
-                }
+                if (e.key === "Escape") { setShowNote(false); setNoteText(notes || ""); }
               }}
               placeholder="Add a note…"
-              style={{
-                flex: 1,
-                fontSize: 10,
-                padding: "5px 9px",
-                borderRadius: 7,
-                border: "1px solid var(--border-medium)",
-                background: "var(--bg-base)",
-                color: "var(--text-primary)",
-                outline: "none",
-                transition: "border-color 0.15s",
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = "var(--gold)")}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border-medium)")}
+              className="flex-1 text-[11px] py-1.5 px-3 rounded-lg bg-erl-base border border-erl-border-medium text-erl-text-primary outline-none focus:border-erl-accent transition-colors"
             />
-            <button
-              onClick={saveNote}
-              style={{
-                background: "var(--gold)",
-                color: "var(--bg-sidebar)",
-                border: "none",
-                borderRadius: 6,
-                padding: "5px 10px",
-                fontSize: 9,
-                fontWeight: 600,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                letterSpacing: 0.5,
-                transition: "opacity 0.12s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-            >
+            <button onClick={saveNote} className="bg-erl-accent text-erl-base border-none rounded-lg px-3 py-1.5 text-[10px] font-semibold cursor-pointer hover:opacity-90 transition-opacity">
               Save
             </button>
-            <button
-              onClick={() => {
-                setShowNote(false);
-                setNoteText(notes || "");
-              }}
-              style={{
-                background: "none",
-                border: "none",
-                color: "var(--text-muted)",
-                fontSize: 13,
-                cursor: "pointer",
-                padding: "4px 5px",
-                lineHeight: 1,
-                borderRadius: 4,
-                transition: "color 0.12s, background 0.12s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "var(--text-primary)";
-                e.currentTarget.style.background = "rgba(201,135,58,0.08)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "var(--text-muted)";
-                e.currentTarget.style.background = "transparent";
-              }}
-            >
-              &#x2715;
+            <button onClick={() => { setShowNote(false); setNoteText(notes || ""); }} className="bg-none border-none text-erl-text-muted text-sm cursor-pointer px-1 rounded-lg hover:text-erl-text-primary hover:bg-erl-accent/[0.06] transition-colors">
+              ✕
             </button>
           </div>
         ) : notes ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              paddingLeft: 24,
-              cursor: "pointer",
-            }}
-            onClick={() => setShowNote(true)}
-          >
-            <span
-              style={{
-                fontSize: 9.5,
-                color: "var(--gold-dim)",
-                fontStyle: "italic",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              📝 {notes}
-            </span>
-            <span
-              style={{
-                fontSize: 8,
-                color: "var(--text-faint)",
-                textDecoration: "underline",
-                textUnderlineOffset: 2,
-                whiteSpace: "nowrap",
-              }}
-            >
-              edit
-            </span>
+          <div className="flex items-center gap-1.5 pl-7 mt-0.5 cursor-pointer" onClick={() => setShowNote(true)}>
+            <span className="text-[10px] text-erl-accent-dim italic truncate">📝 {notes}</span>
+            <span className="text-[9px] text-erl-text-faint underline underline-offset-2 whitespace-nowrap">edit</span>
           </div>
         ) : (
-          <button
-            onClick={() => setShowNote(true)}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--text-faint)",
-              fontSize: 8.5,
-              cursor: "pointer",
-              padding: "0 0 0 24px",
-              textAlign: "left",
-              transition: "color 0.12s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--gold-dim)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-faint)")}
-          >
+          <button onClick={() => setShowNote(true)} className="text-[9px] text-erl-text-faint pl-7 mt-0.5 text-left hover:text-erl-accent-dim transition-colors">
             + note
           </button>
         )}
       </div>
 
-      {/* Right: vertical qty stepper */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 2,
-          justifyContent: "center",
-        }}
-      >
+      {/* Right: qty stepper */}
+      <div className="flex flex-col items-center gap-1.5 justify-center">
         <button
           onClick={() => onUpdateQty(1)}
-          style={{
-            width: 26,
-            height: 26,
-            borderRadius: 7,
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--border-default)",
-            color: "var(--gold)",
-            fontSize: 14,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            transition: "all 0.12s var(--ease-out)",
-            lineHeight: 1,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--gold)";
-            e.currentTarget.style.color = "var(--bg-sidebar)";
-            e.currentTarget.style.borderColor = "var(--gold)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "var(--bg-elevated)";
-            e.currentTarget.style.color = "var(--gold)";
-            e.currentTarget.style.borderColor = "var(--border-default)";
-          }}
+          className="w-8 h-8 rounded-xl bg-erl-elevated border border-erl-border-default text-erl-accent text-sm flex items-center justify-center cursor-pointer transition-all duration-150 hover:bg-erl-accent hover:text-erl-base hover:border-erl-accent hover:shadow-md active:scale-95"
         >
           +
         </button>
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: "var(--text-primary)",
-            minWidth: 18,
-            textAlign: "center",
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
+        <span className="text-sm font-bold text-erl-text-primary min-w-5 text-center tabular-nums">
           {qty}
         </span>
         <button
           onClick={() => onUpdateQty(-1)}
-          style={{
-            width: 26,
-            height: 26,
-            borderRadius: 7,
-            background: qty <= 1 ? "var(--bg-base)" : "var(--bg-elevated)",
-            border: `1px solid ${qty <= 1 ? "var(--border-subtle)" : "var(--border-default)"}`,
-            color: qty <= 1 ? "var(--text-faint)" : "var(--text-secondary)",
-            fontSize: 14,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: qty <= 1 ? "default" : "pointer",
-            transition: "all 0.12s var(--ease-out)",
-            lineHeight: 1,
-            opacity: qty <= 1 ? 0.4 : 1,
-          }}
-          onMouseEnter={(e) => {
-            if (qty > 1) {
-              e.currentTarget.style.background = "var(--danger)";
-              e.currentTarget.style.color = "#fff";
-              e.currentTarget.style.borderColor = "var(--danger)";
+          className={`
+            w-8 h-8 rounded-xl text-sm flex items-center justify-center transition-all duration-150 active:scale-95
+            ${qty <= 1
+              ? "bg-erl-base border border-erl-border-subtle text-erl-text-faint opacity-40"
+              : "bg-erl-elevated border border-erl-border-default text-erl-text-secondary cursor-pointer hover:bg-erl-danger hover:text-white hover:border-erl-danger"
             }
-          }}
-          onMouseLeave={(e) => {
-            if (qty > 1) {
-              e.currentTarget.style.background = "var(--bg-elevated)";
-              e.currentTarget.style.color = "var(--text-secondary)";
-              e.currentTarget.style.borderColor = "var(--border-default)";
-            }
-          }}
+          `}
         >
           −
         </button>
@@ -750,35 +425,12 @@ const TotalRow: React.FC<{
   valueColor?: string;
   onRemove?: () => void;
 }> = ({ label, value, valueColor, onRemove }) => (
-  <div
-    style={{
-      display: "flex",
-      justifyContent: "space-between",
-      fontSize: 11,
-      color: "var(--gold-dim)",
-      marginBottom: 5,
-      letterSpacing: 0.5,
-      alignItems: "center",
-    }}
-  >
-    <span>{label}</span>
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <span style={{ color: valueColor || "inherit" }}>{value}</span>
+  <div className="flex justify-between text-xs text-erl-accent-dim mb-1.5 tracking-wide items-center">
+    <span className="font-semibold">{label}</span>
+    <div className="flex items-center gap-2">
+      <span className={valueColor || ""}>{value}</span>
       {onRemove && (
-        <button
-          onClick={onRemove}
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--danger)",
-            fontSize: 10,
-            cursor: "pointer",
-            padding: "0 2px",
-            lineHeight: 1,
-          }}
-        >
-          &#x2715;
-        </button>
+        <button onClick={onRemove} className="text-erl-danger text-xs px-0.5 hover:opacity-70 transition-opacity">✕</button>
       )}
     </div>
   </div>

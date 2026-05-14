@@ -88,110 +88,86 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
   }));
 
   return (
-<div style={{
-        position: "fixed", inset: 0, zIndex: 1000,
-        background: "rgba(0,0,0,0.75)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        backdropFilter: "blur(4px)",
-      }}>
-        <div className="card-glass animate-scaleIn" style={{
-          width: "100%", maxWidth: 540,
-          maxHeight: "92vh",
-          display: "flex", flexDirection: "column",
-        }}>
-          {/* Header */}
-          <div className="glass-panel" style={{
-            padding: "16px 20px", borderRadius: 0,
-            display: "flex", justifyContent: "space-between", alignItems: "center",
-            flexShrink: 0,
-          }}>
-            <div>
-              <div className="font-display" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
-                Ingredients: {menuItem.name}
-              </div>
-              <div style={{ fontSize: 10, color: "var(--gold)", marginTop: 2, fontWeight: 600 }}>
-                {menuItem.emoji} {menuItem.category} · ₱{menuItem.price}
-              </div>
+    <div className="fixed inset-0 z-[1000] bg-black/75 flex items-center justify-center backdrop-blur-sm">
+      <div className="card-glass animate-scale-in w-full max-w-[540px] max-h-[92vh] flex flex-col">
+        {/* Header */}
+        <div className="glass-panel px-5 py-4 rounded-none flex justify-between items-center flex-shrink-0">
+          <div>
+            <div className="font-display text-sm font-bold text-erl-text-primary">
+              Ingredients: {menuItem.name}
             </div>
-            <button onClick={onClose} className="btn-ghost" style={{ fontSize: 18, padding: "2px 8px", color: "var(--text-muted)" }}>✕</button>
+            <div className="text-[10px] text-erl-accent mt-0.5 font-semibold">
+              {menuItem.emoji} {menuItem.category} · ₱{menuItem.price}
+            </div>
           </div>
+          <button onClick={onClose} className="btn-ghost text-lg px-2 py-0.5 text-erl-muted">✕</button>
+        </div>
 
-          {/* Body */}
-          <div className="scroll-area" style={{ flex: 1, padding: "12px 20px" }}>
-            {loading ? (
-              <div style={{ textAlign: "center", padding: "2rem" }}>
-                <div className="animate-shimmer" style={{ width: 140, height: 14, borderRadius: 4, margin: "0 auto 8px" }} />
-                <div className="animate-shimmer" style={{ width: 100, height: 10, borderRadius: 4, margin: "0 auto" }} />
+        {/* Body */}
+        <div className="scroll-area flex-1 px-5 py-3">
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-shimmer w-[140px] h-3.5 rounded mx-auto mb-2" />
+              <div className="animate-shimmer w-24 h-2.5 rounded mx-auto" />
+            </div>
+          ) : (
+            <>
+              <div className="text-[9px] text-erl-accent-muted tracking-widest uppercase font-bold mb-3">
+                Check items used per serving
               </div>
-            ) : (
-              <>
-                <div style={{ fontSize: 9, color: "var(--gold-muted)", letterSpacing: 1.5, marginBottom: 12, textTransform: "uppercase", fontWeight: 700 }}>
-                  Check items used per serving
-                </div>
 
-                {grouped.map(({ cat, items }) => (
-                  <div key={cat} style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 9, color: "var(--text-faint)", letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" }}>{cat}</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                      {items.map((inv) => {
-                        const isChecked = !!selected[inv.id];
-                        const qty = selected[inv.id] || "";
-                        const isLow = inv.stock <= 3;
+              {grouped.map(({ cat, items }) => (
+                <div key={cat} className="mb-4">
+                  <div className="text-[9px] text-erl-text-faint tracking-wide uppercase mb-1.5">{cat}</div>
+                  <div className="flex flex-col gap-[5px]">
+                    {items.map((inv) => {
+                      const isChecked = !!selected[inv.id];
+                      const qty = selected[inv.id] || "";
+                      const isLow = inv.stock <= 3;
 
-                        return (
-                          <div key={inv.id} style={{
-                            display: "flex", alignItems: "center", gap: 10,
-                            background: isChecked ? "rgba(201,135,58,0.08)" : "transparent",
-                            border: `1px solid ${isChecked ? "rgba(201,135,58,0.3)" : "var(--border-subtle)"}`,
-                            borderRadius: 9, padding: "8px 12px",
-                          }}>
-                            <input type="checkbox" checked={isChecked}
-                              onChange={() => handleToggle(inv.id)}
-                              style={{ width: 16, height: 16, accentColor: "var(--gold)", flexShrink: 0 }} />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)" }}>{inv.name}</div>
-                              <div className="pill" style={{
-                                fontSize: 8, color: isLow ? "var(--danger)" : "var(--text-faint)",
-                                background: "transparent", padding: 0, letterSpacing: 0.5,
-                              }}>
-                                Stock: {inv.stock} {inv.unit}
-                                {isLow && " ⚠ LOW"}
-                              </div>
+                      return (
+                        <div key={inv.id} className={`
+                          flex items-center gap-2.5 px-3 py-2 rounded-lg
+                          ${isChecked ? "bg-erl-accent/8 border border-erl-accent/30" : "bg-transparent border border-erl-border-subtle"}
+                        `}>
+                          <input type="checkbox" checked={isChecked}
+                            onChange={() => handleToggle(inv.id)}
+                            className="w-4 h-4 accent-erl-accent flex-shrink-0" />
+                          <div className="flex-1">
+                            <div className="text-[11px] font-bold text-erl-text-primary">{inv.name}</div>
+                            <div className={`pill text-[8px] bg-transparent p-0 tracking-wide ${isLow ? "text-erl-danger" : "text-erl-text-faint"}`}>
+                              Stock: {inv.stock} {inv.unit}
+                              {isLow && " ⚠ LOW"}
                             </div>
-                            {isChecked && (
-                              <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                                <span style={{ fontSize: 9, color: "var(--text-faint)" }}>per serving:</span>
-                                <input type="number" value={qty}
-                                  onChange={(e) => handleQtyChange(inv.id, e.target.value)}
-                                  min="0.01" step="0.1"
-                                  style={{
-                                    width: 60, padding: "4px 6px", borderRadius: 6,
-                                    fontSize: 11, textAlign: "center",
-                                  }} />
-                                <span style={{ fontSize: 9, color: "var(--text-faint)" }}>{inv.unit}</span>
-                              </div>
-                            )}
                           </div>
-                        );
-                      })}
-                    </div>
+                          {isChecked && (
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <span className="text-[9px] text-erl-text-faint">per serving:</span>
+                              <input type="number" value={qty}
+                                onChange={(e) => handleQtyChange(inv.id, e.target.value)}
+                                min="0.01" step="0.1"
+                                className="w-[60px] px-1.5 py-1 rounded-md text-[11px] text-center" />
+                              <span className="text-[9px] text-erl-text-faint">{inv.unit}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </>
-            )}
-          </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
 
-          {/* Footer */}
-          <div className="glass-panel" style={{
-            padding: "14px 20px", borderRadius: 0,
-            display: "flex", gap: 10, justifyContent: "flex-end", flexShrink: 0,
-          }}>
-            <button onClick={onClose} className="btn btn-outline" style={{ fontSize: 10, padding: "8px 18px" }}>Cancel</button>
-            <button onClick={handleSave} disabled={saving} className="btn btn-gold" style={{ fontSize: 10, padding: "8px 18px" }}>
-              {saving ? "Saving..." : "Save Ingredients"}
-            </button>
-          </div>
+        {/* Footer */}
+        <div className="glass-panel px-5 py-3.5 rounded-none flex gap-2.5 justify-end flex-shrink-0">
+          <button onClick={onClose} className="btn btn-outline text-[10px] px-4.5 py-2">Cancel</button>
+          <button onClick={handleSave} disabled={saving} className="btn btn-accent text-[10px] px-4.5 py-2">
+            {saving ? "Saving..." : "Save Ingredients"}
+          </button>
         </div>
       </div>
+    </div>
   );
 };

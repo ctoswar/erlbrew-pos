@@ -22,5 +22,10 @@
     "node-cron": "^4.2.1",
     "undici": "^6.21.0",
     "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.14",
+    "tailwindcss": "^4.3.0"
   }
 }

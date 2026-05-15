@@ -40,21 +40,19 @@ if (!rawCors) {
   console.warn('WARNING: CORS_ORIGINS not set — defaulting to same-origin only. Set CORS_ORIGINS=https://yourdomain.com in production!');
 }
 const corsOrigins = rawCors ? rawCors.split(',').map(s => s.trim()) : [];
-app.use(cors({
-  origin(origin, callback) {
-    // Allow no-origin requests (curl, Postman, mobile apps)
-    if (!origin) return callback(null, true);
-    // If CORS_ORIGINS is explicitly configured, always enforce it (regardless of NODE_ENV)
-    if (corsOrigins.length > 0) {
-      if (corsOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error('CORS not allowed'));
-    }
-    // Only allow dev wildcard when CORS_ORIGINS is NOT set AND not in production
-    if (process.env.NODE_ENV !== 'production') return callback(null, true);
-    // Production with no CORS_ORIGINS set — deny by default
-    callback(new Error('CORS not allowed — set CORS_ORIGINS in production'));
-  },
-  credentials: true,
+app.use(cors((req, callback) => {
+  const origin = req.header('Origin');
+  // Allow no-origin requests (curl, Postman, mobile apps)
+  if (!origin) return callback(null, { origin: true, credentials: true });
+  // If CORS_ORIGINS is explicitly configured, enforce it
+  if (corsOrigins.length > 0) {
+    if (corsOrigins.includes(origin)) return callback(null, { origin: true, credentials: true });
+    return callback(new Error('CORS not allowed'));
+  }
+  // Only allow dev wildcard when CORS_ORIGINS is NOT set AND not in production
+  if (process.env.NODE_ENV !== 'production') return callback(null, { origin: true, credentials: true });
+  // Production with no CORS_ORIGINS set — deny by default
+  callback(new Error('CORS not allowed — set CORS_ORIGINS in production'));
 }));
 
 // 6: Rate limiting for login and general API

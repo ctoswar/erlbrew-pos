@@ -144,10 +144,36 @@ router.put('/:id', authMiddleware, async (req, res) => {
       } catch (_) { costFieldsExist = false; }
 
       if (costFieldsExist) {
-        await pool.query('UPDATE inventory SET purchase_cost = 0, unit_cost = 0');
+        if (purchase_cost !== undefined) { fields.push('purchase_cost = ?'); values.push(Number(purchase_cost)); }
+        if (unit_cost !== undefined) { fields.push('unit_cost = ?'); values.push(Number(unit_cost)); }
       }
-      await logAudit(pool, req, { action: 'inventory_reset_costs', entityType: 'inventory', entityId: 'all' });
-      res.json({ ok: true, message: 'All inventory costs reset to 0' });
+
+      if (fields.length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+      }
+
+      values.push(id);
+      await pool.query(`UPDATE inventory SET ${fields.join(', ')} WHERE id = ?`, values);
+
+      // Log stock movement if stock changed
+      if (stock !== undefined) {
+        const newStock = Number(stock);
+        const movementType = newStock > oldStock ? 'restock' : newStock < oldStock ? 'adjustment' : null;
+        if (movementType) {
+          await logInventoryMovement(pool, {
+            inventory_item_id: id,
+            movement_type: movementType,
+            quantity: Math.abs(newStock - oldStock),
+            stock_before: oldStock,
+            stock_after: newStock,
+            notes: 'Manual stock update via admin',
+          });
+        }
+      }
+
+      await logAudit(pool, req, { action: 'inventory_update', entityType: 'inventory', entityId: id });
+      const [updated] = await pool.query('SELECT * FROM inventory WHERE id = ?', [id]);
+      res.json(updated[0]);
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });

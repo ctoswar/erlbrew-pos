@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 
-// ── PH Payroll Constants (2026 Rates) ────────────────────────────────────
+// ── PH Payroll Constants (2025–2026 Rates) ──────────────────────────────────
 const SSS_RATES = {
-  EMPLOYEE: 0.05,   // 5% of MSC
-  EMPLOYER: 0.0975, // 9.75% of MSC (total 14.75%)
+  EMPLOYEE: 0.045,  // 4.5% of MSC (5% increase deferred)
+  EMPLOYER: 0.095,  // 9.5% of MSC (total 14%)
 };
 
 // SSS Monthly Salary Credit brackets (simplified — bracket lookup)
@@ -84,16 +84,17 @@ const OT_RATES = {
 };
 
 // Simplified BIR withholding tax (semi-monthly, PH 2026)
-// Based on taxable income per cutoff
-function computeWithholdingTax(taxableIncomePerCutoff) {
-  const i = Number(taxableIncomePerCutoff) || 0;
-  if (i <= 20833) return 0;
-  if (i <= 33332) return (i - 20833) * 0.15;
-  if (i <= 66666) return 1875 + (i - 33333) * 0.20;
-  if (i <= 166666) return 8541.80 + (i - 66667) * 0.25;
-  if (i <= 333332) return 33541.80 + (i - 166667) * 0.30;
-  if (i <= 833332) return 83541.80 + (i - 333333) * 0.32;
-  return 239541.80 + (i - 833333) * 0.35;
+// Brackets are semi-monthly (monthly thresholds ÷ 2)
+function computeWithholdingTax(semiMonthlyTaxableIncome) {
+  const i = Number(semiMonthlyTaxableIncome) || 0;
+  // Semi-monthly brackets derived from TRAIN law (RA 10963)
+  if (i <= 10417) return 0;                                        // ≤ ₱250,000/yr
+  if (i <= 16666) return (i - 10417) * 0.15;                       // ₱250k–₱400k
+  if (i <= 33333) return 937.45 + (i - 16667) * 0.20;             // ₱400k–₱800k
+  if (i <= 83333) return 4270.95 + (i - 33333) * 0.25;            // ₱800k–₱2M
+  if (i <= 166667) return 16770.70 + (i - 83333) * 0.30;          // ₱2M–₱4M
+  if (i <= 416667) return 41770.70 + (i - 166667) * 0.32;          // ₱4M–₱10M
+  return 121770.70 + (i - 416667) * 0.35;                          // > ₱10M
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -300,10 +301,12 @@ export default function payrollRouter(pool) {
         const philhealthEmployee = Number((philHealthBase * 0.025 / 2).toFixed(2));
         const philhealthEmployer = Number((philHealthBase * 0.025 / 2).toFixed(2));
 
-        // Pag-IBIG (2% employee, 2% employer, capped at ₱10K MFS) — semi-monthly
-        const pagIbigBase = Math.min(monthlySalaryForStatutory, 10000);
-        const pagibigEmployee = Number((pagIbigBase * 0.02 / 2).toFixed(2));
-        const pagibigEmployer = Number((pagIbigBase * 0.02 / 2).toFixed(2));
+// Pag-IBIG (1% employee up to MSC ₱5,000, 2% employer up to MSC ₱5,000) — semi-monthly
+  // Employee rate: 1% for salary ≤ ₱5,000; 2% for salary > ₱5,000
+  const pagIbigBase = Math.min(monthlySalaryForStatutory, 5000);
+  const pagibigEmployeeRate = monthlySalaryForStatutory <= 5000 ? 0.01 : 0.02;
+  const pagibigEmployee = Number((pagIbigBase * pagibigEmployeeRate / 2).toFixed(2));
+  const pagibigEmployer = Number((pagIbigBase * 0.02 / 2).toFixed(2));
 
         // Semi-monthly taxable income for withholding tax
         const semiMonthlyTaxable = grossPay - sssEmployee - philhealthEmployee - pagibigEmployee;

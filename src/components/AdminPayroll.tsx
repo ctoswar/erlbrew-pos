@@ -153,7 +153,8 @@ export const AdminPayroll: React.FC = () => {
     } finally {
       setLoadingPeriods(false);
     }
-  }, [selectedPeriodId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadEntries = useCallback(async (periodId: number) => {
     setLoadingEntries(true);
@@ -204,9 +205,9 @@ export const AdminPayroll: React.FC = () => {
   );
 
   const summary = useMemo(() => {
-    const totalGross = entries.reduce((s, e) => s + (e.gross_pay || 0), 0);
-    const totalDeductions = entries.reduce((s, e) => s + (e.total_deductions || 0), 0);
-    const totalNet = entries.reduce((s, e) => s + (e.net_pay || 0), 0);
+    const totalGross = entries.reduce((s, e) => s + Number(e.gross_pay || 0), 0);
+    const totalDeductions = entries.reduce((s, e) => s + Number(e.total_deductions || 0), 0);
+    const totalNet = entries.reduce((s, e) => s + Number(e.net_pay || 0), 0);
     return {
       totalGross,
       totalDeductions,

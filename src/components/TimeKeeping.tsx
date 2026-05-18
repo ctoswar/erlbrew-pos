@@ -274,7 +274,7 @@ export const TimeKeeping: React.FC = () => {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-lg font-bold tabular-nums leading-tight text-erl-accent">
-                    {selectedDate ? dayRecords.reduce((acc, r) => acc + (r.total_hours || 0), 0).toFixed(1) : "—"}
+                    {selectedDate ? dayRecords.reduce((acc, r) => acc + Number(r.total_hours || 0), 0).toFixed(1) : "—"}
                   </span>
                   <span className="text-[10px] text-erl-text-faint tracking-wider uppercase font-semibold">
                     {selectedDate ? "Day Hours" : "Select a date"}
@@ -473,7 +473,7 @@ export const TimeKeeping: React.FC = () => {
                         <span className="text-[11px] font-bold tracking-[0.15em] text-erl-text-secondary uppercase">Day Total</span>
                       </div>
                       <span className="font-display text-base font-bold text-erl-accent tabular-nums">
-                        {dayRecords.reduce((acc, r) => acc + (r.total_hours || 0), 0).toFixed(1)}h
+                        {dayRecords.reduce((acc, r) => acc + Number(r.total_hours || 0), 0).toFixed(1)}h
                       </span>
                     </div>
                   </div>

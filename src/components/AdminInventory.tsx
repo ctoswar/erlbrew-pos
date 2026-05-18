@@ -81,8 +81,12 @@ export const AdminInventory: React.FC = () => {
   // Computed stats
   const stats = useMemo(() => {
     const total = items.length;
-    const lowStock = items.filter(i => i.stock > 0 && i.stock <= (i.low_stock_threshold || 10)).length;
-    const outOfStock = items.filter(i => i.stock <= 0).length;
+    const lowStock = items.filter(i => {
+      const s = Number(i.stock);
+      const t = Number(i.low_stock_threshold) || 10;
+      return s > 0 && s <= t;
+    }).length;
+    const outOfStock = items.filter(i => Number(i.stock) <= 0).length;
     return { total, lowStock, outOfStock };
   }, [items]);
 
@@ -97,8 +101,10 @@ export const AdminInventory: React.FC = () => {
   }, [items, activeCategory, searchQuery]);
 
   const getStockStatus = (item: InventoryItem) => {
-    if (item.stock <= 0) return "out";
-    if (item.stock <= (item.low_stock_threshold || 10)) return "low";
+    const stock = Number(item.stock);
+    const threshold = Number(item.low_stock_threshold) || 10;
+    if (stock <= 0) return "out";
+    if (stock <= threshold) return "low";
     return "ok";
   };
 
@@ -746,8 +752,10 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
   stockStatus, stockStatusColor,
 }) => {
   // Progress bar: how full is stock relative to 2x threshold (capped)
-  const maxStock = Math.max(item.low_stock_threshold * 2, 1);
-  const fillPct = Math.min(100, Math.max(0, (item.stock / maxStock) * 100));
+  const stock = Number(item.stock);
+  const threshold = Number(item.low_stock_threshold) || 10;
+  const maxStock = Math.max(threshold * 2, 1);
+  const fillPct = Math.min(100, Math.max(0, (stock / maxStock) * 100));
 
   return (
     <div className={`

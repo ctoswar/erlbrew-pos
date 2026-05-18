@@ -457,21 +457,266 @@ export function googleSheetsClientInit(pool) {
                   cell: { userEnteredFormat: { numberFormat: { type: 'NUMBER', pattern: '₱#,##0' } } },
                   fields: 'userEnteredFormat(numberFormat)',
                 },
+},
+            // Freeze top row
+            {
+              updateSheetProperties: {
+                properties: { title: tabName, gridProperties: { frozenRowCount: 1 } },
+                fields: 'gridProperties.frozenRowCount',
               },
-              // Freeze top row
-              {
-                updateSheetProperties: {
-                  properties: { title: tabName, gridProperties: { frozenRowCount: 1 } },
-                  fields: 'gridProperties.frozenRowCount',
-                },
-              },
-            ],
-          },
-        });
-      } catch (e) {
-        console.error('Sheet3 formatting/chart error (non-fatal):', e.message);
+            },
+          ],
+        },
+      });
+    } catch (e) {
+      console.error('Sheet3 formatting/chart error (non-fatal):', e.message);
+    }
+    return { jwtClient, sheets };
+    },
+
+    // ── Sheet4: Payroll — append payroll entries when computed ──────────────
+    async appendPayrollEntries({ period, entries }) {
+      const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+      if (!spreadsheetId) return;
+
+      // Ensure Sheet4 exists
+      const res0 = await sheets.spreadsheets.get({ spreadsheetId });
+      const sheetsList = res0.data.sheets || [];
+      let tabName = 'Sheet4';
+      const sheet4 = sheetsList.find(s => s.properties.title === 'Sheet4');
+      if (!sheet4) {
+        try {
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            resource: { requests: [{ addSheet: { properties: { title: 'Sheet4', index: 3 } } }] },
+          });
+        } catch (e) { console.error('Could not create Sheet4 (non-fatal):', e.message); }
       }
-      return { jwtClient, sheets };
+
+      const rows = [];
+      const periodLabel = period.label || `${period.date_from} to ${period.date_to}`;
+
+      rows.push([
+        '── PAYROLL ──', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
+      ]);
+      rows.push([
+        'Period:', periodLabel, '', 'Status:', period.status, '', 'Computed:', new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }), '', '', '', '', '', '', '', '', ''
+      ]);
+      rows.push(['']);
+      rows.push([
+        'Staff', 'Role', 'Pay Basis', 'Total Hrs', 'Regular Hrs', 'OT Hrs',
+        'Basic Pay', 'OT Pay', 'Gross Pay',
+        'SSS (EE)', 'PhilHealth (EE)', 'Pag-IBIG (EE)', 'WHT', 'Total Deductions', 'Net Pay',
+        'SSS (ER)', 'PhilHealth (ER)', 'Pag-IBIG (ER)'
+      ]);
+
+      for (const e of entries) {
+        rows.push([
+          e.name || `Staff #${e.staff_id}`,
+          e.role || '',
+          e.pay_basis || 'daily',
+          Number(e.total_hours || 0).toFixed(2),
+          Number(e.regular_hours || 0).toFixed(2),
+          Number(e.overtime_hours || 0).toFixed(2),
+          fmt(e.basic_pay),
+          fmt(e.overtime_pay),
+          fmt(e.gross_pay),
+          fmt(e.sss_employee),
+          fmt(e.philhealth_employee),
+          fmt(e.pagibig_employee),
+          fmt(e.withholding_tax),
+          fmt(e.total_deductions),
+          fmt(e.net_pay),
+          fmt(e.sss_employer),
+          fmt(e.philhealth_employer),
+          fmt(e.pagibig_employer),
+        ]);
+      }
+
+      // Totals row
+      const totalsRow = [
+        'TOTALS', '', '', 
+        Number(entries.reduce((s, e) => s + Number(e.total_hours || 0), 0)).toFixed(2),
+        Number(entries.reduce((s, e) => s + Number(e.regular_hours || 0), 0)).toFixed(2),
+        Number(entries.reduce((s, e) => s + Number(e.overtime_hours || 0), 0)).toFixed(2),
+        fmt(entries.reduce((s, e) => s + Number(e.basic_pay || 0), 0)),
+        fmt(entries.reduce((s, e) => s + Number(e.overtime_pay || 0), 0)),
+        fmt(entries.reduce((s, e) => s + Number(e.gross_pay || 0), 0)),
+        fmt(entries.reduce((s, e) => s + Number(e.sss_employee || 0), 0)),
+        fmt(entries.reduce((s, e) => s + Number(e.philhealth_employee || 0), 0)),
+        fmt(entries.reduce((s, e) => s + Number(e.pagibig_employee || 0), 0)),
+        fmt(entries.reduce((s, e) => s + Number(e.withholding_tax || 0), 0)),
+        fmt(entries.reduce((s, e) => s + Number(e.total_deductions || 0), 0)),
+        fmt(entries.reduce((s, e) => s + Number(e.net_pay || 0), 0)),
+        fmt(entries.reduce((s, e) => s + Number(e.sss_employer || 0), 0)),
+        fmt(entries.reduce((s, e) => s + Number(e.philhealth_employer || 0), 0)),
+        fmt(entries.reduce((s, e) => s + Number(e.pagibig_employer || 0), 0)),
+      ];
+      rows.push(totalsRow);
+
+      // Clear and rewrite Sheet4
+      await sheets.spreadsheets.values.clear({ spreadsheetId, range: `${tabName}!A:R` });
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${tabName}!A1`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: rows },
+      });
+    },
+
+    // ── Append a single row to Sheet4 when payroll is approved/paid ────────
+    async appendPayrollStatusChange({ period, status, staffName }) {
+      const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+      if (!spreadsheetId) return;
+
+      try {
+        const res0 = await sheets.spreadsheets.get({ spreadsheetId });
+        const sheetsList = res0.data.sheets || [];
+        const sheet4 = sheetsList.find(s => s.properties.title === 'Sheet4');
+        if (!sheet4) return; // Sheet4 not created yet, skip
+
+        const tabName = 'Sheet4';
+        const ts = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
+        const values = [ts, 'PAYROLL_STATUS', `Period ${period.label || period.date_from}: ${status}`, `By: ${staffName || 'System'}`];
+
+        await sheets.spreadsheets.values.append({
+          spreadsheetId,
+          range: `${tabName}!A1`,
+          valueInputOption: 'USER_ENTERED',
+          resource: { values: [values] },
+        });
+      } catch (e) { console.error('[Sheets] Payroll status append failed (non-fatal):', e.message); }
+    },
+
+    // ── Sheet5: Voids & Refunds ─────────────────────────────────────────────
+    async appendVoidRefund({ type, orderId, reason, staffName, total, items }) {
+      const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+      if (!spreadsheetId) return;
+
+      try {
+        const res0 = await sheets.spreadsheets.get({ spreadsheetId });
+        const sheetsList = res0.data.sheets || [];
+        let tabName = 'Sheet5';
+        const sheet5 = sheetsList.find(s => s.properties.title === 'Sheet5');
+        if (!sheet5) {
+          try {
+            await sheets.spreadsheets.batchUpdate({
+              spreadsheetId,
+              resource: { requests: [{ addSheet: { properties: { title: 'Sheet5', index: 4 } } }] },
+            });
+          } catch (e2) { console.error('Could not create Sheet5 (non-fatal):', e2.message); }
+        }
+
+        const ts = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
+        const values = [ts, type.toUpperCase(), orderId, staffName || '—', `₱${Number(total || 0).toFixed(2)}`, items || '—', reason || '—'];
+
+        await sheets.spreadsheets.values.append({
+          spreadsheetId,
+          range: `${tabName}!A1`,
+          valueInputOption: 'USER_ENTERED',
+          resource: { values: [values] },
+        });
+      } catch (e) { console.error('[Sheets] Void/refund append failed (non-fatal):', e.message); }
+    },
+
+    // ── Sheet6: Cash Drawer ──────────────────────────────────────────────────
+    async appendCashDrawerEvent({ type, shiftDate, amount, staffName, reason, details }) {
+      const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+      if (!spreadsheetId) return;
+
+      try {
+        const res0 = await sheets.spreadsheets.get({ spreadsheetId });
+        const sheetsList = res0.data.sheets || [];
+        let tabName = 'Sheet6';
+        const sheet6 = sheetsList.find(s => s.properties.title === 'Sheet6');
+        if (!sheet6) {
+          try {
+            await sheets.spreadsheets.batchUpdate({
+              spreadsheetId,
+              resource: { requests: [{ addSheet: { properties: { title: 'Sheet6', index: 5 } } }] },
+            });
+          } catch (e2) { console.error('Could not create Sheet6 (non-fatal):', e2.message); }
+        }
+
+        const ts = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
+        const values = [ts, type, shiftDate || '—', `₱${Number(amount || 0).toFixed(2)}`, staffName || '—', reason || '—', details || '—'];
+
+        await sheets.spreadsheets.values.append({
+          spreadsheetId,
+          range: `${tabName}!A1`,
+          valueInputOption: 'USER_ENTERED',
+          resource: { values: [values] },
+        });
+      } catch (e) { console.error('[Sheets] Cash drawer append failed (non-fatal):', e.message); }
+    },
+
+    // ── Z-Report to Sheet ────────────────────────────────────────────────
+    async appendZReport(report) {
+      const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+      if (!spreadsheetId) return;
+
+      try {
+        const res0 = await sheets.spreadsheets.get({ spreadsheetId });
+        const sheetsList = res0.data.sheets || [];
+        let tabName = 'Sheet5';
+        const sheet5 = sheetsList.find(s => s.properties.title === 'Sheet5');
+        if (!sheet5) {
+          try {
+            await sheets.spreadsheets.batchUpdate({
+              spreadsheetId,
+              resource: { requests: [{ addSheet: { properties: { title: 'Sheet5', index: 4 } } }] },
+            });
+          } catch (e2) { console.error('Could not create Sheet5 for Z-report (non-fatal):', e2.message); }
+        }
+
+        const ts = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
+        const values = [
+          ts, 'Z-REPORT',
+          report.report_date || '—',
+          fmt(report.total_sales), fmt(report.total_orders),
+          fmt(report.total_cash), fmt(report.total_card), fmt(report.total_ewallet),
+          fmt(report.total_refunds), fmt(report.total_voids),
+          fmt(report.total_cogs), fmt(report.gross_profit),
+        ];
+
+        await sheets.spreadsheets.values.append({
+          spreadsheetId,
+          range: `${tabName}!A1`,
+          valueInputOption: 'USER_ENTERED',
+          resource: { values: [values] },
+        });
+      } catch (e) { console.error('[Sheets] Z-report append failed (non-fatal):', e.message); }
+    },
+
+    // ── Inventory movement to Sheet ───────────────────────────────────────
+    async appendInventoryMovement({ itemId, itemName, movementType, quantity, stockBefore, stockAfter, notes }) {
+      const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+      if (!spreadsheetId) return;
+
+      try {
+        const res0 = await sheets.spreadsheets.get({ spreadsheetId });
+        const sheetsList = res0.data.sheets || [];
+        let tabName = 'Sheet6';
+        const sheet6 = sheetsList.find(s => s.properties.title === 'Sheet6');
+        if (!sheet6) {
+          try {
+            await sheets.spreadsheets.batchUpdate({
+              spreadsheetId,
+              resource: { requests: [{ addSheet: { properties: { title: 'Sheet6', index: 5 } } }] },
+            });
+          } catch (e2) { console.error('Could not create Sheet6 (non-fatal):', e2.message); }
+        }
+
+        const ts = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
+        const values = [ts, movementType, itemId, itemName || '—', Number(quantity || 0), Number(stockBefore || 0), Number(stockAfter || 0), notes || '—'];
+
+        await sheets.spreadsheets.values.append({
+          spreadsheetId,
+          range: `${tabName}!A1`,
+          valueInputOption: 'USER_ENTERED',
+          resource: { values: [values] },
+        });
+      } catch (e) { console.error('[Sheets] Inventory movement append failed (non-fatal):', e.message); }
     },
   };
 }

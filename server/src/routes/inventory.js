@@ -16,7 +16,7 @@ export async function logInventoryMovement(pool, { inventory_item_id, movement_t
   }
 }
 
-export default function inventoryRouter(pool) {
+export default function inventoryRouter(pool, googleSheets) {
   const router = Router();
 
   // Validation helper
@@ -325,6 +325,23 @@ router.put('/:id', authMiddleware, async (req, res) => {
       });
 
       await conn.commit();
+
+      // Sync inventory movement to Google Sheets
+      if (googleSheets) {
+        try {
+          const [itemRow] = await pool.query('SELECT name FROM inventory WHERE id = ?', [inventory_item_id]);
+          await googleSheets.appendInventoryMovement({
+            itemId: inventory_item_id,
+            itemName: itemRow[0]?.name || inventory_item_id,
+            movementType: movement_type,
+            quantity: actualQty,
+            stockBefore,
+            stockAfter,
+            notes: notes || null,
+          });
+        } catch (e2) { console.error('[Sheets] Inventory movement sync failed (non-fatal):', e2.message); }
+      }
+
       res.json({ ok: true, stock_before: stockBefore, stock_after: stockAfter });
     } catch (e) {
       await conn.rollback();

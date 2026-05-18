@@ -332,10 +332,10 @@ app.use('/api/menu', menuRoutes(pool));
 const ordersExports = ordersRoutes(pool, gs, broadcastEvent);
 app.use('/api/orders', ordersExports.router);
 // Inventory + movements: admin only
-app.use('/api/inventory', inventoryRoutes(pool));
+app.use('/api/inventory', inventoryRoutes(pool, gs));
 app.use('/api/recipes', recipesRouter(pool));
 app.use('/api/clock', clockRouter(pool, gs));
-app.use('/api/payroll', payrollRouter(pool));
+app.use('/api/payroll', payrollRouter(pool, gs));
 app.use('/api/supplier-invoices', supplierInvoiceRoutes(pool));
 app.use('/api/company-settings', companySettingsRoutes(pool));
 app.use('/api', uploadRouter(pool));

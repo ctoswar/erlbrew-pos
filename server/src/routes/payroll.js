@@ -119,7 +119,7 @@ function generatePeriodLabel(dateFrom, dateTo) {
   return `${month} ${year} - ${half}`;
 }
 
-export default function payrollRouter(pool) {
+export default function payrollRouter(pool, googleSheets) {
   const router = Router();
 
   // ── GET /api/payroll/periods — list all payroll periods ────────────────
@@ -175,6 +175,15 @@ export default function payrollRouter(pool) {
       vals.push(id);
       await pool.query(`UPDATE payroll_periods SET ${fields.join(', ')} WHERE id = ?`, vals);
       const [rows] = await pool.query('SELECT * FROM payroll_periods WHERE id = ?', [id]);
+
+      // Log payroll status change to Google Sheets
+      if (googleSheets && status && (status === 'approved' || status === 'paid')) {
+        try {
+          const staffName = req.user?.name || '—';
+          await googleSheets.appendPayrollStatusChange({ period: rows[0], status, staffName });
+        } catch (e2) { console.error('[Sheets] Payroll status change log failed (non-fatal):', e2.message); }
+      }
+
       res.json(rows[0]);
     } catch (e) {
       console.error('[Payroll] PUT /periods/:id error:', e);
@@ -397,6 +406,11 @@ export default function payrollRouter(pool) {
         WHERE pe.payroll_period_id = ?
         ORDER BY s.name
       `, [id]);
+
+      // Sync payroll to Google Sheets
+      if (googleSheets) {
+        try { await googleSheets.appendPayrollEntries({ period: periods[0], entries: result }); } catch (e2) { console.error('[Sheets] Payroll sync failed (non-fatal):', e2.message); }
+      }
 
       res.json({ period: periods[0], entries: result });
     } catch (e) {

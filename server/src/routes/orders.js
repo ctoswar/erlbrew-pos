@@ -834,6 +834,19 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       if (broadcastEvent) {
         broadcastEvent('order:voided', { id, reason: reason.trim() });
       }
+      // Log void to Google Sheets
+      if (googleSheets) {
+        try {
+          const [voidOrder] = await pool.query('SELECT total, staff_name FROM orders WHERE id = ?', [id]);
+          const [voidItems] = await pool.query('SELECT oi.menu_item_id, oi.qty, mi.name FROM order_items oi LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id WHERE oi.order_id = ?', [id]);
+          const itemList = voidItems.map(it => `${it.qty}× ${it.name || it.menu_item_id}`).join(', ') || '—';
+          await googleSheets.appendVoidRefund({
+            type: 'void', orderId: id, reason: reason.trim(),
+            staffName: voidOrder[0]?.staff_name || req.user?.name || '—',
+            total: Number(voidOrder[0]?.total || 0), items: itemList,
+          });
+        } catch (e2) { console.error('[Sheets] Void log failed (non-fatal):', e2.message); }
+      }
       await logAudit(pool, req, { action: 'order_void', entityType: 'order', entityId: id, details: { reason: reason.trim() } });
       res.json({ ok: true });
     } catch (e) {
@@ -852,6 +865,19 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       await pool.query('UPDATE orders SET status = ?, refund_reason = ? WHERE id = ?', ['refunded', reason.trim(), id]);
       if (broadcastEvent) {
         broadcastEvent('order:updated', { id, status: 'refunded' });
+      }
+      // Log refund to Google Sheets
+      if (googleSheets) {
+        try {
+          const [refundOrder] = await pool.query('SELECT total, staff_name FROM orders WHERE id = ?', [id]);
+          const [refundItems] = await pool.query('SELECT oi.menu_item_id, oi.qty, mi.name FROM order_items oi LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id WHERE oi.order_id = ?', [id]);
+          const itemList = refundItems.map(it => `${it.qty}× ${it.name || it.menu_item_id}`).join(', ') || '—';
+          await googleSheets.appendVoidRefund({
+            type: 'refund', orderId: id, reason: reason.trim(),
+            staffName: refundOrder[0]?.staff_name || req.user?.name || '—',
+            total: Number(refundOrder[0]?.total || 0), items: itemList,
+          });
+        } catch (e2) { console.error('[Sheets] Refund log failed (non-fatal):', e2.message); }
       }
       await logAudit(pool, req, { action: 'order_refund', entityType: 'order', entityId: id, details: { reason: reason.trim() } });
       res.json({ ok: true });
@@ -944,6 +970,10 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
           report.total_sales, report.total_orders, report.total_cash, report.total_card,
           report.total_ewallet, report.total_refunds, report.total_voids, report.total_cogs, report.gross_profit]);
       report.id = ins.insertId;
+      // Log Z-report to Google Sheets
+      if (googleSheets) {
+        try { await googleSheets.appendZReport(report); } catch (e2) { console.error('[Sheets] Z-report sync failed (non-fatal):', e2.message); }
+      }
       res.json(report);
     } catch (e) {
       console.error(e);
@@ -1019,6 +1049,9 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         VALUES (?, 'open', ?, ?)
       `, [today, opening_float, opening_float]);
       const [rows] = await pool.query('SELECT * FROM cash_drawer WHERE id = ?', [ins.insertId]);
+      if (googleSheets) {
+        try { await googleSheets.appendCashDrawerEvent({ type: 'drawer_open', shiftDate: today, amount: opening_float, staffName: req.user?.name, reason: 'Shift opened', details: `Float: ₱${Number(opening_float).toFixed(2)}` }); } catch (e2) { console.error('[Sheets] Drawer open log failed (non-fatal):', e2.message); }
+      }
       res.json(rows[0]);
     } catch (e) {
       console.error(e);
@@ -1047,6 +1080,9 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         WHERE id = ?
       `, [closing, payouts, expected, variance, status, notes || '', id]);
       const [updated] = await pool.query('SELECT * FROM cash_drawer WHERE id = ?', [id]);
+      if (googleSheets && action === 'close') {
+        try { await googleSheets.appendCashDrawerEvent({ type: 'drawer_close', shiftDate: drawer.shift_date, amount: closing, staffName: req.user?.name, reason: notes || 'Shift closed', details: `Variance: ₱${variance.toFixed(2)}` }); } catch (e2) { console.error('[Sheets] Drawer close log failed (non-fatal):', e2.message); }
+      }
       res.json(updated[0]);
     } catch (e) {
       console.error(e);
@@ -1117,6 +1153,17 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         'SELECT * FROM cash_drawer_transactions WHERE drawer_id = ? ORDER BY created_at DESC LIMIT 1',
         [drawer.id]
       );
+
+      // Log cash in/out to Google Sheets
+      if (googleSheets) {
+        try {
+          await googleSheets.appendCashDrawerEvent({
+            type: transaction_type === 'cash_in' ? 'cash_in' : 'cash_out',
+            shiftDate: today, amount, staffName: staff_name || req.user?.name,
+            reason: reason || '—', details: `Balance: ₱${balanceAfter.toFixed(2)}`,
+          });
+        } catch (e2) { console.error('[Sheets] Cash transaction log failed (non-fatal):', e2.message); }
+      }
 
       res.json(rows[0]);
     } catch (e) {

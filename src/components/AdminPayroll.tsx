@@ -577,13 +577,13 @@ export const AdminPayroll: React.FC = () => {
                           </td>
                           <td className="px-3 py-2 text-erl-muted">{e.role || "—"}</td>
                           <td className="px-3 py-2 text-right text-erl-text-primary tabular-nums">
-                            {(e.total_hours || 0).toFixed(1)}
+                            {Number(e.total_hours || 0).toFixed(1)}
                           </td>
                           <td className="px-3 py-2 text-right text-erl-muted tabular-nums">
-                            {(e.regular_hours || 0).toFixed(1)}
+                            {Number(e.regular_hours || 0).toFixed(1)}
                           </td>
                           <td className="px-3 py-2 text-right text-erl-muted tabular-nums">
-                            {(e.overtime_hours || 0).toFixed(1)}
+                            {Number(e.overtime_hours || 0).toFixed(1)}
                           </td>
                           <td className="px-3 py-2 text-right text-erl-text-primary tabular-nums">
                             {formatCurrency(e.basic_pay || 0)}

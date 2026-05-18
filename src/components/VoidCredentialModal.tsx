@@ -102,8 +102,8 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onVoid
   };
 
   return (
-    <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-[9999]">
-      <div className="animate-scale-in bg-erl-elevated border-[1.5px] rounded-[14px] p-[1.3rem] w-[300px]"
+    <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-[9999] p-4">
+      <div className="animate-scale-in bg-erl-elevated border-[1.5px] rounded-[14px] p-4 md:p-6 w-full max-w-[300px] mx-auto"
         style={{ borderColor: isRefund ? "var(--gold)" : "var(--danger)", boxShadow: "0 20px 60px rgba(0,0,0,0.6)" }}>
         {/* Header */}
         <div className="flex items-center gap-2 mb-3.5">
@@ -130,13 +130,13 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onVoid
               autoFocus
               onKeyDown={(e) => { if (e.key === "Enter" && reason.trim()) setStep("auth"); }}
               className="w-full bg-erl-base border border-erl-border-medium rounded-md text-erl-text-primary px-3 py-2 text-[10px] outline-none box-border" />
-            <div className="flex gap-1.5 mt-2.5">
-              <button onClick={onCancel} className="flex-1 py-2 rounded-lg border border-erl-border-default bg-erl-base text-erl-secondary text-[9px] font-bold cursor-pointer uppercase tracking-wide">
+            <div className="flex gap-2 mt-2.5">
+              <button onClick={onCancel} className="flex-1 py-2.5 rounded-lg border border-erl-border-default bg-erl-base text-erl-secondary text-[9px] font-bold cursor-pointer uppercase tracking-wide min-h-[44px]">
                 Cancel
               </button>
               <button onClick={() => reason.trim() && setStep("auth")} disabled={!reason.trim()}
                 className={`
-                  flex-1 py-2 rounded-lg border-none text-[9px] font-bold uppercase tracking-wide
+                  flex-1 py-2.5 rounded-lg border-none text-[9px] font-bold uppercase tracking-wide min-h-[44px]
                   ${reason.trim() ? (isRefund ? "bg-erl-accent text-white cursor-pointer" : "bg-erl-danger text-white cursor-pointer") : "bg-erl-surface text-erl-text-disabled cursor-default"}
                 `}>Continue →</button>
             </div>
@@ -182,7 +182,7 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onVoid
               row.map((key) => (
                 <button key={key} onClick={() => pressPin(key)}
                   className={`
-                    py-2 rounded-md text-[11px] font-bold cursor-pointer border border-erl-border-medium
+                    py-2.5 rounded-md text-[11px] font-bold cursor-pointer border border-erl-border-medium min-h-[44px]
                     ${key === "CLR" || key === "⌫" ? "bg-erl-base" : "bg-erl-surface text-erl-text-primary"}
                     ${key === "CLR" ? "text-erl-danger" : key === "⌫" ? "text-erl-accent" : ""}
                   `}>{key}</button>
@@ -193,12 +193,12 @@ export const VoidCredentialModal: React.FC<Props> = ({ orderId, onCancel, onVoid
 
         {error && <div className="text-[9px] text-erl-danger text-center mb-2">{error}</div>}
 
-        <div className="flex gap-1.5">
+        <div className="flex gap-2">
           <button onClick={onCancel} disabled={loading}
-            className="flex-1 py-2 rounded-lg border border-erl-border-default bg-erl-base text-erl-secondary text-[9px] font-bold tracking-wide cursor-pointer uppercase">Cancel</button>
+            className="flex-1 py-2.5 rounded-lg border border-erl-border-default bg-erl-base text-erl-secondary text-[9px] font-bold tracking-wide cursor-pointer uppercase min-h-[44px]">Cancel</button>
           <button onClick={handleSubmit} disabled={loading || pin.length !== 4 || !rfid.trim()}
             className={`
-              flex-1 py-2 rounded-lg border-none text-[9px] font-bold tracking-wide uppercase
+              flex-1 py-2.5 rounded-lg border-none text-[9px] font-bold tracking-wide uppercase min-h-[44px]
               ${pin.length === 4 && rfid.trim() ? (isRefund ? "bg-erl-accent text-white cursor-pointer" : "bg-erl-danger text-white cursor-pointer") : "bg-erl-surface text-erl-text-disabled cursor-default"}
             `}>{loading ? "Verifying…" : isRefund ? "Authorize Refund" : "Authorize Void"}</button>
         </div>

@@ -49,7 +49,7 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
   const { fontSize, setFontSize } = useFontSize();
   const [drawerStatus, setDrawerStatus] = useState<'idle' | 'opening' | 'ok' | 'error'>('idle');
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
-  const { isMobile, isTablet, isDesktop } = useViewport();
+  const { isMobile, isDesktop } = useViewport();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleOpenDrawer = useCallback(async () => {

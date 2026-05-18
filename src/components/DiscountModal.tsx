@@ -44,11 +44,11 @@ export const DiscountModal: React.FC<Props> = ({ subtotal, currentDiscount, onAp
     <>
       <div className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay" onClick={onClose} />
       <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-        <div className="animate-scale-in card-glass p-[1.3rem] w-full max-w-[360px] max-h-[90vh] overflow-y-auto">
+        <div className="animate-scale-in card-glass p-4 md:p-6 w-full max-w-[360px] max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="font-display flex items-center justify-between mb-3.5">
             <div className="text-sm font-bold text-erl-text-primary">Apply Discount</div>
-            <button onClick={onClose} className="btn-ghost text-sm px-1 py-0.5 text-erl-muted">✕</button>
+            <button onClick={onClose} className="btn-ghost text-sm min-w-[44px] min-h-[44px] flex items-center justify-center text-erl-muted">✕</button>
           </div>
 
           {/* Current discount */}
@@ -58,7 +58,7 @@ export const DiscountModal: React.FC<Props> = ({ subtotal, currentDiscount, onAp
                 <div className="text-[8px] text-erl-accent tracking-wide uppercase font-bold mb-px">Active Discount</div>
                 <div className="text-[11px] font-semibold text-erl-text-primary">{currentDiscount.label}</div>
               </div>
-              <button onClick={() => { onRemove(); onClose(); }} className="text-[8px] font-bold px-2 py-1 rounded-md bg-erl-danger text-white cursor-pointer">Remove</button>
+              <button onClick={() => { onRemove(); onClose(); }} className="text-[10px] font-bold px-3 py-1.5 rounded-md bg-erl-danger text-white cursor-pointer min-h-[44px] flex items-center">Remove</button>
             </div>
           )}
 
@@ -100,7 +100,7 @@ export const DiscountModal: React.FC<Props> = ({ subtotal, currentDiscount, onAp
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-erl-muted text-[10px] pointer-events-none">%</span>
                   </div>
                   <button onClick={applyCustomPct} disabled={!customPct || parseFloat(customPct) <= 0}
-                    className="btn btn-accent text-[9px] py-[7px] rounded-md">Apply %</button>
+                    className="btn btn-accent text-[9px] py-2 rounded-md min-h-[44px]">Apply %</button>
                 </div>
                 {customPct && parseFloat(customPct) > 0 && (
                   <div className="text-[8px] text-erl-success mt-[3px]">Saves ₱{(subtotal * (parseFloat(customPct) / 100)).toFixed(2)}</div>
@@ -111,7 +111,7 @@ export const DiscountModal: React.FC<Props> = ({ subtotal, currentDiscount, onAp
                     <input type="number" value={customFixed} onChange={(e) => setCustomFixed(e.target.value)} placeholder="e.g. 50" min="1" className="pl-5 text-[11px] px-2.5 py-2" />
                   </div>
                   <button onClick={applyCustomFixed} disabled={!customFixed || parseFloat(customFixed) <= 0}
-                    className="btn btn-accent text-[9px] py-[7px] rounded-md">Apply ₱</button>
+                    className="btn btn-accent text-[9px] py-2 rounded-md min-h-[44px]">Apply ₱</button>
                 </div>
               </div>
             </div>

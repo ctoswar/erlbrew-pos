@@ -287,7 +287,7 @@ export const AdminMenu: React.FC = () => {
         <>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] animate-fade-in-overlay" onClick={closeForm} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="animate-scale-in card-glass p-0 w-full max-w-[460px] max-h-[90vh] flex flex-col overflow-hidden rounded-2xl">
+            <div className="animate-scale-in card-glass p-0 w-full max-w-[460px] max-h-[90dvh] max-h-[90vh] flex flex-col overflow-hidden rounded-2xl">
               {/* Modal header */}
               <div className="px-6 pt-5 pb-4 border-b border-erl-border-subtle">
                 <div className="font-display text-lg font-bold text-erl-text-primary">
@@ -301,26 +301,26 @@ export const AdminMenu: React.FC = () => {
               {/* Form body */}
               <div className="scroll-area flex-1 overflow-y-auto min-h-0 px-6 py-5">
                 <div className="flex flex-col gap-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormSection label="Item ID" hint="e.g. m17">
                       <input value={form.id} onChange={(e) => setField("id", e.target.value)} placeholder="m17"
                         disabled={!!editingId}
-                        className={`text-erl-text-primary ${editingId ? "opacity-50 cursor-not-allowed" : ""}`} />
+                        className={`w-full text-erl-text-primary ${editingId ? "opacity-50 cursor-not-allowed" : ""}`} />
                     </FormSection>
                     <FormSection label="Name">
                       <input value={form.name} onChange={(e) => setField("name", e.target.value)} placeholder="Item name"
-                        className="text-erl-text-primary" />
+                        className="w-full text-erl-text-primary" />
                     </FormSection>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormSection label="Category">
                       <input
                         list="category-options"
                         value={form.category}
                         onChange={(e) => setField("category", e.target.value)}
                         placeholder="Select or type new category"
-                        className="text-erl-text-primary"
+                        className="w-full text-erl-text-primary"
                       />
                       <datalist id="category-options">
                         {dbCategories.map((c) => <option key={c} value={c} />)}
@@ -328,7 +328,7 @@ export const AdminMenu: React.FC = () => {
                     </FormSection>
                     <FormSection label="Price (₱)">
                       <input type="number" value={form.price} onChange={(e) => setField("price", e.target.value)}
-                        placeholder="0.00" min="0" step="0.01" className="text-erl-text-primary" />
+                        placeholder="0.00" min="0" step="0.01" className="w-full text-erl-text-primary" />
                     </FormSection>
                   </div>
 

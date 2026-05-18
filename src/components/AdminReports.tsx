@@ -229,26 +229,26 @@ export const AdminReports: React.FC = () => {
   return (
     <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Report Type Tabs */}
-      <div className="flex gap-1.5 px-4 py-3 border-b border-erl-border-default flex-shrink-0 justify-between items-center">
-        <div className="flex gap-1.5">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-1.5 px-4 py-3 border-b border-erl-border-default flex-shrink-0 justify-between items-start sm:items-center">
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none w-full sm:w-auto pb-1 sm:pb-0">
           {([["sales", "Sales Report"], ["inventory", "Inventory Report"], ["staff", "Staff Report"]] as const).map(([key, label]) => (
             <button key={key} onClick={() => setActiveReport(key)} className={`
-              px-5 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase
+              flex-shrink-0 px-5 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase
               ${activeReport === key ? "border-[1.5px] border-erl-accent bg-erl-accent/15 text-erl-accent" : "border-[1.5px] border-erl-border-default bg-transparent text-erl-secondary"}
             `}>
               {label}
             </button>
           ))}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <button onClick={() => {
             if (activeReport === "sales") exportSalesCSV();
             else if (activeReport === "staff") exportStaffCSV();
             else exportInventoryCSV();
-          }} className="px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-erl-success bg-erl-success/10 text-erl-success">
+          }} className="flex-1 sm:flex-none px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-erl-success bg-erl-success/10 text-erl-success">
             📥 Export CSV
           </button>
-          <button onClick={() => setShowPrintModal(true)} className="px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-erl-accent bg-erl-accent/10 text-erl-accent">
+          <button onClick={() => setShowPrintModal(true)} className="flex-1 sm:flex-none px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-erl-accent bg-erl-accent/10 text-erl-accent">
             🖨 Print
           </button>
         </div>
@@ -257,39 +257,43 @@ export const AdminReports: React.FC = () => {
       {/* Date Range Selector (only for Sales and Staff reports) */}
       {activeReport !== "inventory" && (
         <div className="flex flex-col gap-2 px-4 py-3 border-b border-erl-border-subtle">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="text-[9px] text-erl-muted tracking-wide">PERIOD:</div>
-            {([
-              ["Today", "today"],
-              ["This Week", "this_week"],
-              ["Last 2 Weeks", "last_2_weeks"],
-              ["This Month", "this_month"],
-              ["Last Month", "last_month"],
-            ] as const).map(([label, value]) => (
-              <button key={value} onClick={() => setDateRange(value)} className={`
-                px-2.5 py-1 text-[8px] rounded-md cursor-pointer
-                ${dateRange === value ? "border border-erl-accent bg-erl-accent/15 text-erl-accent font-bold" : "border border-erl-border-subtle bg-transparent text-erl-muted font-normal"}
-              `}>
-                {label}
-              </button>
-            ))}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="text-[9px] text-erl-muted tracking-wide flex-shrink-0">PERIOD:</div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {([
+                ["Today", "today"],
+                ["This Week", "this_week"],
+                ["Last 2 Weeks", "last_2_weeks"],
+                ["This Month", "this_month"],
+                ["Last Month", "last_month"],
+              ] as const).map(([label, value]) => (
+                <button key={value} onClick={() => setDateRange(value)} className={`
+                  px-2.5 py-1 text-[8px] rounded-md cursor-pointer
+                  ${dateRange === value ? "border border-erl-accent bg-erl-accent/15 text-erl-accent font-bold" : "border border-erl-border-subtle bg-transparent text-erl-muted font-normal"}
+                `}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="text-[9px] text-erl-muted tracking-wide">MONTH:</div>
-            {(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"] as const).map((month) => (
-              <button key={month} onClick={() => setDateRange(month)} className={`
-                px-2 py-1 text-[8px] rounded-md cursor-pointer
-                ${dateRange === month ? "border border-erl-accent bg-erl-accent/15 text-erl-accent font-bold" : "border border-erl-border-subtle bg-transparent text-erl-muted font-normal"}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="text-[9px] text-erl-muted tracking-wide flex-shrink-0">MONTH:</div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"] as const).map((month) => (
+                <button key={month} onClick={() => setDateRange(month)} className={`
+                  px-2 py-1 text-[8px] rounded-md cursor-pointer
+                  ${dateRange === month ? "border border-erl-accent bg-erl-accent/15 text-erl-accent font-bold" : "border border-erl-border-subtle bg-transparent text-erl-muted font-normal"}
+                `}>
+                  {month.toUpperCase()}
+                </button>
+              ))}
+              <button onClick={() => setDateRange("year_to_date")} className={`
+                px-2.5 py-1 text-[8px] rounded-md cursor-pointer
+                ${dateRange === "year_to_date" ? "border border-erl-accent bg-erl-accent/15 text-erl-accent font-bold" : "border border-erl-border-subtle bg-transparent text-erl-muted font-normal"}
               `}>
-                {month.toUpperCase()}
+                Year to Date
               </button>
-            ))}
-            <button onClick={() => setDateRange("year_to_date")} className={`
-              px-2.5 py-1 text-[8px] rounded-md cursor-pointer
-              ${dateRange === "year_to_date" ? "border border-erl-accent bg-erl-accent/15 text-erl-accent font-bold" : "border border-erl-border-subtle bg-transparent text-erl-muted font-normal"}
-            `}>
-              Year to Date
-            </button>
+            </div>
           </div>
           {dateRange === "custom" && (
             <div className="flex items-center gap-2">
@@ -339,7 +343,7 @@ export const AdminReports: React.FC = () => {
                 </div>
 
                 {/* Summary Cards */}
-                <div className="grid grid-cols-3 gap-2.5 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 mb-4">
                   {[
                     { label: "Total Revenue", value: formatCurrency(salesSummary.totalRevenue), color: "text-erl-accent" },
                     { label: "Total Orders", value: String(salesSummary.totalOrders), color: "text-erl-text-primary" },
@@ -361,6 +365,7 @@ export const AdminReports: React.FC = () => {
                     <div className="px-3.5 py-2.5 border-b border-erl-border-subtle text-[9px] font-semibold text-erl-muted tracking-widest uppercase">
                       Daily Breakdown
                     </div>
+                    <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-[10px]">
                       <thead>
                         <tr className="bg-erl-elevated">
@@ -384,15 +389,16 @@ export const AdminReports: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
+          )}
 
-            {/* INVENTORY REPORT */}
+          {/* INVENTORY REPORT */}
             {activeReport === "inventory" && (
               <div>
                 {/* Summary */}
-                <div className="grid grid-cols-3 gap-2.5 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
                   <div className="bg-erl-surface rounded-[10px] p-3 text-center">
                     <div className="text-xl font-bold text-erl-accent">{inventoryItems.length}</div>
                     <div className={labelStyle}>Total Items</div>
@@ -448,6 +454,7 @@ export const AdminReports: React.FC = () => {
                     <div className="px-3.5 py-2.5 border-b border-erl-border-subtle text-[9px] font-semibold text-[#e8a020] tracking-widest uppercase">
                       Low Stock Alerts
                     </div>
+                    <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-[10px]">
                       <thead>
                         <tr className="bg-erl-elevated">
@@ -473,13 +480,15 @@ export const AdminReports: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Full Inventory Table */}
+              {/* Full Inventory Table */}
                 <div className="bg-erl-surface rounded-xl overflow-hidden">
                   <div className="px-3.5 py-2.5 border-b border-erl-border-subtle text-[9px] font-semibold text-erl-muted tracking-widest uppercase">
                     All Inventory Items
                   </div>
+                  <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-[10px]">
                     <thead>
                       <tr className="bg-erl-elevated">
@@ -518,6 +527,7 @@ export const AdminReports: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
+                </div>
               </div>
             )}
 
@@ -528,6 +538,7 @@ export const AdminReports: React.FC = () => {
                   <div className="px-3.5 py-2.5 border-b border-erl-border-subtle text-[9px] font-semibold text-erl-muted tracking-widest uppercase">
                     Staff Performance ({startDate} to {endDate})
                   </div>
+                  <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-[10px]">
                     <thead>
                       <tr className="bg-erl-elevated">
@@ -570,6 +581,7 @@ export const AdminReports: React.FC = () => {
                       )}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -655,7 +667,7 @@ const PrintModal: React.FC<{
     <>
       <div className="fixed inset-0 bg-black/65 z-[998]" onClick={onClose} />
       <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-        <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-[380px] max-h-[90vh] overflow-y-auto">
+        <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[380px] max-h-[90dvh] max-h-[90vh] overflow-y-auto">
           <div className="text-sm font-bold text-erl-text-primary mb-4 font-display">
             Print Report
           </div>

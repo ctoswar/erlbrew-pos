@@ -85,8 +85,8 @@ export const AdminCustomers: React.FC = () => {
           <h2 className="font-display text-lg font-bold text-erl-text-primary">Customer Detail</h2>
         </div>
 
-        <div className="card-glass rounded-2xl p-6 mb-6">
-          <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="card-glass rounded-2xl p-4 md:p-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <div className="text-[8px] text-erl-text-muted tracking-widest uppercase mb-1 font-bold">Phone</div>
               <div className="text-sm text-erl-text-primary font-bold">{selectedCustomer.phone}</div>
@@ -169,8 +169,8 @@ export const AdminCustomers: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-2">
         <h2 className="font-display text-lg font-bold text-erl-text-primary">Customers</h2>
         <div className="flex gap-2">
           <button onClick={() => setView("list")}
@@ -189,7 +189,7 @@ export const AdminCustomers: React.FC = () => {
           <div className="mb-4">
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by phone or name…"
-              className="w-full max-w-sm bg-erl-surface border border-erl-border-default rounded-lg px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent" />
+              className="w-full sm:max-w-sm bg-erl-surface border border-erl-border-default rounded-lg px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent" />
           </div>
           {loading ? (
             <div className="text-[10px] text-erl-text-muted py-4">Loading…</div>

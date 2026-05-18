@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Order, Staff, InventoryItem, DiscountType } from "../types";
 import { formatCurrency } from "../utils";
 import { apiGet, clearAllOrders } from "../utils/api";
+import { useViewport } from "../hooks/useViewport";
 import { AdminStaff } from "./AdminStaff";
 import { AdminMenu } from "./AdminMenu";
 import { AdminPrintSettings } from "./AdminPrintSettings";
@@ -48,6 +49,8 @@ const TABS: { label: string; value: AdminTab; icon: string }[] = [
 ];
 
 export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
+  const { isMobile } = useViewport();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [orders, setOrders] = useState<Order[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -229,20 +232,34 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
     );
   }
 
+  const handleTabChange = (value: AdminTab) => {
+    setActiveTab(value);
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <div className="flex h-screen bg-erl-base">
+    <div className="flex h-screen bg-erl-base relative">
+      {/* Mobile overlay */}
+      {isMobile && mobileMenuOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setMobileMenuOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <div className="w-[220px] bg-erl-sidebar border-r border-erl-border-default flex flex-col">
+      <div className={`
+        ${isMobile ? 'fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 w-[220px]' : 'relative w-[220px]'}
+        ${isMobile && !mobileMenuOpen ? '-translate-x-full' : 'translate-x-0'}
+        bg-erl-sidebar border-r border-erl-border-default flex flex-col
+      `}>
         <div className="p-5 border-b border-erl-border-default">
           <div className="font-display text-base text-erl-accent mb-1">Admin Panel</div>
           <div className="text-[10px] text-erl-text-muted">{staff.name} ({staff.role})</div>
         </div>
 
-        <nav className="flex-1 p-3">
+        <nav className="flex-1 p-3 overflow-y-auto">
           {TABS.map(({ label, value, icon }) => (
             <button
               key={value}
-              onClick={() => setActiveTab(value)}
+              onClick={() => handleTabChange(value)}
               className={`w-full flex items-center gap-2.5 py-2.5 px-3 mb-1 rounded-xl border-none cursor-pointer text-[11px] text-left transition-all duration-200 ${
                 activeTab === value
                   ? 'bg-erl-accent/8 text-erl-accent font-semibold shadow-[0_0_16px_rgba(196,149,106,0.06)]'
@@ -278,7 +295,27 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 min-w-0">
+        {/* Mobile header */}
+        {isMobile && (
+          <div className="flex items-center gap-3 mb-4 pb-3 border-b border-erl-border-default">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-2 rounded-lg border border-erl-border-default bg-erl-surface text-erl-text-primary"
+              aria-label="Open menu"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <div>
+              <div className="text-sm font-bold text-erl-text-primary">{TABS.find(t => t.value === activeTab)?.label}</div>
+              <div className="text-[10px] text-erl-text-muted">{staff.name}</div>
+            </div>
+          </div>
+        )}
         {activeTab === 'dashboard' && <Dashboard orders={orders} staffName={staff.name} />}
         {activeTab === 'reports' && <AdminReports />}
         {activeTab === 'history' && <OrderHistory />}
@@ -296,7 +333,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
         {activeTab === 'cogs' && (
           <div>
             <h2 className="text-lg text-erl-text-primary mb-5">Cost Analysis</h2>
-            <div className="grid grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               {[
                 { label: 'Total Revenue', value: formatCurrency(summary.revenue || 0), color: 'text-erl-accent' },
                 { label: 'Total COGS', value: formatCurrency(summary.cogs || 0), color: 'text-erl-text-primary' },
@@ -313,6 +350,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
               <div className="py-3 px-4 border-b border-erl-border-subtle text-[11px] font-semibold text-erl-text-muted">
                 ORDER BREAKDOWN ({summary.details.length} orders)
               </div>
+              <div className="overflow-x-auto">
               <table className="w-full border-collapse text-[11px]">
                 <thead>
                   <tr className="border-b border-erl-border-default">
@@ -336,6 +374,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         )}
@@ -359,8 +398,8 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
         {activeTab === 'backup' && (
           <div>
             <h2 className="text-lg text-erl-text-primary mb-5">Backup & Restore</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-erl-surface rounded-xl p-6 border border-erl-border-subtle">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-erl-surface rounded-xl p-4 md:p-6 border border-erl-border-subtle">
                 <h3 className="text-[13px] text-erl-text-primary mb-2">📤 Export Backup</h3>
                 <p className="text-[11px] text-erl-text-muted mb-4">Download all orders and inventory data to a JSON file.</p>
                 <div className="text-[10px] text-erl-text-muted mb-3">Orders: {orders.length} | Inventory: {inventory.length} items</div>
@@ -369,7 +408,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
                   Download Backup
                 </button>
               </div>
-              <div className="bg-erl-surface rounded-xl p-6 border border-erl-border-subtle">
+              <div className="bg-erl-surface rounded-xl p-4 md:p-6 border border-erl-border-subtle">
                 <h3 className="text-[13px] text-erl-text-primary mb-2">📥 Import Backup</h3>
                 <p className="text-[11px] text-erl-text-muted mb-4">Restore data from a previously downloaded backup file.</p>
                 <input type="file" accept=".json" onChange={importData} id="backup-file" className="hidden" />
@@ -377,14 +416,14 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
                   Select Backup File
                 </label>
               </div>
-              <div className="bg-erl-surface rounded-xl p-6 border border-erl-danger col-span-2">
+              <div className="bg-erl-surface rounded-xl p-4 md:p-6 border border-erl-danger md:col-span-2">
                 <h3 className="text-[13px] text-erl-danger mb-2">⚠️ Clear Local Data</h3>
                 <p className="text-[11px] text-erl-text-muted mb-4">Remove all locally stored backup data. This will NOT affect data on the server.</p>
                 <button onClick={clearLocalData} className="py-2.5 px-5 text-[11px] rounded-lg border border-erl-danger bg-transparent text-erl-danger cursor-pointer hover:bg-erl-danger/5">
                   Clear Local Data
                 </button>
               </div>
-              <div className="bg-erl-surface rounded-xl p-6 border-2 border-erl-danger col-span-2">
+              <div className="bg-erl-surface rounded-xl p-4 md:p-6 border-2 border-erl-danger md:col-span-2">
                 <h3 className="text-[13px] text-erl-danger mb-2">☠️ Fresh Start — Delete Everything (Except Staff)</h3>
                 <p className="text-[11px] text-erl-text-muted mb-4">Permanently DELETE ALL transaction data from the server. Staff accounts are preserved. This CANNOT be undone.</p>
                 <button onClick={clearServerOrders} className="py-2.5 px-5 text-[11px] rounded-lg border border-erl-danger bg-erl-danger text-white cursor-pointer font-bold hover:bg-erl-danger/90">
@@ -396,7 +435,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
                   </div>
                 )}
               </div>
-              <div className="bg-erl-surface rounded-xl p-6 border border-erl-border-subtle col-span-2">
+              <div className="bg-erl-surface rounded-xl p-4 md:p-6 border border-erl-border-subtle md:col-span-2">
                 <h3 className="text-[13px] text-erl-text-primary mb-2">ℹ️ About Local Backup</h3>
                 <p className="text-[11px] text-erl-text-muted mb-2">This admin panel stores data in your browser's localStorage. This means:</p>
                 <ul className="text-[11px] text-erl-text-muted ml-4 list-disc">

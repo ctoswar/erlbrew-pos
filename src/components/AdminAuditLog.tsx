@@ -54,28 +54,28 @@ export const AdminAuditLog: React.FC = () => {
   const actions = Object.entries(ACTION_LABELS);
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-2">
         <h2 className="font-display text-lg font-bold text-erl-text-primary">Audit Log</h2>
         <div className="text-[10px] text-erl-text-muted">{total} total events</div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <div>
+      <div className="flex flex-col md:flex-row flex-wrap gap-3 mb-6">
+        <div className="w-full md:w-auto">
           <div className="text-[8px] text-erl-text-muted tracking-widest uppercase mb-1 font-bold">From</div>
           <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setOffset(0); }}
-            className="bg-erl-surface border border-erl-border-default rounded-lg px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent" />
+            className="w-full md:w-auto bg-erl-surface border border-erl-border-default rounded-lg px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent" />
         </div>
-        <div>
+        <div className="w-full md:w-auto">
           <div className="text-[8px] text-erl-text-muted tracking-widest uppercase mb-1 font-bold">To</div>
           <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setOffset(0); }}
-            className="bg-erl-surface border border-erl-border-default rounded-lg px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent" />
+            className="w-full md:w-auto bg-erl-surface border border-erl-border-default rounded-lg px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent" />
         </div>
-        <div>
+        <div className="w-full md:w-auto">
           <div className="text-[8px] text-erl-text-muted tracking-widest uppercase mb-1 font-bold">Action</div>
           <select value={actionFilter} onChange={(e) => { setActionFilter(e.target.value); setOffset(0); }}
-            className="bg-erl-surface border border-erl-border-default rounded-lg px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent cursor-pointer">
+            className="w-full md:w-auto bg-erl-surface border border-erl-border-default rounded-lg px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent cursor-pointer">
             <option value="">All actions</option>
             {actions.map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
@@ -84,7 +84,7 @@ export const AdminAuditLog: React.FC = () => {
         </div>
         <div className="flex items-end">
           <button onClick={fetchLogs} disabled={loading}
-            className="px-4 py-2 rounded-lg bg-erl-accent text-white text-xs font-bold tracking-wide cursor-pointer hover:bg-erl-accent-hover transition-colors disabled:opacity-50">
+            className="w-full md:w-auto px-4 py-2 rounded-lg bg-erl-accent text-white text-xs font-bold tracking-wide cursor-pointer hover:bg-erl-accent-hover transition-colors disabled:opacity-50">
             {loading ? "Loading…" : "Refresh"}
           </button>
         </div>

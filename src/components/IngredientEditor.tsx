@@ -142,7 +142,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-erl-text-muted hover:text-erl-text-primary hover:bg-erl-surface transition-colors cursor-pointer bg-transparent border-none text-base ml-4"
+            className="min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center text-erl-text-muted hover:text-erl-text-primary hover:bg-erl-surface transition-colors cursor-pointer bg-transparent border-none text-base ml-4"
           >
             ✕
           </button>

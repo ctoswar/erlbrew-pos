@@ -23,13 +23,13 @@ export const AdminScreen: React.FC = () => {
   return (
     <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Sub-tab bar */}
-      <div className="glass-panel flex gap-1.5 px-4 py-3 border-b border-erl-accent/10 flex-shrink-0 relative rounded-none">
+      <div className="glass-panel flex gap-1.5 px-4 py-3 border-b border-erl-accent/10 flex-shrink-0 relative rounded-none overflow-x-auto scrollbar-none">
         {TABS.map(({ key, label, icon }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
             className={`
-              relative px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wider uppercase cursor-pointer transition-all duration-150 ease-out
+              relative px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wider uppercase cursor-pointer transition-all duration-150 ease-out flex-shrink-0 whitespace-nowrap
               ${
                 tab === key
                   ? "bg-erl-accent/10 border-[1.5px] border-erl-accent text-erl-accent"

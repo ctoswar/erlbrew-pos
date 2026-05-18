@@ -50,7 +50,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="card-glass overflow-hidden rounded-2xl shadow-2xl flex flex-col max-h-[92vh] min-w-[360px] w-full max-w-[420px]">
+      <div className="card-glass overflow-hidden rounded-2xl shadow-2xl flex flex-col max-h-[92vh] min-w-0 w-full max-w-[420px]">
         {/* Toolbar */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-erl-border-subtle flex-shrink-0">
           <div>
@@ -67,9 +67,9 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
         </div>
 
         {/* Scrollable receipt paper */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 flex justify-center bg-[#e8e4df]">
+        <div className="flex-1 overflow-y-auto overflow-x-auto px-5 py-4 flex justify-center bg-[#e8e4df]">
           <div
-            className="receipt-print-target"
+            className="receipt-print-target flex-shrink-0"
             style={{
               background: "#fff",
               width: PAPER_WIDTH,

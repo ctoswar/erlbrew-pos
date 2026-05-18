@@ -3,6 +3,7 @@ import { Order } from "../types";
 import { formatCurrency, formatTime } from "../utils";
 import { apiGet } from "../utils/api";
 import { serverOrderToOrder } from "../hooks/useOrders";
+import { useViewport } from "../hooks/useViewport";
 
 interface HistoryResponse {
   orders: any[];
@@ -51,6 +52,7 @@ export const OrderHistory: React.FC = () => {
 
   const totalPages = Math.ceil(total / limit);
   const currentPage = Math.floor(offset / limit) + 1;
+  const { isMobile } = useViewport();
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden min-h-0">
@@ -89,7 +91,7 @@ export const OrderHistory: React.FC = () => {
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             className="flex-1 min-w-[150px] bg-erl-base border border-erl-border-default rounded-md text-erl-text-primary px-2.5 py-1.5 text-[11px]" />
           <button onClick={handleSearch} disabled={loading} className={`
-            px-4 py-1.5 rounded-md border-none bg-erl-accent text-erl-sidebar text-[9px] font-bold tracking-wide uppercase whitespace-nowrap
+            px-4 py-2.5 sm:py-1.5 rounded-md border-none bg-erl-accent text-erl-sidebar text-[9px] font-bold tracking-wide uppercase whitespace-nowrap min-h-[44px] sm:min-h-0
             ${loading ? "cursor-wait" : "cursor-pointer"}
           `}>
             {loading ? "⟳" : "Search"}
@@ -110,61 +112,88 @@ export const OrderHistory: React.FC = () => {
             <div className="text-[9px] text-erl-text-faint mb-2.5 tracking-wide">
               {total} order{total !== 1 ? 's' : ''} found
             </div>
-            <table className="w-full border-collapse text-[11px]">
-              <thead>
-                <tr className="border-b border-erl-border-default">
-                  {["Order", "Date", "Time", "Staff", "Type", "Items", "Total", "Payment", "Status"].map(h => (
-                    <th key={h} className="text-left text-[8px] text-erl-text-disabled tracking-widest uppercase pb-2 pr-2 font-normal">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
+            {isMobile ? (
+              <div className="flex flex-col gap-3">
                 {orders.map((o) => (
-                  <tr key={o.id} className="border-t border-erl-border-subtle">
-                    <td className="py-1.5 pr-2 text-erl-text-primary font-bold font-mono text-[10px]">
-                      #{o.id.slice(0, 8).toUpperCase()}
-                    </td>
-                    <td className="py-1.5 pr-2 text-erl-muted text-[10px]">
-                      {o.createdAt.toLocaleDateString("en-PH", { month: "short", day: "2-digit" })}
-                    </td>
-                    <td className="py-1.5 pr-2 text-erl-muted text-[10px]">
-                      {formatTime(o.createdAt)}
-                    </td>
-                    <td className="py-1.5 pr-2 text-erl-muted">{o.staff?.name?.split(" ")[0] ?? '—'}</td>
-                    <td className="py-1.5 pr-2 text-erl-muted">{o.type === "dine-in" ? o.customerName || "Dine-in" : "Takeout"}</td>
-                    <td className="py-1.5 pr-2 text-erl-muted">{o.items.reduce((s, ci) => s + (ci?.qty ?? 0), 0)}</td>
-                    <td className="py-1.5 pr-2 text-erl-accent font-bold">{formatCurrency(o.total)}</td>
-                    <td className="py-1.5 pr-2 text-erl-muted text-[10px] capitalize">{o.payMethod}</td>
-                    <td className="py-1.5">
-                      <span className={`pill text-[8px] ${o.status === "completed" ? "pill-success" : o.status === "ready" ? "pill-gold" : o.status === "voided" || o.status === "refunded" ? "pill-danger" : "pill-muted"}`}>
+                  <div key={o.id} className="bg-erl-surface rounded-xl p-4 border border-erl-border-subtle">
+                    <div className="flex justify-between items-start mb-2.5">
+                      <div className="font-bold text-erl-text-primary font-mono text-sm">#{o.id.slice(0, 8).toUpperCase()}</div>
+                      <span className={`pill text-[10px] ${o.status === "completed" ? "pill-success" : o.status === "ready" ? "pill-gold" : o.status === "voided" || o.status === "refunded" ? "pill-danger" : "pill-muted"}`}>
                         {o.status}
                       </span>
-                    </td>
-                  </tr>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-erl-text-muted mb-2.5">
+                      <div>{o.createdAt.toLocaleDateString("en-PH", { month: "short", day: "2-digit" })} {formatTime(o.createdAt)}</div>
+                      <div>{o.staff?.name?.split(" ")[0] ?? '—'}</div>
+                      <div>{o.type === "dine-in" ? o.customerName || "Dine-in" : "Takeout"}</div>
+                      <div className="capitalize">{o.payMethod}</div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-erl-text-muted">{o.items.reduce((s, ci) => s + (ci?.qty ?? 0), 0)} items</div>
+                      <div className="text-erl-accent font-bold text-sm">{formatCurrency(o.total)}</div>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-[11px] min-w-[640px]">
+                  <thead>
+                    <tr className="border-b border-erl-border-default">
+                      {["Order", "Date", "Time", "Staff", "Type", "Items", "Total", "Payment", "Status"].map(h => (
+                        <th key={h} className="text-left text-[8px] text-erl-text-disabled tracking-widest uppercase pb-2 pr-2 font-normal">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((o) => (
+                      <tr key={o.id} className="border-t border-erl-border-subtle">
+                        <td className="py-1.5 pr-2 text-erl-text-primary font-bold font-mono text-[10px]">
+                          #{o.id.slice(0, 8).toUpperCase()}
+                        </td>
+                        <td className="py-1.5 pr-2 text-erl-muted text-[10px]">
+                          {o.createdAt.toLocaleDateString("en-PH", { month: "short", day: "2-digit" })}
+                        </td>
+                        <td className="py-1.5 pr-2 text-erl-muted text-[10px]">
+                          {formatTime(o.createdAt)}
+                        </td>
+                        <td className="py-1.5 pr-2 text-erl-muted">{o.staff?.name?.split(" ")[0] ?? '—'}</td>
+                        <td className="py-1.5 pr-2 text-erl-muted">{o.type === "dine-in" ? o.customerName || "Dine-in" : "Takeout"}</td>
+                        <td className="py-1.5 pr-2 text-erl-muted">{o.items.reduce((s, ci) => s + (ci?.qty ?? 0), 0)}</td>
+                        <td className="py-1.5 pr-2 text-erl-accent font-bold">{formatCurrency(o.total)}</td>
+                        <td className="py-1.5 pr-2 text-erl-muted text-[10px] capitalize">{o.payMethod}</td>
+                        <td className="py-1.5">
+                          <span className={`pill text-[8px] ${o.status === "completed" ? "pill-success" : o.status === "ready" ? "pill-gold" : o.status === "voided" || o.status === "refunded" ? "pill-danger" : "pill-muted"}`}>
+                            {o.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-4">
+              <div className="flex justify-center items-center gap-2 mt-4 flex-wrap">
                 <button onClick={() => fetchHistory(0)} disabled={offset === 0} className={`
-                  px-3 py-1.5 rounded-md border border-erl-border-default bg-transparent text-[9px]
+                  px-4 sm:px-3 py-2.5 sm:py-1.5 rounded-md border border-erl-border-default bg-transparent text-[9px] min-h-[44px] sm:min-h-0
                   ${offset === 0 ? "text-erl-text-disabled cursor-default" : "text-erl-text-primary cursor-pointer"}
                 `}>« First</button>
                 <button onClick={() => fetchHistory(Math.max(0, offset - limit))} disabled={offset === 0} className={`
-                  px-3 py-1.5 rounded-md border border-erl-border-default bg-transparent text-[9px]
+                  px-4 sm:px-3 py-2.5 sm:py-1.5 rounded-md border border-erl-border-default bg-transparent text-[9px] min-h-[44px] sm:min-h-0
                   ${offset === 0 ? "text-erl-text-disabled cursor-default" : "text-erl-text-primary cursor-pointer"}
                 `}>← Prev</button>
-                <span className="text-[10px] text-erl-muted">
+                <span className="text-[10px] text-erl-muted min-h-[44px] flex items-center">
                   Page {currentPage} of {totalPages}
                 </span>
                 <button onClick={() => fetchHistory(offset + limit)} disabled={offset + limit >= total} className={`
-                  px-3 py-1.5 rounded-md border border-erl-border-default bg-transparent text-[9px]
+                  px-4 sm:px-3 py-2.5 sm:py-1.5 rounded-md border border-erl-border-default bg-transparent text-[9px] min-h-[44px] sm:min-h-0
                   ${offset + limit >= total ? "text-erl-text-disabled cursor-default" : "text-erl-text-primary cursor-pointer"}
                 `}>Next →</button>
                 <button onClick={() => fetchHistory((totalPages - 1) * limit)} disabled={offset + limit >= total} className={`
-                  px-3 py-1.5 rounded-md border border-erl-border-default bg-transparent text-[9px]
+                  px-4 sm:px-3 py-2.5 sm:py-1.5 rounded-md border border-erl-border-default bg-transparent text-[9px] min-h-[44px] sm:min-h-0
                   ${offset + limit >= total ? "text-erl-text-disabled cursor-default" : "text-erl-text-primary cursor-pointer"}
                 `}>Last »</button>
               </div>

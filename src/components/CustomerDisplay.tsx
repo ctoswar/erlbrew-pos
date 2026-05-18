@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { CartItem, OrderType } from "../types";
 import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
 import { useCart } from "../hooks/useCart";
@@ -79,22 +79,22 @@ export const CustomerDisplay: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0d0600] via-[#1e0e06] to-[#0d0600] text-[#f5e6d0] font-sans flex flex-col">
       {/* Header */}
-      <div className="px-12 pt-7 pb-5 border-b border-erl-accent/20 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <span className="text-4xl">☕</span>
+      <div className="px-4 md:px-12 pt-5 md:pt-7 pb-4 md:pb-5 border-b border-erl-accent/20 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-3 md:gap-4">
+          <span className="text-3xl md:text-4xl">☕</span>
           <div>
-            <div className="font-display text-[26px] font-bold text-erl-accent tracking-wide">
+            <div className="font-display text-xl md:text-[26px] font-bold text-erl-accent tracking-wide">
               ERLBREW CAFÉ
             </div>
-            <div className="text-[11px] text-[#f5e6d0]/50 tracking-widest uppercase mt-0.5">
+            <div className="text-[10px] md:text-[11px] text-[#f5e6d0]/50 tracking-widest uppercase mt-0.5">
               Customer Display
             </div>
           </div>
         </div>
         {!isEmpty && (
-          <div className="bg-erl-accent/15 border-[1.5px] border-erl-accent/40 rounded-xl px-5 py-2.5 text-center">
+          <div className="bg-erl-accent/15 border-[1.5px] border-erl-accent/40 rounded-xl px-4 md:px-5 py-2 md:py-2.5 text-center">
             <div className="text-[9px] tracking-widest text-[#f5e6d0]/50 uppercase mb-1">Order Type</div>
-            <div className="text-[15px] font-bold text-erl-accent">
+            <div className="text-[13px] md:text-[15px] font-bold text-erl-accent">
               {orderLabel}
             </div>
           </div>
@@ -102,20 +102,20 @@ export const CustomerDisplay: React.FC = () => {
       </div>
 
       {/* Body */}
-      <div className="flex-1 flex items-center justify-center px-12">
+      <div className="flex-1 flex items-center justify-center px-4 md:px-12">
         {isEmpty ? (
           /* Empty state */
           <div key={"empty-" + fadeKey} className="text-center animate-fade-in">
-            <div className="text-8xl mb-6">🛒</div>
-            <div className="font-display text-4xl text-erl-accent mb-3">
+            <div className="text-6xl md:text-8xl mb-4 md:mb-6">🛒</div>
+            <div className="font-display text-3xl md:text-4xl text-erl-accent mb-3">
               Welcome!
             </div>
-            <div className="text-lg text-[#f5e6d0]/55 leading-relaxed max-w-[440px]">
+            <div className="text-base md:text-lg text-[#f5e6d0]/55 leading-relaxed max-w-[440px]">
               Your order will appear here as items are added by the cashier.
             </div>
-            <div className="mt-8 flex gap-3 justify-center">
+            <div className="mt-6 md:mt-8 flex gap-2 md:gap-3 justify-center flex-wrap">
               {categories.length > 0 && categories.map((cat) => (
-                <span key={cat} className="bg-erl-accent/10 border border-erl-accent/25 rounded-full px-4 py-1.5 text-[11px] text-[#f5e6d0]/40 tracking-wide">
+                <span key={cat} className="bg-erl-accent/10 border border-erl-accent/25 rounded-full px-3 md:px-4 py-1.5 text-[10px] md:text-[11px] text-[#f5e6d0]/40 tracking-wide">
                   {cat}
                 </span>
               ))}
@@ -123,33 +123,33 @@ export const CustomerDisplay: React.FC = () => {
           </div>
         ) : (
           /* Cart items */
-          <div key={"cart-" + fadeKey} className="w-full max-w-[1100px] flex gap-12 items-start animate-fade-in">
+          <div key={"cart-" + fadeKey} className="w-full max-w-[1100px] flex flex-col lg:flex-row gap-8 lg:gap-12 items-start animate-fade-in">
             {/* Left: item list */}
-            <div className="flex-1">
-              <div className="text-[10px] tracking-widest text-[#f5e6d0]/35 uppercase mb-5">
+            <div className="flex-1 w-full">
+              <div className="text-[10px] tracking-widest text-[#f5e6d0]/35 uppercase mb-4 md:mb-5">
                 Your Order · {items.reduce((s, c) => s + c.qty, 0)} item{items.reduce((s, c) => s + c.qty, 0) !== 1 ? "s" : ""}
               </div>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2 md:gap-3">
                 {items.map((ci) => (
-                  <div key={ci.item.id} className="flex items-center gap-4 bg-white/[0.04] border border-erl-accent/12 rounded-[14px] px-5 py-4">
-                    <div className="w-11 h-11 rounded-[10px] bg-erl-accent/15 flex items-center justify-center text-[22px] flex-shrink-0">
+                  <div key={ci.item.id} className="flex items-center gap-3 md:gap-4 bg-white/[0.04] border border-erl-accent/12 rounded-[14px] px-4 md:px-5 py-3 md:py-4">
+                    <div className="w-9 h-9 md:w-11 md:h-11 rounded-[10px] bg-erl-accent/15 flex items-center justify-center text-lg md:text-[22px] flex-shrink-0">
                       {ci.item.emoji}
                     </div>
-                    <div className="flex-1">
-                      <div className="text-base font-semibold text-[#f5e6d0] mb-0.5">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm md:text-base font-semibold text-[#f5e6d0] mb-0.5 truncate">
                         {ci.item.name}
                       </div>
                       {ci.notes && (
-                        <div className="text-[11px] text-[#f5e6d0]/40 italic">
+                        <div className="text-[10px] md:text-[11px] text-[#f5e6d0]/40 italic">
                           Note: {ci.notes}
                         </div>
                       )}
                     </div>
-                    <div className="text-right">
-                      <div className="text-[11px] text-[#f5e6d0]/40 mb-0.5">
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-[10px] md:text-[11px] text-[#f5e6d0]/40 mb-0.5">
                         {ci.qty} × {formatCurrency(ci.item.price)}
                       </div>
-                      <div className="text-[17px] font-bold text-erl-accent">
+                      <div className="text-[15px] md:text-[17px] font-bold text-erl-accent">
                         {formatCurrency(ci.item.price * ci.qty)}
                       </div>
                     </div>
@@ -159,26 +159,26 @@ export const CustomerDisplay: React.FC = () => {
             </div>
 
             {/* Right: totals */}
-            <div className="w-[320px] flex-shrink-0 bg-erl-accent/8 border-[1.5px] border-erl-accent/20 rounded-[20px] px-7 py-7">
-              <div className="text-[10px] tracking-widest text-[#f5e6d0]/35 uppercase mb-5">
+            <div className="w-full lg:w-[320px] flex-shrink-0 bg-erl-accent/8 border-[1.5px] border-erl-accent/20 rounded-[20px] px-5 md:px-7 py-5 md:py-7">
+              <div className="text-[10px] tracking-widest text-[#f5e6d0]/35 uppercase mb-4 md:mb-5">
                 Total
               </div>
 
-              <div className="flex flex-col gap-3.5">
+              <div className="flex flex-col gap-3 md:gap-3.5">
                 <div className="flex justify-between text-sm text-[#f5e6d0]/60">
                   <span>Subtotal</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="h-px bg-erl-accent/20 my-1" />
-                <div className="flex justify-between font-display text-[28px] font-bold text-erl-accent">
+                <div className="flex justify-between font-display text-2xl md:text-[28px] font-bold text-erl-accent">
                   <span>Total</span>
                   <span>{formatCurrency(grand)}</span>
                 </div>
               </div>
 
-              <div className="mt-6 px-4 py-3.5 bg-black/20 rounded-[10px] text-center">
+              <div className="mt-5 md:mt-6 px-4 py-3 md:py-3.5 bg-black/20 rounded-[10px] text-center">
                 <div className="text-[10px] text-[#f5e6d0]/35 tracking-wide mb-1">Order Type</div>
-                <div className="text-base font-bold text-[#f5e6d0]">{orderType === "dine-in" ? `🍽️ ${customerName || "Dine-in"}` : "🥤 Takeout"}</div>
+                <div className="text-sm md:text-base font-bold text-[#f5e6d0]">{orderType === "dine-in" ? `🍽️ ${customerName || "Dine-in"}` : "🥤 Takeout"}</div>
               </div>
             </div>
           </div>
@@ -186,7 +186,7 @@ export const CustomerDisplay: React.FC = () => {
       </div>
 
       {/* Footer */}
-      <div className="px-12 py-4 border-t border-erl-accent/10 flex justify-between items-center flex-shrink-0">
+      <div className="px-4 md:px-12 py-4 border-t border-erl-accent/10 flex justify-between items-center flex-shrink-0">
         <div className="text-[11px] text-[#f5e6d0]/25">
           Powered by Erlbrew POS
         </div>

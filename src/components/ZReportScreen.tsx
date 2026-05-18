@@ -110,7 +110,7 @@ export const ZReportScreen: React.FC = () => {
           </div>
 
           {/* Stats grid */}
-          <div className="grid grid-cols-3 gap-px bg-erl-border-subtle/30">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-erl-border-subtle/30">
             {lastReportStats.map((stat) => (
               <div key={stat.label} className={`
                 px-4 py-3
@@ -149,7 +149,7 @@ export const ZReportScreen: React.FC = () => {
           <div className="flex flex-col gap-2.5">
             {reports.map((r) => (
               <div key={r.id} className="rounded-xl border border-erl-border-subtle bg-erl-surface/60 px-4 py-3 hover:border-erl-border-medium hover:shadow-sm transition-all duration-200">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-semibold text-erl-text-primary">
                       {r.report_date}
@@ -160,7 +160,7 @@ export const ZReportScreen: React.FC = () => {
                       {r.total_orders} order{r.total_orders !== 1 ? "s" : ""}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                  <div className="flex items-center gap-3 flex-shrink-0 sm:ml-4">
                     <div className="text-right">
                       <div className="text-[12px] text-erl-text-faint">Sales</div>
                       <div className="text-[13px] font-bold text-erl-accent tabular-nums">{formatCurrency(r.total_sales)}</div>

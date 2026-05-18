@@ -50,7 +50,7 @@ export const ModifierModal: React.FC<Props> = ({ item, onAdd, onClose }) => {
                 {formatCurrency(item.price)} base
               </div>
             </div>
-            <button onClick={onClose} className="btn-ghost text-base px-1.5 py-0.5 text-erl-muted">✕</button>
+            <button onClick={onClose} className="btn-ghost text-base min-w-[44px] min-h-[44px] flex items-center justify-center text-erl-muted">✕</button>
           </div>
 
           {/* Modifier list */}
@@ -67,7 +67,7 @@ export const ModifierModal: React.FC<Props> = ({ item, onAdd, onClose }) => {
                     ${isSelected(mod) ? "bg-erl-accent/10 border-[1.5px] border-erl-accent" : "bg-erl-surface border-[1.5px] border-erl-border-default"}
                   `}>
                   <div className={`
-                    w-[18px] h-[18px] rounded flex items-center justify-center flex-shrink-0 text-[10px] text-erl-sidebar
+                    w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-[10px] text-erl-sidebar
                     ${isSelected(mod) ? "bg-erl-accent border-[1.5px] border-erl-accent" : "bg-transparent border-[1.5px] border-erl-border-medium"}
                   `}>
                     {isSelected(mod) ? "✓" : ""}
@@ -101,7 +101,7 @@ export const ModifierModal: React.FC<Props> = ({ item, onAdd, onClose }) => {
             <button className="btn btn-accent w-full py-2.5" onClick={handleAdd}>
               Add to Cart
             </button>
-            <button onClick={onClose} className="btn btn-outline w-full text-[10px] py-2">
+            <button onClick={onClose} className="btn btn-outline w-full text-[10px] py-2.5">
               Cancel
             </button>
           </div>

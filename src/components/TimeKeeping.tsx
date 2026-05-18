@@ -130,9 +130,9 @@ export const TimeKeeping: React.FC = () => {
   return (
     <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Header with tabs */}
-      <div className="glass-panel px-5 py-3.5 border-b border-erl-accent/[0.08] flex items-center justify-between flex-shrink-0 rounded-none">
-        <div className="flex items-center gap-4">
-          <div className="w-8 h-8 rounded-xl bg-erl-accent/10 flex items-center justify-center">
+      <div className="glass-panel px-4 md:px-5 py-3.5 border-b border-erl-accent/[0.08] flex flex-col sm:flex-row items-start sm:items-center justify-between flex-shrink-0 rounded-none gap-2">
+        <div className="flex items-center gap-3 md:gap-4 flex-wrap">
+          <div className="w-8 h-8 rounded-xl bg-erl-accent/10 flex items-center justify-center flex-shrink-0">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-erl-accent">
               <circle cx="12" cy="12" r="10"/>
               <polyline points="12 6 12 12 16 14"/>
@@ -142,7 +142,7 @@ export const TimeKeeping: React.FC = () => {
           <div className="flex gap-1 bg-erl-base rounded-xl p-0.5 border border-erl-border-subtle">
             {([["today", "Today"], ["calendar", "Calendar"]] as const).map(([key, label]) => (
               <button key={key} onClick={() => setTab(key as Tab)} className={`
-                px-3.5 py-1.5 text-xs rounded-lg cursor-pointer transition-all duration-200 font-semibold tracking-wide
+                px-3 py-1.5 sm:px-3.5 text-xs rounded-lg cursor-pointer transition-all duration-200 font-semibold tracking-wide min-h-[44px]
                 ${tab === key
                   ? "bg-erl-accent/15 text-erl-accent shadow-sm"
                   : "text-erl-text-faint hover:text-erl-text-secondary"}
@@ -152,7 +152,7 @@ export const TimeKeeping: React.FC = () => {
             ))}
           </div>
         </div>
-        <div className="text-xs text-erl-text-faint tracking-wide font-medium">{todayDateStr}</div>
+        <div className="text-xs text-erl-text-faint tracking-wide font-medium hidden sm:block">{todayDateStr}</div>
       </div>
 
       {/* Body */}
@@ -232,7 +232,7 @@ export const TimeKeeping: React.FC = () => {
         {tab === "calendar" && (
           <>
             {/* Month Stats Bar */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-xl px-4 py-3 flex items-center gap-3 border bg-erl-surface border-erl-border-subtle">
                 <div className="w-8 h-8 rounded-lg bg-erl-accent/10 flex items-center justify-center">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-erl-accent">
@@ -284,13 +284,13 @@ export const TimeKeeping: React.FC = () => {
             </div>
 
             {/* Calendar Navigation */}
-            <div className="flex items-center justify-between">
-              <button onClick={prevMonth} className="w-10 h-10 rounded-xl border border-erl-border-default bg-erl-surface/50 text-erl-text-secondary cursor-pointer flex items-center justify-center hover:border-erl-accent/30 hover:text-erl-accent hover:bg-erl-accent/5 transition-all duration-200">
+            <div className="flex items-center justify-between gap-2">
+              <button onClick={prevMonth} className="w-10 h-10 rounded-xl border border-erl-border-default bg-erl-surface/50 text-erl-text-secondary cursor-pointer flex items-center justify-center hover:border-erl-accent/30 hover:text-erl-accent hover:bg-erl-accent/5 transition-all duration-200 min-h-[44px]">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
               </button>
 
               <div className="flex flex-col items-center">
-                <div className="font-display text-xl font-bold text-erl-text-primary tracking-wide">
+                <div className="font-display text-lg sm:text-xl font-bold text-erl-text-primary tracking-wide">
                   {monthNames[calMonth]}
                 </div>
                 <div className="text-xs text-erl-text-muted font-medium tracking-wider mt-0.5">
@@ -299,10 +299,10 @@ export const TimeKeeping: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <button onClick={() => { const now = new Date(); setCalDate(new Date(now.getFullYear(), now.getMonth(), 1)); setSelectedDate(todayStr); }} className="px-3 py-2 rounded-xl border border-erl-border-default bg-erl-surface/50 text-erl-text-secondary cursor-pointer text-[11px] font-semibold tracking-wide hover:border-erl-accent/30 hover:text-erl-accent hover:bg-erl-accent/5 transition-all duration-200">
+                <button onClick={() => { const now = new Date(); setCalDate(new Date(now.getFullYear(), now.getMonth(), 1)); setSelectedDate(todayStr); }} className="px-3 py-2 rounded-xl border border-erl-border-default bg-erl-surface/50 text-erl-text-secondary cursor-pointer text-[11px] font-semibold tracking-wide hover:border-erl-accent/30 hover:text-erl-accent hover:bg-erl-accent/5 transition-all duration-200 min-h-[44px]">
                   Today
                 </button>
-                <button onClick={nextMonth} className="w-10 h-10 rounded-xl border border-erl-border-default bg-erl-surface/50 text-erl-text-secondary cursor-pointer flex items-center justify-center hover:border-erl-accent/30 hover:text-erl-accent hover:bg-erl-accent/5 transition-all duration-200">
+                <button onClick={nextMonth} className="w-10 h-10 rounded-xl border border-erl-border-default bg-erl-surface/50 text-erl-text-secondary cursor-pointer flex items-center justify-center hover:border-erl-accent/30 hover:text-erl-accent hover:bg-erl-accent/5 transition-all duration-200 min-h-[44px]">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
                 </button>
               </div>
@@ -322,7 +322,7 @@ export const TimeKeeping: React.FC = () => {
               {/* Day cells */}
               <div className="grid grid-cols-7">
                 {days.map((d, i) => {
-                  if (d === null) return <div key={`e${i}`} className="min-h-[80px] bg-erl-base/20" />;
+                  if (d === null) return <div key={`e${i}`} className="min-h-[60px] sm:min-h-[80px] bg-erl-base/20" />;
                   const ds = dateStr(d);
                   const dayStaff = summary[ds] || [];
                   const isToday = ds === todayStr;
@@ -334,7 +334,7 @@ export const TimeKeeping: React.FC = () => {
                       key={ds}
                       onClick={() => setSelectedDate(isSelected ? null : ds)}
                       className={`
-                        relative p-2 min-h-[80px] cursor-pointer transition-all duration-200
+                        relative p-1.5 sm:p-2 min-h-[60px] sm:min-h-[80px] cursor-pointer transition-all duration-200
                         ${i % 7 !== 6 ? "border-r border-erl-border-subtle" : ""}
                         ${days.length - i > 7 ? "border-b border-erl-border-subtle" : ""}
                         ${isSelected ? "bg-erl-accent/10" : isToday ? "bg-erl-accent/[0.04]" : isWeekend ? "bg-erl-base/[0.03]" : "hover:bg-erl-accent/[0.02]"}
@@ -352,16 +352,16 @@ export const TimeKeeping: React.FC = () => {
 
                       {/* Staff indicators */}
                       {dayStaff.length > 0 && (
-                        <div className="flex flex-wrap gap-1 justify-center">
-                          {dayStaff.slice(0, 5).map((s) => (
-                            <div key={s.staff_id} title={s.name} className="w-5 h-5 rounded-full flex items-center justify-center text-[7px] font-bold text-white shadow-sm"
+                        <div className="flex flex-wrap gap-0.5 sm:gap-1 justify-center">
+                          {dayStaff.slice(0, 3).map((s) => (
+                            <div key={s.staff_id} title={s.name} className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[6px] sm:text-[7px] font-bold text-white shadow-sm"
                               style={{ background: s.color || "#555" }}>
                               {s.initials}
                             </div>
                           ))}
-                          {dayStaff.length > 5 && (
-                            <div className="w-5 h-5 rounded-full bg-erl-border-default flex items-center justify-center text-[7px] font-bold text-erl-text-muted">
-                              +{dayStaff.length - 5}
+                          {dayStaff.length > 3 && (
+                            <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-erl-border-default flex items-center justify-center text-[6px] sm:text-[7px] font-bold text-erl-text-muted">
+                              +{dayStaff.length - 3}
                             </div>
                           )}
                         </div>

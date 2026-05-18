@@ -392,7 +392,7 @@ export const AdminInventory: React.FC = () => {
         <>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] animate-fade-in-overlay" onClick={() => setMovementItemId(null)} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="animate-scale-in card-glass p-0 w-full max-w-[640px] max-h-[85vh] flex flex-col overflow-hidden rounded-2xl">
+            <div className="animate-scale-in card-glass p-0 w-full max-w-[640px] max-h-[85dvh] max-h-[85vh] flex flex-col overflow-hidden rounded-2xl">
               {/* Modal header */}
               <div className="flex justify-between items-center px-6 py-4 border-b border-erl-border-subtle">
                 <div>
@@ -435,7 +435,7 @@ export const AdminInventory: React.FC = () => {
         <>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] animate-fade-in-overlay" onClick={() => setShowAllMovements(false)} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="animate-scale-in card-glass p-0 w-full max-w-[740px] max-h-[85vh] flex flex-col overflow-hidden rounded-2xl">
+            <div className="animate-scale-in card-glass p-0 w-full max-w-[740px] max-h-[85dvh] max-h-[85vh] flex flex-col overflow-hidden rounded-2xl">
               {/* Modal header */}
               <div className="flex justify-between items-center px-6 py-4 border-b border-erl-border-subtle">
                 <div>
@@ -450,46 +450,50 @@ export const AdminInventory: React.FC = () => {
               </div>
 
               {/* Table header */}
-              <div className="grid grid-cols-[1fr_90px_70px_60px_60px_100px] gap-2 px-6 py-2 text-[11px] font-bold text-erl-text-faint uppercase tracking-wider border-b border-erl-border-subtle">
-                <div>Item</div>
-                <div>Type</div>
-                <div className="text-right">Qty</div>
-                <div className="text-center">Before</div>
-                <div className="text-center">After</div>
-                <div className="text-right">Time</div>
-              </div>
+              <div className="overflow-x-auto">
+                <div className="min-w-[640px]">
+                  <div className="grid grid-cols-[1fr_90px_70px_60px_60px_100px] gap-2 px-6 py-2 text-[11px] font-bold text-erl-text-faint uppercase tracking-wider border-b border-erl-border-subtle">
+                    <div>Item</div>
+                    <div>Type</div>
+                    <div className="text-right">Qty</div>
+                    <div className="text-center">Before</div>
+                    <div className="text-center">After</div>
+                    <div className="text-right">Time</div>
+                  </div>
 
-              {/* Modal body */}
-              <div className="scroll-area flex-1 overflow-y-auto min-h-0">
-                {allMovementsLoading ? (
-                  <div className="text-center py-10">
-                    <div className="animate-shimmer w-24 h-4 rounded-md mx-auto mb-2" />
-                    <div className="animate-shimmer w-16 h-3 rounded-md mx-auto" />
-                  </div>
-                ) : allMovements.length === 0 ? (
-                  <div className="text-center py-10 text-erl-text-disabled">
-                    <p className="text-[13px]">No movements recorded yet.</p>
-                  </div>
-                ) : (
-                  <div className="px-6 py-2">
-                    {allMovements.map((m) => (
-                      <div key={m.id} className="grid grid-cols-[1fr_90px_70px_60px_60px_100px] gap-2 py-2.5 border-b border-erl-border-subtle/50 text-[12px] items-center">
-                        <div className="font-medium text-erl-text-primary truncate">{m.inventory_name}</div>
-                        <div>
-                          <span className="font-semibold text-[11px]" style={{ color: MOVEMENT_COLORS[m.movement_type] }}>
-                            {MOVEMENT_ICONS[m.movement_type]} {MOVEMENT_LABELS[m.movement_type]}
-                          </span>
-                        </div>
-                        <div className="text-right font-bold tabular-nums">{m.quantity} {m.unit}</div>
-                        <div className="text-center text-erl-text-muted tabular-nums">{m.stock_before}</div>
-                        <div className="text-center text-erl-text-muted tabular-nums">{m.stock_after}</div>
-                        <div className="text-right text-erl-text-faint text-[11px] whitespace-nowrap tabular-nums">
-                          {new Date(m.created_at).toLocaleString()}
-                        </div>
+                  {/* Modal body */}
+                  <div className="scroll-area flex-1 overflow-y-auto min-h-0">
+                    {allMovementsLoading ? (
+                      <div className="text-center py-10">
+                        <div className="animate-shimmer w-24 h-4 rounded-md mx-auto mb-2" />
+                        <div className="animate-shimmer w-16 h-3 rounded-md mx-auto" />
                       </div>
-                    ))}
+                    ) : allMovements.length === 0 ? (
+                      <div className="text-center py-10 text-erl-text-disabled">
+                        <p className="text-[13px]">No movements recorded yet.</p>
+                      </div>
+                    ) : (
+                      <div className="px-6 py-2">
+                        {allMovements.map((m) => (
+                          <div key={m.id} className="grid grid-cols-[1fr_90px_70px_60px_60px_100px] gap-2 py-2.5 border-b border-erl-border-subtle/50 text-[12px] items-center">
+                            <div className="font-medium text-erl-text-primary truncate">{m.inventory_name}</div>
+                            <div>
+                              <span className="font-semibold text-[11px]" style={{ color: MOVEMENT_COLORS[m.movement_type] }}>
+                                {MOVEMENT_ICONS[m.movement_type]} {MOVEMENT_LABELS[m.movement_type]}
+                              </span>
+                            </div>
+                            <div className="text-right font-bold tabular-nums">{m.quantity} {m.unit}</div>
+                            <div className="text-center text-erl-text-muted tabular-nums">{m.stock_before}</div>
+                            <div className="text-center text-erl-text-muted tabular-nums">{m.stock_after}</div>
+                            <div className="text-right text-erl-text-faint text-[11px] whitespace-nowrap tabular-nums">
+                              {new Date(m.created_at).toLocaleString()}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>
@@ -501,7 +505,7 @@ export const AdminInventory: React.FC = () => {
         <>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] animate-fade-in-overlay" onClick={() => setShowAdjustModal(false)} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="animate-scale-in card-glass p-0 w-full max-w-[400px] overflow-hidden rounded-2xl">
+            <div className="animate-scale-in card-glass p-0 w-full max-w-[400px] max-h-[90dvh] max-h-[90vh] overflow-hidden rounded-2xl">
               {/* Modal header */}
               <div className="px-6 pt-5 pb-4 border-b border-erl-border-subtle">
                 <div className="font-display text-base font-bold text-erl-text-primary">
@@ -561,7 +565,7 @@ export const AdminInventory: React.FC = () => {
         <>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] animate-fade-in-overlay" onClick={closeForm} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="animate-scale-in card-glass p-0 w-full max-w-[460px] max-h-[90vh] flex flex-col overflow-hidden rounded-2xl">
+            <div className="animate-scale-in card-glass p-0 w-full max-w-[460px] max-h-[90dvh] max-h-[90vh] flex flex-col overflow-hidden rounded-2xl">
               {/* Modal header */}
               <div className="px-6 pt-5 pb-4 border-b border-erl-border-subtle">
                 <div className="font-display text-lg font-bold text-erl-text-primary">
@@ -575,26 +579,26 @@ export const AdminInventory: React.FC = () => {
               {/* Form body */}
               <div className="scroll-area flex-1 overflow-y-auto min-h-0 px-6 py-5">
                 <div className="flex flex-col gap-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormSection label="Item ID" hint="e.g. cup-s">
                       <input value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))}
                         placeholder="cup-s" disabled={!!editingId}
-                        className={`text-erl-text-primary ${editingId ? "opacity-50 cursor-not-allowed" : ""}`} />
+                        className={`w-full text-erl-text-primary ${editingId ? "opacity-50 cursor-not-allowed" : ""}`} />
                     </FormSection>
                     <FormSection label="Name">
                       <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                        placeholder="Medium Cup (12oz)" className="text-erl-text-primary" />
+                        placeholder="Medium Cup (12oz)" className="w-full text-erl-text-primary" />
                     </FormSection>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormSection label="Category">
-                      <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="text-erl-text-primary">
+                      <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="w-full text-erl-text-primary">
                         {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </FormSection>
                     <FormSection label="Unit">
-                      <select value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} className="text-erl-text-primary">
+                      <select value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} className="w-full text-erl-text-primary">
                         {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
                       </select>
                     </FormSection>
@@ -602,25 +606,25 @@ export const AdminInventory: React.FC = () => {
 
                   <div className="h-px bg-erl-border-subtle" />
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormSection label="Current Stock">
                       <input type="number" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
-                        placeholder="0" min="0" step="1" className="text-erl-text-primary" />
+                        placeholder="0" min="0" step="1" className="w-full text-erl-text-primary" />
                     </FormSection>
                     <FormSection label="Low Stock Threshold">
                       <input type="number" value={form.low_stock_threshold} onChange={(e) => setForm((f) => ({ ...f, low_stock_threshold: e.target.value }))}
-                        placeholder="10" min="0" className="text-erl-text-primary" />
+                        placeholder="10" min="0" className="w-full text-erl-text-primary" />
                     </FormSection>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormSection label="Purchase Cost" hint="₱/unit">
                       <input type="number" value={form.purchase_cost} onChange={(e) => setForm((f) => ({ ...f, purchase_cost: e.target.value }))}
-                        placeholder="0.00" min="0" step="0.01" className="text-erl-text-primary" />
+                        placeholder="0.00" min="0" step="0.01" className="w-full text-erl-text-primary" />
                     </FormSection>
                     <FormSection label="Unit Cost" hint="₱/serving">
                       <input type="number" value={form.unit_cost} onChange={(e) => setForm((f) => ({ ...f, unit_cost: e.target.value }))}
-                        placeholder="0.00" min="0" step="0.01" className="text-erl-text-primary" />
+                        placeholder="0.00" min="0" step="0.01" className="w-full text-erl-text-primary" />
                     </FormSection>
                   </div>
                 </div>

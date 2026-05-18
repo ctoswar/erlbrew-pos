@@ -103,7 +103,7 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
                 Add-ons & customizations for this item
               </div>
             </div>
-            <button onClick={onClose} className="bg-none border-none text-erl-muted text-lg cursor-pointer">✕</button>
+            <button onClick={onClose} className="bg-none border-none text-erl-muted text-lg cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center">✕</button>
           </div>
 
           {error && (
@@ -172,10 +172,10 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
                           {mod.price > 0 ? `+${formatCurrency(mod.price)}` : "Free"}
                         </div>
                       </div>
-                      <button onClick={() => startEdit(mod)} className="bg-none border border-erl-border-default rounded-md px-2 py-[3px] text-[9px] font-bold text-erl-muted cursor-pointer tracking-wide">
+                      <button onClick={() => startEdit(mod)} className="bg-none border border-erl-border-default rounded-md px-2 py-1.5 text-[9px] font-bold text-erl-muted cursor-pointer tracking-wide min-h-[44px]">
                         Edit
                       </button>
-                      <button onClick={() => handleDelete(mod.id!)} className="bg-none border border-red-500/30 rounded-md px-2 py-[3px] text-[9px] font-bold text-erl-danger cursor-pointer tracking-wide">
+                      <button onClick={() => handleDelete(mod.id!)} className="bg-none border border-red-500/30 rounded-md px-2 py-1.5 text-[9px] font-bold text-erl-danger cursor-pointer tracking-wide min-h-[44px]">
                         Del
                       </button>
                     </>
@@ -218,13 +218,13 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
                 <button
                   onClick={handleAdd}
                   disabled={saving || !form.name.trim()}
-                  className="btn btn-accent flex-1 py-1.5 text-[11px]"
+                  className="btn btn-accent flex-1 py-2 text-[11px] min-h-[44px]"
                 >
                   {saving ? "Saving..." : "Add Modifier"}
                 </button>
                 <button
                   onClick={() => { setShowAddForm(false); setForm({ name: "", price: "", isDefault: false }); }}
-                  className="flex-1 py-1.5 rounded-lg bg-erl-elevated text-erl-muted text-[11px] font-bold cursor-pointer border-[1.5px] border-erl-border-default"
+                  className="flex-1 py-2 rounded-lg bg-erl-elevated text-erl-muted text-[11px] font-bold cursor-pointer border-[1.5px] border-erl-border-default min-h-[44px]"
                 >
                   Cancel
                 </button>
@@ -233,7 +233,7 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
           ) : (
             <button
               onClick={() => { setShowAddForm(true); setEditingId(null); }}
-              className="btn btn-accent w-full py-2 text-[11px]"
+              className="btn btn-accent w-full py-2.5 text-[11px] min-h-[44px]"
             >
               + Add Modifier
             </button>

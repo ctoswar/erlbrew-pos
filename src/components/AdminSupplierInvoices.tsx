@@ -267,7 +267,7 @@ Erlbrew Café`;
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-2.5 px-4 py-3 border-b border-erl-border-subtle flex-shrink-0">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 px-4 py-3 border-b border-erl-border-subtle flex-shrink-0">
         <div className="bg-erl-surface rounded-lg px-3 py-2.5 text-center">
           <div className="text-[8px] text-erl-muted uppercase tracking-wide">Pending</div>
           <div className="text-sm font-bold text-erl-accent">{formatCurrency(totalStats.pending)}</div>
@@ -367,7 +367,7 @@ Erlbrew Café`;
         <>
           <div className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay" onClick={closeForm} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[600px] max-h-[90vh] overflow-y-auto animate-fade-in-up">
+            <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[600px] max-h-[90dvh] max-h-[90vh] overflow-y-auto animate-fade-in-up">
               <div className="font-display text-sm font-bold text-erl-text-primary mb-4">
                 {editingId ? "Edit Invoice" : "New Supplier Invoice"}
               </div>
@@ -436,7 +436,7 @@ Erlbrew Café`;
                   ) : (
                     <div className="flex flex-col gap-1.5">
                       {form.items.map((item, idx) => (
-                        <div key={idx} className="grid grid-cols-[2fr_60px_80px_80px_30px] gap-1.5 items-center">
+                        <div key={idx} className="grid grid-cols-1 sm:grid-cols-[2fr_60px_80px_80px_30px] gap-1.5 items-center">
                           <input value={item.item_description} onChange={e => updateLineItem(idx, "item_description", e.target.value)} className={inputClass} placeholder="Description" />
                           <input type="number" value={item.quantity} onChange={e => updateLineItem(idx, "quantity", parseFloat(e.target.value) || 0)} className={inputClass} placeholder="Qty" />
                           <input type="number" value={item.unit_price} onChange={e => updateLineItem(idx, "unit_price", parseFloat(e.target.value) || 0)} className={inputClass} placeholder="Unit Price" />
@@ -498,7 +498,7 @@ Erlbrew Café`;
         <>
           <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setViewingInvoice(null)} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[500px] max-h-[90vh] overflow-y-auto">
+            <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[500px] max-h-[90dvh] max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <div className="font-display text-base font-bold text-erl-text-primary">{viewingInvoice.invoice_number}</div>
@@ -562,7 +562,7 @@ Erlbrew Café`;
         <>
           <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setEmailInvoice(null)} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[600px] max-h-[90dvh] max-h-[90vh] overflow-y-auto">
               {/* Header */}
               <div className="flex justify-between items-center mb-5">
                 <div className="font-display text-sm font-bold text-erl-text-primary">

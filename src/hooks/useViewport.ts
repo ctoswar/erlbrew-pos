@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 // Breakpoints matching global.css and POSScreen.tsx
 export const BREAKPOINTS = {

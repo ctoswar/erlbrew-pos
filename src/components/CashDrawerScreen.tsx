@@ -170,7 +170,7 @@ export const CashDrawerScreen: React.FC = () => {
   };
 
   return (
-    <div className="scroll-area px-5 py-3 flex flex-col gap-3.5 max-w-[520px] overflow-y-auto min-h-0">
+    <div className="scroll-area px-5 py-3 flex flex-col gap-3.5 w-full max-w-[520px] mx-auto overflow-y-auto min-h-0">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
@@ -196,7 +196,7 @@ export const CashDrawerScreen: React.FC = () => {
       )}
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
         {[
           { label: "Opening Float", value: formatCurrency(drawer?.opening_float ?? 0) },
           { label: "Cash Sales", value: formatCurrency(drawer?.cash_sales ?? 0) },
@@ -242,14 +242,14 @@ export const CashDrawerScreen: React.FC = () => {
 
       {/* Cash Payouts */}
       <div className="card-glass p-4">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <span className="text-[10px] text-erl-muted font-semibold">Cash Payouts (–)</span>
           <input
             type="number"
             value={cashPayouts}
             onChange={(e) => setCashPayouts(Number(e.target.value) || 0)}
             disabled={drawer?.status === 'closed'}
-            className="w-[140px] py-[5px] px-2.5 rounded-md border-[1.5px] border-erl-border-default text-right bg-erl-base text-erl-text-primary text-[13px]"
+            className="w-full sm:w-[140px] py-[5px] px-2.5 rounded-md border-[1.5px] border-erl-border-default text-right bg-erl-base text-erl-text-primary text-[13px]"
           />
         </div>
       </div>
@@ -267,14 +267,14 @@ export const CashDrawerScreen: React.FC = () => {
       {/* Actual / Variance */}
       <div className="card-glass p-4">
         <div className="flex flex-col gap-2.5">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <span className="text-[10px] text-erl-muted font-semibold">Actual Cash (counted)</span>
             <input
               type="number"
               value={closingAmount}
               onChange={(e) => setClosingAmount(Number(e.target.value) || 0)}
               disabled={drawer?.status === 'closed'}
-              className="w-[140px] py-[5px] px-2.5 rounded-md border-[1.5px] border-erl-border-default text-right bg-erl-base text-erl-text-primary text-[13px]"
+              className="w-full sm:w-[140px] py-[5px] px-2.5 rounded-md border-[1.5px] border-erl-border-default text-right bg-erl-base text-erl-text-primary text-[13px]"
             />
           </div>
           <div className="h-px bg-erl-border-default" />
@@ -291,7 +291,7 @@ export const CashDrawerScreen: React.FC = () => {
 
       {/* Notes */}
       <div className="card-glass p-4">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <span className="text-[10px] text-erl-muted font-semibold">Notes</span>
           <input
             type="text"
@@ -299,7 +299,7 @@ export const CashDrawerScreen: React.FC = () => {
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g. Paid supplier, petty cash..."
             disabled={drawer?.status === 'closed'}
-            className="py-[5px] px-2.5 rounded-md border-[1.5px] border-erl-border-default text-left bg-erl-base text-erl-text-primary text-[11px] w-[260px]"
+            className="py-[5px] px-2.5 rounded-md border-[1.5px] border-erl-border-default text-left bg-erl-base text-erl-text-primary text-[11px] w-full sm:w-[260px]"
           />
         </div>
       </div>
@@ -360,8 +360,8 @@ export const CashDrawerScreen: React.FC = () => {
             No transactions for today.
           </div>
         ) : (
-          <div className="max-h-[240px] overflow-y-auto">
-            <table className="w-full border-collapse text-[9px]">
+          <div className="max-h-[240px] overflow-y-auto overflow-x-auto">
+            <table className="w-full border-collapse text-[9px] min-w-[480px]">
               <thead>
                 <tr className="border-b border-erl-border-subtle">
                   <th className="px-1.5 py-1 text-left text-erl-text-faint font-semibold">Type</th>

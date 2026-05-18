@@ -220,7 +220,7 @@ export const AdminStaff: React.FC = () => {
       </div>
 
       {/* Body */}
-      <div className="scroll-area flex-1 p-5 overflow-y-auto min-h-0">
+      <div className="scroll-area flex-1 p-4 md:p-5 overflow-y-auto min-h-0">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <div className="w-8 h-8 border-2 border-erl-accent/30 border-t-erl-accent rounded-full animate-spin" />
@@ -246,7 +246,7 @@ export const AdminStaff: React.FC = () => {
 
             {/* Add Staff Form */}
             {showAddForm && (
-              <div className="card-glass p-6 border border-erl-accent/20 relative overflow-hidden">
+               <div className="card-glass p-4 md:p-6 border border-erl-accent/20 relative overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-erl-accent/40 to-transparent" />
                 
                 <div className="flex items-center gap-2 mb-5">
@@ -255,7 +255,7 @@ export const AdminStaff: React.FC = () => {
                 </div>
 
                 {/* Name + Role row */}
-                <div className="flex gap-3 mb-3">
+                <div className="flex flex-col md:flex-row gap-3 mb-3">
                   <div className="flex-1">
                     <label className="text-xs text-erl-text-muted mb-1.5 block tracking-wide font-medium">RFID *</label>
                     <input
@@ -290,7 +290,7 @@ export const AdminStaff: React.FC = () => {
                 </div>
 
                 {/* Initials + Color + PIN row */}
-                <div className="flex gap-3 mb-5">
+                <div className="flex flex-col md:flex-row gap-3 mb-5">
                   <div className="flex-1">
                     <label className="text-xs text-erl-text-muted mb-1.5 block tracking-wide font-medium">Initials (auto)</label>
                     <input

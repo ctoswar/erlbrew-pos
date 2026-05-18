@@ -143,7 +143,7 @@ export const AdminPrintSettings: React.FC = () => {
 
   return (
     <div className="scroll-area flex-1 overflow-y-auto min-h-0">
-      <div className="max-w-[640px] mx-auto px-6 py-5 flex flex-col gap-5">
+      <div className="max-w-[640px] w-full mx-auto px-4 md:px-6 py-5 flex flex-col gap-5">
         {/* ── Section: Appearance ─────────────────────────────── */}
         <SectionTitle title="Appearance" subtitle="Customize theme and text size" />
 
@@ -225,13 +225,14 @@ export const AdminPrintSettings: React.FC = () => {
 
           {/* Company Fields */}
           <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormSection label="Company Name">
                 <input
                   type="text"
                   value={companyInfo.company_name}
                   onChange={(e) => setCompanyInfo(c => ({ ...c, company_name: e.target.value }))}
                   placeholder="Erlbrew Cafe"
+                  className="w-full"
                 />
               </FormSection>
               <FormSection label="Business Address">
@@ -240,16 +241,18 @@ export const AdminPrintSettings: React.FC = () => {
                   value={companyInfo.company_address}
                   onChange={(e) => setCompanyInfo(c => ({ ...c, company_address: e.target.value }))}
                   placeholder="123 Coffee Street"
+                  className="w-full"
                 />
               </FormSection>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormSection label="Phone">
                 <input
                   type="text"
                   value={companyInfo.company_phone}
                   onChange={(e) => setCompanyInfo(c => ({ ...c, company_phone: e.target.value }))}
                   placeholder="+63 917 123 4567"
+                  className="w-full"
                 />
               </FormSection>
               <FormSection label="Email">
@@ -258,6 +261,7 @@ export const AdminPrintSettings: React.FC = () => {
                   value={companyInfo.company_email}
                   onChange={(e) => setCompanyInfo(c => ({ ...c, company_email: e.target.value }))}
                   placeholder="hello@erlbrew.cafe"
+                  className="w-full"
                 />
               </FormSection>
             </div>
@@ -366,13 +370,13 @@ export const AdminPrintSettings: React.FC = () => {
 
           {/* GCash Ref */}
           <SettingsRow label="GCash Number" description="Shown on E-Wallet payment screen">
-            <div className="w-[200px]">
+            <div className="w-full md:w-[200px]">
               <input
                 type="text"
                 value={settings.gcashNumber}
                 onChange={(e) => update({ gcashNumber: e.target.value })}
                 placeholder="e.g. 0917-123-4567"
-                className="!text-[12px]"
+                className="!text-[12px] w-full"
               />
             </div>
           </SettingsRow>
@@ -435,7 +439,7 @@ const SectionTitle: React.FC<{ title: string; subtitle: string }> = ({ title, su
 );
 
 const SettingsRow: React.FC<{ label: string; description: string; children: React.ReactNode }> = ({ label, description, children }) => (
-  <div className="flex items-center justify-between py-3 border-b border-erl-border-subtle/60 last:border-b-0">
+  <div className="flex flex-col md:flex-row md:items-center justify-between py-3 border-b border-erl-border-subtle/60 last:border-b-0 gap-2">
     <div className="flex flex-col mr-4 min-w-0">
       <div className="text-[13px] font-semibold text-erl-text-primary">{label}</div>
       <div className="text-[11px] text-erl-text-faint mt-0.5">{description}</div>

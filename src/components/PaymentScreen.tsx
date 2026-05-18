@@ -150,7 +150,7 @@ export const PaymentScreen: React.FC<Props> = ({
             </div>
             <div className="mb-3">
               <div className="text-[10px] text-erl-text-muted tracking-[3px] uppercase mb-2 font-bold">Customer's Reference No.</div>
-              <input type="text" value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} placeholder="e.g. REF-123456789" />
+              <input type="text" value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} placeholder="e.g. REF-123456789" className="min-h-[44px]" />
             </div>
             <div className="text-xs text-erl-text-muted text-center font-medium">Tap <strong className="text-erl-accent">Confirm & Place Order</strong> once paid</div>
           </div>
@@ -174,13 +174,13 @@ export const PaymentScreen: React.FC<Props> = ({
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-erl-text-muted text-sm pointer-events-none font-semibold">₱</span>
                   <input type="number" value={splitEwallet} onChange={(e) => setSplitEwallet(e.target.value)} placeholder="0.00" min="0" max={total}
-                    className="w-full py-3 pl-8 pr-4 rounded-2xl border-2 border-erl-border-default bg-erl-surface text-erl-text-primary text-sm focus:border-erl-accent focus:shadow-[0_0_0_3px_rgba(196,149,106,0.1)] transition-all" />
+                    className="w-full py-3 pl-8 pr-4 min-h-[44px] rounded-2xl border-2 border-erl-border-default bg-erl-surface text-erl-text-primary text-sm focus:border-erl-accent focus:shadow-[0_0_0_3px_rgba(196,149,106,0.1)] transition-all" />
                 </div>
               </div>
               <div>
                 <div className="text-[10px] text-erl-text-faint mb-1.5 font-semibold">E-Wallet Reference</div>
                 <input type="text" value={splitRef} onChange={(e) => setSplitRef(e.target.value)} placeholder="GCash ref number…"
-                  className="w-full py-3 px-4 rounded-2xl border-2 border-erl-border-default bg-erl-surface text-erl-text-primary text-sm focus:border-erl-accent focus:shadow-[0_0_0_3px_rgba(196,149,106,0.1)] transition-all" />
+                  className="w-full py-3 px-4 min-h-[44px] rounded-2xl border-2 border-erl-border-default bg-erl-surface text-erl-text-primary text-sm focus:border-erl-accent focus:shadow-[0_0_0_3px_rgba(196,149,106,0.1)] transition-all" />
               </div>
               {splitEwalletNum > 0 && (
                 <div className="p-3.5 bg-erl-accent/[0.04] rounded-xl text-xs text-erl-text-muted">
@@ -193,7 +193,7 @@ export const PaymentScreen: React.FC<Props> = ({
         )}
 
         <button
-          className={`btn w-full text-[11px] py-4 rounded-2xl tracking-[0.12em] font-bold transition-all duration-300 ${
+          className={`btn w-full text-[11px] py-4 min-h-[44px] rounded-2xl tracking-[0.12em] font-bold transition-all duration-300 whitespace-normal break-words leading-tight ${
             canConfirm && (method !== "ewallet" || canConfirmEwallet)
               ? "btn-accent shadow-lg hover:shadow-xl hover:-translate-y-0.5"
               : "bg-erl-border-default text-erl-text-disabled cursor-not-allowed"

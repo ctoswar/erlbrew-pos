@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MenuItem, CartItem, CartItemModifier } from "../types";
 import { formatCurrency } from "../utils";
 import { apiGet } from "../utils/api";
@@ -23,6 +23,17 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
   };
 
   const [modifierItem, setModifierItem] = useState<MenuItem | null>(null);
+  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+  useEffect(() => {
+    if (activeCategory && tabRefs.current.has(activeCategory)) {
+      tabRefs.current.get(activeCategory)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }
+  }, [activeCategory]);
 
   useEffect(() => {
     setLoading(true);
@@ -53,14 +64,21 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
   return (
     <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Category Tabs */}
-      <div className="hide-scrollbar flex gap-2 px-6 pt-5 pb-3 flex-shrink-0 overflow-x-auto">
+      <div
+        className="hide-scrollbar flex gap-2 px-3 md:px-6 pt-4 md:pt-5 pb-2 md:pb-3 flex-shrink-0 overflow-x-auto snap-x"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
         {categories.map((cat: string) => (
           <button
             key={cat}
+            ref={(el) => {
+              if (el) tabRefs.current.set(cat, el);
+              else tabRefs.current.delete(cat);
+            }}
             onClick={() => setActiveCategory(cat)}
             className={`
-              px-5 py-2.5 rounded-full text-[10px] font-bold tracking-[0.15em] uppercase
-              whitespace-nowrap flex-shrink-0 cursor-pointer transition-all duration-250 ease-out
+              px-4 md:px-5 py-2.5 md:py-2.5 min-h-[44px] md:min-h-0 rounded-full text-[11px] md:text-[10px] font-bold tracking-[0.15em] uppercase
+              whitespace-nowrap flex-shrink-0 cursor-pointer transition-all duration-250 ease-out snap-start
               ${
                 activeCategory === cat
                   ? "bg-erl-accent text-erl-base shadow-[0_4px_16px_rgba(196,149,106,0.3)]"
@@ -74,7 +92,7 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
       </div>
 
       {/* Grid */}
-      <div className="scroll-area flex-1 px-6 pb-6 pt-3 overflow-y-auto min-h-0">
+      <div className="scroll-area flex-1 px-3 md:px-6 pb-4 md:pb-6 pt-2 md:pt-3 overflow-y-auto min-h-0">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
             <div className="w-10 h-10 border-2 border-erl-accent/20 border-t-erl-accent rounded-full animate-spin" />
@@ -88,7 +106,7 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
             <span className="text-sm text-erl-text-muted tracking-wide">No items in this category</span>
           </div>
         ) : (
-          <div className="menu-grid-root grid grid-cols-2 gap-4">
+          <div className="menu-grid-root grid grid-cols-2 gap-3 md:gap-4">
             {items.map((item) => (
               <MenuCard
                 key={`${item.id}-${(item.modifiers || []).map((m) => m.id || m.name).join("-")}`}
@@ -161,7 +179,7 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd, onOpenModal 
     >
       {/* Image */}
       {hasImage && (
-        <div className="w-full h-[120px] overflow-hidden bg-erl-base relative">
+        <div className="w-full h-[100px] md:h-[120px] overflow-hidden bg-erl-base relative">
           <img
             src={item.image}
             alt={item.name}
@@ -173,7 +191,7 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd, onOpenModal 
           {/* Popular badge on image */}
           {item.popular && (
             <div className="absolute top-2.5 right-2.5">
-              <span className="pill pill-accent text-[7px]">
+              <span className="pill pill-accent text-[8px] md:text-[7px]">
                 <span className="w-1.5 h-1.5 rounded-full bg-erl-accent animate-pulse mr-1" />
                 Popular
               </span>
@@ -182,13 +200,13 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd, onOpenModal 
         </div>
       )}
 
-      <div className="px-4 py-3.5 flex flex-col gap-2 flex-1">
+      <div className="px-3 md:px-4 py-3 md:py-3.5 flex flex-col gap-2 flex-1">
         {/* Top row: emoji + name */}
         {!hasImage && (
           <div className="flex items-start justify-between">
-            <span className="text-[26px] leading-none filter drop-shadow-sm">{item.emoji}</span>
+            <span className="text-[22px] md:text-[26px] leading-none filter drop-shadow-sm">{item.emoji}</span>
             {item.popular && (
-              <span className="pill pill-accent text-[7px]">
+              <span className="pill pill-accent text-[8px] md:text-[7px]">
                 <span className="w-1.5 h-1.5 rounded-full bg-erl-accent animate-pulse mr-1" />
                 Popular
               </span>
@@ -197,24 +215,24 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd, onOpenModal 
         )}
 
         {/* Name */}
-        <div className="text-[14px] font-bold text-erl-text-primary leading-snug flex-1 font-display">
+        <div className="text-[13px] md:text-[14px] font-bold text-erl-text-primary leading-snug flex-1 font-display">
           {item.name}
         </div>
 
         {/* Description */}
         {item.description && (
-          <div className="text-[10px] text-erl-text-secondary leading-relaxed line-clamp-2">
+          <div className="text-[11px] md:text-[10px] text-erl-text-secondary leading-relaxed line-clamp-2">
             {item.description}
           </div>
         )}
 
         {/* Bottom: price + qty */}
         <div className="flex items-center justify-between mt-auto pt-1.5">
-          <span className="font-display text-[16px] font-bold text-erl-accent tracking-tight">
+          <span className="font-display text-[15px] md:text-[16px] font-bold text-erl-accent tracking-tight">
             {formatCurrency(item.price)}
           </span>
           {cartItem && cartItem.qty > 0 && (
-            <div className="bg-erl-accent text-erl-base rounded-xl min-w-[26px] h-7 flex items-center justify-center text-[11px] font-bold px-2 shadow-[0_2px_10px_rgba(196,149,106,0.3)]">
+            <div className="bg-erl-accent text-erl-base rounded-xl min-w-[28px] h-8 md:min-w-[26px] md:h-7 flex items-center justify-center text-xs md:text-[11px] font-bold px-2 shadow-[0_2px_10px_rgba(196,149,106,0.3)]">
               {cartItem.qty}
             </div>
           )}
@@ -222,7 +240,7 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd, onOpenModal 
 
         {/* Modifier indicator */}
         {modifiers.length > 0 && !cartItem && (
-          <div className="text-[9px] text-erl-accent-dim tracking-wide font-medium">
+          <div className="text-[10px] md:text-[9px] text-erl-accent-dim tracking-wide font-medium">
             {modifiers.length} option{modifiers.length > 1 ? 's' : ''} available
           </div>
         )}

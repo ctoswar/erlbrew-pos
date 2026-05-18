@@ -49,10 +49,6 @@ const PAY_BASIS_OPTIONS: { value: PayBasis; label: string }[] = [
   { value: "monthly", label: "Monthly" },
 ];
 
-function todayISO(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
 function getSemiMonthlyDates(which: "first" | "second"): {
   from: string;
   to: string;
@@ -408,22 +404,24 @@ export const AdminPayroll: React.FC = () => {
       {activeTab === "overview" && (
         <div className="flex flex-col flex-1 overflow-hidden min-h-0">
           {/* Period selector + quick actions */}
-          <div className="px-5 py-3 border-b border-erl-border-subtle flex items-center gap-3 flex-shrink-0 flex-wrap">
-            <div className="text-[9px] text-erl-muted tracking-wide uppercase font-bold">Period:</div>
-            <select
-              value={selectedPeriodId ?? ""}
-              onChange={(e) => setSelectedPeriodId(Number(e.target.value) || null)}
-              className="text-[10px] bg-erl-base border border-erl-border-default rounded-md px-2 py-1 text-erl-text-primary outline-none cursor-pointer min-w-[180px]"
-            >
-              {periods.length === 0 && <option value="">No periods</option>}
-              {periods.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label || periodLabel(p.date_from, p.date_to)} ({STATUS_LABELS[p.status]})
-                </option>
-              ))}
-            </select>
+          <div className="px-5 py-3 border-b border-erl-border-subtle flex flex-col sm:flex-row sm:items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="text-[9px] text-erl-muted tracking-wide uppercase font-bold flex-shrink-0">Period:</div>
+              <select
+                value={selectedPeriodId ?? ""}
+                onChange={(e) => setSelectedPeriodId(Number(e.target.value) || null)}
+                className="flex-1 sm:flex-none text-[10px] bg-erl-base border border-erl-border-default rounded-md px-2 py-1 text-erl-text-primary outline-none cursor-pointer min-w-[180px]"
+              >
+                {periods.length === 0 && <option value="">No periods</option>}
+                {periods.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label || periodLabel(p.date_from, p.date_to)} ({STATUS_LABELS[p.status]})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => quickCreate("first")}
                 className="px-2.5 py-1 text-[8px] rounded-md cursor-pointer border border-erl-border-subtle bg-transparent text-erl-muted font-normal hover:border-erl-accent hover:text-erl-accent"
@@ -448,7 +446,7 @@ export const AdminPayroll: React.FC = () => {
 
           {/* Summary stats */}
           {selectedPeriod && (
-            <div className="grid grid-cols-4 gap-2.5 px-5 py-3 flex-shrink-0">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 px-5 py-3 flex-shrink-0">
               {[
                 { label: "Total Gross Pay", value: formatCurrency(summary.totalGross), color: "text-erl-accent" },
                 { label: "Total Deductions", value: formatCurrency(summary.totalDeductions), color: "text-erl-danger" },
@@ -467,17 +465,19 @@ export const AdminPayroll: React.FC = () => {
 
           {/* Period actions */}
           {selectedPeriod && (
-            <div className="px-5 pb-3 flex items-center gap-2 flex-shrink-0">
-              <span className={`pill text-[10px] ${STATUS_COLORS[selectedPeriod.status]}`}>
-                {STATUS_LABELS[selectedPeriod.status]}
-              </span>
-              <span className="text-[11px] text-erl-text-faint">
-                {new Date(selectedPeriod.date_from).toLocaleDateString("en-PH")} – {new Date(selectedPeriod.date_to).toLocaleDateString("en-PH")}
-                {selectedPeriod.pay_date && (
-                  <span> · Pay date: {new Date(selectedPeriod.pay_date).toLocaleDateString("en-PH")}</span>
-                )}
-              </span>
-              <div className="ml-auto flex items-center gap-2">
+            <div className="px-5 pb-3 flex flex-col sm:flex-row sm:items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`pill text-[10px] ${STATUS_COLORS[selectedPeriod.status]}`}>
+                  {STATUS_LABELS[selectedPeriod.status]}
+                </span>
+                <span className="text-[11px] text-erl-text-faint">
+                  {new Date(selectedPeriod.date_from).toLocaleDateString("en-PH")} – {new Date(selectedPeriod.date_to).toLocaleDateString("en-PH")}
+                  {selectedPeriod.pay_date && (
+                    <span> · Pay date: {new Date(selectedPeriod.pay_date).toLocaleDateString("en-PH")}</span>
+                  )}
+                </span>
+              </div>
+              <div className="sm:ml-auto flex items-center gap-2 flex-wrap">
                 {selectedPeriod.status === "open" && (
                   <button
                     onClick={() => handleCompute(selectedPeriod.id)}
@@ -540,8 +540,8 @@ export const AdminPayroll: React.FC = () => {
               </div>
             ) : (
               <div className="bg-erl-surface/60 rounded-xl overflow-hidden border border-erl-border-subtle">
-                <div className="max-h-[calc(100vh-280px)] overflow-y-auto">
-                  <table className="w-full border-collapse text-[10px]">
+                <div className="max-h-[calc(100vh-280px)] overflow-y-auto overflow-x-auto">
+                  <table className="w-full border-collapse text-[10px] min-w-[900px]">
                     <thead>
                       <tr className="bg-erl-elevated sticky top-0 z-10">
                         <th className="px-3 py-2 text-left text-erl-muted font-semibold">Staff</th>
@@ -638,8 +638,8 @@ export const AdminPayroll: React.FC = () => {
             </div>
           ) : (
             <div className="bg-erl-surface/60 rounded-xl overflow-hidden border border-erl-border-subtle">
-              <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
-                <table className="w-full border-collapse text-[10px]">
+              <div className="max-h-[calc(100vh-200px)] overflow-y-auto overflow-x-auto">
+                <table className="w-full border-collapse text-[10px] min-w-[900px]">
                   <thead>
                     <tr className="bg-erl-elevated sticky top-0 z-10">
                       <th className="px-3 py-2 text-left text-erl-muted font-semibold">Staff</th>
@@ -839,7 +839,7 @@ export const AdminPayroll: React.FC = () => {
         <>
           <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setShowCreateModal(false)} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="animate-scale-in card-glass p-6 w-full max-w-[420px]">
+            <div className="animate-scale-in card-glass p-6 w-full max-w-[420px] max-h-[90dvh] max-h-[90vh] overflow-y-auto">
               <div className="font-display text-sm font-bold text-erl-text-primary mb-4">
                 Create Payroll Period
               </div>
@@ -927,7 +927,7 @@ export const AdminPayroll: React.FC = () => {
         <>
           <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setSelectedEntry(null)} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-            <div className="animate-scale-in card-glass p-6 w-full max-w-[480px] max-h-[90vh] overflow-y-auto">
+            <div className="animate-scale-in card-glass p-6 w-full max-w-[480px] max-h-[90dvh] max-h-[90vh] overflow-y-auto">
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <div>

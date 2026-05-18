@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { apiAdminGet, apiAdminPut, createStaff, CreateStaffData } from "../utils/api";
+import { formatCurrency } from "../utils";
 
 interface StaffMember {
   id: number;
@@ -9,6 +10,9 @@ interface StaffMember {
   role: string;
   initials: string;
   color: string;
+  pay_basis?: string | null;
+  daily_rate?: number | null;
+  monthly_salary?: number | null;
 }
 
 export const AdminStaff: React.FC = () => {
@@ -451,7 +455,7 @@ export const AdminStaff: React.FC = () => {
                   </div>
 
                   {/* Row 4: PIN */}
-                  <div className="flex items-center gap-3 pl-1">
+                  <div className="flex items-center gap-3 mb-3 pl-1">
                     <span className="text-[10px] text-erl-text-faint tracking-[0.15em] uppercase font-semibold w-[52px] flex-shrink-0">PIN</span>
                     {changingPwId === s.id ? (
                       <div className="flex-1">
@@ -496,6 +500,23 @@ export const AdminStaff: React.FC = () => {
                         Change PIN
                       </button>
                     )}
+                  </div>
+
+                  {/* Row 5: Pay info */}
+                  <div className="flex items-center gap-3 pl-1 mt-1">
+                    <span className="text-[10px] text-erl-text-faint tracking-[0.15em] uppercase font-semibold w-[52px] flex-shrink-0">Pay</span>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {s.daily_rate || s.monthly_salary ? (
+                        <span className="text-[11px] text-erl-text-secondary">
+                          {s.pay_basis === 'monthly'
+                            ? <>{formatCurrency(s.monthly_salary || 0)}/mo</>
+                            : <>{formatCurrency(s.daily_rate || 0)}/day</>
+                          }
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-erl-text-faint italic">No rate set</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

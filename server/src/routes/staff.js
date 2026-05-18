@@ -87,7 +87,7 @@ export default function staffRouter(pool){
   // GET all staff (protected)
   router.get('/', authMiddleware, async (req, res) => {
     try {
-      const [rows] = await pool.query('SELECT id, rfid, rfid_alt, name, role, initials, color, created_at FROM staff');
+      const [rows] = await pool.query('SELECT id, rfid, rfid_alt, name, role, initials, color, pay_basis, daily_rate, monthly_salary, created_at FROM staff');
       res.json(rows);
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
@@ -135,7 +135,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // PUT update staff (admin only)
   router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
-    const { rfid, rfid_alt, name, role, initials, color, password } = req.body;
+    const { rfid, rfid_alt, name, role, initials, color, password, pay_basis, daily_rate, monthly_salary } = req.body;
     try {
       const fields = [];
       const values = [];
@@ -145,6 +145,9 @@ router.get('/:id', authMiddleware, async (req, res) => {
       if (role !== undefined) { fields.push('role = ?'); values.push(role); }
       if (initials !== undefined) { fields.push('initials = ?'); values.push(initials); }
       if (color !== undefined) { fields.push('color = ?'); values.push(color); }
+      if (pay_basis !== undefined) { fields.push('pay_basis = ?'); values.push(pay_basis); }
+      if (daily_rate !== undefined) { fields.push('daily_rate = ?'); values.push(daily_rate || null); }
+      if (monthly_salary !== undefined) { fields.push('monthly_salary = ?'); values.push(monthly_salary || null); }
       if (password !== undefined) {
         const pw = String(password);
         if (pw.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
@@ -155,7 +158,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
       if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
       values.push(id);
       await pool.query(`UPDATE staff SET ${fields.join(', ')} WHERE id = ?`, values);
-    const [rows] = await pool.query('SELECT id, rfid, rfid_alt, name, role, initials, color FROM staff WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT id, rfid, rfid_alt, name, role, initials, color, pay_basis, daily_rate, monthly_salary FROM staff WHERE id = ?', [id]);
     await logAudit(pool, req, { action: 'staff_update', entityType: 'staff', entityId: id, details: { name, role } });
     res.json(rows[0]);
   } catch (e) {

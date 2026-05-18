@@ -32,14 +32,14 @@ export const CheckoutScreen: React.FC<Props> = ({
   const discountAmount = discount?.amount ?? 0;
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-erl-base p-6 relative overflow-hidden">
+    <div className="flex-1 flex items-center justify-center bg-erl-base p-3 sm:p-4 md:p-6 relative overflow-hidden">
       {/* Ambient glow */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-erl-accent/[0.02] blur-[120px] pointer-events-none" />
 
-      <div className="animate-scale-in card-glass py-10 px-8 w-full max-w-[500px] rounded-2xl relative">
+      <div className="animate-scale-in card-glass py-6 px-4 sm:py-8 sm:px-6 md:py-10 md:px-8 w-full max-w-[500px] rounded-2xl relative">
         {/* Header */}
         <div className="flex items-center gap-4 mb-7">
-          <button onClick={onBack} className="btn-ghost text-xs py-2 px-3 text-erl-text-muted rounded-xl hover:bg-white/[0.03] transition-colors flex items-center gap-1.5">
+          <button onClick={onBack} className="btn-ghost text-xs py-2 px-3 min-h-[44px] text-erl-text-muted rounded-xl hover:bg-white/[0.03] transition-colors flex items-center gap-1.5">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             Back
           </button>
@@ -54,7 +54,7 @@ export const CheckoutScreen: React.FC<Props> = ({
         </div>
 
         {/* Items List */}
-        <div className="mb-6 max-h-[240px] overflow-y-auto hide-scrollbar">
+        <div className="mb-6 max-h-[180px] sm:max-h-[220px] md:max-h-[240px] overflow-y-auto hide-scrollbar">
           {cart.map((ci, idx) => {
             const lineTotal = (ci.item.price + (ci.modifiers || []).reduce((s, m) => s + m.price, 0)) * ci.qty;
             return (
@@ -107,7 +107,7 @@ export const CheckoutScreen: React.FC<Props> = ({
           <div className="h-px bg-gradient-to-r from-transparent via-erl-border-default to-transparent my-3" />
           <div className="flex justify-between items-baseline">
             <span className="text-xs text-erl-text-secondary tracking-[0.15em] uppercase font-bold">Grand Total</span>
-            <span className="font-display text-[30px] font-bold text-erl-accent tracking-tight">{formatCurrency(grand)}</span>
+            <span className="font-display text-[24px] sm:text-[28px] md:text-[30px] font-bold text-erl-accent tracking-tight">{formatCurrency(grand)}</span>
           </div>
         </div>
 
@@ -118,7 +118,7 @@ export const CheckoutScreen: React.FC<Props> = ({
             <MetaBox label="Staff" value={staffName.split(" ")[0]} />
             <MetaBox label="Items" value={String(cart.reduce((s, ci) => s + ci.qty, 0))} />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             {orderType === "dine-in" && (
               <div className="flex-1">
                 <div className="text-[8px] text-erl-text-muted tracking-[2px] uppercase mb-1 font-bold">Customer Name</div>
@@ -127,7 +127,7 @@ export const CheckoutScreen: React.FC<Props> = ({
                   value={customerName}
                   onChange={(e) => onCustomerNameChange(e.target.value)}
                   placeholder="Customer name"
-                  className="w-full bg-erl-surface border border-erl-border-default rounded-xl px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent transition-colors"
+                  className="w-full min-h-[44px] bg-erl-surface border border-erl-border-default rounded-xl px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent transition-colors"
                 />
               </div>
             )}
@@ -138,14 +138,14 @@ export const CheckoutScreen: React.FC<Props> = ({
                 value={customerPhone}
                 onChange={(e) => onCustomerPhoneChange(e.target.value)}
                 placeholder="e.g. 09171234567"
-                className="w-full bg-erl-surface border border-erl-border-default rounded-xl px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent transition-colors"
+                className="w-full min-h-[44px] bg-erl-surface border border-erl-border-default rounded-xl px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent transition-colors"
               />
             </div>
           </div>
         </div>
 
         <button
-          className="btn btn-accent w-full text-[11px] py-4 rounded-2xl tracking-[0.15em] font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
+          className="btn btn-accent w-full text-[11px] py-4 min-h-[44px] rounded-2xl tracking-[0.15em] font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
           onClick={onContinue}
         >
           Select Payment Method →
@@ -161,7 +161,7 @@ export const CheckoutScreen: React.FC<Props> = ({
 };
 
 const MetaBox: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div className="card-glass flex-1 py-3 px-3 rounded-xl text-center">
+  <div className="card-glass flex-1 py-3 px-3 min-h-[44px] rounded-xl text-center flex flex-col items-center justify-center">
     <div className="text-[8px] text-erl-text-muted tracking-[2px] uppercase mb-1.5 font-bold">
       {label}
     </div>

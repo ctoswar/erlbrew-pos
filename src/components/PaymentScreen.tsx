@@ -45,14 +45,14 @@ export const PaymentScreen: React.FC<Props> = ({
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-erl-base p-6 relative overflow-hidden">
+    <div className="flex-1 flex items-center justify-center bg-erl-base p-3 sm:p-4 md:p-6 relative overflow-hidden">
       {/* Ambient glow */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-erl-accent/[0.02] blur-[120px] pointer-events-none" />
 
-      <div className="animate-scale-in card-glass py-8 px-7 w-full max-w-[460px] rounded-2xl relative">
+      <div className="animate-scale-in card-glass py-6 px-4 sm:py-8 sm:px-7 w-full max-w-[460px] rounded-2xl relative">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <button onClick={onBack} className="btn-ghost text-xs py-2 px-3 text-erl-text-muted rounded-xl hover:bg-white/[0.03] transition-colors flex items-center gap-1.5">
+          <button onClick={onBack} className="btn-ghost text-xs py-2 px-3 min-h-[44px] text-erl-text-muted rounded-xl hover:bg-white/[0.03] transition-colors flex items-center gap-1.5">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             Back
           </button>
@@ -69,7 +69,7 @@ export const PaymentScreen: React.FC<Props> = ({
         {/* Amount Due */}
         <div className="text-center mb-7">
           <div className="text-[10px] text-erl-text-muted tracking-[4px] uppercase mb-2 font-bold">Amount Due</div>
-          <div className="font-display text-[48px] font-bold text-erl-accent tracking-tight leading-none">{formatCurrency(total)}</div>
+          <div className="font-display text-[32px] sm:text-[40px] md:text-[48px] font-bold text-erl-accent tracking-tight leading-none">{formatCurrency(total)}</div>
           {discountLabel && discountAmount && (
             <div className="text-xs text-erl-success mt-2 font-semibold">{discountLabel} (−{formatCurrency(discountAmount)})</div>
           )}
@@ -80,7 +80,7 @@ export const PaymentScreen: React.FC<Props> = ({
           <div className="flex gap-2 mb-6">
             {(["cash", "card", "ewallet"] as PayMethod[]).map((m) => (
               <button key={m} onClick={() => { setMethod(m); setCashGiven(""); }}
-                className={`flex-1 py-3 rounded-2xl border-2 text-[10px] font-bold tracking-[0.12em] uppercase cursor-pointer transition-all duration-250 ease-out ${
+                className={`flex-1 min-h-[44px] flex items-center justify-center py-3 rounded-2xl border-2 text-[10px] font-bold tracking-[0.12em] uppercase cursor-pointer transition-all duration-250 ease-out ${
                   method === m
                     ? "bg-erl-accent/8 border-erl-accent/30 text-erl-accent shadow-[0_0_16px_rgba(196,149,106,0.08)]"
                     : "bg-transparent border-erl-border-default text-erl-text-faint hover:border-erl-border-medium hover:text-erl-text-secondary hover:bg-erl-accent/[0.02]"
@@ -94,10 +94,10 @@ export const PaymentScreen: React.FC<Props> = ({
         {method === "cash" && (
           <div className="mb-6">
             <div className="text-[10px] text-erl-text-muted tracking-[4px] uppercase mb-3 font-bold">Cash Tendered</div>
-            <div className="flex gap-2 mb-3 flex-wrap">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-3">
               {quickAmounts.map((amt) => (
                 <button key={amt} onClick={() => setCashGiven(String(amt))}
-                  className={`rounded-2xl py-2.5 px-5 text-sm font-bold cursor-pointer transition-all duration-200 ease-out ${
+                  className={`rounded-2xl py-2.5 px-3 min-h-[44px] text-sm font-bold cursor-pointer transition-all duration-200 ease-out ${
                     cashGiven === String(amt)
                       ? "bg-erl-accent border-2 border-erl-accent text-erl-base shadow-[0_2px_10px_rgba(196,149,106,0.3)]"
                       : "bg-erl-surface border-2 border-erl-border-subtle text-erl-text-muted hover:border-erl-border-medium hover:text-erl-text-secondary"
@@ -105,11 +105,11 @@ export const PaymentScreen: React.FC<Props> = ({
                 >{formatCurrency(amt)}</button>
               ))}
             </div>
-            <input type="number" value={cashGiven} onChange={(e) => setCashGiven(e.target.value)} placeholder="Or enter amount" className="mb-3" />
+            <input type="number" value={cashGiven} onChange={(e) => setCashGiven(e.target.value)} placeholder="Or enter amount" className="mb-3 min-h-[44px]" />
             {cashGiven && cash >= total && (
               <div className="bg-erl-success/[0.05] border border-erl-success/20 rounded-2xl py-5 px-5 text-center">
                 <div className="text-[10px] text-erl-success tracking-[4px] uppercase mb-2 font-bold">Change</div>
-                <div className="font-display text-[36px] font-bold text-erl-success tracking-tight">{formatCurrency(change)}</div>
+                <div className="font-display text-[28px] sm:text-[32px] md:text-[36px] font-bold text-erl-success tracking-tight">{formatCurrency(change)}</div>
               </div>
             )}
             {cashGiven && cash < total && (
@@ -137,7 +137,7 @@ export const PaymentScreen: React.FC<Props> = ({
             <div className="bg-erl-accent/[0.03] rounded-2xl p-6 mb-4 text-center border border-erl-accent/[0.06]">
               <div className="text-[10px] text-erl-text-muted tracking-[4px] uppercase mb-3 font-bold">GCash Reference</div>
               <div className="inline-flex items-center gap-2 bg-erl-accent/[0.06] border-2 border-dashed border-erl-accent/25 rounded-2xl py-3.5 px-6 mb-3">
-                <span className="text-2xl font-bold text-erl-accent tracking-widest font-mono">{printSettings.gcashNumber || "0917-123-4567"}</span>
+                <span className="text-lg sm:text-xl md:text-2xl font-bold text-erl-accent tracking-widest font-mono">{printSettings.gcashNumber || "0917-123-4567"}</span>
                 <button onClick={() => navigator.clipboard.writeText("09171234567")}
                   className="bg-transparent border-none cursor-pointer text-erl-accent-muted text-sm py-1 px-2 rounded-xl hover:bg-erl-accent/[0.08] transition-colors">
                   📋

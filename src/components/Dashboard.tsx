@@ -178,7 +178,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
   const marginColor = (summary.profitMargin ?? 0) >= 30 ? "text-erl-success" : (summary.profitMargin ?? 0) >= 15 ? "text-erl-accent" : "text-erl-danger";
 
   return (
-    <div className="scroll-area flex-1 p-5 flex flex-col gap-3.5 overflow-y-auto min-h-0">
+    <div className="scroll-area flex-1 p-3 sm:p-5 flex flex-col gap-3.5 overflow-y-auto min-h-0">
       {/* Page header */}
       <div className="flex items-baseline justify-between flex-wrap gap-1.5">
         <div>
@@ -240,7 +240,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
         {[
           { label: "Total Revenue", value: formatCurrency(summary.totalRevenue), sub: "Today", delta: revenueDelta, fmt: (d: number) => formatCurrency(Math.abs(d)) },
           { label: "Orders", value: String(summary.totalOrders), sub: "Completed", delta: ordersDelta, fmt: (d: number) => String(Math.abs(Math.round(d))) },
@@ -267,7 +267,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
         })}
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         {[
           { label: "COGS", value: formatCurrency(summary.totalCOGS ?? 0), sub: "Cost of Goods", color: "text-erl-text-secondary" },
           { label: "Profit", value: formatCurrency(summary.grossProfit ?? 0), sub: "Revenue − COGS", color: (summary.grossProfit ?? 0) >= 0 ? "text-erl-success" : "text-erl-danger" },
@@ -302,7 +302,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
         );
       })()}
 
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
         {/* Top Items */}
         <div className="stat-card py-3 px-3 rounded-[10px]">
           <div className="text-[8px] text-erl-text-muted tracking-[1.5px] uppercase mb-2.5">Top Items</div>
@@ -346,7 +346,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
       {summary.byPayMethod.length > 0 && (
         <div className="stat-card py-3 px-3 rounded-[10px]">
           <div className="text-[8px] text-erl-text-muted tracking-[1.5px] uppercase mb-2.5">Payment Methods</div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {summary.byPayMethod.map((pm) => (
               <div key={pm.method} className="flex-1 bg-erl-base rounded-lg py-2.5 text-center">
                 <div className="text-base mb-0.5">{pm.method === "cash" ? "💵" : pm.method === "card" ? "💳" : "📱"}</div>
@@ -365,7 +365,8 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
         {recentOrders.length === 0 ? (
           <div className="text-[10px] text-erl-text-disabled text-center py-3">No orders yet</div>
         ) : (
-          <table className="w-full border-collapse text-[10px]">
+          <div className="overflow-x-auto -mx-3 px-3">
+          <table className="w-full border-collapse text-[10px] min-w-[640px]">
             <thead>
               <tr>
                 {["Order", "Time", "Staff", "Type", "Items", "Total", "Ref", "Status", "", ""].map((h, i) => (
@@ -389,17 +390,18 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
                     <span className={`pill text-[7px] py-0.5 px-1.5 ${o.status === "completed" ? "pill-success" : o.status === "ready" ? "pill-gold" : "pill-muted"}`}>{o.status}</span>
                   </td>
                   <td className="py-1 pr-0">
-                    <button onClick={() => setReprintOrder(o)} className="bg-transparent border border-erl-border-default rounded text-erl-text-muted text-[7px] py-0.5 px-1.5 cursor-pointer tracking-wide uppercase">🖨</button>
+                    <button onClick={() => setReprintOrder(o)} className="bg-transparent border border-erl-border-default rounded text-erl-text-muted text-[7px] py-0.5 px-1.5 cursor-pointer tracking-wide uppercase min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">🖨</button>
                   </td>
                   <td className="py-1 pr-0">
                     {onRepeatOrder && (
-                      <button onClick={() => onRepeatOrder(o.items)} className="bg-transparent border border-erl-border-default rounded text-erl-accent text-[7px] py-0.5 px-1.5 cursor-pointer tracking-wide uppercase" title="Repeat order">🔁</button>
+                      <button onClick={() => onRepeatOrder(o.items)} className="bg-transparent border border-erl-border-default rounded text-erl-accent text-[7px] py-0.5 px-1.5 cursor-pointer tracking-wide uppercase min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0" title="Repeat order">🔁</button>
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -408,7 +410,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
         <>
           <div className="fixed inset-0 bg-black/65 z-[9998]" onClick={() => setReprintOrder(null)} />
           <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4">
-            <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-[400px] max-h-[90vh] overflow-y-auto">
+            <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[400px] max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <div className="text-xs font-bold text-erl-text-primary font-display">Reprint Receipt</div>
                 <button onClick={() => setReprintOrder(null)} className="bg-transparent border-none text-erl-text-muted text-base cursor-pointer">✕</button>

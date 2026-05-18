@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Order, OrderStatus } from "../types";
 import { formatTime, formatCurrency } from "../utils";
 import { VoidCredentialModal } from "./VoidCredentialModal";
+import { useViewport } from "../hooks/useViewport";
 
 interface Props {
   orders: Order[];
@@ -20,6 +21,8 @@ const COLUMNS: { status: OrderStatus; label: string; color: string }[] = [
 export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOrder, onRefundOrder }) => {
   const [voidTarget, setVoidTarget] = useState<string | null>(null);
   const [refundTarget, setRefundTarget] = useState<string | null>(null);
+  const [mobileFilter, setMobileFilter] = useState<OrderStatus | 'all'>('all');
+  const { isMobile } = useViewport();
 
   const handleVoidSuccess = () => {
     if (voidTarget) { onVoidOrder(voidTarget); setVoidTarget(null); }

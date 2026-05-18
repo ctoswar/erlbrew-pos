@@ -14,6 +14,7 @@ import { Dashboard } from "./Dashboard";
 import { AdminScreen } from "./AdminScreen";
 import { TimeKeeping } from "./TimeKeeping";
 import { DiscountModal } from "./DiscountModal";
+import { useViewport } from "../hooks/useViewport";
 import { openCashDrawer } from "../utils/receiptUtils";
 import { calcGrand } from "../utils";
 
@@ -22,8 +23,6 @@ interface Props {
   onLogout: () => void;
 }
 
-const MOBILE_BREAKPOINT = 768;
-const TABLET_BREAKPOINT = 1024;
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
@@ -33,8 +32,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
-  const [isTablet, setIsTablet] = useState(() => window.innerWidth >= MOBILE_BREAKPOINT && window.innerWidth < TABLET_BREAKPOINT);
+  const { isMobile, isTablet } = useViewport();
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [splitItems, setSplitItems] = useState<CartItem[]>([]);
   const [splitMode, setSplitMode] = useState(false);
@@ -44,16 +42,6 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     const modKey = (ci.modifiers || []).map((m) => m.name).sort().join("|");
     return modKey ? `${ci.item.id}::${modKey}` : ci.item.id;
   }
-
-  // Track viewport width for responsive layout
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-      setIsTablet(window.innerWidth >= MOBILE_BREAKPOINT && window.innerWidth < TABLET_BREAKPOINT);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   // Session timeout
   useEffect(() => {

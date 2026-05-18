@@ -217,16 +217,32 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center p-8 overflow-y-auto relative">
+      <main className="flex-1 flex items-center justify-center p-4 md:p-8 overflow-y-auto relative">
         {/* Center glow */}
         <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-erl-accent/[0.02] blur-[120px] pointer-events-none" />
 
         {/* Step 1: RFID Scan */}
         {step === "rfid" && (
           <div
-            className="animate-scale-in card-glass py-10 px-10 w-[380px] text-center relative cursor-pointer"
+            className="animate-scale-in card-glass py-8 md:py-10 px-6 md:px-10 w-full max-w-[380px] text-center relative cursor-pointer"
             onClick={() => rfidInputRef.current?.focus()}
           >
+            {/* Mobile brand header */}
+            <div className="flex flex-col items-center md:hidden mb-6">
+              {company.company_logo ? (
+                <img src={company.company_logo} alt="Logo" className="w-10 h-10 mb-2 rounded-xl object-contain shadow-lg" />
+              ) : (
+                <div className="w-10 h-10 mb-2 rounded-xl bg-gradient-to-br from-erl-accent/15 to-erl-accent/[0.03] border border-erl-accent/10 flex items-center justify-center shadow-lg shadow-erl-accent/5">
+                  <CoffeeSVG />
+                </div>
+              )}
+              <h1 className="font-display text-lg font-bold text-erl-accent tracking-[4px]">
+                {company.company_name || "Erlbrew"}
+              </h1>
+              <p className="text-[6px] text-erl-accent-dim tracking-[4px] uppercase font-bold">
+                Point of Sale
+              </p>
+            </div>
             <input
               ref={rfidInputRef}
               value={rfid}
@@ -315,7 +331,23 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
 
         {/* ── Step 2: PIN Entry ── */}
         {step === "pin" && selectedStaff && (
-          <div className="animate-scale-in card-glass py-12 px-10 w-[400px] text-center">
+          <div className="animate-scale-in card-glass py-10 md:py-12 px-6 md:px-10 w-full max-w-[400px] text-center">
+            {/* Mobile brand header */}
+            <div className="flex flex-col items-center md:hidden mb-6">
+              {company.company_logo ? (
+                <img src={company.company_logo} alt="Logo" className="w-10 h-10 mb-2 rounded-xl object-contain shadow-lg" />
+              ) : (
+                <div className="w-10 h-10 mb-2 rounded-xl bg-gradient-to-br from-erl-accent/15 to-erl-accent/[0.03] border border-erl-accent/10 flex items-center justify-center shadow-lg shadow-erl-accent/5">
+                  <CoffeeSVG />
+                </div>
+              )}
+              <h1 className="font-display text-lg font-bold text-erl-accent tracking-[4px]">
+                {company.company_name || "Erlbrew"}
+              </h1>
+              <p className="text-[6px] text-erl-accent-dim tracking-[4px] uppercase font-bold">
+                Point of Sale
+              </p>
+            </div>
             <button
               onClick={goBack}
               className="bg-transparent border-none text-erl-text-faint text-xs mb-8 px-4 py-2 cursor-pointer hover:text-erl-text-muted transition-colors rounded-xl hover:bg-white/[0.03] flex items-center gap-2 mx-auto"
@@ -350,7 +382,7 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
               {[0, 1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className={`w-16 h-16 rounded-2xl flex items-center justify-center text-[28px] font-bold transition-all duration-300 ease-out ${
+                  className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-[28px] font-bold transition-all duration-300 ease-out ${
                     i < pin.length
                       ? "bg-erl-accent/10 border-2 border-erl-accent text-erl-accent shadow-[0_0_24px_rgba(196,149,106,0.12)]"
                       : "bg-erl-base border-2 border-erl-border-default"
@@ -366,7 +398,7 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
               {(["1", "2", "3", "4", "5", "6", "7", "8", "9", "CLR", "0", "\u232B"] as string[]).map((k) => (
                 <button
                   key={k}
-                  className={`btn text-[20px] py-4 rounded-2xl border transition-all duration-200 ease-out font-semibold ${
+                  className={`btn text-[20px] py-3 md:py-4 rounded-2xl border transition-all duration-200 ease-out font-semibold ${
                     k === "CLR" || k === "\u232B"
                       ? "bg-erl-base border-erl-border-default text-erl-text-muted hover:bg-erl-elevated hover:text-erl-text-secondary text-sm"
                       : "bg-erl-surface border-erl-border-subtle text-erl-text-primary hover:bg-erl-accent/8 hover:text-erl-accent hover:border-erl-accent/20"

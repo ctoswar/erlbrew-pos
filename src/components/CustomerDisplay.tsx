@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { CartItem, OrderType } from "../types";
 import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
 import { useCart } from "../hooks/useCart";
+import { apiGet } from "../utils/api";
 
 const CART_KEY = "erlbrew_cart";
 const POLL_INTERVAL = 3000;
@@ -27,8 +28,20 @@ function readCart(): DisplayCart {
 
 export const CustomerDisplay: React.FC = () => {
   const [cart, setCart] = useState<DisplayCart>(() => readCart());
+  const [categories, setCategories] = useState<string[]>([]);
   
   const [fadeKey, setFadeKey] = useState(0);
+
+  // Fetch categories from menu API
+  useEffect(() => {
+    apiGet<any[]>("/menu")
+      .then((data) => {
+        const cats = [...new Set(data.map((d: any) => d.category).filter(Boolean))] as string[];
+        cats.sort((a, b) => a.localeCompare(b));
+        setCategories(cats);
+      })
+      .catch(() => {});
+  }, []);
 
   const reload = useCallback(() => {
     setCart(readCart());
@@ -101,7 +114,7 @@ export const CustomerDisplay: React.FC = () => {
               Your order will appear here as items are added by the cashier.
             </div>
             <div className="mt-8 flex gap-3 justify-center">
-              {["Signature Brews", "Espresso", "Cold Drinks", "Pastries"].map((cat) => (
+              {categories.length > 0 && categories.map((cat) => (
                 <span key={cat} className="bg-erl-accent/10 border border-erl-accent/25 rounded-full px-4 py-1.5 text-[11px] text-[#f5e6d0]/40 tracking-wide">
                   {cat}
                 </span>

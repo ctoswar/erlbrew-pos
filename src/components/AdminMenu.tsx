@@ -5,12 +5,10 @@ import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete, uploadMenuItemI
 import { IngredientEditor } from "./IngredientEditor";
 import { ModifierEditor } from "./ModifierEditor";
 
-const CATEGORIES = ["Signature Brews", "Espresso", "Pastries", "Cold Drinks"];
-
 const EMPTY_FORM = {
   id: "",
   name: "",
-  category: "Signature Brews",
+  category: "",
   price: "",
   badge: "",
   description: "",
@@ -52,7 +50,14 @@ export const AdminMenu: React.FC = () => {
 
   useEffect(() => { loadItems(); }, []);
 
-  const allCategories = useMemo(() => ["All", ...CATEGORIES], []);
+  // Derive categories dynamically from menu items
+  const dbCategories = useMemo(() => {
+    const unique = [...new Set(items.map((i) => i.category).filter(Boolean))];
+    unique.sort((a, b) => a.localeCompare(b));
+    return unique;
+  }, [items]);
+
+  const allCategories = useMemo(() => ["All", ...dbCategories], [dbCategories]);
 
   // Stats
   const stats = useMemo(() => {
@@ -106,8 +111,8 @@ export const AdminMenu: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!form.id.trim() || !form.name.trim() || !form.price) {
-      setError("ID, name, and price are required");
+    if (!form.id.trim() || !form.name.trim() || !form.price || !form.category.trim()) {
+      setError("ID, name, category, and price are required");
       return;
     }
     const price = parseFloat(form.price);
@@ -214,7 +219,7 @@ export const AdminMenu: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search menu items…"
-            className="w-full box-border pl-9 !py-2.5 !text-[13px] !rounded-xl"
+            className="w-full box-border pl-9 !py-2.5 !text-[13px] !rounded-xl text-erl-text-primary"
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-erl-text-faint hover:text-erl-text-primary transition-colors text-sm cursor-pointer bg-transparent border-none">
@@ -300,34 +305,43 @@ export const AdminMenu: React.FC = () => {
                     <FormSection label="Item ID" hint="e.g. m17">
                       <input value={form.id} onChange={(e) => setField("id", e.target.value)} placeholder="m17"
                         disabled={!!editingId}
-                        className={editingId ? "opacity-50 cursor-not-allowed" : ""} />
+                        className={`text-erl-text-primary ${editingId ? "opacity-50 cursor-not-allowed" : ""}`} />
                     </FormSection>
                     <FormSection label="Name">
-                      <input value={form.name} onChange={(e) => setField("name", e.target.value)} placeholder="Item name" />
+                      <input value={form.name} onChange={(e) => setField("name", e.target.value)} placeholder="Item name"
+                        className="text-erl-text-primary" />
                     </FormSection>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <FormSection label="Category">
-                      <select value={form.category} onChange={(e) => setField("category", e.target.value)}>
-                        {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                      </select>
+                      <input
+                        list="category-options"
+                        value={form.category}
+                        onChange={(e) => setField("category", e.target.value)}
+                        placeholder="Select or type new category"
+                        className="text-erl-text-primary"
+                      />
+                      <datalist id="category-options">
+                        {dbCategories.map((c) => <option key={c} value={c} />)}
+                      </datalist>
                     </FormSection>
                     <FormSection label="Price (₱)">
                       <input type="number" value={form.price} onChange={(e) => setField("price", e.target.value)}
-                        placeholder="0.00" min="0" step="0.01" />
+                        placeholder="0.00" min="0" step="0.01" className="text-erl-text-primary" />
                     </FormSection>
                   </div>
 
                   <div className="h-px bg-erl-border-subtle" />
 
                   <FormSection label="Badge" hint="optional, e.g. SIGNATURE, NEW">
-                    <input value={form.badge} onChange={(e) => setField("badge", e.target.value)} placeholder="SIGNATURE" />
+                    <input value={form.badge} onChange={(e) => setField("badge", e.target.value)} placeholder="SIGNATURE"
+                      className="text-erl-text-primary" />
                   </FormSection>
 
                   <FormSection label="Description">
                     <textarea value={form.description} onChange={(e) => setField("description", e.target.value)}
-                      placeholder="Short description..." />
+                      placeholder="Short description..." className="text-erl-text-primary" />
                   </FormSection>
 
                   <FormSection label="Emoji">

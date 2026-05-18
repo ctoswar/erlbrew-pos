@@ -303,3 +303,76 @@ INSERT INTO company_settings (setting_key, setting_value) VALUES
   ('company_email', ''),
   ('company_logo', '')  -- Base64 encoded logo image
 ON DUPLICATE KEY UPDATE setting_key=LAST_INSERT_ID(setting_key);
+
+-- ── Payroll: extend staff with payroll fields ──────────────────────────────
+ALTER TABLE staff
+  ADD COLUMN pay_basis ENUM('daily','monthly') DEFAULT 'daily' AFTER password_hash,
+  ADD COLUMN daily_rate DECIMAL(10,2) DEFAULT NULL AFTER pay_basis,
+  ADD COLUMN monthly_salary DECIMAL(10,2) DEFAULT NULL AFTER daily_rate,
+  ADD COLUMN sss_number VARCHAR(20) DEFAULT NULL AFTER monthly_salary,
+  ADD COLUMN philhealth_number VARCHAR(20) DEFAULT NULL AFTER sss_number,
+  ADD COLUMN pagibig_number VARCHAR(20) DEFAULT NULL AFTER philhealth_number,
+  ADD COLUMN tin VARCHAR(20) DEFAULT NULL AFTER pagibig_number,
+  ADD COLUMN tax_status ENUM('single','married','head_of_family') DEFAULT 'single' AFTER tin,
+  ADD COLUMN hire_date DATE DEFAULT NULL AFTER tax_status;
+
+-- ── Payroll periods ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS payroll_periods (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  label VARCHAR(80) NOT NULL,                -- e.g. "May 2026 - 1st Half"
+  date_from DATE NOT NULL,
+  date_to DATE NOT NULL,
+  pay_date DATE DEFAULT NULL,
+  status ENUM('open','computed','approved','paid') DEFAULT 'open',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_period (date_from, date_to)
+);
+
+-- ── Payroll entries (per employee per period) ──────────────────────────────
+CREATE TABLE IF NOT EXISTS payroll_entries (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  payroll_period_id INT NOT NULL,
+  staff_id INT NOT NULL,
+  -- Hours
+  total_hours DECIMAL(7,2) DEFAULT 0,
+  regular_hours DECIMAL(7,2) DEFAULT 0,
+  overtime_hours DECIMAL(7,2) DEFAULT 0,
+  holiday_hours DECIMAL(7,2) DEFAULT 0,
+  rest_day_hours DECIMAL(7,2) DEFAULT 0,
+  night_diff_hours DECIMAL(7,2) DEFAULT 0,
+  late_minutes INT DEFAULT 0,
+  -- Earnings
+  basic_pay DECIMAL(10,2) DEFAULT 0,
+  overtime_pay DECIMAL(10,2) DEFAULT 0,
+  holiday_pay DECIMAL(10,2) DEFAULT 0,
+  night_differential_pay DECIMAL(10,2) DEFAULT 0,
+  rest_day_pay DECIMAL(10,2) DEFAULT 0,
+  allowances DECIMAL(10,2) DEFAULT 0,
+  bonuses DECIMAL(10,2) DEFAULT 0,
+  gross_pay DECIMAL(10,2) DEFAULT 0,
+  -- Deductions
+  sss_employee DECIMAL(10,2) DEFAULT 0,
+  philhealth_employee DECIMAL(10,2) DEFAULT 0,
+  pagibig_employee DECIMAL(10,2) DEFAULT 0,
+  withholding_tax DECIMAL(10,2) DEFAULT 0,
+  absence_deductions DECIMAL(10,2) DEFAULT 0,
+  other_deductions DECIMAL(10,2) DEFAULT 0,
+  total_deductions DECIMAL(10,2) DEFAULT 0,
+  -- Net
+  net_pay DECIMAL(10,2) DEFAULT 0,
+  -- Employer contributions
+  sss_employer DECIMAL(10,2) DEFAULT 0,
+  philhealth_employer DECIMAL(10,2) DEFAULT 0,
+  pagibig_employer DECIMAL(10,2) DEFAULT 0,
+  -- Audit
+  computed_at TIMESTAMP NULL,
+  approved_by INT DEFAULT NULL,
+  approved_at TIMESTAMP NULL,
+  paid_at TIMESTAMP NULL,
+  notes TEXT DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (payroll_period_id) REFERENCES payroll_periods(id) ON DELETE CASCADE,
+  FOREIGN KEY (staff_id) REFERENCES staff(id),
+  UNIQUE KEY unique_entry (payroll_period_id, staff_id)
+);

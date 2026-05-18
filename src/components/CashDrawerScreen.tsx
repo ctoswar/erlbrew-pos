@@ -424,7 +424,7 @@ export const CashDrawerScreen: React.FC = () => {
                 </div>
                 <input value={txReason} onChange={(e) => setTxReason(e.target.value)}
                   placeholder={txType === 'cash_in' ? "e.g. Cash from safe" : "e.g. Paid supplier"}
-                  className="w-full box-border" />
+                  className="w-full box-border text-erl-text-primary" />
               </div>
 
               <div className="flex gap-2">

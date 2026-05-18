@@ -315,7 +315,7 @@ export const AdminInventory: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search items by name or ID…"
-            className="w-full box-border pl-9 !py-2.5 !text-[13px] !rounded-xl"
+            className="w-full box-border pl-9 !py-2.5 !text-[13px] !rounded-xl text-erl-text-primary"
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-erl-text-faint hover:text-erl-text-primary transition-colors text-sm cursor-pointer bg-transparent border-none">
@@ -526,12 +526,12 @@ export const AdminInventory: React.FC = () => {
                 <FormSection label="Quantity">
                   <input type="number" value={adjustQty} onChange={(e) => setAdjustQty(e.target.value)}
                     placeholder="0" min="0" step="1" autoFocus
-                    className="w-full box-border text-center text-[18px] font-bold !py-3" />
+                    className="w-full box-border text-center text-[18px] font-bold !py-3 text-erl-text-primary" />
                 </FormSection>
 
                 <FormSection label="Notes" hint="optional">
                   <input value={adjustNotes} onChange={(e) => setAdjustNotes(e.target.value)}
-                    placeholder="e.g. Weekly delivery" className="w-full box-border" />
+                    placeholder="e.g. Weekly delivery" className="w-full box-border text-erl-text-primary" />
                 </FormSection>
               </div>
 
@@ -573,22 +573,22 @@ export const AdminInventory: React.FC = () => {
                     <FormSection label="Item ID" hint="e.g. cup-s">
                       <input value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))}
                         placeholder="cup-s" disabled={!!editingId}
-                        className={editingId ? "opacity-50 cursor-not-allowed" : ""} />
+                        className={`text-erl-text-primary ${editingId ? "opacity-50 cursor-not-allowed" : ""}`} />
                     </FormSection>
                     <FormSection label="Name">
                       <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                        placeholder="Medium Cup (12oz)" />
+                        placeholder="Medium Cup (12oz)" className="text-erl-text-primary" />
                     </FormSection>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <FormSection label="Category">
-                      <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
+                      <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="text-erl-text-primary">
                         {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </FormSection>
                     <FormSection label="Unit">
-                      <select value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}>
+                      <select value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} className="text-erl-text-primary">
                         {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
                       </select>
                     </FormSection>
@@ -599,22 +599,22 @@ export const AdminInventory: React.FC = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <FormSection label="Current Stock">
                       <input type="number" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
-                        placeholder="0" min="0" step="1" />
+                        placeholder="0" min="0" step="1" className="text-erl-text-primary" />
                     </FormSection>
                     <FormSection label="Low Stock Threshold">
                       <input type="number" value={form.low_stock_threshold} onChange={(e) => setForm((f) => ({ ...f, low_stock_threshold: e.target.value }))}
-                        placeholder="10" min="0" />
+                        placeholder="10" min="0" className="text-erl-text-primary" />
                     </FormSection>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <FormSection label="Purchase Cost" hint="₱/unit">
                       <input type="number" value={form.purchase_cost} onChange={(e) => setForm((f) => ({ ...f, purchase_cost: e.target.value }))}
-                        placeholder="0.00" min="0" step="0.01" />
+                        placeholder="0.00" min="0" step="0.01" className="text-erl-text-primary" />
                     </FormSection>
                     <FormSection label="Unit Cost" hint="₱/serving">
                       <input type="number" value={form.unit_cost} onChange={(e) => setForm((f) => ({ ...f, unit_cost: e.target.value }))}
-                        placeholder="0.00" min="0" step="0.01" />
+                        placeholder="0.00" min="0" step="0.01" className="text-erl-text-primary" />
                     </FormSection>
                   </div>
                 </div>

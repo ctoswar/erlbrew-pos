@@ -400,7 +400,7 @@ export const AdminStaff: React.FC = () => {
                         <input value={editRfid} onChange={(e) => setEditRfid(e.target.value.toUpperCase())}
                           onKeyDown={(e) => e.key === "Enter" && saveRfid(s.id)}
                           placeholder="Tap card or type…" autoFocus
-                          className="flex-1 text-sm font-mono bg-erl-base border border-erl-accent rounded-xl px-3 py-2 outline-none" />
+                          className="flex-1 text-sm font-mono bg-erl-base border border-erl-accent rounded-xl px-3 py-2 outline-none text-erl-text-primary" />
                         <button onClick={() => saveRfid(s.id)} disabled={saving} className="btn btn-accent text-xs px-3 py-2 rounded-xl">Save</button>
                         <button onClick={() => setEditingRfidId(null)} className="btn-ghost text-xs px-3 py-2 text-erl-text-muted">Cancel</button>
                       </div>
@@ -429,7 +429,7 @@ export const AdminStaff: React.FC = () => {
                         <input value={editRfidAlt} onChange={(e) => setEditRfidAlt(e.target.value.toUpperCase())}
                           onKeyDown={(e) => e.key === "Enter" && saveRfidAlt(s.id)}
                           placeholder="Tablet reader code…" autoFocus
-                          className="flex-1 text-sm font-mono bg-erl-base border border-erl-accent rounded-xl px-3 py-2 outline-none" />
+                          className="flex-1 text-sm font-mono bg-erl-base border border-erl-accent rounded-xl px-3 py-2 outline-none text-erl-text-primary" />
                         <button onClick={() => saveRfidAlt(s.id)} disabled={saving} className="btn btn-accent text-xs px-3 py-2 rounded-xl">Save</button>
                         <button onClick={() => setEditingRfidAltId(null)} className="btn-ghost text-xs px-3 py-2 text-erl-text-muted">Cancel</button>
                       </div>

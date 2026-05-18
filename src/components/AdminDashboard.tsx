@@ -12,6 +12,7 @@ import { AdminSupplierInvoices } from "./AdminSupplierInvoices";
 import { ZReportScreen } from "./ZReportScreen";
 import { CashDrawerScreen } from "./CashDrawerScreen";
 import { TimeKeeping } from "./TimeKeeping";
+import { AdminPayroll } from "./AdminPayroll";
 import { OrderHistory } from "./OrderHistory";
 import { AdminAuditLog } from "./AdminAuditLog";
 import { AdminCustomers } from "./AdminCustomers";
@@ -25,7 +26,7 @@ interface Props {
   onLogout: () => void;
 }
 
-type AdminTab = 'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'audit' | 'customers';
+type AdminTab = 'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'payroll' | 'audit' | 'customers';
 
 const TABS: { label: string; value: AdminTab; icon: string }[] = [
   { label: 'Dashboard', value: 'dashboard', icon: '📊' },
@@ -35,6 +36,7 @@ const TABS: { label: string; value: AdminTab; icon: string }[] = [
   { label: 'Menu Items', value: 'menu', icon: '☕' },
   { label: 'Staff', value: 'staff', icon: '👥' },
   { label: 'Time Keeping', value: 'time', icon: '⏱️' },
+  { label: 'Payroll', value: 'payroll', icon: '💵' },
   { label: 'Inventory', value: 'inventory', icon: '📦' },
   { label: 'Z-Report', value: 'zreport', icon: '📋' },
   { label: 'Cash Drawer', value: 'cashdrawer', icon: '💰' },
@@ -349,8 +351,9 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             <CashDrawerScreen />
           </div>
         )}
-        {activeTab === 'time' && <TimeKeeping />}
-        {activeTab === 'suppliers' && <AdminSupplierInvoices />}
+{activeTab === 'time' && <TimeKeeping />}
+{activeTab === 'payroll' && <AdminPayroll />}
+{activeTab === 'suppliers' && <AdminSupplierInvoices />}
         {activeTab === 'audit' && <AdminAuditLog />}
         {activeTab === 'customers' && <AdminCustomers />}
         {activeTab === 'backup' && (

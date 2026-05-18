@@ -93,7 +93,7 @@ export const DiscountModal: React.FC<Props> = ({ subtotal, currentDiscount, onAp
             <div className="border-t border-erl-border-subtle pt-3">
               <div className="text-[9px] text-erl-muted tracking-widest uppercase mb-2">Custom Discount</div>
               <div className="mb-2">
-                <input value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} placeholder="Discount name" className="mb-1.5 text-[11px] px-2.5 py-2" />
+                <input value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} placeholder="Discount name" className="mb-1.5 text-[11px] px-2.5 py-2 text-erl-text-primary" />
                 <div className="grid grid-cols-2 gap-1.5">
                   <div className="relative">
                     <input type="number" value={customPct} onChange={(e) => setCustomPct(e.target.value)} placeholder="e.g. 15" min="1" max="100" className="pr-7 text-[11px] px-2.5 py-2" />

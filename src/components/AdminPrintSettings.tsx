@@ -9,6 +9,8 @@ export interface PrintSettings {
   showBIRInfo: boolean;
   showCustomerCopy: boolean;
   showQRCode: boolean;
+  /** URL to encode in the receipt QR code (e.g. Google survey, GCash, etc.) */
+  qrCodeUrl: string;
   printCopies: number;
   /** Where to send print jobs: browser opens OS print dialog; bluetooth calls print-server.py on the Pi */
   printVia: "browser" | "bluetooth";
@@ -22,6 +24,7 @@ const DEFAULT_SETTINGS: PrintSettings = {
   showBIRInfo: true,
   showCustomerCopy: true,
   showQRCode: false,
+  qrCodeUrl: "",
   printCopies: 1,
   printVia: "browser",
   gcashNumber: "",
@@ -393,7 +396,6 @@ export const AdminPrintSettings: React.FC = () => {
             ["showStoreHeader", "Store Header", "Cafe name, address, and TIN on receipt"],
             ["showBIRInfo", "BIR Accreditation", "ATP No., COR No., Serial, PTU, and Machine details"],
             ["showCustomerCopy", "Customer Copy Footer", "Thank you message and customer copy note"],
-            ["showQRCode", "QR Code", "Show QR code placeholder on receipt"],
           ] as [keyof PrintSettings, string, string][]).map(([key, label, desc]) => (
             <div key={key} className="flex items-center justify-between py-3">
               <div className="flex flex-col mr-4">
@@ -418,6 +420,47 @@ export const AdminPrintSettings: React.FC = () => {
               </button>
             </div>
           ))}
+
+          {/* QR Code toggle + URL input */}
+          <div className="py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col mr-4">
+                <div className="text-[13px] font-semibold text-erl-text-primary">QR Code</div>
+                <div className="text-[11px] text-erl-text-faint mt-0.5">Show QR code on receipt (survey, payment, etc.)</div>
+              </div>
+              <button
+                onClick={() => toggle("showQRCode")}
+                className="w-12 h-[26px] rounded-full border-none cursor-pointer relative flex-shrink-0 transition-colors duration-200"
+                style={{ background: settings.showQRCode ? "var(--accent)" : "var(--color-border-medium)" }}
+                role="switch"
+                aria-checked={settings.showQRCode}
+              >
+                <div
+                  className="absolute top-[3px] w-[20px] h-[20px] rounded-full transition-all duration-200"
+                  style={{
+                    left: settings.showQRCode ? 26 : 3,
+                    background: settings.showQRCode ? "var(--bg-sidebar)" : "var(--text-muted)",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                  }}
+                />
+              </button>
+            </div>
+            {settings.showQRCode && (
+              <div className="mt-3 pl-1">
+                <div className="text-[11px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5">QR Code URL</div>
+                <input
+                  type="text"
+                  value={settings.qrCodeUrl}
+                  onChange={(e) => update({ qrCodeUrl: e.target.value })}
+                  placeholder="https://forms.gle/... or https://gcash.app/..."
+                  className="w-full"
+                />
+                <div className="text-[11px] text-erl-text-faint mt-1.5">
+                  Paste any link — Google Forms, GCash QR, feedback survey, etc.
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Tip ────────────────────────────────────────────── */}

@@ -297,7 +297,7 @@ export function useOrders() {
         tax,
         total,
         createdAt: new Date(),
-        customerName: type === "dine-in" ? (customerName || "Dine-in") : undefined,
+        customerName: customerName || (type === "dine-in" ? "Dine-in" : undefined),
         type,
         payMethod,
         cashTendered,

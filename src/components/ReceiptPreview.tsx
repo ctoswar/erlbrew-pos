@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { Order } from "../types";
 import { formatCurrency } from "../utils";
 import { loadPrintSettings, PrintSettings } from "./AdminPrintSettings";
@@ -205,8 +206,17 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
               <>
                 <div className="border-t border-dashed border-[#aaa] mb-1.5" />
                 <div className="text-center py-2 text-[#555]">
-                  <div className="text-[10px] tracking-wide">[ QR CODE ]</div>
-                  <div className="text-[9px] text-[#888]">Scan to Pay</div>
+                  {settings.qrCodeUrl ? (
+                    <>
+                      <QRCodeSVG value={settings.qrCodeUrl} size={120} level="M" includeMargin={false} style={{ margin: "0 auto" }} />
+                      <div className="text-[9px] text-[#888] mt-1">Scan for more info</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-[10px] tracking-wide">[ QR CODE ]</div>
+                      <div className="text-[9px] text-[#888]">Set a URL in Print Settings</div>
+                    </>
+                  )}
                 </div>
               </>
             )}

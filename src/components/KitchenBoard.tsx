@@ -163,7 +163,7 @@ const KitchenCard: React.FC<KitchenCardProps> = ({ order, colColor, onUpdateStat
       {/* Meta pills */}
       <div className="flex gap-1.5 sm:gap-1 mb-2.5 sm:mb-2 flex-wrap">
         <span className="pill pill-gold text-[10px] sm:text-[7.5px] py-1 sm:py-[3px] px-2.5 sm:px-2">
-          {order.type === "dine-in" ? (order.customerName || "Dine-in") : "Takeout"}
+          {order.customerName || (order.type === "dine-in" ? "Dine-in" : "Takeout")}
         </span>
         <span className="pill pill-muted text-[10px] sm:text-[7.5px] py-1 sm:py-[3px] px-2.5 sm:px-2">
           {order.staff.name.split(" ")[0]}

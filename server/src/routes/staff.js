@@ -87,7 +87,16 @@ export default function staffRouter(pool){
   // GET all staff (protected)
   router.get('/', authMiddleware, async (req, res) => {
     try {
-      const [rows] = await pool.query('SELECT id, rfid, rfid_alt, name, role, initials, color, pay_basis, daily_rate, monthly_salary, created_at FROM staff');
+      const [rows] = await pool.query(`
+        SELECT s.id, s.rfid, s.rfid_alt, s.name, s.role, s.initials, s.color,
+               s.pay_basis, s.daily_rate, s.monthly_salary, s.schedule_id,
+               ss.name AS schedule_name,
+               ss.shift_start, ss.shift_end, ss.lunch_start, ss.lunch_end, ss.snack_start, ss.snack_end,
+               s.created_at
+        FROM staff s
+        LEFT JOIN staff_schedules ss ON s.schedule_id = ss.id
+        ORDER BY s.name
+      `);
       res.json(rows);
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
@@ -135,7 +144,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // PUT update staff (admin only)
   router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
-    const { rfid, rfid_alt, name, role, initials, color, password, pay_basis, daily_rate, monthly_salary } = req.body;
+    const { rfid, rfid_alt, name, role, initials, color, password, pay_basis, daily_rate, monthly_salary, schedule_id } = req.body;
     try {
       const fields = [];
       const values = [];
@@ -148,6 +157,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
       if (pay_basis !== undefined) { fields.push('pay_basis = ?'); values.push(pay_basis); }
       if (daily_rate !== undefined) { fields.push('daily_rate = ?'); values.push(daily_rate || null); }
       if (monthly_salary !== undefined) { fields.push('monthly_salary = ?'); values.push(monthly_salary || null); }
+      if (schedule_id !== undefined) { fields.push('schedule_id = ?'); values.push(schedule_id || null); }
       if (password !== undefined) {
         const pw = String(password);
         if (pw.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
@@ -158,7 +168,15 @@ router.get('/:id', authMiddleware, async (req, res) => {
       if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
       values.push(id);
       await pool.query(`UPDATE staff SET ${fields.join(', ')} WHERE id = ?`, values);
-    const [rows] = await pool.query('SELECT id, rfid, rfid_alt, name, role, initials, color, pay_basis, daily_rate, monthly_salary FROM staff WHERE id = ?', [id]);
+    const [rows] = await pool.query(`
+      SELECT s.id, s.rfid, s.rfid_alt, s.name, s.role, s.initials, s.color,
+             s.pay_basis, s.daily_rate, s.monthly_salary, s.schedule_id,
+             ss.name AS schedule_name,
+             ss.shift_start, ss.shift_end, ss.lunch_start, ss.lunch_end, ss.snack_start, ss.snack_end
+      FROM staff s
+      LEFT JOIN staff_schedules ss ON s.schedule_id = ss.id
+      WHERE s.id = ?
+    `, [id]);
     await logAudit(pool, req, { action: 'staff_update', entityType: 'staff', entityId: id, details: { name, role } });
     res.json(rows[0]);
   } catch (e) {

@@ -316,6 +316,26 @@ ALTER TABLE staff
   ADD COLUMN tax_status ENUM('single','married','head_of_family') DEFAULT 'single' AFTER tin,
   ADD COLUMN hire_date DATE DEFAULT NULL AFTER tax_status;
 
+-- ── Staff schedules (shift + breaks) ───────────────────────────────────────
+-- Reusable schedule templates
+CREATE TABLE IF NOT EXISTS staff_schedules (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(64) NOT NULL,
+  shift_start TIME DEFAULT NULL,
+  shift_end TIME DEFAULT NULL,
+  lunch_start TIME DEFAULT NULL,
+  lunch_end TIME DEFAULT NULL,
+  snack_start TIME DEFAULT NULL,
+  snack_end TIME DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Assign schedule template to staff
+ALTER TABLE staff
+  ADD COLUMN schedule_id INT DEFAULT NULL AFTER hire_date,
+  ADD FOREIGN KEY (schedule_id) REFERENCES staff_schedules(id) ON DELETE SET NULL;
+
 -- ── Payroll periods ────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS payroll_periods (
   id INT AUTO_INCREMENT PRIMARY KEY,

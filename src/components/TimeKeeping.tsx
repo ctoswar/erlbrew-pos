@@ -1,5 +1,32 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { apiGet, apiPost } from "../utils/api";
+import { apiGet, apiPost, apiAdminGet, apiAdminPut, apiAdminPost, apiAdminDelete } from "../utils/api";
+
+interface ScheduleTemplate {
+  id: number;
+  name: string;
+  shift_start: string | null;
+  shift_end: string | null;
+  lunch_start: string | null;
+  lunch_end: string | null;
+  snack_start: string | null;
+  snack_end: string | null;
+}
+
+interface StaffSchedule {
+  staff_id: number;
+  name: string;
+  role: string;
+  initials: string;
+  color: string;
+  schedule_id: number | null;
+  schedule_name: string | null;
+  shift_start: string | null;
+  shift_end: string | null;
+  lunch_start: string | null;
+  lunch_end: string | null;
+  snack_start: string | null;
+  snack_end: string | null;
+}
 
 interface TimeRecord {
   id: number;
@@ -15,6 +42,12 @@ interface TimeRecord {
     clock_out: string | null;
     total_hours: number;
   } | null;
+  shift_start: string | null;
+  shift_end: string | null;
+  lunch_start: string | null;
+  lunch_end: string | null;
+  snack_start: string | null;
+  snack_end: string | null;
 }
 
 interface ClockResponse {
@@ -35,7 +68,7 @@ interface DayRecord {
   color: string;
 }
 
-type Tab = "today" | "calendar";
+type Tab = "today" | "calendar" | "schedules";
 
 export const TimeKeeping: React.FC = () => {
   const [tab, setTab] = useState<Tab>("today");
@@ -51,6 +84,19 @@ export const TimeKeeping: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [dayRecords, setDayRecords] = useState<DayRecord[]>([]);
   const [dayLoading, setDayLoading] = useState(false);
+
+  // ── Tab: Schedules ──
+  const [templates, setTemplates] = useState<ScheduleTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [staffList, setStaffList] = useState<StaffSchedule[]>([]);
+  const [staffListLoading, setStaffListLoading] = useState(false);
+  const [schedulesMsg, setSchedulesMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [schedulesSubTab, setSchedulesSubTab] = useState<"templates" | "assignments">("templates");
+
+  // Template form
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<number | null>(null);
+  const [templateForm, setTemplateForm] = useState<Partial<ScheduleTemplate>>({ name: "" });
 
   const loadToday = useCallback(() => {
     apiGet<TimeRecord[]>("/clock")
@@ -81,6 +127,97 @@ export const TimeKeeping: React.FC = () => {
     const id = setInterval(loadToday, 30000);
     return () => clearInterval(id);
   }, [loadToday]);
+
+  // ── Schedules logic ──
+  const loadTemplates = useCallback(() => {
+    setTemplatesLoading(true);
+    apiAdminGet<ScheduleTemplate[]>("/staff-schedules")
+      .then(setTemplates)
+      .catch((err) => console.error("Failed to load schedule templates:", err))
+      .finally(() => setTemplatesLoading(false));
+  }, []);
+
+  const loadStaffWithSchedules = useCallback(() => {
+    setStaffListLoading(true);
+    apiAdminGet<StaffSchedule[]>("/staff")
+      .then((data) => {
+        const normalized = data.map((s: any) => ({
+          staff_id: s.id,
+          name: s.name,
+          role: s.role,
+          initials: s.initials,
+          color: s.color,
+          schedule_id: s.schedule_id || null,
+          schedule_name: s.schedule_name || null,
+          shift_start: s.shift_start || null,
+          shift_end: s.shift_end || null,
+          lunch_start: s.lunch_start || null,
+          lunch_end: s.lunch_end || null,
+          snack_start: s.snack_start || null,
+          snack_end: s.snack_end || null,
+        }));
+        setStaffList(normalized);
+      })
+      .catch((err) => console.error("Failed to load staff schedules:", err))
+      .finally(() => setStaffListLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (tab === "schedules") {
+      loadTemplates();
+      loadStaffWithSchedules();
+    }
+  }, [tab, loadTemplates, loadStaffWithSchedules]);
+
+  const showSchedulesMsg = (text: string, ok: boolean) => {
+    setSchedulesMsg({ text, ok });
+    setTimeout(() => setSchedulesMsg(null), 2500);
+  };
+
+  const saveTemplate = async () => {
+    if (!templateForm.name?.trim()) { showSchedulesMsg("Schedule name is required", false); return; }
+    try {
+      if (editingTemplateId) {
+        await apiAdminPut(`/staff-schedules/${editingTemplateId}`, templateForm);
+        showSchedulesMsg("Schedule updated", true);
+      } else {
+        await apiAdminPost("/staff-schedules", templateForm);
+        showSchedulesMsg("Schedule created", true);
+      }
+      setShowTemplateForm(false);
+      setEditingTemplateId(null);
+      setTemplateForm({ name: "" });
+      loadTemplates();
+      loadStaffWithSchedules();
+      loadToday();
+    } catch (e: any) {
+      showSchedulesMsg(e.message || "Failed to save schedule", false);
+    }
+  };
+
+  const deleteTemplate = async (id: number) => {
+    if (!confirm("Delete this schedule template? Staff assigned to it will lose their schedule.")) return;
+    try {
+      await apiAdminDelete(`/staff-schedules/${id}`);
+      showSchedulesMsg("Schedule deleted", true);
+      loadTemplates();
+      loadStaffWithSchedules();
+      loadToday();
+    } catch (e: any) {
+      showSchedulesMsg(e.message || "Failed to delete schedule", false);
+    }
+  };
+
+  const assignScheduleToStaff = async (staffId: number, scheduleId: number | null) => {
+    try {
+      await apiAdminPut(`/staff/${staffId}`, { schedule_id: scheduleId });
+      showSchedulesMsg("Assignment saved", true);
+      loadStaffWithSchedules();
+      loadToday();
+    } catch (e: any) {
+      showSchedulesMsg(e.message || "Failed to assign schedule", false);
+    }
+  };
 
   // ── Calendar logic ──
   const calYear = calDate.getFullYear();
@@ -140,7 +277,7 @@ export const TimeKeeping: React.FC = () => {
           </div>
           <div className="font-display text-lg font-bold text-erl-text-primary tracking-wide">Timekeeping</div>
           <div className="flex gap-1 bg-erl-base rounded-xl p-0.5 border border-erl-border-subtle">
-            {([["today", "Today"], ["calendar", "Calendar"]] as const).map(([key, label]) => (
+            {([["today", "Today"], ["calendar", "Calendar"], ["schedules", "Schedules"]] as const).map(([key, label]) => (
               <button key={key} onClick={() => setTab(key as Tab)} className={`
                 px-3 py-1.5 sm:px-3.5 text-xs rounded-lg cursor-pointer transition-all duration-200 font-semibold tracking-wide min-h-[44px]
                 ${tab === key
@@ -482,6 +619,230 @@ export const TimeKeeping: React.FC = () => {
             )}
           </>
         )}
+
+        {tab === "schedules" && (
+          <>
+            {schedulesMsg && (
+              <div className={`animate-scale-in rounded-xl px-4 py-3 text-sm font-bold ${schedulesMsg.ok ? "bg-erl-success-bg text-erl-success border border-erl-success-border" : "bg-erl-danger-bg text-erl-danger border border-erl-danger-border"}`}>
+                {schedulesMsg.text}
+              </div>
+            )}
+
+            {/* Sub-tabs */}
+            <div className="flex gap-2">
+              {([["templates", "Schedule Templates"], ["assignments", "Staff Assignments"]] as const).map(([key, label]) => (
+                <button key={key} onClick={() => setSchedulesSubTab(key)} className={`
+                  px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all duration-200 min-h-[44px]
+                  ${schedulesSubTab === key
+                    ? "bg-erl-accent/15 text-erl-accent border-[1.5px] border-erl-accent"
+                    : "border-[1.5px] border-erl-border-default bg-transparent text-erl-text-secondary hover:border-erl-border-medium"}
+                `}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── Templates Sub-tab ── */}
+            {schedulesSubTab === "templates" && (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="font-display text-sm font-bold text-erl-text-primary tracking-wide">
+                    {templates.length} {templates.length === 1 ? "Template" : "Templates"}
+                  </div>
+                  {!showTemplateForm && (
+                    <button onClick={() => { setShowTemplateForm(true); setEditingTemplateId(null); setTemplateForm({ name: "" }); }}
+                      className="btn btn-accent text-xs px-4 py-2 tracking-wider">
+                      + Create Schedule
+                    </button>
+                  )}
+                </div>
+
+                {/* Create / Edit Form */}
+                {showTemplateForm && (
+                  <div className="card-glass p-5 border border-erl-accent/20 rounded-2xl">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-2 h-2 rounded-full bg-erl-accent shadow-[0_0_8px_rgba(196,149,106,0.4)]" />
+                      <span className="text-xs text-erl-accent font-bold tracking-[0.2em] uppercase">
+                        {editingTemplateId ? "Edit Schedule" : "New Schedule"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                      <div>
+                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Schedule Name *</label>
+                        <input type="text" value={templateForm.name || ""} onChange={(e) => setTemplateForm(f => ({ ...f, name: e.target.value }))}
+                          placeholder="e.g. Morning Shift" className="w-full text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Shift Start</label>
+                        <input type="time" value={templateForm.shift_start || ""} onChange={(e) => setTemplateForm(f => ({ ...f, shift_start: e.target.value || null }))}
+                          className="w-full text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Shift End</label>
+                        <input type="time" value={templateForm.shift_end || ""} onChange={(e) => setTemplateForm(f => ({ ...f, shift_end: e.target.value || null }))}
+                          className="w-full text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Lunch Start</label>
+                        <input type="time" value={templateForm.lunch_start || ""} onChange={(e) => setTemplateForm(f => ({ ...f, lunch_start: e.target.value || null }))}
+                          className="w-full text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Lunch End</label>
+                        <input type="time" value={templateForm.lunch_end || ""} onChange={(e) => setTemplateForm(f => ({ ...f, lunch_end: e.target.value || null }))}
+                          className="w-full text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Snack Start</label>
+                        <input type="time" value={templateForm.snack_start || ""} onChange={(e) => setTemplateForm(f => ({ ...f, snack_start: e.target.value || null }))}
+                          className="w-full text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Snack End</label>
+                        <input type="time" value={templateForm.snack_end || ""} onChange={(e) => setTemplateForm(f => ({ ...f, snack_end: e.target.value || null }))}
+                          className="w-full text-sm" />
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <button onClick={saveTemplate} className="btn btn-accent text-xs px-5 py-2.5 tracking-wider">
+                        {editingTemplateId ? "Update" : "Create"}
+                      </button>
+                      <button onClick={() => { setShowTemplateForm(false); setEditingTemplateId(null); }} className="btn btn-ghost text-xs px-4 py-2.5">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Templates List */}
+                {templatesLoading ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-3">
+                    <div className="w-8 h-8 border-2 border-erl-accent/30 border-t-erl-accent rounded-full animate-spin" />
+                    <span className="text-sm text-erl-text-muted">Loading templates...</span>
+                  </div>
+                ) : templates.length === 0 && !showTemplateForm ? (
+                  <div className="card-glass rounded-2xl p-8 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-erl-accent/5 flex items-center justify-center mx-auto mb-3">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-erl-text-faint">
+                        <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                      </svg>
+                    </div>
+                    <div className="text-sm text-erl-text-muted font-medium">No schedule templates yet</div>
+                    <div className="text-[11px] text-erl-text-faint mt-1">Create your first shift schedule above</div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2.5">
+                    {templates.map((t) => (
+                      <div key={t.id} className="card-glass rounded-xl px-4 py-3.5 flex items-center gap-3 transition-all duration-200 hover:border-erl-accent/15">
+                        <div className="w-10 h-10 rounded-xl bg-erl-accent/10 flex items-center justify-center flex-shrink-0">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-erl-accent">
+                            <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-erl-text-primary">{t.name}</div>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {(t.shift_start || t.shift_end) && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-erl-accent/8 text-erl-accent font-semibold tracking-wide">
+                                Shift {fmtTime(t.shift_start)} – {fmtTime(t.shift_end)}
+                              </span>
+                            )}
+                            {(t.lunch_start || t.lunch_end) && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-erl-success/10 text-erl-success font-semibold tracking-wide">
+                                Lunch {fmtTime(t.lunch_start)} – {fmtTime(t.lunch_end)}
+                              </span>
+                            )}
+                            {(t.snack_start || t.snack_end) && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#d4a87a]/15 text-[#d4a87a] font-semibold tracking-wide">
+                                Snack {fmtTime(t.snack_start)} – {fmtTime(t.snack_end)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          <button onClick={() => {
+                            setEditingTemplateId(t.id);
+                            setTemplateForm({ ...t });
+                            setShowTemplateForm(true);
+                          }} className="text-[10px] px-2.5 py-1.5 rounded-lg border border-erl-border-default text-erl-text-faint font-bold hover:border-erl-accent/30 hover:text-erl-accent transition-colors">
+                            Edit
+                          </button>
+                          <button onClick={() => deleteTemplate(t.id)} className="text-[10px] px-2.5 py-1.5 rounded-lg border border-erl-border-default text-erl-text-faint font-bold hover:border-erl-danger/30 hover:text-erl-danger transition-colors">
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── Assignments Sub-tab ── */}
+            {schedulesSubTab === "assignments" && (
+              <>
+                <div className="font-display text-sm font-bold text-erl-text-primary tracking-wide mb-1">
+                  Assign Schedules to Staff
+                </div>
+                <div className="text-[11px] text-erl-text-faint mb-3">
+                  Select a schedule template for each staff member. Their assigned times will appear on the Today tab.
+                </div>
+
+                {staffListLoading ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-3">
+                    <div className="w-8 h-8 border-2 border-erl-accent/30 border-t-erl-accent rounded-full animate-spin" />
+                    <span className="text-sm text-erl-text-muted">Loading staff...</span>
+                  </div>
+                ) : staffList.length === 0 ? (
+                  <div className="text-center py-12 text-sm text-erl-text-muted">No staff found</div>
+                ) : (
+                  <div className="flex flex-col gap-2.5">
+                    {staffList.map((s) => (
+                      <div key={s.staff_id} className="card-glass rounded-xl px-4 py-3 flex items-center gap-3 transition-all duration-200 hover:border-erl-accent/15">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                          style={{ background: s.color || "#555" }}>
+                          {s.initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-erl-text-primary">{s.name}</div>
+                          <div className="text-[10px] text-erl-text-faint tracking-wider uppercase font-semibold">{s.role}</div>
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <div className="text-right">
+                            {s.schedule_name ? (
+                              <div className="text-xs text-erl-accent font-semibold">{s.schedule_name}</div>
+                            ) : (
+                              <div className="text-xs text-erl-text-faint italic">No schedule</div>
+                            )}
+                            {(s.shift_start || s.shift_end) && (
+                              <div className="text-[10px] text-erl-text-muted font-mono mt-0.5">
+                                {fmtTime(s.shift_start)} – {fmtTime(s.shift_end)}
+                              </div>
+                            )}
+                          </div>
+                          <select
+                            value={s.schedule_id || ""}
+                            onChange={(e) => assignScheduleToStaff(s.staff_id, e.target.value ? Number(e.target.value) : null)}
+                            className="text-xs bg-erl-base border border-erl-border-medium rounded-xl px-3 py-2 text-erl-text-primary outline-none focus:border-erl-accent min-w-[160px]"
+                          >
+                            <option value="">— No Schedule —</option>
+                            {templates.map((t) => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="p-4 rounded-xl bg-erl-surface border border-erl-border-subtle text-[12px] text-erl-text-faint leading-relaxed">
+              <strong className="text-erl-text-secondary">💡 Tip:</strong> Create schedule templates first (e.g. "Morning Shift", "Closing Shift"), then assign them to staff. Break badges will show on the Today tab during lunch and snack hours.
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -582,6 +943,25 @@ const RfidInput: React.FC<{ onScan: (rfid: string) => void }> = ({ onScan }) => 
   );
 };
 
+// ── Helpers ──
+function fmtTime(t: string | null): string {
+  if (!t) return "—";
+  const [h, m] = t.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h, m);
+  return d.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", hour12: true });
+}
+
+function isWithinBreak(now: Date, start: string | null, end: string | null): boolean {
+  if (!start || !end) return false;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const s = sh * 60 + sm;
+  const e = eh * 60 + em;
+  const n = now.getHours() * 60 + now.getMinutes();
+  return n >= s && n < e;
+}
+
 // ── Staff Group ──
 const StaffGroup: React.FC<{
   label: string;
@@ -603,6 +983,9 @@ const StaffGroup: React.FC<{
           const rec = r.record;
           const hours = rec?.total_hours ? parseFloat(String(rec.total_hours)) : 0;
           const statusColor = r.status === "clocked_in" ? "rgb(122,191,122)" : r.status === "clocked_out" ? "rgb(196,149,106)" : "rgb(90,69,53)";
+          const now = new Date();
+          const onLunch = r.status === "clocked_in" && isWithinBreak(now, r.lunch_start, r.lunch_end);
+          const onSnack = r.status === "clocked_in" && isWithinBreak(now, r.snack_start, r.snack_end);
           return (
             <div key={r.staff_id} className="card-glass px-4 py-3.5 flex items-center gap-3.5 transition-all duration-200 hover:border-erl-accent/15">
               {/* Avatar */}
@@ -618,6 +1001,24 @@ const StaffGroup: React.FC<{
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold text-erl-text-primary">{r.name}</div>
                 <div className="text-[10px] text-erl-text-faint tracking-[0.1em] uppercase font-semibold mt-0.5">{r.role}</div>
+                {/* Schedule pills */}
+                {(r.shift_start || r.shift_end) && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-erl-accent/8 text-erl-accent font-semibold tracking-wide">
+                      Shift {fmtTime(r.shift_start)} – {fmtTime(r.shift_end)}
+                    </span>
+                    {onLunch && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-erl-success/10 text-erl-success font-semibold tracking-wide">
+                        On Lunch
+                      </span>
+                    )}
+                    {onSnack && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#d4a87a]/15 text-[#d4a87a] font-semibold tracking-wide">
+                        Snack Break
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Time */}

@@ -129,9 +129,11 @@ router.get('/', async (req, res) => {
       const [records] = await pool.query(
         `SELECT tr.id, tr.staff_id, tr.clock_in, tr.clock_out,
          TRUNCATE(TIMESTAMPDIFF(MINUTE, tr.clock_in, COALESCE(tr.clock_out, ?)) / 60.0, 2) AS total_hours,
-         s.name, s.role, s.initials, s.color
+         s.name, s.role, s.initials, s.color,
+         ss.shift_start, ss.shift_end, ss.lunch_start, ss.lunch_end, ss.snack_start, ss.snack_end
          FROM time_records tr
          JOIN staff s ON s.id = tr.staff_id
+         LEFT JOIN staff_schedules ss ON ss.id = s.schedule_id
          WHERE DATE(tr.clock_in) = ?
          ORDER BY tr.clock_in DESC`,
         [nowParam, today]

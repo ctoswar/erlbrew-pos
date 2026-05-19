@@ -321,14 +321,23 @@ ALTER TABLE staff
 CREATE TABLE IF NOT EXISTS staff_schedules (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(64) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Per-day schedule entries (Mon-Sat)
+CREATE TABLE IF NOT EXISTS staff_schedule_days (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  schedule_id INT NOT NULL,
+  day_of_week ENUM('mon','tue','wed','thu','fri','sat') NOT NULL,
   shift_start TIME DEFAULT NULL,
   shift_end TIME DEFAULT NULL,
   lunch_start TIME DEFAULT NULL,
   lunch_end TIME DEFAULT NULL,
   snack_start TIME DEFAULT NULL,
   snack_end TIME DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  UNIQUE KEY unique_schedule_day (schedule_id, day_of_week),
+  FOREIGN KEY (schedule_id) REFERENCES staff_schedules(id) ON DELETE CASCADE
 );
 
 -- Assign schedule template to staff

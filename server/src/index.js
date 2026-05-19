@@ -344,7 +344,7 @@ app.use('/api', uploadRouter(pool));
 app.use('/api/audit-logs', auditRoutes(pool));
 app.use('/api/customers', customersRoutes(pool));
 
-// Google Sheets sync: write Dashboard to Sheet3
+// Google Sheets sync: write Dashboard to Dashboard tab
 app.post('/api/sheets/sync-dashboard', async (req, res) => {
   if (!gs) return res.status(503).json({ error: 'Sheets not configured' });
   try {

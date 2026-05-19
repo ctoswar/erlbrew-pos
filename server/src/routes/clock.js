@@ -130,10 +130,14 @@ router.get('/', async (req, res) => {
         `SELECT tr.id, tr.staff_id, tr.clock_in, tr.clock_out,
          TRUNCATE(TIMESTAMPDIFF(MINUTE, tr.clock_in, COALESCE(tr.clock_out, ?)) / 60.0, 2) AS total_hours,
          s.name, s.role, s.initials, s.color,
-         ss.shift_start, ss.shift_end, ss.lunch_start, ss.lunch_end, ss.snack_start, ss.snack_end
+         ssd.shift_start, ssd.shift_end, ssd.lunch_start, ssd.lunch_end, ssd.snack_start, ssd.snack_end
          FROM time_records tr
          JOIN staff s ON s.id = tr.staff_id
-         LEFT JOIN staff_schedules ss ON ss.id = s.schedule_id
+         LEFT JOIN staff_schedule_days ssd ON ssd.schedule_id = s.schedule_id
+           AND ssd.day_of_week = CASE DAYOFWEEK(tr.clock_in)
+             WHEN 2 THEN 'mon' WHEN 3 THEN 'tue' WHEN 4 THEN 'wed'
+             WHEN 5 THEN 'thu' WHEN 6 THEN 'fri' WHEN 7 THEN 'sat'
+           END
          WHERE DATE(tr.clock_in) = ?
          ORDER BY tr.clock_in DESC`,
         [nowParam, today]
@@ -148,7 +152,15 @@ router.get('/', async (req, res) => {
       }
 
       const [allStaff] = await pool.query(
-        'SELECT id, name, role, initials, color FROM staff ORDER BY name'
+        `SELECT s.id, s.name, s.role, s.initials, s.color,
+         ssd.shift_start, ssd.shift_end, ssd.lunch_start, ssd.lunch_end, ssd.snack_start, ssd.snack_end
+         FROM staff s
+         LEFT JOIN staff_schedule_days ssd ON ssd.schedule_id = s.schedule_id
+           AND ssd.day_of_week = CASE DAYOFWEEK(CURDATE())
+             WHEN 2 THEN 'mon' WHEN 3 THEN 'tue' WHEN 4 THEN 'wed'
+             WHEN 5 THEN 'thu' WHEN 6 THEN 'fri' WHEN 7 THEN 'sat'
+           END
+         ORDER BY s.name`
       );
 
       const result = allStaff.map((s) => {
@@ -161,6 +173,12 @@ router.get('/', async (req, res) => {
           color: s.color,
           status: rec ? (rec.clock_out ? 'clocked_out' : 'clocked_in') : 'not_in',
           record: rec || null,
+          shift_start: rec?.shift_start || s.shift_start || null,
+          shift_end: rec?.shift_end || s.shift_end || null,
+          lunch_start: rec?.lunch_start || s.lunch_start || null,
+          lunch_end: rec?.lunch_end || s.lunch_end || null,
+          snack_start: rec?.snack_start || s.snack_start || null,
+          snack_end: rec?.snack_end || s.snack_end || null,
         };
       });
 

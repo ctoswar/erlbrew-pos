@@ -90,11 +90,16 @@ export default function staffRouter(pool){
       const [rows] = await pool.query(`
         SELECT s.id, s.rfid, s.rfid_alt, s.name, s.role, s.initials, s.color,
                s.pay_basis, s.daily_rate, s.monthly_salary, s.schedule_id,
-               ss.name AS schedule_name,
-               ss.shift_start, ss.shift_end, ss.lunch_start, ss.lunch_end, ss.snack_start, ss.snack_end,
+               st.name AS schedule_name,
+               ssd.shift_start, ssd.shift_end, ssd.lunch_start, ssd.lunch_end, ssd.snack_start, ssd.snack_end,
                s.created_at
         FROM staff s
-        LEFT JOIN staff_schedules ss ON s.schedule_id = ss.id
+        LEFT JOIN staff_schedules st ON st.id = s.schedule_id
+        LEFT JOIN staff_schedule_days ssd ON ssd.schedule_id = s.schedule_id
+          AND ssd.day_of_week = CASE DAYOFWEEK(CURDATE())
+            WHEN 2 THEN 'mon' WHEN 3 THEN 'tue' WHEN 4 THEN 'wed'
+            WHEN 5 THEN 'thu' WHEN 6 THEN 'fri' WHEN 7 THEN 'sat'
+          END
         ORDER BY s.name
       `);
       res.json(rows);

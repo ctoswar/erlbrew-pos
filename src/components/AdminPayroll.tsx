@@ -549,6 +549,7 @@ export const AdminPayroll: React.FC = () => {
                         <th className="px-3 py-2 text-right text-erl-muted font-semibold">Hrs</th>
                         <th className="px-3 py-2 text-right text-erl-muted font-semibold">Reg</th>
                         <th className="px-3 py-2 text-right text-erl-muted font-semibold">OT</th>
+                        <th className="px-3 py-2 text-right text-erl-muted font-semibold">Late</th>
                         <th className="px-3 py-2 text-right text-erl-muted font-semibold">Basic</th>
                         <th className="px-3 py-2 text-right text-erl-muted font-semibold">OT Pay</th>
                         <th className="px-3 py-2 text-right text-erl-muted font-semibold">Gross</th>
@@ -585,6 +586,9 @@ export const AdminPayroll: React.FC = () => {
                           </td>
                           <td className="px-3 py-2 text-right text-erl-muted tabular-nums">
                             {Number(e.overtime_hours || 0).toFixed(1)}
+                          </td>
+                          <td className="px-3 py-2 text-right text-erl-danger tabular-nums">
+                            {e.late_minutes > 0 ? `${e.late_minutes}m` : "—"}
                           </td>
                           <td className="px-3 py-2 text-right text-erl-text-primary tabular-nums">
                             {formatCurrency(e.basic_pay || 0)}

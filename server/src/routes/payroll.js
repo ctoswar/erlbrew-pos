@@ -265,11 +265,44 @@ export default function payrollRouter(pool, googleSheets) {
       const daysMap = {};
       for (const d of daysWorked) { daysMap[d.staff_id] = d.days; }
 
+      // ── Calculate late minutes per staff ──
+      // Compare each clock_in time with assigned schedule shift_start for that day of week
+      const [individualRecords] = await pool.query(`
+        SELECT tr.staff_id, tr.clock_in, TIME(tr.clock_in) AS clock_in_time, ssd.shift_start
+        FROM time_records tr
+        JOIN staff s ON s.id = tr.staff_id
+        LEFT JOIN staff_schedule_days ssd ON ssd.schedule_id = s.schedule_id
+          AND ssd.day_of_week = CASE DAYOFWEEK(tr.clock_in)
+            WHEN 2 THEN 'mon' WHEN 3 THEN 'tue' WHEN 4 THEN 'wed'
+            WHEN 5 THEN 'thu' WHEN 6 THEN 'fri' WHEN 7 THEN 'sat'
+          END
+        WHERE DATE(tr.clock_in) >= ? AND DATE(tr.clock_in) <= ?
+          AND tr.clock_out IS NOT NULL
+          AND ssd.shift_start IS NOT NULL
+      `, [period.date_from, period.date_to]);
+
+      const lateMinutesMap = {};
+      const GRACE_MINUTES = 15; // 15-minute grace period
+      for (const rec of individualRecords) {
+        if (!rec.shift_start) continue;
+        // Parse times as minutes since midnight
+        const [ciH, ciM] = rec.clock_in_time.split(':').map(Number);
+        const [ssH, ssM] = rec.shift_start.split(':').map(Number);
+        const ciMinutes = ciH * 60 + ciM;
+        const ssMinutes = ssH * 60 + ssM;
+        const diff = ciMinutes - ssMinutes;
+        if (diff > GRACE_MINUTES) {
+          if (!lateMinutesMap[rec.staff_id]) lateMinutesMap[rec.staff_id] = 0;
+          lateMinutesMap[rec.staff_id] += diff;
+        }
+      }
+
       const entries = [];
 
       for (const s of staff) {
         const totalHours = hoursMap[s.id] || 0;
         const days = daysMap[s.id] || 0;
+        const lateMinutes = lateMinutesMap[s.id] || 0;
 
         // Compute daily/hourly rate
         let hourlyRate;
@@ -297,6 +330,10 @@ export default function payrollRouter(pool, googleSheets) {
         const overtimePay = Number((overtimeHours * hourlyRate * 0.25).toFixed(2)); // 125% premium = 25% extra
         const grossPay = Number((basicPay + overtimePay).toFixed(2));
 
+        // Late deduction: convert late minutes to hours, multiply by hourly rate
+        const lateHours = lateMinutes / 60;
+        const absenceDeductions = Number((lateHours * hourlyRate).toFixed(2));
+
         // Monthly salary for statutory computation
         const monthlySalaryForStatutory = s.pay_basis === 'monthly' ? monthlySalary : (dailyRate * 261 / 12);
 
@@ -310,19 +347,18 @@ export default function payrollRouter(pool, googleSheets) {
         const philhealthEmployee = Number((philHealthBase * 0.025 / 2).toFixed(2));
         const philhealthEmployer = Number((philHealthBase * 0.025 / 2).toFixed(2));
 
-// Pag-IBIG (1% employee up to MSC ₱5,000, 2% employer up to MSC ₱5,000) — semi-monthly
-  // Employee rate: 1% for salary ≤ ₱5,000; 2% for salary > ₱5,000
-  const pagIbigBase = Math.min(monthlySalaryForStatutory, 5000);
-  const pagibigEmployeeRate = monthlySalaryForStatutory <= 5000 ? 0.01 : 0.02;
-  const pagibigEmployee = Number((pagIbigBase * pagibigEmployeeRate / 2).toFixed(2));
-  const pagibigEmployer = Number((pagIbigBase * 0.02 / 2).toFixed(2));
+        // Pag-IBIG (1% employee up to MSC ₱5,000, 2% employer up to MSC ₱5,000) — semi-monthly
+        const pagIbigBase = Math.min(monthlySalaryForStatutory, 5000);
+        const pagibigEmployeeRate = monthlySalaryForStatutory <= 5000 ? 0.01 : 0.02;
+        const pagibigEmployee = Number((pagIbigBase * pagibigEmployeeRate / 2).toFixed(2));
+        const pagibigEmployer = Number((pagIbigBase * 0.02 / 2).toFixed(2));
 
         // Semi-monthly taxable income for withholding tax
         const semiMonthlyTaxable = grossPay - sssEmployee - philhealthEmployee - pagibigEmployee;
         const withholdingTax = Number(computeWithholdingTax(semiMonthlyTaxable).toFixed(2));
 
-        // Total deductions
-        const totalDeductions = Number((sssEmployee + philhealthEmployee + pagibigEmployee + withholdingTax).toFixed(2));
+        // Total deductions = statutory + late absence deduction
+        const totalDeductions = Number((sssEmployee + philhealthEmployee + pagibigEmployee + withholdingTax + absenceDeductions).toFixed(2));
         const netPay = Number((grossPay - totalDeductions).toFixed(2));
 
         entries.push({
@@ -334,7 +370,7 @@ export default function payrollRouter(pool, googleSheets) {
           holiday_hours: 0,
           rest_day_hours: 0,
           night_diff_hours: 0,
-          late_minutes: 0,
+          late_minutes: lateMinutes,
           basic_pay: basicPay,
           overtime_pay: overtimePay,
           holiday_pay: 0,
@@ -347,7 +383,7 @@ export default function payrollRouter(pool, googleSheets) {
           philhealth_employee: philhealthEmployee,
           pagibig_employee: pagibigEmployee,
           withholding_tax: withholdingTax,
-          absence_deductions: 0,
+          absence_deductions: absenceDeductions,
           other_deductions: 0,
           total_deductions: totalDeductions,
           net_pay: netPay,

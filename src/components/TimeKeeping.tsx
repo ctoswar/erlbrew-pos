@@ -1,15 +1,19 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { apiGet, apiPost, apiAdminGet, apiAdminPut, apiAdminPost, apiAdminDelete } from "../utils/api";
 
-interface ScheduleTemplate {
-  id: number;
-  name: string;
+interface ScheduleDay {
   shift_start: string | null;
   shift_end: string | null;
   lunch_start: string | null;
   lunch_end: string | null;
   snack_start: string | null;
   snack_end: string | null;
+}
+
+interface ScheduleTemplate {
+  id: number;
+  name: string;
+  days: Record<string, ScheduleDay>;
 }
 
 interface StaffSchedule {
@@ -94,6 +98,13 @@ export const TimeKeeping: React.FC = () => {
   const [schedulesSubTab, setSchedulesSubTab] = useState<"templates" | "assignments">("templates");
 
   // Template form
+  const DAYS_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat"] as const;
+  const DAY_LABELS: Record<string, string> = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday" };
+  const emptyDay = (): ScheduleDay => ({ shift_start: null, shift_end: null, lunch_start: null, lunch_end: null, snack_start: null, snack_end: null });
+  const emptyDays = (): Record<string, ScheduleDay> => ({
+    mon: emptyDay(), tue: emptyDay(), wed: emptyDay(), thu: emptyDay(), fri: emptyDay(), sat: emptyDay(),
+  });
+
   const [showTemplateForm, setShowTemplateForm] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState<number | null>(null);
   const [templateForm, setTemplateForm] = useState<Partial<ScheduleTemplate>>({ name: "" });
@@ -176,12 +187,16 @@ export const TimeKeeping: React.FC = () => {
 
   const saveTemplate = async () => {
     if (!templateForm.name?.trim()) { showSchedulesMsg("Schedule name is required", false); return; }
+    const payload = {
+      name: templateForm.name,
+      days: templateForm.days || emptyDays(),
+    };
     try {
       if (editingTemplateId) {
-        await apiAdminPut(`/staff-schedules/${editingTemplateId}`, templateForm);
+        await apiAdminPut(`/staff-schedules/${editingTemplateId}`, payload);
         showSchedulesMsg("Schedule updated", true);
       } else {
-        await apiAdminPost("/staff-schedules", templateForm);
+        await apiAdminPost("/staff-schedules", payload);
         showSchedulesMsg("Schedule created", true);
       }
       setShowTemplateForm(false);
@@ -666,48 +681,58 @@ export const TimeKeeping: React.FC = () => {
                         {editingTemplateId ? "Edit Schedule" : "New Schedule"}
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                      <div>
-                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Schedule Name *</label>
-                        <input type="text" value={templateForm.name || ""} onChange={(e) => setTemplateForm(f => ({ ...f, name: e.target.value }))}
-                          placeholder="e.g. Morning Shift" className="w-full text-sm" />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Shift Start</label>
-                        <input type="time" value={templateForm.shift_start || ""} onChange={(e) => setTemplateForm(f => ({ ...f, shift_start: e.target.value || null }))}
-                          className="w-full text-sm" />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Shift End</label>
-                        <input type="time" value={templateForm.shift_end || ""} onChange={(e) => setTemplateForm(f => ({ ...f, shift_end: e.target.value || null }))}
-                          className="w-full text-sm" />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Lunch Start</label>
-                        <input type="time" value={templateForm.lunch_start || ""} onChange={(e) => setTemplateForm(f => ({ ...f, lunch_start: e.target.value || null }))}
-                          className="w-full text-sm" />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Lunch End</label>
-                        <input type="time" value={templateForm.lunch_end || ""} onChange={(e) => setTemplateForm(f => ({ ...f, lunch_end: e.target.value || null }))}
-                          className="w-full text-sm" />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Snack Start</label>
-                        <input type="time" value={templateForm.snack_start || ""} onChange={(e) => setTemplateForm(f => ({ ...f, snack_start: e.target.value || null }))}
-                          className="w-full text-sm" />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Snack End</label>
-                        <input type="time" value={templateForm.snack_end || ""} onChange={(e) => setTemplateForm(f => ({ ...f, snack_end: e.target.value || null }))}
-                          className="w-full text-sm" />
-                      </div>
+                    <div className="mb-4">
+                      <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">Schedule Name *</label>
+                      <input type="text" value={templateForm.name || ""} onChange={(e) => setTemplateForm(f => ({ ...f, name: e.target.value }))}
+                        placeholder="e.g. Morning Shift" className="w-full max-w-[300px] text-sm" />
                     </div>
+
+                    {/* Mon-Sat schedule table */}
+                    <div className="overflow-x-auto mb-4">
+                      <table className="w-full text-[11px] border-collapse">
+                        <thead>
+                          <tr className="bg-erl-base/60 text-erl-text-faint uppercase tracking-wider">
+                            <th className="px-3 py-2 text-left font-semibold">Day</th>
+                            <th className="px-3 py-2 text-left font-semibold">Shift Start</th>
+                            <th className="px-3 py-2 text-left font-semibold">Shift End</th>
+                            <th className="px-3 py-2 text-left font-semibold">Lunch Start</th>
+                            <th className="px-3 py-2 text-left font-semibold">Lunch End</th>
+                            <th className="px-3 py-2 text-left font-semibold">Snack Start</th>
+                            <th className="px-3 py-2 text-left font-semibold">Snack End</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {DAYS_ORDER.map((day) => {
+                            const d = (templateForm.days?.[day] as ScheduleDay) || emptyDay();
+                            return (
+                              <tr key={day} className="border-t border-erl-border-subtle/50">
+                                <td className="px-3 py-2 font-bold text-erl-text-primary">{DAY_LABELS[day]}</td>
+                                {(["shift_start", "shift_end", "lunch_start", "lunch_end", "snack_start", "snack_end"] as (keyof ScheduleDay)[]).map((field) => (
+                                  <td key={field} className="px-3 py-2">
+                                    <input
+                                      type="time"
+                                      value={d[field] || ""}
+                                      onChange={(e) => {
+                                        const nextDays = { ...(templateForm.days || emptyDays()) };
+                                        nextDays[day] = { ...d, [field]: e.target.value || null };
+                                        setTemplateForm((f) => ({ ...f, days: nextDays }));
+                                      }}
+                                      className="w-full text-xs bg-erl-base border border-erl-border-medium rounded-lg px-2 py-1 text-erl-text-primary outline-none focus:border-erl-accent"
+                                    />
+                                  </td>
+                                ))}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
                     <div className="flex gap-3">
                       <button onClick={saveTemplate} className="btn btn-accent text-xs px-5 py-2.5 tracking-wider">
                         {editingTemplateId ? "Update" : "Create"}
                       </button>
-                      <button onClick={() => { setShowTemplateForm(false); setEditingTemplateId(null); }} className="btn btn-ghost text-xs px-4 py-2.5">
+                      <button onClick={() => { setShowTemplateForm(false); setEditingTemplateId(null); setTemplateForm({ name: "" }); }} className="btn btn-ghost text-xs px-4 py-2.5">
                         Cancel
                       </button>
                     </div>
@@ -741,28 +766,23 @@ export const TimeKeeping: React.FC = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-bold text-erl-text-primary">{t.name}</div>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {(t.shift_start || t.shift_end) && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-erl-accent/8 text-erl-accent font-semibold tracking-wide">
-                                Shift {fmtTime(t.shift_start)} – {fmtTime(t.shift_end)}
-                              </span>
-                            )}
-                            {(t.lunch_start || t.lunch_end) && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-erl-success/10 text-erl-success font-semibold tracking-wide">
-                                Lunch {fmtTime(t.lunch_start)} – {fmtTime(t.lunch_end)}
-                              </span>
-                            )}
-                            {(t.snack_start || t.snack_end) && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#d4a87a]/15 text-[#d4a87a] font-semibold tracking-wide">
-                                Snack {fmtTime(t.snack_start)} – {fmtTime(t.snack_end)}
-                              </span>
-                            )}
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {DAYS_ORDER.map((day) => {
+                              const d = t.days?.[day];
+                              const hasTimes = d && (d.shift_start || d.shift_end);
+                              return (
+                                <span key={day} className={`text-[9px] px-1.5 py-0.5 rounded-md font-semibold tracking-wide ${hasTimes ? "bg-erl-accent/8 text-erl-accent" : "bg-erl-base text-erl-text-faint"}`}>
+                                  {day.charAt(0).toUpperCase() + day.slice(1)}
+                                  {hasTimes ? ` ${fmtTime(d.shift_start)}–${fmtTime(d.shift_end)}` : " —"}
+                                </span>
+                              );
+                            })}
                           </div>
                         </div>
                         <div className="flex gap-1.5 flex-shrink-0">
                           <button onClick={() => {
                             setEditingTemplateId(t.id);
-                            setTemplateForm({ ...t });
+                            setTemplateForm({ name: t.name, days: { ...(t.days || {}) } });
                             setShowTemplateForm(true);
                           }} className="text-[10px] px-2.5 py-1.5 rounded-lg border border-erl-border-default text-erl-text-faint font-bold hover:border-erl-accent/30 hover:text-erl-accent transition-colors">
                             Edit
@@ -962,6 +982,17 @@ function isWithinBreak(now: Date, start: string | null, end: string | null): boo
   return n >= s && n < e;
 }
 
+function getLateMinutes(clockIn: string, shiftStart: string | null): number {
+  if (!shiftStart) return 0;
+  const ci = new Date(clockIn);
+  const [sh, sm] = shiftStart.split(":").map(Number);
+  const ciMin = ci.getHours() * 60 + ci.getMinutes();
+  const ssMin = sh * 60 + sm;
+  const diff = ciMin - ssMin;
+  const GRACE = 15; // 15-minute grace period
+  return diff > GRACE ? diff : 0;
+}
+
 // ── Staff Group ──
 const StaffGroup: React.FC<{
   label: string;
@@ -986,6 +1017,8 @@ const StaffGroup: React.FC<{
           const now = new Date();
           const onLunch = r.status === "clocked_in" && isWithinBreak(now, r.lunch_start, r.lunch_end);
           const onSnack = r.status === "clocked_in" && isWithinBreak(now, r.snack_start, r.snack_end);
+          const lateMins = rec ? getLateMinutes(rec.clock_in, r.shift_start) : 0;
+          const isLate = lateMins > 0;
           return (
             <div key={r.staff_id} className="card-glass px-4 py-3.5 flex items-center gap-3.5 transition-all duration-200 hover:border-erl-accent/15">
               {/* Avatar */}
@@ -1002,11 +1035,18 @@ const StaffGroup: React.FC<{
                 <div className="text-sm font-bold text-erl-text-primary">{r.name}</div>
                 <div className="text-[10px] text-erl-text-faint tracking-[0.1em] uppercase font-semibold mt-0.5">{r.role}</div>
                 {/* Schedule pills */}
-                {(r.shift_start || r.shift_end) && (
+                {(r.shift_start || r.shift_end || isLate) && (
                   <div className="flex flex-wrap gap-1 mt-1.5">
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-erl-accent/8 text-erl-accent font-semibold tracking-wide">
-                      Shift {fmtTime(r.shift_start)} – {fmtTime(r.shift_end)}
-                    </span>
+                    {(r.shift_start || r.shift_end) && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-erl-accent/8 text-erl-accent font-semibold tracking-wide">
+                        Shift {fmtTime(r.shift_start)} – {fmtTime(r.shift_end)}
+                      </span>
+                    )}
+                    {isLate && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-erl-danger/10 text-erl-danger font-semibold tracking-wide">
+                        Late {lateMins}m
+                      </span>
+                    )}
                     {onLunch && (
                       <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-erl-success/10 text-erl-success font-semibold tracking-wide">
                         On Lunch

@@ -18,8 +18,8 @@ async function resolveClockTabName(sheets, spreadsheetId) {
   if (cachedClockTabName) return cachedClockTabName;
   const res = await sheets.spreadsheets.get({ spreadsheetId });
   const sheetsList = res.data.sheets || [];
-  const clockTab = sheetsList.find((s) => s.properties.title === 'Sheet2');
-  cachedClockTabName = clockTab ? 'Sheet2' : (sheetsList[0]?.properties.title || 'Sheet1');
+  const clockTab = sheetsList.find((s) => s.properties.title === 'Time Records');
+  cachedClockTabName = clockTab ? 'Time Records' : (sheetsList[0]?.properties.title || 'Sheet1');
   return cachedClockTabName;
 }
 
@@ -41,39 +41,38 @@ async function loadMenuItemNames(pool) {
   }
 }
 
-let cachedSheet3TabName = null;
+let cachedDashboardTabName = null;
 
-async function resolveSheet3TabName(sheets, spreadsheetId) {
-  if (cachedSheet3TabName) return cachedSheet3TabName;
+async function resolveDashboardTabName(sheets, spreadsheetId) {
+  if (cachedDashboardTabName) return cachedDashboardTabName;
   const res = await sheets.spreadsheets.get({ spreadsheetId });
   const sheetsList = res.data.sheets || [];
-  const tab = sheetsList.find((s) => s.properties.title === 'Sheet3');
-  cachedSheet3TabName = tab ? 'Sheet3' : (sheetsList[0]?.properties.title || 'Sheet1');
-  return cachedSheet3TabName;
+  const tab = sheetsList.find((s) => s.properties.title === 'Dashboard');
+  cachedDashboardTabName = tab ? 'Dashboard' : (sheetsList[0]?.properties.title || 'Sheet1');
+  return cachedDashboardTabName;
 }
 
-async function ensureSheet3Exists(sheets, spreadsheetId) {
-  const tabName = await resolveSheet3TabName(sheets, spreadsheetId);
-  // Check if Sheet3 already exists
+async function ensureDashboardExists(sheets, spreadsheetId) {
+  const tabName = await resolveDashboardTabName(sheets, spreadsheetId);
+  // Check if Dashboard already exists
   const res = await sheets.spreadsheets.get({ spreadsheetId });
   const sheetsList = res.data.sheets || [];
-  const exists = sheetsList.some((s) => s.properties.title === 'Sheet3');
+  const exists = sheetsList.some((s) => s.properties.title === 'Dashboard');
   if (!exists) {
-    // Create Sheet3 by duplicating Sheet1 (Sheets API doesn't have a direct "create sheet" call,
-    // but we can use batchUpdate with an addSheet request)
+    // Create Dashboard tab
     try {
       await sheets.spreadsheets.batchUpdate({
         spreadsheetId,
         resource: {
-          requests: [{ addSheet: { properties: { title: 'Sheet3', index: 2 } } }],
+          requests: [{ addSheet: { properties: { title: 'Dashboard', index: 2 } } }],
         },
       });
-      cachedSheet3TabName = 'Sheet3';
-      return 'Sheet3';
+      cachedDashboardTabName = 'Dashboard';
+      return 'Dashboard';
     } catch (e) {
       // Fall back to first sheet
-      console.error('Could not create Sheet3, falling back:', e.message);
-      cachedSheet3TabName = sheetsList[0]?.properties.title || 'Sheet1';
+      console.error('Could not create Dashboard, falling back:', e.message);
+      cachedDashboardTabName = sheetsList[0]?.properties.title || 'Sheet1';
     }
   }
   return tabName;
@@ -157,7 +156,7 @@ export function googleSheetsClientInit(pool) {
       const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
       if (!spreadsheetId) return;
 
-      const tabName = await ensureSheet3Exists(sheets, spreadsheetId);
+      const tabName = await ensureDashboardExists(sheets, spreadsheetId);
 
       // Compute summary (same logic as frontend buildDailySummary)
       const completed = (orders || []).filter((o) => o.status === 'completed');
@@ -284,7 +283,7 @@ export function googleSheetsClientInit(pool) {
         ]);
       });
 
-      // Write all rows to Sheet3 starting at A1
+      // Write all rows to Dashboard starting at A1
       await sheets.spreadsheets.values.update({
         spreadsheetId,
         range: `${tabName}!A1`,
@@ -469,28 +468,28 @@ export function googleSheetsClientInit(pool) {
         },
       });
     } catch (e) {
-      console.error('Sheet3 formatting/chart error (non-fatal):', e.message);
+      console.error('Dashboard formatting/chart error (non-fatal):', e.message);
     }
     return { jwtClient, sheets };
     },
 
-    // ── Sheet4: Payroll — append payroll entries when computed ──────────────
+    // ── Payroll — append payroll entries when computed ──────────────
     async appendPayrollEntries({ period, entries }) {
       const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
       if (!spreadsheetId) return;
 
-      // Ensure Sheet4 exists
+      // Ensure Payroll tab exists
       const res0 = await sheets.spreadsheets.get({ spreadsheetId });
       const sheetsList = res0.data.sheets || [];
-      let tabName = 'Sheet4';
-      const sheet4 = sheetsList.find(s => s.properties.title === 'Sheet4');
-      if (!sheet4) {
+      let tabName = 'Payroll';
+      const payrollTab = sheetsList.find(s => s.properties.title === 'Payroll');
+      if (!payrollTab) {
         try {
           await sheets.spreadsheets.batchUpdate({
             spreadsheetId,
-            resource: { requests: [{ addSheet: { properties: { title: 'Sheet4', index: 3 } } }] },
+            resource: { requests: [{ addSheet: { properties: { title: 'Payroll', index: 3 } } }] },
           });
-        } catch (e) { console.error('Could not create Sheet4 (non-fatal):', e.message); }
+        } catch (e) { console.error('Could not create Payroll tab (non-fatal):', e.message); }
       }
 
       const rows = [];
@@ -554,7 +553,7 @@ export function googleSheetsClientInit(pool) {
       ];
       rows.push(totalsRow);
 
-      // Clear and rewrite Sheet4
+      // Clear and rewrite Payroll tab
       await sheets.spreadsheets.values.clear({ spreadsheetId, range: `${tabName}!A:R` });
       await sheets.spreadsheets.values.update({
         spreadsheetId,
@@ -564,7 +563,7 @@ export function googleSheetsClientInit(pool) {
       });
     },
 
-    // ── Append a single row to Sheet4 when payroll is approved/paid ────────
+    // ── Append a single row to Payroll tab when payroll is approved/paid ────────
     async appendPayrollStatusChange({ period, status, staffName }) {
       const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
       if (!spreadsheetId) return;
@@ -572,10 +571,10 @@ export function googleSheetsClientInit(pool) {
       try {
         const res0 = await sheets.spreadsheets.get({ spreadsheetId });
         const sheetsList = res0.data.sheets || [];
-        const sheet4 = sheetsList.find(s => s.properties.title === 'Sheet4');
-        if (!sheet4) return; // Sheet4 not created yet, skip
+        const payrollTab = sheetsList.find(s => s.properties.title === 'Payroll');
+        if (!payrollTab) return; // Payroll tab not created yet, skip
 
-        const tabName = 'Sheet4';
+        const tabName = 'Payroll';
         const ts = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
         const values = [ts, 'PAYROLL_STATUS', `Period ${period.label || period.date_from}: ${status}`, `By: ${staffName || 'System'}`];
 
@@ -588,7 +587,7 @@ export function googleSheetsClientInit(pool) {
       } catch (e) { console.error('[Sheets] Payroll status append failed (non-fatal):', e.message); }
     },
 
-    // ── Sheet5: Voids & Refunds ─────────────────────────────────────────────
+    // ── Voids/Refunds + Z-Reports ─────────────────────────────────────────────
     async appendVoidRefund({ type, orderId, reason, staffName, total, items }) {
       const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
       if (!spreadsheetId) return;
@@ -596,15 +595,15 @@ export function googleSheetsClientInit(pool) {
       try {
         const res0 = await sheets.spreadsheets.get({ spreadsheetId });
         const sheetsList = res0.data.sheets || [];
-        let tabName = 'Sheet5';
-        const sheet5 = sheetsList.find(s => s.properties.title === 'Sheet5');
-        if (!sheet5) {
+        let tabName = 'Voids/Refunds + Z-Reports';
+        const vrTab = sheetsList.find(s => s.properties.title === 'Voids/Refunds + Z-Reports');
+        if (!vrTab) {
           try {
             await sheets.spreadsheets.batchUpdate({
               spreadsheetId,
-              resource: { requests: [{ addSheet: { properties: { title: 'Sheet5', index: 4 } } }] },
+              resource: { requests: [{ addSheet: { properties: { title: 'Voids/Refunds + Z-Reports', index: 4 } } }] },
             });
-          } catch (e2) { console.error('Could not create Sheet5 (non-fatal):', e2.message); }
+          } catch (e2) { console.error('Could not create Voids/Refunds + Z-Reports tab (non-fatal):', e2.message); }
         }
 
         const ts = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
@@ -619,7 +618,7 @@ export function googleSheetsClientInit(pool) {
       } catch (e) { console.error('[Sheets] Void/refund append failed (non-fatal):', e.message); }
     },
 
-    // ── Sheet6: Cash Drawer ──────────────────────────────────────────────────
+    // ── Cash Drawer + Inventory ──────────────────────────────────────────────────
     async appendCashDrawerEvent({ type, shiftDate, amount, staffName, reason, details }) {
       const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
       if (!spreadsheetId) return;
@@ -627,15 +626,15 @@ export function googleSheetsClientInit(pool) {
       try {
         const res0 = await sheets.spreadsheets.get({ spreadsheetId });
         const sheetsList = res0.data.sheets || [];
-        let tabName = 'Sheet6';
-        const sheet6 = sheetsList.find(s => s.properties.title === 'Sheet6');
-        if (!sheet6) {
+        let tabName = 'Cash Drawer + Inventory';
+        const cdiTab = sheetsList.find(s => s.properties.title === 'Cash Drawer + Inventory');
+        if (!cdiTab) {
           try {
             await sheets.spreadsheets.batchUpdate({
               spreadsheetId,
-              resource: { requests: [{ addSheet: { properties: { title: 'Sheet6', index: 5 } } }] },
+              resource: { requests: [{ addSheet: { properties: { title: 'Cash Drawer + Inventory', index: 5 } } }] },
             });
-          } catch (e2) { console.error('Could not create Sheet6 (non-fatal):', e2.message); }
+          } catch (e2) { console.error('Could not create Cash Drawer + Inventory tab (non-fatal):', e2.message); }
         }
 
         const ts = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
@@ -658,15 +657,15 @@ export function googleSheetsClientInit(pool) {
       try {
         const res0 = await sheets.spreadsheets.get({ spreadsheetId });
         const sheetsList = res0.data.sheets || [];
-        let tabName = 'Sheet5';
-        const sheet5 = sheetsList.find(s => s.properties.title === 'Sheet5');
-        if (!sheet5) {
+        let tabName = 'Voids/Refunds + Z-Reports';
+        const vrTab = sheetsList.find(s => s.properties.title === 'Voids/Refunds + Z-Reports');
+        if (!vrTab) {
           try {
             await sheets.spreadsheets.batchUpdate({
               spreadsheetId,
-              resource: { requests: [{ addSheet: { properties: { title: 'Sheet5', index: 4 } } }] },
+              resource: { requests: [{ addSheet: { properties: { title: 'Voids/Refunds + Z-Reports', index: 4 } } }] },
             });
-          } catch (e2) { console.error('Could not create Sheet5 for Z-report (non-fatal):', e2.message); }
+          } catch (e2) { console.error('Could not create Voids/Refunds + Z-Reports tab for Z-report (non-fatal):', e2.message); }
         }
 
         const ts = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
@@ -696,15 +695,15 @@ export function googleSheetsClientInit(pool) {
       try {
         const res0 = await sheets.spreadsheets.get({ spreadsheetId });
         const sheetsList = res0.data.sheets || [];
-        let tabName = 'Sheet6';
-        const sheet6 = sheetsList.find(s => s.properties.title === 'Sheet6');
-        if (!sheet6) {
+        let tabName = 'Cash Drawer + Inventory';
+        const cdiTab = sheetsList.find(s => s.properties.title === 'Cash Drawer + Inventory');
+        if (!cdiTab) {
           try {
             await sheets.spreadsheets.batchUpdate({
               spreadsheetId,
-              resource: { requests: [{ addSheet: { properties: { title: 'Sheet6', index: 5 } } }] },
+              resource: { requests: [{ addSheet: { properties: { title: 'Cash Drawer + Inventory', index: 5 } } }] },
             });
-          } catch (e2) { console.error('Could not create Sheet6 (non-fatal):', e2.message); }
+          } catch (e2) { console.error('Could not create Cash Drawer + Inventory tab (non-fatal):', e2.message); }
         }
 
         const ts = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });

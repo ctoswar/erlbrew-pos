@@ -151,3 +151,7 @@ server/.slop-patches/src_hooks_useOrders.ts.patch
 server/.slop-patches/src_styles_global.css.patch
 server/.slop-patches/tailwind.config.js.patch
 server/.slop-patches/test.patch
+docker-compose.yml
+docker-compose.yml
+docker-compose.yml
+pull-images.bat

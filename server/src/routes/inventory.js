@@ -83,7 +83,8 @@ router.post('/', authMiddleware, async (req, res) => {
       // Only insert cost columns if they exist in the DB (migration may not be applied yet)
       const baseCols = '(id, name, category, unit, stock, low_stock_threshold)';
       const baseVals = [id, name, category, unit || 'pcs', stock ?? 0, low_stock_threshold ?? 10];
-      let sql = `INSERT INTO inventory ${baseCols}`;
+      const ph = baseVals.map(() => '?').join(', ');
+      let sql = `INSERT INTO inventory ${baseCols} VALUES (${ph})`;
       let vals = baseVals;
 
       try {
@@ -95,7 +96,9 @@ router.post('/', authMiddleware, async (req, res) => {
         // cols is [{ COLUMN_NAME: 'purchase_cost' }, { COLUMN_NAME: 'unit_cost' }]
         const hasCost = Array.isArray(cols) && cols.length >= 2;
         if (hasCost) {
-          sql = `INSERT INTO inventory ${baseCols.replace(')', ', purchase_cost, unit_cost)')}`;
+          const extendedCols = baseCols.replace(')', ', purchase_cost, unit_cost)');
+          const extendedPh = [...baseVals, purchase_cost ?? 0, unit_cost ?? 0].map(() => '?').join(', ');
+          sql = `INSERT INTO inventory ${extendedCols} VALUES (${extendedPh})`;
           vals = [...baseVals, purchase_cost ?? 0, unit_cost ?? 0];
         }
       } catch (_) { /* migration not applied — skip cost columns */ }

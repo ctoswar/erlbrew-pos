@@ -3,6 +3,7 @@ services:
   erlbw-api:
     build: ./server
     container_name: erlbw-api
+    pull_policy: never
     restart: unless-stopped
     expose:
       - "3001"                     # Internal port (not published to host)
@@ -33,6 +34,7 @@ services:
       args:
         # VITE_API_URL empty → nginx proxies /api to backend (see nginx.conf)
         VITE_API_URL: ""
+    pull_policy: never
     container_name: erlbrew-pos
     restart: unless-stopped
     ports:

@@ -12,8 +12,11 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
   const [modifiers, setModifiers] = useState<Modifier[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showBatchAdd, setShowBatchAdd] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ name: "", price: "", isDefault: false });
+  const [batchText, setBatchText] = useState("");
+  const [batchPrice, setBatchPrice] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -45,6 +48,31 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleBatchAdd = async () => {
+    const names = batchText.trim().split('\n').map(s => s.trim()).filter(Boolean);
+    if (names.length === 0) return;
+    setSaving(true);
+    setError("");
+    const price = Number(batchPrice) || 0;
+    let created = 0;
+    for (const name of names) {
+      try {
+        await createModifier(item.id, { name, price, isDefault: false });
+        created++;
+      } catch (e: any) {
+        setError(e.message);
+        break;
+      }
+    }
+    if (created > 0) {
+      setBatchText("");
+      setBatchPrice("");
+      setShowBatchAdd(false);
+      loadModifiers();
+    }
+    setSaving(false);
   };
 
   const handleSaveEdit = async (id: number) => {
@@ -185,9 +213,49 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
             </div>
           )}
 
+          {/* Batch add — paste multiple lines */}
+          {showBatchAdd ? (
+            <div className="border-[1.5px] border-erl-border-medium rounded-[10px] p-3 bg-erl-surface mb-2.5">
+              <div className="mb-2 text-[11px] font-bold text-erl-secondary tracking-wide">
+                BATCH ADD MODIFIERS
+              </div>
+              <textarea
+                value={batchText}
+                onChange={(e) => setBatchText(e.target.value)}
+                placeholder={"Extra shot\nOat milk\nWhipped cream\nSoy milk\nCaramel drizzle"}
+                rows={5}
+                className="w-full px-2.5 py-1.5 rounded-md border-[1.5px] border-erl-border-default bg-erl-elevated text-erl-text-primary text-xs mb-2 resize-none"
+              />
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="number"
+                  value={batchPrice}
+                  onChange={(e) => setBatchPrice(e.target.value)}
+                  placeholder="Price for all (0 = free)"
+                  className="flex-1 px-2.5 py-1.5 rounded-md border-[1.5px] border-erl-border-default bg-erl-elevated text-erl-text-primary text-[11px]"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleBatchAdd}
+                  disabled={saving || !batchText.trim()}
+                  className="btn btn-accent flex-1 py-2 text-[11px] min-h-[44px]"
+                >
+                  {saving ? `Creating...` : `Add All (${batchText.trim() ? batchText.trim().split('\n').filter(Boolean).length : 0})`}
+                </button>
+                <button
+                  onClick={() => { setShowBatchAdd(false); setBatchText(""); setBatchPrice(""); }}
+                  className="flex-1 py-2 rounded-lg bg-erl-elevated text-erl-muted text-[11px] font-bold cursor-pointer border-[1.5px] border-erl-border-default min-h-[44px]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {/* Add modifier form / button */}
           {showAddForm ? (
-            <div className="border-[1.5px] border-erl-border-medium rounded-[10px] p-3 bg-erl-surface">
+            <div className="border-[1.5px] border-erl-border-medium rounded-[10px] p-3 bg-erl-surface mb-2.5">
               <div className="mb-2 text-[11px] font-bold text-erl-secondary tracking-wide">
                 ADD NEW MODIFIER
               </div>
@@ -230,14 +298,23 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
                 </button>
               </div>
             </div>
-          ) : (
+          ) : null}
+
+          {/* Action buttons row */}
+          <div className="flex gap-2">
             <button
-              onClick={() => { setShowAddForm(true); setEditingId(null); }}
-              className="btn btn-accent w-full py-2.5 text-[11px] min-h-[44px]"
+              onClick={() => { setShowBatchAdd(true); setShowAddForm(false); setEditingId(null); }}
+              className="btn btn-accent flex-1 py-2.5 text-[11px] min-h-[44px]"
             >
-              + Add Modifier
+              📋 Batch Add
             </button>
-          )}
+            <button
+              onClick={() => { setShowAddForm(true); setShowBatchAdd(false); setEditingId(null); }}
+              className="flex-1 py-2.5 rounded-lg bg-erl-elevated text-erl-muted text-[11px] font-bold cursor-pointer border-[1.5px] border-erl-border-default min-h-[44px]"
+            >
+              + Single
+            </button>
+          </div>
         </div>
       </div>
     </>

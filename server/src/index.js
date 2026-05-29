@@ -48,7 +48,17 @@ app.use(cors((req, callback) => {
   if (!origin) return callback(null, { origin: true, credentials: true });
   // If CORS_ORIGINS is explicitly configured, enforce it
   if (corsOrigins.length > 0) {
-    if (corsOrigins.includes(origin)) return callback(null, { origin: true, credentials: true });
+    // Support wildcard patterns like http://192.168.* or https://*.domain.com
+    const allowed = corsOrigins.some(allowed => {
+      if (allowed === origin) return true;
+      // Convert wildcard pattern to regex: http://*.example.com → /^http:\/\/[^/]+\.example\.com$/
+      if (allowed.includes('*')) {
+        const escaped = allowed.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]+');
+        return new RegExp(`^${escaped}$`).test(origin);
+      }
+      return false;
+    });
+    if (allowed) return callback(null, { origin: true, credentials: true });
     return callback(new Error('CORS not allowed'));
   }
   // Only allow dev wildcard when CORS_ORIGINS is NOT set AND not in production

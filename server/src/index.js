@@ -23,7 +23,7 @@ import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
 
-const HARDCODED_PRINT_SERVER = 'https://192.168.75.101:9100';
+const DEFAULT_PRINT_SERVER = null; // must be configured via env or settings
 
 dotenv.config();
 
@@ -95,17 +95,34 @@ const pool = mysql.createPool({
   dateStrings: false,
 });
 
-// Print server URL resolver: env var › DB company_settings › hardcoded default
+// Print server URL resolver: env var › DB company_settings
+function normalizePrintServerUrl(url) {
+  if (!url) return null;
+  // Auto-prepend http:// if no protocol given (handles bare host:port input)
+  if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
+  return url;
+}
+
 async function resolvePrintServer() {
   const fromEnv = process.env.PRINT_SERVER_URL;
-  if (fromEnv) return fromEnv;
+  if (fromEnv) {
+    console.log(`[print-proxy] Using PRINT_SERVER_URL env: ${fromEnv}`);
+    return normalizePrintServerUrl(fromEnv);
+  }
   try {
     const [settings] = await pool.execute(
       `SELECT setting_value FROM company_settings WHERE setting_key = 'print_server_url'`
     );
-    if (settings.length > 0 && settings[0].setting_value) return settings[0].setting_value;
-  } catch (_) { /* table may not exist yet */ }
-  return HARDCODED_PRINT_SERVER;
+    if (settings.length > 0 && settings[0].setting_value) {
+      console.log(`[print-proxy] Using DB company_settings: ${settings[0].setting_value}`);
+      return normalizePrintServerUrl(settings[0].setting_value);
+    }
+    console.warn('[print-proxy] No print_server_url found in DB company_settings');
+  } catch (err) {
+    console.warn(`[print-proxy] DB lookup failed (table may not exist): ${err.message}`);
+  }
+  console.warn('[print-proxy] No print server URL configured. Set PRINT_SERVER_URL env var or configure in Admin Settings.');
+  return null;
 }
 
 const MENU_SEED = [
@@ -452,15 +469,16 @@ o.customer_name, o.table_name, o.type, o.pay_method,
 });
 
 // Print proxy: browser → backend → Pi Bluetooth print server
-// Use https.request directly for self-signed cert support (native fetch agent option unreliable)
-function printServerRequest(urlStr, options = {}) {
+// Attempts HTTPS first, falls back to HTTP on TLS/SSL errors.
+// This handles the case where the user points to a new Pi that only speaks HTTP.
+function printServerRequest(urlStr, options = {}, attempt = 1) {
   return new Promise((resolve, reject) => {
     const urlObj = new URL(urlStr);
-    const mod = urlObj.protocol === 'https:' ? https : http;
     const bodyStr = options.body || '';
+    const currentPort = urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80);
     const opts = {
       hostname: urlObj.hostname,
-      port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+      port: currentPort,
       path: urlObj.pathname + urlObj.search,
       method: options.method || 'GET',
       headers: {
@@ -469,6 +487,12 @@ function printServerRequest(urlStr, options = {}) {
       },
       rejectUnauthorized: false,
     };
+    // First attempt: try the protocol from the URL
+    // On EPROTO/TLS error and first attempt, retry with the other protocol
+    const mod = attempt === 1
+      ? (urlObj.protocol === 'https:' ? https : http)
+      : (urlObj.protocol === 'https:' ? http : https);
+
     const req = mod.request(opts, (res) => {
       const chunks = [];
       res.on('data', d => chunks.push(d));
@@ -482,7 +506,24 @@ function printServerRequest(urlStr, options = {}) {
         });
       });
     });
-    req.on('error', reject);
+    req.on('error', (err) => {
+      // Fallback logic for attempt 1: try alternative protocol and/or port
+      if (attempt === 1 && (
+        err.code === 'EPROTO' ||
+        err.code === 'ERR_SSL_WRONG_VERSION_NUMBER' ||
+        err.code === 'ECONNRESET' ||
+        err.code === 'ECONNREFUSED' ||
+        err.message.includes('wrong version number')
+      )) {
+        const newProto = urlObj.protocol === 'https:' ? 'http' : 'https';
+        // Also swap port between the common Pi ports (9000 ↔ 9100)
+        const altPort = currentPort == 9000 ? '9100' : (currentPort == 9100 ? '9000' : currentPort);
+        const fallbackUrl = `${newProto}://${urlObj.hostname}:${altPort}${urlObj.pathname}${urlObj.search}`;
+        console.log(`[print-proxy] ${err.code} with ${urlStr}, retrying with ${fallbackUrl}...`);
+        return resolve(printServerRequest(fallbackUrl, options, 2));
+      }
+      reject(err);
+    });
     if (bodyStr) req.write(bodyStr);
     req.end();
   });
@@ -494,6 +535,9 @@ app.post('/api/print', async (req, res) => {
     return res.status(400).json({ error: 'lines array required' });
   }
   const serverUrl = await resolvePrintServer();
+  if (!serverUrl) {
+    return res.status(502).json({ error: 'Print server not configured. Set PRINT_SERVER_URL env or configure in Admin Settings.' });
+  }
   try {
     const br = await printServerRequest(`${serverUrl}/print`, {
       method: 'POST',
@@ -510,6 +554,9 @@ app.post('/api/print', async (req, res) => {
 
 app.post('/api/open-drawer', async (req, res) => {
   const serverUrl = await resolvePrintServer();
+  if (!serverUrl) {
+    return res.status(502).json({ error: 'Print server not configured. Set PRINT_SERVER_URL env or configure in Admin Settings.' });
+  }
   try {
     const br = await printServerRequest(`${serverUrl}/open-drawer`, {
       method: 'POST',

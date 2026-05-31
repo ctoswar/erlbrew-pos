@@ -4,8 +4,10 @@
 # Stage 1: Build the React app
 FROM node:18-alpine AS builder
 WORKDIR /app
+# Force install the Alpine (musl) native build of rollup — npm's optional dep resolution
+# is broken when lockfile was generated on a different platform (Windows/glibc → Alpine/musl)
 COPY package*.json ./
-RUN npm install
+RUN npm ci && npm install @rollup/rollup-linux-x64-musl --no-save
 COPY . .
 # Pass API URL at build time — leave empty so nginx proxies /api to backend
 ARG VITE_API_URL=

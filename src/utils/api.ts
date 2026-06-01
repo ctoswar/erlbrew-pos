@@ -502,15 +502,23 @@ export interface CashDrawer {
 }
 
 export async function getCashDrawer(): Promise<CashDrawer> {
-  const res = await fetch(getApiUrl('/orders/cash-drawer'), { credentials: 'include' });
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl('/orders/cash-drawer'), {
+    credentials: 'include',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!res.ok) throw new Error(`API failed: ${res.status}`);
   return res.json();
 }
 
 export async function openCashDrawer(openingFloat: number): Promise<CashDrawer> {
+  const token = getAuthToken();
   const res = await fetch(getApiUrl('/orders/cash-drawer'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     credentials: 'include',
     body: JSON.stringify({ opening_float: openingFloat }),
   });
@@ -545,7 +553,11 @@ export interface CashDrawerTransaction {
 }
 
 export async function getCashDrawerTransactions(): Promise<CashDrawerTransaction[]> {
-  const res = await fetch(getApiUrl('/orders/cash-drawer/transactions'), { credentials: 'include' });
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl('/orders/cash-drawer/transactions'), {
+    credentials: 'include',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!res.ok) throw new Error(`API failed: ${res.status}`);
   return res.json();
 }
@@ -556,9 +568,13 @@ export async function createCashDrawerTransaction(data: {
   reason?: string;
   staff_name?: string;
 }): Promise<CashDrawerTransaction> {
+  const token = getAuthToken();
   const res = await fetch(getApiUrl('/orders/cash-drawer/transactions'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     credentials: 'include',
     body: JSON.stringify(data),
   });
@@ -575,9 +591,13 @@ export async function updateCashDrawer(id: number, data: {
   notes?: string;
   action?: 'save' | 'close';
 }): Promise<CashDrawer> {
+  const token = getAuthToken();
   const res = await fetch(getApiUrl(`/orders/cash-drawer/${id}`), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     credentials: 'include',
     body: JSON.stringify(data),
   });

@@ -15,7 +15,7 @@ services:
       # CORS: allow the frontend container by Docker DNS name
       # Also allow by IP range for direct tablet access on LAN
       # Override or append in your .env as needed
-      CORS_ORIGINS: http://erlbrew-pos,http://localhost:3000,http://localhost:3004,http://192.168.75.*,http://100.*,https://pos.tirona.site
+      CORS_ORIGINS: http://erlbrew-pos,http://localhost:3000,http://localhost:3004,http://192.168.*,http://100.*,https://pos.tirona.site
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/menu"]
       interval: 30s

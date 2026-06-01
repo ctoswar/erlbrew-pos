@@ -7,7 +7,7 @@ WORKDIR /app
 # Force install the Alpine (musl) native build of rollup — npm's optional dep resolution
 # is broken when lockfile was generated on a different platform (Windows/glibc → Alpine/musl)
 COPY package*.json ./
-RUN npm ci && npm install @rollup/rollup-linux-x64-musl --no-save
+RUN npm install && npm install @rollup/rollup-linux-arm64-musl --no-save
 COPY . .
 # Pass API URL at build time — leave empty so nginx proxies /api to backend
 ARG VITE_API_URL=

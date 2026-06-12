@@ -152,6 +152,11 @@ export function useOrders() {
   const [pendingCount, setPendingCount] = useState(() => readQueue().length);
   const syncedRef = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Track recently-placed local orders to prevent SSE race-condition duplicates
+  // When placeOrder creates a local optimistic order, we record its fingerprint.
+  // syncFromServer then skips server orders that match a pending local order,
+  // preventing the kitchen board from showing the order twice before the ID is remapped.
+  const pendingLocalRef = useRef<Map<string, { createdAt: number; items: string; total: number }>>(new Map());
 
   // Retry pending offline orders
   const retryPending = useCallback(() => {
@@ -184,9 +189,24 @@ export function useOrders() {
         if (Array.isArray(data)) {
           if (data.length > 0) {
             const serverOrders = data.map(serverOrderToOrder);
+            // Clean up expired pending-local entries (older than 30s)
+            const now = Date.now();
+            for (const [key, val] of pendingLocalRef.current) {
+              if (now - val.createdAt > 30000) pendingLocalRef.current.delete(key);
+            }
             setOrders(prev => {
               const existingIds = new Set(prev.map(o => o.id));
-              const newOrders = serverOrders.filter(o => !existingIds.has(o.id));
+              const newOrders = serverOrders.filter(o => {
+                if (existingIds.has(o.id)) return false;
+                // Check if this server order matches a pending local order
+                // (race condition: SSE triggered GET before placeOrder's .then() remapped ID)
+                const fingerprint = `${o.staff.name}|${o.items.map(i => `${i.item.id}:${i.qty}`).sort().join(',')}`;
+                const match = Array.from(pendingLocalRef.current.values()).find(
+                  p => p.items === fingerprint && p.total === o.total
+                );
+                if (match) return false; // skip — will be handled by placeOrder's .then()
+                return true;
+              });
               // Also update status for existing orders from server
               const updated = prev.map(local => {
                 const server = serverOrders.find(s => s.id === local.id);
@@ -305,12 +325,22 @@ export function useOrders() {
         referenceNumber,
       };
 
+      // Track this local order in pendingLocalRef to prevent SSE race-condition duplicates
+      const fingerprint = `${staff.name}|${cart.map(ci => `${ci.item.id}:${ci.qty}`).sort().join(',')}`;
+      pendingLocalRef.current.set(localOrder.id, {
+        createdAt: Date.now(),
+        items: fingerprint,
+        total,
+      });
+
       setOrders((prev) => [localOrder, ...prev]);
 
       // Post to API with auth token — on success, replace the temp local order with server version
       const token = getAuthToken();
       if (token) {
         apiAdminPost<{ id?: string; subtotal?: number; tax?: number; total?: number }>('/orders', payload).then((data) => {
+          // Remove pending entry since we're mapping the ID now
+          pendingLocalRef.current.delete(localOrder.id);
           setOrders((prev) =>
             prev.map((o) => {
               if (o.id !== localOrder.id) return o;
@@ -331,6 +361,7 @@ export function useOrders() {
       } else {
         // Fallback: try without auth (will fail if server requires auth)
         apiPost<{ id?: string; subtotal?: number; tax?: number; total?: number }>('/orders', payload).then((data) => {
+          pendingLocalRef.current.delete(localOrder.id);
           setOrders((prev) =>
             prev.map((o) => {
               if (o.id !== localOrder.id) return o;

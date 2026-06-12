@@ -155,3 +155,7 @@ docker-compose.yml
 docker-compose.yml
 docker-compose.yml
 pull-images.bat
+print-server/.dockerignore
+print-server/.env.example
+print-server/Dockerfile
+print-server/requirements.txt

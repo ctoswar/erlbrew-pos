@@ -136,8 +136,8 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   if (settings.showQRCode) {
     lines.push(ln("-"));
     if (settings.qrCodeUrl) {
-      lines.push(padCenter("Scan QR for more info"));
-      lines.push(padCenter(settings.qrCodeUrl.length > W - 4 ? settings.qrCodeUrl.substring(0, W - 4) + "..." : settings.qrCodeUrl));
+      lines.push(padCenter("[ QR CODE ]"));
+      lines.push(padCenter("Scan for more info"));
     } else {
       lines.push(padCenter("[ QR CODE ]"));
       lines.push(padCenter("Scan to Pay"));

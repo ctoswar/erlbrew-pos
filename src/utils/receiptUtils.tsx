@@ -169,8 +169,10 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
   if (settings.showQRCode) {
     lines.push(ln("-"));
     if (settings.qrCodeUrl) {
-      lines.push(padCenter("Scan QR for more info"));
-      lines.push(padCenter(settings.qrCodeUrl.length > W - 4 ? settings.qrCodeUrl.substring(0, W - 4) + "..." : settings.qrCodeUrl));
+      // Note: For Bluetooth printing, the actual QR code is rendered by print-server.py
+      // using ESC/POS native QR commands. These lines are only for browser/plain-text preview.
+      lines.push(padCenter("[ QR CODE ]"));
+      lines.push(padCenter("Scan for more info"));
     } else {
       lines.push(padCenter("[ QR CODE ]"));
       lines.push(padCenter("Scan to Pay"));
@@ -258,7 +260,11 @@ export async function printViaBluetooth(order: Order, settings: PrintSettings, d
   const res = await fetch(`${baseUrl}/api/print`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ lines: allLines, paperSize: settings.paperSize }),
+    body: JSON.stringify({
+      lines: allLines,
+      paperSize: settings.paperSize,
+      qrCodeUrl: settings.showQRCode && settings.qrCodeUrl ? settings.qrCodeUrl : null,
+    }),
   });
 
   if (!res.ok) {

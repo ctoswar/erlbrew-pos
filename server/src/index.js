@@ -530,7 +530,7 @@ function printServerRequest(urlStr, options = {}, attempt = 1) {
 }
 
 app.post('/api/print', async (req, res) => {
-  const { lines, paperSize } = req.body || {};
+  const { lines, paperSize, qrCodeUrl } = req.body || {};
   if (!lines || !Array.isArray(lines)) {
     return res.status(400).json({ error: 'lines array required' });
   }
@@ -542,7 +542,7 @@ app.post('/api/print', async (req, res) => {
     const br = await printServerRequest(`${serverUrl}/print`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lines, paperSize: paperSize || '80mm' }),
+      body: JSON.stringify({ lines, paperSize: paperSize || '80mm', qrCodeUrl: qrCodeUrl || null }),
     });
     const data = await br.json();
     res.status(br.ok ? 200 : 502).json(data);

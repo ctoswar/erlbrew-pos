@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { formatCurrency } from "../utils";
 import {
-  getCashDrawer, updateCashDrawer, apiPost,
+  getCashDrawer, updateCashDrawer, apiPost, openCashDrawer,
   getCashDrawerTransactions, createCashDrawerTransaction,
   type CashDrawer, type CashDrawerTransaction,
 } from "../utils/api";
@@ -28,6 +28,7 @@ export const CashDrawerScreen: React.FC = () => {
   const [cashPayouts, setCashPayouts] = useState(0);
   const [closingAmount, setClosingAmount] = useState(0);
   const [notes, setNotes] = useState('');
+  const [openingFloat, setOpeningFloat] = useState(0);
 
   // Transaction history
   const [transactions, setTransactions] = useState<CashDrawerTransaction[]>([]);
@@ -74,9 +75,19 @@ export const CashDrawerScreen: React.FC = () => {
     setDrawerStatus('opening');
     setMsg({ text: '', type: 'info' });
     try {
+      // If no DB record exists yet, create one first with the opening float
+      if (!drawerId) {
+        const d = await openCashDrawer(openingFloat);
+        setDrawer(d);
+        setDrawerId(d.id);
+        setCashPayouts(d.cash_payouts);
+        setClosingAmount(d.closing_amount);
+        setNotes(d.notes || '');
+      }
+      // Pop open the physical cash drawer via Pi
       await apiPost('/open-drawer', {});
       setDrawerStatus('ok');
-      setMsg({ text: '✓ Drawer opened!', type: 'success' });
+      setMsg({ text: '✓ Shift started — drawer opened!', type: 'success' });
       setTimeout(() => setDrawerStatus('idle'), 2000);
     } catch (e) {
       setDrawerStatus('error');
@@ -209,23 +220,25 @@ export const CashDrawerScreen: React.FC = () => {
         ))}
       </div>
 
-      {/* Opening Float */}
-      <div className="card-glass p-4">
-        <div className="flex justify-between items-center">
-          <span className="text-[10px] text-erl-muted font-semibold">Opening Float</span>
-          <div className="flex items-center gap-2">
-            <span className="text-[13px] font-display font-bold text-erl-accent">
-              {formatCurrency(drawer?.opening_float ?? 0)}
-            </span>
-            {drawer?.status === 'closed' && (
-              <span className="text-[8px] text-erl-muted">• Shift ended</span>
-            )}
+      {/* Opening Float — only show for real drawers */}
+      {drawer?.id && (
+        <div className="card-glass p-4">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] text-erl-muted font-semibold">Opening Float</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-display font-bold text-erl-accent">
+                {formatCurrency(drawer?.opening_float ?? 0)}
+              </span>
+              {drawer?.status === 'closed' && (
+                <span className="text-[8px] text-erl-muted">• Shift ended</span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Cash In / Out Buttons */}
-      {drawer?.status === 'open' && (
+      {/* Cash In / Out Buttons — only show if drawer has a real DB record (id exists) */}
+      {drawer?.status === 'open' && drawer.id && (
         <div className="flex gap-2">
           <button onClick={() => openTxModal('cash_in')} className="btn btn-outline flex-1 text-[10px] py-2.5 border-erl-success text-erl-success">
             + Cash In
@@ -236,6 +249,29 @@ export const CashDrawerScreen: React.FC = () => {
           <button onClick={handleOpenDrawer} disabled={drawerStatus !== 'idle'}
             className="btn btn-accent flex-1 text-[10px] py-2.5">
             {drawerStatus === 'opening' ? "⟳" : "🔓 Open"}
+          </button>
+        </div>
+      )}
+      {/* Prompt to open shift if drawer is virtual (no DB record yet) */}
+      {drawer?.status === 'open' && !drawer.id && (
+        <div className="flex flex-col gap-2">
+          <div className="card-glass p-4">
+            <div className="flex flex-col gap-2.5">
+              <span className="text-[10px] text-erl-muted font-semibold">Opening Float</span>
+              <input
+                type="number"
+                value={openingFloat}
+                onChange={(e) => setOpeningFloat(Number(e.target.value) || 0)}
+                placeholder="0.00"
+                step="0.01"
+                autoFocus
+                className="w-full py-[5px] px-2.5 rounded-md border-[1.5px] border-erl-border-default text-left bg-erl-base text-erl-text-primary text-[13px] box-border"
+              />
+            </div>
+          </div>
+          <button onClick={handleOpenDrawer} disabled={drawerStatus !== 'idle'}
+            className="btn btn-accent w-full text-[10px] py-2.5">
+            {drawerStatus === 'opening' ? "⟳ Opening..." : "Start Shift with Float"}
           </button>
         </div>
       )}
@@ -304,9 +340,9 @@ export const CashDrawerScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons — only if drawer has a real DB record */}
       <div className="flex flex-col gap-2">
-        {drawer?.status === 'open' && (
+        {drawer?.status === 'open' && drawer.id && (
           <>
             <button onClick={handleSave} disabled={drawerStatus === 'saving'}
               className="btn btn-outline w-full text-[10px] py-2.5 border-erl-accent text-erl-accent">

@@ -365,16 +365,15 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         );
         if (drawers.length) {
           const drawer = drawers[0];
-          const balanceBefore = Number(drawer.opening_float) + Number(drawer.cash_sales) - Number(drawer.cash_payouts);
+          const cashSales = await computeCashSales();
+          const balanceBefore = Number(drawer.opening_float) + cashSales - Number(drawer.cash_payouts);
           const balanceAfter = balanceBefore + total;
           await pool.query(
             `INSERT INTO cash_drawer_transactions (drawer_id, transaction_type, amount, balance_before, balance_after, reason, staff_name)
              VALUES (?, 'sale', ?, ?, ?, ?, ?)`,
             [drawer.id, total, balanceBefore, balanceAfter, `Order #${id.slice(0, 8).toUpperCase()}`, staff_name || null]
           );
-          // Update cash_sales on the drawer
-          const newSales = Number(drawer.cash_sales) + total;
-          await pool.query('UPDATE cash_drawer SET cash_sales = ? WHERE id = ?', [newSales, drawer.id]);
+          // cash_sales is computed from orders table — no manual counter needed
         }
       } catch (e) {
         console.error('Failed to log cash sale transaction:', e);
@@ -995,6 +994,16 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     }
   });
 
+  // Helper: compute cash_sales from actual completed cash orders (excl. tax = subtotal)
+  async function computeCashSales() {
+    const [rows] = await pool.query(`
+      SELECT COALESCE(SUM(subtotal), 0) AS total
+      FROM orders
+      WHERE DATE(created_at) = CURDATE() AND status = 'completed' AND pay_method = 'cash'
+    `);
+    return Number(rows[0]?.total) || 0;
+  }
+
   // Helper
   function toMysqlDate(d) {
     const pad = n => String(n).padStart(2, '0');
@@ -1005,25 +1014,23 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   router.get('/cash-drawer', authMiddleware, async (req, res) => {
     try {
       const today = toMysqlDate(new Date());
+      const cashSales = await computeCashSales();
       const [rows] = await pool.query(
         'SELECT * FROM cash_drawer WHERE shift_date = ? AND status = "open" LIMIT 1',
         [today]
       );
-      if (rows.length) return res.json(rows[0]);
-
-      // Auto-calculate today's cash sales from completed cash orders
-      const [cashRows] = await pool.query(`
-        SELECT COALESCE(SUM(total), 0) AS cash_sales
-        FROM orders
-        WHERE DATE(created_at) = CURDATE() AND status = 'completed' AND pay_method = 'cash'
-      `);
+      if (rows.length) {
+        // Override stored cash_sales with computed value from orders table (excl. tax)
+        rows[0].cash_sales = cashSales;
+        return res.json(rows[0]);
+      }
 
       res.json({
         id: null,
         shift_date: today,
         status: 'open',
         opening_float: 0,
-        cash_sales: Number(cashRows[0]?.cash_sales) || 0,
+        cash_sales: cashSales,
         cash_payouts: 0,
         closing_amount: 0,
         expected_amount: 0,
@@ -1069,7 +1076,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       const drawer = rows[0];
       const closing = Number(closing_amount) || 0;
       const payouts = Number(cash_payouts) || 0;
-      const expected = Number(drawer.opening_float) + Number(drawer.cash_sales) - payouts;
+      const cashSales = await computeCashSales();
+      const expected = Number(drawer.opening_float) + cashSales - payouts;
       const variance = closing - expected;
       const status = action === 'close' ? 'closed' : 'open';
       const closedAt = action === 'close' ? 'NOW()' : 'NULL';
@@ -1080,6 +1088,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         WHERE id = ?
       `, [closing, payouts, expected, variance, status, notes || '', id]);
       const [updated] = await pool.query('SELECT * FROM cash_drawer WHERE id = ?', [id]);
+      if (updated.length) updated[0].cash_sales = cashSales;
       if (googleSheets && action === 'close') {
         try { await googleSheets.appendCashDrawerEvent({ type: 'drawer_close', shiftDate: drawer.shift_date, amount: closing, staffName: req.user?.name, reason: notes || 'Shift closed', details: `Variance: ₱${variance.toFixed(2)}` }); } catch (e2) { console.error('[Sheets] Drawer close log failed (non-fatal):', e2.message); }
       }
@@ -1131,7 +1140,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       }
 
       const drawer = drawers[0];
-      const balanceBefore = Number(drawer.opening_float) + Number(drawer.cash_sales) - Number(drawer.cash_payouts);
+      const cashSales = await computeCashSales();
+      const balanceBefore = Number(drawer.opening_float) + cashSales - Number(drawer.cash_payouts);
       const balanceAfter = transaction_type === 'cash_in'
         ? balanceBefore + amount
         : balanceBefore - amount;

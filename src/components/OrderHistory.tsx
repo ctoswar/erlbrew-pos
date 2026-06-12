@@ -3,6 +3,7 @@ import { Order } from "../types";
 import { formatCurrency, formatTime } from "../utils";
 import { apiGet } from "../utils/api";
 import { serverOrderToOrder } from "../hooks/useOrders";
+import { ReceiptPreview } from "./ReceiptPreview";
 import { useViewport } from "../hooks/useViewport";
 
 interface HistoryResponse {
@@ -16,6 +17,7 @@ export const OrderHistory: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [reprintOrder, setReprintOrder] = useState<Order | null>(null);
   const [startDate, setStartDate] = useState(() => {
     const d = new Date(); d.setDate(d.getDate() - 7);
     return d.toISOString().split("T")[0];
@@ -128,8 +130,15 @@ export const OrderHistory: React.FC = () => {
                       <div>{o.type === "dine-in" ? o.customerName || "Dine-in" : "Takeout"}</div>
                       <div className="capitalize">{o.payMethod}</div>
                     </div>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {o.items.map((ci, idx) => (
+                        <span key={idx} className="text-[10px] bg-erl-base px-1.5 py-0.5 rounded text-erl-text-secondary">
+                          {ci.qty}× {ci.item.name}
+                        </span>
+                      ))}
+                    </div>
                     <div className="flex justify-between items-center">
-                      <div className="text-xs text-erl-text-muted">{o.items.reduce((s, ci) => s + (ci?.qty ?? 0), 0)} items</div>
+                      <button onClick={() => setReprintOrder(o)} className="bg-transparent border border-erl-border-default rounded text-erl-text-muted text-[9px] py-1 px-2 cursor-pointer tracking-wide uppercase min-h-[44px]">🖨 Reprint</button>
                       <div className="text-erl-accent font-bold text-sm">{formatCurrency(o.total)}</div>
                     </div>
                   </div>
@@ -140,7 +149,7 @@ export const OrderHistory: React.FC = () => {
                 <table className="w-full border-collapse text-[11px] min-w-[640px]">
                   <thead>
                     <tr className="border-b border-erl-border-default">
-                      {["Order", "Date", "Time", "Staff", "Type", "Items", "Total", "Payment", "Status"].map(h => (
+                      {["Order", "Date", "Time", "Staff", "Type", "Items Ordered", "Total", "Payment", "Status", ""].map(h => (
                         <th key={h} className="text-left text-[8px] text-erl-text-disabled tracking-widest uppercase pb-2 pr-2 font-normal">{h}</th>
                       ))}
                     </tr>
@@ -159,13 +168,24 @@ export const OrderHistory: React.FC = () => {
                         </td>
                         <td className="py-1.5 pr-2 text-erl-muted">{o.staff?.name?.split(" ")[0] ?? '—'}</td>
                         <td className="py-1.5 pr-2 text-erl-muted">{o.type === "dine-in" ? o.customerName || "Dine-in" : "Takeout"}</td>
-                        <td className="py-1.5 pr-2 text-erl-muted">{o.items.reduce((s, ci) => s + (ci?.qty ?? 0), 0)}</td>
+                        <td className="py-1.5 pr-2 text-erl-muted text-[10px] max-w-[200px]">
+                          <div className="flex flex-wrap gap-1">
+                            {o.items.map((ci, idx) => (
+                              <span key={idx} className="bg-erl-base px-1 rounded text-[9px] whitespace-nowrap">
+                                {ci.qty}× {ci.item.name}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
                         <td className="py-1.5 pr-2 text-erl-accent font-bold">{formatCurrency(o.total)}</td>
                         <td className="py-1.5 pr-2 text-erl-muted text-[10px] capitalize">{o.payMethod}</td>
                         <td className="py-1.5">
                           <span className={`pill text-[8px] ${o.status === "completed" ? "pill-success" : o.status === "ready" ? "pill-gold" : o.status === "voided" || o.status === "refunded" ? "pill-danger" : "pill-muted"}`}>
                             {o.status}
                           </span>
+                        </td>
+                        <td className="py-1.5 pr-0">
+                          <button onClick={() => setReprintOrder(o)} className="bg-transparent border border-erl-border-default rounded text-erl-text-muted text-[8px] py-0.5 px-1.5 cursor-pointer tracking-wide uppercase min-h-[44px] min-w-[44px]" title="Reprint receipt">🖨</button>
                         </td>
                       </tr>
                     ))}
@@ -201,6 +221,9 @@ export const OrderHistory: React.FC = () => {
           </>
         )}
       </div>
+    {reprintOrder && (
+        <ReceiptPreview order={reprintOrder} onClose={() => setReprintOrder(null)} />
+      )}
     </div>
   );
 };

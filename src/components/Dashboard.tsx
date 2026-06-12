@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Order, CartItem, DiscountType } from "../types";
 import { buildDailySummary, formatCurrency, formatTime } from "../utils";
 import { apiAdminGet, apiGet, resetCogs, resetInventoryCosts } from "../utils/api";
-import { Receipt } from "./Receipt";
+import { ReceiptPreview } from "./ReceiptPreview";
 
 interface CogsData {
   cogs: number;
@@ -407,18 +407,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
 
       {/* Reprint receipt modal */}
       {reprintOrder && (
-        <>
-          <div className="fixed inset-0 bg-black/65 z-[9998]" onClick={() => setReprintOrder(null)} />
-          <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4">
-            <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[400px] max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <div className="text-xs font-bold text-erl-text-primary font-display">Reprint Receipt</div>
-                <button onClick={() => setReprintOrder(null)} className="bg-transparent border-none text-erl-text-muted text-base cursor-pointer">✕</button>
-              </div>
-              <Receipt order={reprintOrder} onPrint={() => setReprintOrder(null)} />
-            </div>
-          </div>
-        </>
+        <ReceiptPreview order={reprintOrder} onClose={() => setReprintOrder(null)} />
       )}
     </div>
   );

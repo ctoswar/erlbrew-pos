@@ -241,6 +241,131 @@ router.get('/', async (req, res) => {
     }
   });
 
+  // GET /api/clock/print — all staff with time records for a date range (for print report)
+  // MUST be before /:staffId or Express matches 'print' as staffId
+  // Query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD
+  router.get('/print', async (req, res) => {
+    const { from, to } = req.query;
+    if (!from || !to) {
+      return res.status(400).json({ error: '"from" and "to" query params required (YYYY-MM-DD)' });
+    }
+    try {
+      // Get all time records in the date range
+      const [records] = await pool.query(`
+        SELECT tr.id, tr.staff_id, tr.clock_in, tr.clock_out, tr.total_hours,
+               DATE(tr.clock_in) AS record_date,
+               s.name, s.role, s.initials, s.color
+        FROM time_records tr
+        JOIN staff s ON s.id = tr.staff_id
+        WHERE DATE(tr.clock_in) >= ? AND DATE(tr.clock_in) <= ?
+        ORDER BY s.name, tr.clock_in
+      `, [from, to]);
+
+      // Get all staff
+      const [allStaff] = await pool.query(
+        `SELECT s.id, s.name, s.role, s.initials, s.color
+         FROM staff s
+         ORDER BY s.name`
+      );
+
+      // Get all schedule assignments for staff in range period (we fetch all schedules, 
+      // the frontend will map day_of_week)
+      const [allSchedules] = await pool.query(`
+        SELECT s.id AS staff_id, ss.name AS schedule_name,
+               ssd.day_of_week, ssd.shift_start, ssd.shift_end
+        FROM staff s
+        JOIN staff_schedule_days ssd ON ssd.schedule_id = s.schedule_id
+        JOIN staff_schedules ss ON ss.id = s.schedule_id
+        ORDER BY s.id, FIELD(ssd.day_of_week, 'mon','tue','wed','thu','fri','sat')
+      `);
+
+      // Index schedules by staff_id -> day_of_week -> { shift_start, shift_end }
+      const scheduleMap = {};
+      for (const sc of allSchedules) {
+        if (!scheduleMap[sc.staff_id]) scheduleMap[sc.staff_id] = {};
+        scheduleMap[sc.staff_id][sc.day_of_week] = {
+          schedule_name: sc.schedule_name,
+          shift_start: sc.shift_start,
+          shift_end: sc.shift_end,
+        };
+      }
+
+      // Group records by date -> staff_id
+      const byDate = {};
+      const presentStaff = new Set();
+      for (const r of records) {
+        const d = r.record_date;
+        if (!byDate[d]) byDate[d] = {};
+        if (!byDate[d][r.staff_id]) byDate[d][r.staff_id] = [];
+        byDate[d][r.staff_id].push(r);
+        if (r.clock_out) presentStaff.add(r.staff_id);
+        else presentStaff.add(r.staff_id);
+      }
+
+      // Build date entries in order
+      const dates = [];
+      const d = new Date(from + 'T00:00:00');
+      const endDate = new Date(to + 'T00:00:00');
+      while (d <= endDate) {
+        dates.push(d.toISOString().slice(0, 10));
+        d.setDate(d.getDate() + 1);
+      }
+
+      // Build per-date summary with staff records
+      const dateEntries = dates.map((date) => {
+        const dayOfWeek = ['sun','mon','tue','wed','thu','fri','sat'][new Date(date + 'T00:00:00').getDay()];
+        const dateRecords = byDate[date] || {};
+
+        const staff = allStaff.map((s) => ({
+          staff_id: s.id,
+          name: s.name,
+          role: s.role,
+          initials: s.initials,
+          color: s.color,
+          shift_start: (scheduleMap[s.id]?.[dayOfWeek]?.shift_start) || null,
+          shift_end: (scheduleMap[s.id]?.[dayOfWeek]?.shift_end) || null,
+          schedule_name: (scheduleMap[s.id]?.[dayOfWeek]?.schedule_name) || null,
+          records: dateRecords[s.id] || [],
+        }));
+
+        const dayTotalHours = staff.reduce((acc, s) =>
+          acc + s.records.reduce((a, r) => a + Number(r.total_hours || 0), 0), 0);
+
+        return {
+          date,
+          day_of_week: dayOfWeek,
+          staff,
+          total_hours: Math.round(dayTotalHours * 100) / 100,
+          staff_present: staff.filter((s) => s.records.length > 0).length,
+        };
+      });
+
+      // Grand totals
+      const grandTotalHours = dateEntries.reduce((acc, d) => acc + d.total_hours, 0);
+      const uniqueStaffPresent = presentStaff.size;
+
+      res.json({
+        from,
+        to,
+        total_days: dates.length,
+        total_staff: allStaff.length,
+        unique_staff_present: uniqueStaffPresent,
+        grand_total_hours: Math.round(grandTotalHours * 100) / 100,
+        dates: dateEntries,
+        all_staff: allStaff.map((s) => ({
+          staff_id: s.id,
+          name: s.name,
+          role: s.role,
+          initials: s.initials,
+          color: s.color,
+        })),
+      });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'Failed to fetch print data' });
+    }
+  });
+
   // GET /api/clock/:staffId — specific employee's time records (auth required)
   router.get('/:staffId', authMiddleware, async (req, res) => {
     const { staffId } = req.params;

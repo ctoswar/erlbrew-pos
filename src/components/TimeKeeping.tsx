@@ -72,6 +72,44 @@ interface DayRecord {
   color: string;
 }
 
+interface PrintStaffRecord {
+  staff_id: number;
+  name: string;
+  role: string;
+  initials: string;
+  color: string;
+  shift_start: string | null;
+  shift_end: string | null;
+  schedule_name: string | null;
+  records: {
+    id: number;
+    staff_id: number;
+    clock_in: string;
+    clock_out: string | null;
+    total_hours: number;
+    record_date: string;
+  }[];
+}
+
+interface PrintDateEntry {
+  date: string;
+  day_of_week: string;
+  staff: PrintStaffRecord[];
+  total_hours: number;
+  staff_present: number;
+}
+
+interface PrintResponse {
+  from: string;
+  to: string;
+  total_days: number;
+  total_staff: number;
+  unique_staff_present: number;
+  grand_total_hours: number;
+  dates: PrintDateEntry[];
+  all_staff: { staff_id: number; name: string; role: string; initials: string; color: string }[];
+}
+
 type Tab = "today" | "calendar" | "schedules";
 
 export const TimeKeeping: React.FC = () => {
@@ -96,6 +134,12 @@ export const TimeKeeping: React.FC = () => {
   const [staffListLoading, setStaffListLoading] = useState(false);
   const [schedulesMsg, setSchedulesMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [schedulesSubTab, setSchedulesSubTab] = useState<"templates" | "assignments">("templates");
+
+  // ── Print ──
+  const [showPrintPicker, setShowPrintPicker] = useState(false);
+  const getTodayStr = () => new Date().toISOString().split("T")[0];
+  const [printFrom, setPrintFrom] = useState(getTodayStr);
+  const [printTo, setPrintTo] = useState(getTodayStr);
 
   // Template form
   const DAYS_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat"] as const;
@@ -132,6 +176,126 @@ export const TimeKeeping: React.FC = () => {
       loadToday();
     } catch (err) { console.error("RFID tap handler error:", err); }
   }, [loadToday]);
+
+  // ── Print handler ──
+  const handlePrint = useCallback(async () => {
+    try {
+      const data = await apiGet<PrintResponse>(`/clock/print?from=${printFrom}&to=${printTo}`);
+      const dateObj = new Date(printFrom + "T00:00:00");
+      const fromLabel = dateObj.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+      const toLabel = new Date(printTo + "T00:00:00").toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
+
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) return;
+
+      const companyName = (() => { try { const s = localStorage.getItem("erlbrew_company_settings"); return s ? JSON.parse(s).company_name || "Erlbrew Cafe" : "Erlbrew Cafe"; } catch { return "Erlbrew Cafe"; } })();
+
+      const DAY_LABELS_FULL: Record<string, string> = { sun: "Sunday", mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday" };
+
+      const staffTotals: Record<number, { name: string; role: string; total_hours: number; days_present: number }> = {};
+      for (const de of data.dates) {
+        for (const s of de.staff) {
+          const hrs = s.records.reduce((a, r) => a + Number(r.total_hours || 0), 0);
+          if (!staffTotals[s.staff_id]) staffTotals[s.staff_id] = { name: s.name, role: s.role, total_hours: 0, days_present: 0 };
+          staffTotals[s.staff_id].total_hours += hrs;
+          if (s.records.length > 0) staffTotals[s.staff_id].days_present++;
+        }
+      }
+
+      printWindow.document.write(`<!DOCTYPE html><html><head>
+        <title>Timekeeping Report</title>
+        <style>
+          * { margin:0; padding:0; box-sizing:border-box; }
+          body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #1a0e06; }
+          .header { text-align: center; margin-bottom: 16px; border-bottom: 2px solid #C9873A; padding-bottom: 10px; }
+          .header h1 { font-size: 20px; color: #1a0e06; margin-bottom: 3px; }
+          .header .subtitle { font-size: 12px; color: #C9873A; }
+          .summary { display: flex; gap: 10px; margin-bottom: 14px; justify-content: center; flex-wrap: wrap; }
+          .summary-box { background: #f9f5f2; border: 1px solid #e0d5c8; border-radius: 8px; padding: 7px 14px; text-align: center; min-width: 60px; }
+          .summary-box .label { font-size: 7px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+          .summary-box .value { font-size: 15px; font-weight: 700; color: #C9873A; }
+          .section-title { font-size: 13px; color: #1a0e06; margin: 16px 0 5px 0; padding-bottom: 3px; border-bottom: 1px solid #e0d5c8; font-weight: 700; }
+          .date-header { background: #f5f0eb; padding: 5px 9px; font-weight: 700; font-size: 10px; color: #5a4535; margin-top: 12px; border-radius: 4px 4px 0 0; border: 1px solid #ddd; border-bottom: none; display: flex; justify-content: space-between; }
+          .date-header .dh-right { font-weight: 400; color: #C9873A; }
+          table { width:100%; border-collapse:collapse; margin-bottom:4px; font-size:10px; }
+          th, td { border:1px solid #ddd; padding:4px 7px; text-align:left; }
+          th { background: #f5f0eb; font-weight:600; font-size:8px; text-transform:uppercase; letter-spacing:0.5px; color:#5a4535; }
+          td { font-size:10px; }
+          .no-record { color: #999; font-style: italic; font-size:9px; }
+          .shift-badge { display: inline-block; font-size:8px; background: #fdf3e8; color: #C9873A; padding: 1px 4px; border-radius: 3px; }
+          .footer { margin-top: 18px; text-align: center; font-size: 7px; color: #999; border-top: 1px solid #e0d5c8; padding-top: 8px; }
+          .total-row { font-weight: 700; background: #f9f5f2; }
+          .grand-total { background: #C9873A; color: #fff; font-weight: 700; }
+          .page-break { page-break-before: always; }
+          @media print { body { padding: 10px; font-size:9px; } }
+          </style></head><body>
+          <div class="header">
+            <h1>${companyName}</h1>
+            <div class="subtitle">Timekeeping Report \u2022 ${fromLabel} \u2013 ${toLabel}</div>
+          </div>
+          <div class="summary">
+            <div class="summary-box"><div class="label">Date Range</div><div class="value">${data.total_days}d</div></div>
+            <div class="summary-box"><div class="label">Staff Active</div><div class="value">${data.unique_staff_present}/${data.total_staff}</div></div>
+            <div class="summary-box"><div class="label">Total Hours</div><div class="value">${data.grand_total_hours.toFixed(1)}</div></div>
+          </div>
+
+          <div class="section-title">Staff Summary</div>
+          <table>
+            <thead><tr><th>Name</th><th>Role</th><th>Days Present</th><th>Total Hours</th></tr></thead>
+            <tbody>
+              ${data.all_staff.map((s) => {
+                const t = staffTotals[s.staff_id];
+                const dp = t ? t.days_present : 0;
+                const th = t ? t.total_hours : 0;
+                return '<tr><td>' + s.name + '</td><td>' + s.role + '</td><td>' + dp + ' / ' + data.total_days + '</td><td>' + th.toFixed(2) + '</td></tr>';
+              }).join("")}
+              <tr class="grand-total"><td colspan="3" style="text-align:right;padding-right:12px;">Grand Total:</td><td>${data.grand_total_hours.toFixed(2)}</td></tr>
+            </tbody>
+          </table>
+
+          <div class="section-title">Daily Breakdown</div>
+          ${data.dates.map((de, di) => {
+            const dl = new Date(de.date + "T00:00:00").toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" });
+            const hasRecords = de.staff.some((s) => s.records.length > 0);
+            if (!hasRecords) return '<div class="date-header"><span>' + dl + ' (' + DAY_LABELS_FULL[de.day_of_week] + ')</span><span class="dh-right">No records</span></div>';
+            const pb = di > 0 ? '<div class="page-break"></div>' : '';
+            let rows = '';
+            for (const s of de.staff) {
+              const dayTotal = s.records.reduce((a, r) => a + Number(r.total_hours || 0), 0);
+              const schedName = s.schedule_name || (s.shift_start ? fmtShort(s.shift_start) + '\u2013' + fmtShort(s.shift_end || '') : null);
+              if (s.records.length === 0) {
+                rows += '<tr><td>' + s.name + '</td><td class="no-record">' + (schedName || '\u2014') + '</td><td class="no-record" colspan="3">Off / No records</td></tr>';
+              } else {
+                for (let ri = 0; ri < s.records.length; ri++) {
+                  const r = s.records[ri];
+                  const cin = new Date(r.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" });
+                  const cout = r.clock_out ? new Date(r.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" }) : '<span style="color:#7abf7a">Active</span>';
+                  const hrs = r.total_hours ? Number(r.total_hours).toFixed(2) : '\u2014';
+                  if (ri === 0) {
+                    rows += '<tr><td>' + s.name + '</td><td>' + (schedName ? '<span class="shift-badge">' + schedName + '</span>' : '\u2014') + '</td><td>' + cin + '</td><td>' + cout + '</td><td>' + hrs + '</td></tr>';
+                  } else {
+                    rows += '<tr><td></td><td></td><td>' + cin + '</td><td>' + cout + '</td><td>' + hrs + '</td></tr>';
+                  }
+                }
+                if (s.records.length > 1) {
+                  rows += '<tr class="total-row"><td colspan="4" style="text-align:right;padding-right:12px;">' + s.name + ' Day Total:</td><td>' + dayTotal.toFixed(2) + '</td></tr>';
+                }
+              }
+            }
+            return pb + '<div class="date-header"><span>' + dl + ' (' + DAY_LABELS_FULL[de.day_of_week] + ')</span><span class="dh-right">' + de.staff_present + ' staff &middot; ' + de.total_hours.toFixed(1) + 'h</span></div><table><thead><tr><th>Name</th><th>Shift</th><th>Clock In</th><th>Clock Out</th><th>Hours</th></tr></thead><tbody>' + rows + '</tbody></table>';
+          }).join("")}
+
+          <div class="footer">
+            <div>Generated on ${new Date().toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+          </div>
+          <script>window.onload = function() { window.print(); }</scr` + `ipt></body></html>`);
+      printWindow.document.close();
+    } catch (err) {
+      console.error("Failed to load print data:", err);
+    } finally {
+      setShowPrintPicker(false);
+    }
+  }, [printFrom, printTo]);
 
   // Auto-poll every 30s
   useEffect(() => {
@@ -305,7 +469,58 @@ export const TimeKeeping: React.FC = () => {
           </div>
         </div>
         <div className="text-xs text-erl-text-faint tracking-wide font-medium hidden sm:block">{todayDateStr}</div>
+        <button
+          onClick={() => setShowPrintPicker(true)}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-erl-border-default text-erl-text-secondary text-xs font-semibold tracking-wide cursor-pointer hover:border-erl-accent/30 hover:text-erl-accent hover:bg-erl-accent/5 transition-all duration-200 min-h-[44px]"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9" />
+            <path d="M6 12H4a2 2 0 00-2 2v4a2 2 0 002 2h16a2 2 0 002-2v-4a2 2 0 00-2-2h-2" />
+            <rect x="6" y="14" width="12" height="8" />
+          </svg>
+          Print Report
+        </button>
       </div>
+
+      {/* Print Date Range Picker Modal */}
+      {showPrintPicker && (
+        <>
+          <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setShowPrintPicker(false)} />
+          <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
+            <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[360px]">
+              <div className="font-display text-base font-bold text-erl-text-primary mb-4">Print Timekeeping Report</div>
+              <div className="flex gap-3 mb-4">
+                <div className="flex-1">
+                  <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">From</label>
+                  <input
+                    type="date"
+                    value={printFrom}
+                    onChange={(e) => setPrintFrom(e.target.value)}
+                    className="w-full text-sm bg-erl-base border border-erl-border-medium rounded-xl px-3 py-2.5 text-erl-text-primary outline-none focus:border-erl-accent"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">To</label>
+                  <input
+                    type="date"
+                    value={printTo}
+                    onChange={(e) => setPrintTo(e.target.value)}
+                    className="w-full text-sm bg-erl-base border border-erl-border-medium rounded-xl px-3 py-2.5 text-erl-text-primary outline-none focus:border-erl-accent"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end">
+                <button onClick={() => setShowPrintPicker(false)} className="btn btn-ghost text-xs px-4 py-2.5 min-h-[44px]">
+                  Cancel
+                </button>
+                <button onClick={handlePrint} className="btn btn-accent text-xs px-5 py-2.5 font-semibold tracking-wide min-h-[44px]">
+                  Print
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Body */}
       <div className="scroll-area flex-1 p-5 flex flex-col gap-5 overflow-y-auto min-h-0">
@@ -970,6 +1185,12 @@ function fmtTime(t: string | null): string {
   const d = new Date();
   d.setHours(h, m);
   return d.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", hour12: true });
+}
+
+function fmtShort(t: string | null): string {
+  if (!t) return "";
+  const [h, m] = t.split(":").map(Number);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 function isWithinBreak(now: Date, start: string | null, end: string | null): boolean {

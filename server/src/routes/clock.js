@@ -246,6 +246,7 @@ router.get('/', async (req, res) => {
   // Query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD
   router.get('/print', async (req, res) => {
     const { from, to } = req.query;
+    console.log('[clock/print] Request:', { from, to });
     if (!from || !to) {
       return res.status(400).json({ error: '"from" and "to" query params required (YYYY-MM-DD)' });
     }
@@ -253,13 +254,14 @@ router.get('/', async (req, res) => {
       // Get all time records in the date range
       const [records] = await pool.query(`
         SELECT tr.id, tr.staff_id, tr.clock_in, tr.clock_out, tr.total_hours,
-               DATE(tr.clock_in) AS record_date,
+               DATE_FORMAT(tr.clock_in, '%Y-%m-%d') AS record_date,
                s.name, s.role, s.initials, s.color
         FROM time_records tr
         JOIN staff s ON s.id = tr.staff_id
         WHERE DATE(tr.clock_in) >= ? AND DATE(tr.clock_in) <= ?
         ORDER BY s.name, tr.clock_in
       `, [from, to]);
+      console.log('[clock/print] Records found:', records.length);
 
       // Get all staff
       const [allStaff] = await pool.query(

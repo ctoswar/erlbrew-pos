@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import express from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
-import { logAudit } from '../services/audit.js';
+import { logAudit, logAuditDirect } from '../services/audit.js';
 
 // Simple input-validation helper (shared-style per task spec)
 function validate(req, res, rules){
@@ -218,6 +218,8 @@ if (rfid && pin) {
     try { clockAction = await autoClockIn(user.id, rfid); } catch (e) { console.error('Auto clock-in failed:', e); }
 
     const token = jwt.sign({ sub: user.id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    // Audit: login via RFID+PIN
+    await logAuditDirect(pool, { staffId: user.id, staffName: user.name, action: 'staff_login', entityType: 'staff', entityId: String(user.id), details: { method: 'rfid_pin' }, ip: req.ip || req.socket?.remoteAddress });
     return res.json({ token, clockAction });
   }
   // Username + Password login (admin with password hash OR PIN login)
@@ -235,6 +237,8 @@ if (rfid && pin) {
         if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
       }
       const token = jwt.sign({ sub: user.id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+      // Audit: login via username+password
+      await logAuditDirect(pool, { staffId: user.id, staffName: user.name, action: 'staff_login', entityType: 'staff', entityId: String(user.id), details: { method: 'username_password' }, ip: req.ip || req.socket?.remoteAddress });
       return res.json({ token });
     }
     res.status(400).json({ error: 'Invalid login payload' });

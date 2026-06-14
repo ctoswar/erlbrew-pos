@@ -355,6 +355,9 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
     res.json({ id, subtotal: orderSubtotal, tax: orderTax, total: orderTotal, status: 'preparing' });
 
+    // Audit: order creation
+    await logAudit(pool, req, { action: 'order_create', entityType: 'order', entityId: id, details: { type, pay_method, total: orderTotal, itemCount: itemsOut.length } });
+
     // Log cash drawer sale transaction if cash payment
     if (pay_method === 'cash' && total > 0) {
       try {
@@ -424,6 +427,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       } catch (e) { /* non-fatal — don't block completion */ }
     }
     await pool.query('UPDATE orders SET status = ?, completed_at = ? WHERE id = ?', [status, status === 'completed' ? new Date() : null, id]);
+    // Audit: status change
+    await logAudit(pool, req, { action: 'order_status_change', entityType: 'order', entityId: id, details: { newStatus: status } });
     res.json({ ok: true });
 
     // Broadcast status change to all SSE clients
@@ -457,7 +462,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       await pool.query('DELETE FROM supplier_invoices');
       await pool.query('DELETE FROM cash_drawer_transactions');
       await pool.query('DELETE FROM cash_drawer');
-      await pool.query('DELETE FROM inventory_movements');
+      // NOTE: inventory_movements and audit_logs are intentionally NOT wiped by Fresh Start
+      // to preserve audit trail across session resets.
       await pool.query('DELETE FROM z_reports');
       await pool.query('DELETE FROM time_records');
       await pool.query('DELETE FROM recipes');
@@ -492,6 +498,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       }
       await pool.query('DELETE FROM order_items WHERE order_id = ?', [id]);
       await pool.query('DELETE FROM orders WHERE id = ?', [id]);
+      // Audit: order deleted
+      await logAudit(pool, req, { action: 'order_delete', entityType: 'order', entityId: id });
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
@@ -601,6 +609,9 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       } catch (e) {
         console.error('Failed to reset inventory costs:', e);
       }
+
+      // Audit: COGS reset
+      await logAudit(pool, req, { action: 'cogs_reset', entityType: 'system', entityId: 'cogs', details: resetAll ? { resetAll: true } : { start, end } });
 
       // Then set all order totals = subtotals (makes profit = 0 for past orders)
       if (resetAll) {
@@ -969,6 +980,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
           report.total_sales, report.total_orders, report.total_cash, report.total_card,
           report.total_ewallet, report.total_refunds, report.total_voids, report.total_cogs, report.gross_profit]);
       report.id = ins.insertId;
+      // Audit: Z-Report generated
+      await logAudit(pool, req, { action: 'z_report_generate', entityType: 'z_report', entityId: String(ins.insertId), details: { date: report.report_date, total_sales: report.total_sales } });
       // Log Z-report to Google Sheets
       if (googleSheets) {
         try { await googleSheets.appendZReport(report); } catch (e2) { console.error('[Sheets] Z-report sync failed (non-fatal):', e2.message); }
@@ -1056,6 +1069,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         VALUES (?, 'open', ?, ?)
       `, [today, opening_float, opening_float]);
       const [rows] = await pool.query('SELECT * FROM cash_drawer WHERE id = ?', [ins.insertId]);
+      // Audit: cash drawer opened
+      await logAudit(pool, req, { action: 'cash_drawer_open', entityType: 'cash_drawer', entityId: String(ins.insertId), details: { shift_date: today, opening_float: Number(opening_float) } });
       if (googleSheets) {
         try { await googleSheets.appendCashDrawerEvent({ type: 'drawer_open', shiftDate: today, amount: opening_float, staffName: req.user?.name, reason: 'Shift opened', details: `Float: ₱${Number(opening_float).toFixed(2)}` }); } catch (e2) { console.error('[Sheets] Drawer open log failed (non-fatal):', e2.message); }
       }
@@ -1089,6 +1104,10 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       `, [closing, payouts, expected, variance, status, notes || '', id]);
       const [updated] = await pool.query('SELECT * FROM cash_drawer WHERE id = ?', [id]);
       if (updated.length) updated[0].cash_sales = cashSales;
+      // Audit: cash drawer close (only when explicitly closing)
+      if (action === 'close') {
+        await logAudit(pool, req, { action: 'cash_drawer_close', entityType: 'cash_drawer', entityId: id, details: { closing_amount: closing, expected, variance, shift_date: drawer.shift_date } });
+      }
       if (googleSheets && action === 'close') {
         try { await googleSheets.appendCashDrawerEvent({ type: 'drawer_close', shiftDate: drawer.shift_date, amount: closing, staffName: req.user?.name, reason: notes || 'Shift closed', details: `Variance: ₱${variance.toFixed(2)}` }); } catch (e2) { console.error('[Sheets] Drawer close log failed (non-fatal):', e2.message); }
       }

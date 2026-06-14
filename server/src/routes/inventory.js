@@ -217,6 +217,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       }
 
       await pool.query('UPDATE inventory SET purchase_cost = 0, unit_cost = 0');
+      await logAudit(pool, req, { action: 'inventory_reset_costs', entityType: 'inventory', entityId: 'all', details: { message: 'All costs reset to 0' } });
       res.json({ ok: true, message: 'All inventory costs reset to 0' });
     } catch (e) {
       console.error(e);
@@ -230,6 +231,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       await pool.query('DELETE FROM inventory_movements');
       await pool.query('DELETE FROM recipes');
       await pool.query('DELETE FROM inventory');
+      await logAudit(pool, req, { action: 'inventory_clear_all', entityType: 'inventory', entityId: 'all', details: { message: 'All inventory, recipes, and movement logs cleared' } });
       return res.json({ ok: true, message: 'All inventory items, recipes, and movement logs cleared. Auto-seed on restart.' });
     } catch (e) {
       console.error(e);

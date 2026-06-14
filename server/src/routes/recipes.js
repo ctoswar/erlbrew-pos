@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
+import { logAudit } from '../services/audit.js';
 
 export default function recipesRouter(pool) {
   const router = Router();
@@ -42,6 +43,9 @@ export default function recipesRouter(pool) {
       }
 
       await conn.commit();
+
+      // Audit: recipes updated
+      await logAudit(pool, req, { action: 'recipes_update', entityType: 'recipes', entityId: req.params.menuItemId, details: { ingredientCount: items.length } });
 
       const [rows] = await pool.query(
         `SELECT r.id, r.inventory_item_id, r.quantity,

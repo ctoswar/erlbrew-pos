@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
+import { logAudit } from '../services/audit.js';
 
 export default function customersRouter(pool) {
   const router = Router();
@@ -91,6 +92,7 @@ export default function customersRouter(pool) {
           await pool.query(`UPDATE customers SET ${fields.join(', ')} WHERE phone = ?`, values);
         }
         const [updated] = await pool.query('SELECT * FROM customers WHERE phone = ?', [normalizedPhone]);
+        await logAudit(pool, req, { action: 'customer_update', entityType: 'customer', entityId: String(existing[0].id), details: { phone: normalizedPhone, name } });
         return res.json(updated[0]);
       }
       const [r] = await pool.query(
@@ -98,6 +100,7 @@ export default function customersRouter(pool) {
         [normalizedPhone, name || null, email || null, notes || null]
       );
       const [inserted] = await pool.query('SELECT * FROM customers WHERE id = ?', [r.insertId]);
+      await logAudit(pool, req, { action: 'customer_create', entityType: 'customer', entityId: String(r.insertId), details: { phone: normalizedPhone, name } });
       res.json(inserted[0]);
     } catch (e) {
       console.error(e);
@@ -118,6 +121,7 @@ export default function customersRouter(pool) {
       values.push(req.params.id);
       await pool.query(`UPDATE customers SET ${fields.join(', ')} WHERE id = ?`, values);
       const [rows] = await pool.query('SELECT * FROM customers WHERE id = ?', [req.params.id]);
+      await logAudit(pool, req, { action: 'customer_update', entityType: 'customer', entityId: req.params.id });
       res.json(rows[0]);
     } catch (e) {
       console.error(e);

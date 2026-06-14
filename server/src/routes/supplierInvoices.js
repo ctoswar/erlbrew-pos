@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import { logAudit } from '../services/audit.js';
 
 export default function supplierInvoiceRouter(pool) {
   const router = Router();
@@ -76,6 +77,7 @@ export default function supplierInvoiceRouter(pool) {
       }
 
       res.json({ ok: true, id: invoiceId });
+      await logAudit(pool, req, { action: 'supplier_invoice_create', entityType: 'supplier_invoice', entityId: String(invoiceId), details: { invoice_number, supplier_name, total_amount } });
     } catch (e) {
       if (e.code === 'ER_DUP_ENTRY') {
         return res.status(409).json({ error: 'Invoice number already exists' });
@@ -120,6 +122,7 @@ export default function supplierInvoiceRouter(pool) {
       }
 
       res.json({ ok: true });
+      await logAudit(pool, req, { action: 'supplier_invoice_update', entityType: 'supplier_invoice', entityId: req.params.id, details: { invoice_number, supplier_name, total_amount } });
     } catch (e) {
       if (e.code === 'ER_DUP_ENTRY') {
         return res.status(409).json({ error: 'Invoice number already exists' });
@@ -132,7 +135,8 @@ export default function supplierInvoiceRouter(pool) {
   // DELETE supplier invoice
   router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     try {
-      await pool.execute(`DELETE FROM supplier_invoices WHERE id = ?`, [req.params.id]);
+      await pool.execute('DELETE FROM supplier_invoices WHERE id = ?', [req.params.id]);
+      await logAudit(pool, req, { action: 'supplier_invoice_delete', entityType: 'supplier_invoice', entityId: req.params.id });
       res.json({ ok: true });
     } catch (e) {
       console.error(e);

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
+import { logAudit } from '../services/audit.js';
 
 // ── PH Payroll Constants (2025–2026 Rates) ──────────────────────────────────
 const SSS_RATES = {
@@ -151,6 +152,7 @@ export default function payrollRouter(pool, googleSheets) {
         [label, date_from, date_to, pay_date || null, 'open']
       );
       const [rows] = await pool.query('SELECT * FROM payroll_periods WHERE id = ?', [result.insertId]);
+      await logAudit(pool, req, { action: 'payroll_period_create', entityType: 'payroll_period', entityId: String(result.insertId), details: { label, date_from, date_to } });
       res.json(rows[0]);
     } catch (e) {
       if (e.code === 'ER_DUP_ENTRY') {
@@ -176,6 +178,9 @@ export default function payrollRouter(pool, googleSheets) {
       await pool.query(`UPDATE payroll_periods SET ${fields.join(', ')} WHERE id = ?`, vals);
       const [rows] = await pool.query('SELECT * FROM payroll_periods WHERE id = ?', [id]);
 
+      // Audit: payroll period updated
+      await logAudit(pool, req, { action: 'payroll_period_update', entityType: 'payroll_period', entityId: id, details: { status, pay_date, label } });
+
       // Log payroll status change to Google Sheets
       if (googleSheets && status && (status === 'approved' || status === 'paid')) {
         try {
@@ -198,6 +203,7 @@ export default function payrollRouter(pool, googleSheets) {
       // Delete entries first (FK cascade should handle this, but be explicit)
       await pool.query('DELETE FROM payroll_entries WHERE payroll_period_id = ?', [id]);
       await pool.query('DELETE FROM payroll_periods WHERE id = ?', [id]);
+      await logAudit(pool, req, { action: 'payroll_period_delete', entityType: 'payroll_period', entityId: id });
       res.json({ ok: true });
     } catch (e) {
       console.error('[Payroll] DELETE /periods/:id error:', e);
@@ -444,6 +450,7 @@ export default function payrollRouter(pool, googleSheets) {
       `, [id]);
 
       // Sync payroll to Google Sheets
+      await logAudit(pool, req, { action: 'payroll_compute', entityType: 'payroll_period', entityId: id, details: { entriesCount: entries.length } });
       if (googleSheets) {
         try { await googleSheets.appendPayrollEntries({ period: periods[0], entries: result }); } catch (e2) { console.error('[Sheets] Payroll sync failed (non-fatal):', e2.message); }
       }

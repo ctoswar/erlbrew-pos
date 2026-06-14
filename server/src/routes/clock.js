@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
+import { logAuditDirect } from '../services/audit.js';
 
 // Helpers for Asia/Taipei time (UTC+8) — server timezone-independent
 function taipeiNow() {
@@ -61,6 +62,10 @@ if (open.length) {
     // Log to Google Sheets (best-effort — don't fail the clock-out if sheets errors)
     const rec = records[0];
     if (!rec) return res.status(404).json({ error: 'Clock record not found after insert' });
+
+    // Audit: clock-out
+    await logAuditDirect(pool, { staffId: staff_id, staffName: name, action: 'clock_out', entityType: 'time_record', entityId: String(open[0].id), details: { hours: rec.total_hours } });
+
     if (googleSheets) {
       try {
         await googleSheets.appendTimeRecord({
@@ -94,6 +99,10 @@ const [records] = await pool.query(
 
     // Log to Google Sheets (best-effort)
     const recIn = records[0];
+
+    // Audit: clock-in
+    await logAuditDirect(pool, { staffId: staff_id, staffName: name, action: 'clock_in', entityType: 'time_record', entityId: String(insert.insertId) });
+
     if (googleSheets) {
       try {
         await googleSheets.appendTimeRecord({

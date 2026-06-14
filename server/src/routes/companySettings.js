@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import express from 'express';
+import { logAudit } from '../services/audit.js';
 
 export default function companySettingsRouter(pool) {
   const router = Router();
@@ -31,6 +32,7 @@ export default function companySettingsRouter(pool) {
           ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
         `, [key, value || '']);
       }
+      await logAudit(pool, req, { action: 'company_settings_update_batch', entityType: 'company_settings', entityId: null, details: { keys: Object.keys(updates) } });
       res.json({ ok: true });
     } catch (e) {
       console.error(e);
@@ -61,6 +63,7 @@ export default function companySettingsRouter(pool) {
         INSERT INTO company_settings (setting_key, setting_value) VALUES (?, ?)
         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
       `, [req.params.key, value || '']);
+      await logAudit(pool, req, { action: 'company_settings_update', entityType: 'company_settings', entityId: req.params.key });
       res.json({ ok: true });
     } catch (e) {
       console.error(e);

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import { logAudit } from '../services/audit.js';
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
@@ -88,6 +89,8 @@ export default function staffSchedulesRouter(pool) {
       }
 
       await conn.commit();
+      // Audit: schedule created
+      await logAudit(pool, req, { action: 'schedule_create', entityType: 'staff_schedule', entityId: String(scheduleId), details: { name } });
       const [templates] = await pool.query('SELECT * FROM staff_schedules WHERE id = ?', [scheduleId]);
       const [dayRows] = await pool.query('SELECT * FROM staff_schedule_days WHERE schedule_id = ?', [scheduleId]);
       const dayMap = {};
@@ -133,6 +136,8 @@ export default function staffSchedulesRouter(pool) {
       }
 
       await conn.commit();
+      // Audit: schedule updated
+      await logAudit(pool, req, { action: 'schedule_update', entityType: 'staff_schedule', entityId: id, details: { name } });
       const [templates] = await pool.query('SELECT * FROM staff_schedules WHERE id = ?', [id]);
       const [dayRows] = await pool.query('SELECT * FROM staff_schedule_days WHERE schedule_id = ?', [id]);
       const dayMap = {};
@@ -158,6 +163,7 @@ export default function staffSchedulesRouter(pool) {
     const { id } = req.params;
     try {
       await pool.query('DELETE FROM staff_schedules WHERE id = ?', [id]);
+      await logAudit(pool, req, { action: 'schedule_delete', entityType: 'staff_schedule', entityId: id });
       res.json({ ok: true });
     } catch (e) {
       console.error('Failed to delete schedule:', e);

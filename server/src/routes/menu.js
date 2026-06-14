@@ -1,5 +1,6 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
+import { logAudit } from '../services/audit.js';
 
 // Validation helper per FIX 5
 function validate(req, res, rules){
@@ -66,6 +67,7 @@ export default function menuRouter(pool){
     if (err) return err;
     try {
       const [r] = await pool.query('INSERT INTO menu_items (id, name, category, price, badge, description, emoji, popular) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [id, name, category, price, badge, description, emoji, popular]);
+      await logAudit(pool, req, { action: 'menu_create', entityType: 'menu_item', entityId: id, details: { name, category, price } });
       res.json({ id: r.insertId });
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
@@ -84,6 +86,7 @@ const err = validate(req, res, {
   if (err) return err;
   try {
     await pool.query('UPDATE menu_items SET name=?, category=?, price=?, badge=?, description=?, emoji=?, popular=? WHERE id=?', [name, category, price, badge, description, emoji, popular, id]);
+      await logAudit(pool, req, { action: 'menu_update', entityType: 'menu_item', entityId: id, details: { name, category, price } });
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
@@ -100,6 +103,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       // Delete child order_items first, then the menu item
       await pool.query('DELETE FROM order_items WHERE menu_item_id = ?', [id]);
       await pool.query('DELETE FROM menu_items WHERE id = ?', [id]);
+      await logAudit(pool, req, { action: 'menu_delete', entityType: 'menu_item', entityId: id });
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
@@ -133,6 +137,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         'INSERT INTO menu_modifiers (menu_item_id, name, price, is_default) VALUES (?, ?, ?, ?)',
         [id, name, Number(price) || 0, Boolean(isDefault)]
       );
+      await logAudit(pool, req, { action: 'modifier_create', entityType: 'menu_modifier', entityId: String(r.insertId), details: { menuItemId: id, name, price: Number(price) || 0 } });
       res.json({ id: r.insertId, name, price: Number(price) || 0, isDefault: Boolean(isDefault) });
     } catch (e) {
       console.error(e);
@@ -153,6 +158,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
       vals.push(id);
       await pool.query(`UPDATE menu_modifiers SET ${fields.join(', ')} WHERE id = ?`, vals);
+      await logAudit(pool, req, { action: 'modifier_update', entityType: 'menu_modifier', entityId: id, details: { name, price } });
       res.json({ ok: true });
     } catch (e) {
       console.error(e);
@@ -165,6 +171,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     const { id } = req.params;
     try {
       await pool.query('DELETE FROM menu_modifiers WHERE id = ?', [id]);
+      await logAudit(pool, req, { action: 'modifier_delete', entityType: 'menu_modifier', entityId: id });
       res.json({ ok: true });
     } catch (e) {
       console.error(e);

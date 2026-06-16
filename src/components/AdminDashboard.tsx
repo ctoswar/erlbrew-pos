@@ -59,6 +59,22 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'ok' | 'error'>('idle');
   const [serverMsg, setServerMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
   // Load from localStorage on mount
   useEffect(() => {
     const storedOrders = localStorage.getItem(STORAGE_KEY_ORDERS);
@@ -287,7 +303,10 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
           {syncStatus === 'error' && <div className="text-[8px] text-erl-danger mt-1">✗ Failed</div>}
         </div>
 
-        <div className="p-3 border-t border-erl-border-default">
+        <div className="p-3 border-t border-erl-border-default flex flex-col gap-2">
+          <button onClick={toggleFullscreen} className="w-full py-2.5 text-[9px] rounded-xl border-none bg-white/[0.03] text-erl-text-muted cursor-pointer hover:bg-white/[0.06] hover:text-erl-text-secondary transition-all duration-200">
+            {isFullscreen ? '✕ Exit Fullscreen' : '⛶ Fullscreen'}
+          </button>
           <button onClick={onLogout} className="w-full py-2.5 text-[9px] rounded-xl border-none bg-white/[0.03] text-erl-text-muted cursor-pointer hover:bg-white/[0.06] hover:text-erl-text-secondary transition-all duration-200">
             ← Logout
           </button>
@@ -324,7 +343,12 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
         {activeTab === 'inventory' && <AdminInventory />}
         {activeTab === 'settings' && (
           <div>
-            <h2 className="text-lg text-erl-text-primary mb-5">Settings</h2>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg text-erl-text-primary">Settings</h2>
+              <button onClick={toggleFullscreen} className="py-2 px-3 text-[10px] rounded-lg border border-erl-border-default bg-erl-surface text-erl-text-muted cursor-pointer hover:bg-white/[0.06] hover:text-erl-text-secondary transition-all duration-200">
+                {isFullscreen ? '✕ Exit Fullscreen' : '⛶ Fullscreen'}
+              </button>
+            </div>
             <div className="bg-erl-surface rounded-xl border border-erl-border-subtle">
               <AdminPrintSettings />
             </div>

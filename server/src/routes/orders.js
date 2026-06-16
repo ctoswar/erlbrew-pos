@@ -4,6 +4,17 @@ import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logInventoryMovement } from './inventory.js';
 import { logAudit } from '../services/audit.js';
 
+// Helpers for Asia/Taipei time (UTC+8) — server timezone-independent
+function taipeiNow() {
+  return new Date(Date.now() + 8 * 60 * 60 * 1000);
+}
+function toMysqlDatetime(d) {
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+}
+function toDateOnly(d) {
+  return d.toISOString().slice(0, 10);
+}
+
 export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   const router = express.Router();
 
@@ -162,11 +173,11 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         params.push(`%${search}%`, `%${search}%`);
       }
       if (conditions.length === 0) {
-        // Default: last 30 days
-        const d = new Date();
+        // Default: last 30 days (Taipei time)
+        const d = taipeiNow();
         d.setDate(d.getDate() - 30);
         conditions.push('o.created_at >= ?');
-        params.push(d.toISOString().slice(0, 10));
+        params.push(toDateOnly(d));
       }
 
       const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
@@ -361,7 +372,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     // Log cash drawer sale transaction if cash payment
     if (pay_method === 'cash' && total > 0) {
       try {
-        const today = toMysqlDate(new Date());
+        const today = toMysqlDate(taipeiNow());
         const [drawers] = await pool.query(
           'SELECT id, opening_float, cash_sales, cash_payouts FROM cash_drawer WHERE shift_date = ? AND status = "open" LIMIT 1',
           [today]
@@ -510,11 +521,11 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   router.get('/cogs', authMiddleware, async (req, res) => {
     try {
       const { start, end } = req.query;
-      const today = new Date();
+      const today = taipeiNow();
       const toDate = (d) => {
         const dt = d ? new Date(d) : today;
         dt.setHours(0, 0, 0, 0);
-        return dt.toISOString().slice(0, 10);
+        return toDateOnly(dt);
       };
       const startStr = toDate(start);
       const endStr = toDate(end);
@@ -644,7 +655,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   router.get('/reports/sales', authMiddleware, async (req, res) => {
     try {
       const { start, end } = req.query;
-      const today = new Date().toISOString().slice(0, 10);
+      const today = toDateOnly(taipeiNow());
       const startStr = start || today;
       const endStr = end || today;
 
@@ -738,7 +749,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   router.get('/reports/staff', authMiddleware, async (req, res) => {
     try {
       const { start, end } = req.query;
-      const today = new Date().toISOString().slice(0, 10);
+      const today = toDateOnly(taipeiNow());
       const startStr = start || today;
       const endStr = end || today;
 
@@ -896,32 +907,27 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     }
   });
 
-  // Helper for MySQL DATETIME format
-  function toMysqlDT(d) {
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  }
-
   // Reusable Z-Report generator (used by route AND cron)
   // targetDate: YYYY-MM-DD string. Defaults to today if omitted.
   async function buildZReportData(pool, targetDate) {
-    const now = new Date();
+    const now = taipeiNow();
 
     let periodStart, periodEnd, reportDateStr;
     if (targetDate) {
-      // Cron: cover the full day 00:00:00 → 23:59:59 of the target date
-      periodStart = new Date(targetDate + 'T00:00:00');
-      periodEnd = new Date(targetDate + 'T23:59:59');
+      // Cron: cover the full day 00:00:00 → 23:59:59 of the target date in Taipei time
+      const [y, m, d] = targetDate.split('-').map(Number);
+      periodStart = new Date(Date.UTC(y, m - 1, d));
+      periodEnd = new Date(Date.UTC(y, m - 1, d, 23, 59, 59));
       reportDateStr = targetDate;
     } else {
-      // Manual trigger: today from midnight to now
-      reportDateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-      periodStart = new Date(`${reportDateStr}T00:00:00`);
+      // Manual trigger: today from midnight to now in Taipei time
+      reportDateStr = toDateOnly(now);
+      periodStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
       periodEnd = now;
     }
 
-    const periodStartStr = toMysqlDT(periodStart);
-    const periodEndStr = toMysqlDT(periodEnd);
+    const periodStartStr = toMysqlDatetime(periodStart);
+    const periodEndStr = toMysqlDatetime(periodEnd);
     const [salesRows] = await pool.query(`
       SELECT
         COUNT(*) AS total_orders,
@@ -1026,7 +1032,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   // GET /api/orders/cash-drawer — today's open drawer or null
   router.get('/cash-drawer', authMiddleware, async (req, res) => {
     try {
-      const today = toMysqlDate(new Date());
+      const today = toMysqlDate(taipeiNow());
       const cashSales = await computeCashSales();
       const [rows] = await pool.query(
         'SELECT * FROM cash_drawer WHERE shift_date = ? AND status = "open" LIMIT 1',
@@ -1059,7 +1065,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   // POST /api/orders/cash-drawer — open (create) today's drawer
   router.post('/cash-drawer', authMiddleware, async (req, res) => {
     try {
-      const today = toMysqlDate(new Date());
+      const today = toMysqlDate(taipeiNow());
       const { opening_float = 0 } = req.body || {};
       // Close any existing open drawers for today
       await pool.query('UPDATE cash_drawer SET status = "closed", closed_at = NOW() WHERE shift_date = ? AND status = "open"', [today]);
@@ -1121,7 +1127,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   // GET /api/orders/cash-drawer/transactions — list transactions for today's drawer
   router.get('/cash-drawer/transactions', authMiddleware, async (req, res) => {
     try {
-      const today = toMysqlDate(new Date());
+      const today = toMysqlDate(taipeiNow());
       const [drawers] = await pool.query(
         'SELECT id FROM cash_drawer WHERE shift_date = ? ORDER BY id DESC LIMIT 1',
         [today]
@@ -1149,7 +1155,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         return res.status(400).json({ error: 'amount must be a positive number' });
       }
 
-      const today = toMysqlDate(new Date());
+      const today = toMysqlDate(taipeiNow());
       const [drawers] = await pool.query(
         'SELECT id, opening_float, cash_sales, cash_payouts FROM cash_drawer WHERE shift_date = ? AND status = "open" LIMIT 1',
         [today]

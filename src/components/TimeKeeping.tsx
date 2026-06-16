@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Staff } from "../types";
 import { apiGet, apiPost, apiAdminGet, apiAdminPut, apiAdminPost, apiAdminDelete } from "../utils/api";
 
 interface ScheduleDay {
@@ -112,8 +113,20 @@ interface PrintResponse {
 
 type Tab = "today" | "calendar" | "schedules";
 
-export const TimeKeeping: React.FC = () => {
+interface TimeKeepingProps {
+  staff: Staff;
+}
+
+export const TimeKeeping: React.FC<TimeKeepingProps> = ({ staff }) => {
+  const isAdmin = staff.role === "Manager";
   const [tab, setTab] = useState<Tab>("today");
+
+  // Restrict non-admin to only "today" tab
+  useEffect(() => {
+    if (!isAdmin && tab !== "today") {
+      setTab("today");
+    }
+  }, [isAdmin, tab]);
 
   // ── Tab: Today ──
   const [records, setRecords] = useState<TimeRecord[]>([]);
@@ -456,7 +469,7 @@ export const TimeKeeping: React.FC = () => {
           </div>
           <div className="font-display text-lg font-bold text-erl-text-primary tracking-wide">Timekeeping</div>
           <div className="flex gap-1 bg-erl-base rounded-xl p-0.5 border border-erl-border-subtle">
-            {([["today", "Today"], ["calendar", "Calendar"], ["schedules", "Schedules"]] as const).map(([key, label]) => (
+            {([["today", "Today"], ...(isAdmin ? [["calendar", "Calendar"] as const, ["schedules", "Schedules"] as const] : [])] as const).map(([key, label]) => (
               <button key={key} onClick={() => setTab(key as Tab)} className={`
                 px-3 py-1.5 sm:px-3.5 text-xs rounded-lg cursor-pointer transition-all duration-200 font-semibold tracking-wide min-h-[44px]
                 ${tab === key

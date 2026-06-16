@@ -287,7 +287,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
       case "admin":
         return <AdminScreen />;
       case "time":
-        return <TimeKeeping />;
+        return <TimeKeeping staff={staff} />;
       default:
         return null;
     }

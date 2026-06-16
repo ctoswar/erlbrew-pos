@@ -390,7 +390,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             <CashDrawerScreen />
           </div>
         )}
-{activeTab === 'time' && <TimeKeeping />}
+{activeTab === 'time' && <TimeKeeping staff={staff} />}
 {activeTab === 'payroll' && <AdminPayroll />}
 {activeTab === 'suppliers' && <AdminSupplierInvoices />}
         {activeTab === 'audit' && <AdminAuditLog />}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Order, OrderStatus } from "../types";
 import { formatTime, formatCurrency } from "../utils";
 import { VoidCredentialModal } from "./VoidCredentialModal";
@@ -138,6 +138,13 @@ interface KitchenCardProps {
 }
 
 const KitchenCard: React.FC<KitchenCardProps> = ({ order, colColor, onUpdateStatus, isVoidPending, onRequestVoid, isRefundPending, onRequestRefund }) => {
+  // Live ticker — re-render every second so elapsed time and Late badge stay current
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const createdAt = order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt);
   const elapsed = Math.floor((Date.now() - createdAt.getTime()) / 60000);
   const isLate = order.status === "preparing" && elapsed >= 10;
@@ -156,6 +163,9 @@ const KitchenCard: React.FC<KitchenCardProps> = ({ order, colColor, onUpdateStat
         </div>
         <div className="flex items-center gap-2 sm:gap-[5px]">
           {isLate && <span className="pill pill-danger animate-pulse-slow text-[10px] sm:text-[7px] py-1 sm:py-0.5 px-2 sm:px-1.5">Late</span>}
+          {order.status !== "completed" && !isLate && (
+            <span className="text-[9px] sm:text-[7px] text-erl-text-faint font-mono">{elapsed}m</span>
+          )}
           <div className="text-[10px] sm:text-[7.5px] text-erl-text-disabled tracking-wide">{formatTime(order.createdAt)}</div>
         </div>
       </div>

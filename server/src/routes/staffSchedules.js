@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logAudit } from '../services/audit.js';
 
-const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 export default function staffSchedulesRouter(pool) {
   const router = Router();
@@ -11,7 +11,7 @@ export default function staffSchedulesRouter(pool) {
   router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
     try {
       const [templates] = await pool.query('SELECT * FROM staff_schedules ORDER BY name');
-      const [days] = await pool.query('SELECT * FROM staff_schedule_days ORDER BY schedule_id, FIELD(day_of_week, "mon","tue","wed","thu","fri","sat")');
+      const [days] = await pool.query('SELECT * FROM staff_schedule_days ORDER BY schedule_id, FIELD(day_of_week, "mon","tue","wed","thu","fri","sat","sun")');
 
       const dayMap = {};
       for (const d of days) {
@@ -45,7 +45,7 @@ export default function staffSchedulesRouter(pool) {
       const [templates] = await pool.query('SELECT * FROM staff_schedules WHERE id = ?', [id]);
       if (!templates.length) return res.status(404).json({ error: 'Schedule not found' });
 
-      const [days] = await pool.query('SELECT * FROM staff_schedule_days WHERE schedule_id = ? ORDER BY FIELD(day_of_week, "mon","tue","wed","thu","fri","sat")', [id]);
+      const [days] = await pool.query('SELECT * FROM staff_schedule_days WHERE schedule_id = ? ORDER BY FIELD(day_of_week, "mon","tue","wed","thu","fri","sat","sun")', [id]);
       const dayMap = {};
       for (const d of days) {
         dayMap[d.day_of_week] = {

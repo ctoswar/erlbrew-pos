@@ -143,13 +143,13 @@ router.get('/', async (req, res) => {
          FROM time_records tr
          JOIN staff s ON s.id = tr.staff_id
          LEFT JOIN staff_schedule_days ssd ON ssd.schedule_id = s.schedule_id
-           AND ssd.day_of_week = CASE DAYOFWEEK(tr.clock_in)
-             WHEN 2 THEN 'mon' WHEN 3 THEN 'tue' WHEN 4 THEN 'wed'
-             WHEN 5 THEN 'thu' WHEN 6 THEN 'fri' WHEN 7 THEN 'sat'
-           END
-         WHERE DATE(tr.clock_in) = ?
-         ORDER BY tr.clock_in DESC`,
-        [nowParam, today]
+            AND ssd.day_of_week = CASE DAYOFWEEK(tr.clock_in)
+              WHEN 1 THEN 'sun' WHEN 2 THEN 'mon' WHEN 3 THEN 'tue' WHEN 4 THEN 'wed'
+              WHEN 5 THEN 'thu' WHEN 6 THEN 'fri' WHEN 7 THEN 'sat'
+            END
+          WHERE DATE(tr.clock_in) = ?
+          ORDER BY tr.clock_in DESC`,
+         [nowParam, today]
       );
 
       // Group by staff — keep latest record per person
@@ -166,9 +166,9 @@ router.get('/', async (req, res) => {
          FROM staff s
          LEFT JOIN staff_schedule_days ssd ON ssd.schedule_id = s.schedule_id
            AND ssd.day_of_week = CASE DAYOFWEEK(CURDATE())
-             WHEN 2 THEN 'mon' WHEN 3 THEN 'tue' WHEN 4 THEN 'wed'
-             WHEN 5 THEN 'thu' WHEN 6 THEN 'fri' WHEN 7 THEN 'sat'
-           END
+              WHEN 1 THEN 'sun' WHEN 2 THEN 'mon' WHEN 3 THEN 'tue' WHEN 4 THEN 'wed'
+              WHEN 5 THEN 'thu' WHEN 6 THEN 'fri' WHEN 7 THEN 'sat'
+            END
          ORDER BY s.name`
       );
 

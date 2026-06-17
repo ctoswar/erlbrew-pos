@@ -279,7 +279,7 @@ export default function payrollRouter(pool, googleSheets) {
         JOIN staff s ON s.id = tr.staff_id
         LEFT JOIN staff_schedule_days ssd ON ssd.schedule_id = s.schedule_id
           AND ssd.day_of_week = CASE DAYOFWEEK(tr.clock_in)
-            WHEN 2 THEN 'mon' WHEN 3 THEN 'tue' WHEN 4 THEN 'wed'
+            WHEN 1 THEN 'sun' WHEN 2 THEN 'mon' WHEN 3 THEN 'tue' WHEN 4 THEN 'wed'
             WHEN 5 THEN 'thu' WHEN 6 THEN 'fri' WHEN 7 THEN 'sat'
           END
         WHERE DATE(tr.clock_in) >= ? AND DATE(tr.clock_in) <= ?

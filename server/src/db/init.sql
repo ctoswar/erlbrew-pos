@@ -329,7 +329,7 @@ CREATE TABLE IF NOT EXISTS staff_schedules (
 CREATE TABLE IF NOT EXISTS staff_schedule_days (
   id INT AUTO_INCREMENT PRIMARY KEY,
   schedule_id INT NOT NULL,
-  day_of_week ENUM('mon','tue','wed','thu','fri','sat') NOT NULL,
+  day_of_week ENUM('mon','tue','wed','thu','fri','sat','sun') NOT NULL,
   shift_start TIME DEFAULT NULL,
   shift_end TIME DEFAULT NULL,
   lunch_start TIME DEFAULT NULL,

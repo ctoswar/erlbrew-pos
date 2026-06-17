@@ -159,3 +159,4 @@ print-server/.dockerignore
 print-server/.env.example
 print-server/Dockerfile
 print-server/requirements.txt
+server/migrate-sun.js

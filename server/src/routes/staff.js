@@ -97,7 +97,7 @@ export default function staffRouter(pool){
         LEFT JOIN staff_schedules st ON st.id = s.schedule_id
         LEFT JOIN staff_schedule_days ssd ON ssd.schedule_id = s.schedule_id
           AND ssd.day_of_week = CASE DAYOFWEEK(CURDATE())
-            WHEN 2 THEN 'mon' WHEN 3 THEN 'tue' WHEN 4 THEN 'wed'
+            WHEN 1 THEN 'sun' WHEN 2 THEN 'mon' WHEN 3 THEN 'tue' WHEN 4 THEN 'wed'
             WHEN 5 THEN 'thu' WHEN 6 THEN 'fri' WHEN 7 THEN 'sat'
           END
         ORDER BY s.name

@@ -155,11 +155,11 @@ export const TimeKeeping: React.FC<TimeKeepingProps> = ({ staff }) => {
   const [printTo, setPrintTo] = useState(getTodayStr);
 
   // Template form
-  const DAYS_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat"] as const;
-  const DAY_LABELS: Record<string, string> = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday" };
+  const DAYS_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+  const DAY_LABELS: Record<string, string> = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
   const emptyDay = (): ScheduleDay => ({ shift_start: null, shift_end: null, lunch_start: null, lunch_end: null, snack_start: null, snack_end: null });
   const emptyDays = (): Record<string, ScheduleDay> => ({
-    mon: emptyDay(), tue: emptyDay(), wed: emptyDay(), thu: emptyDay(), fri: emptyDay(), sat: emptyDay(),
+    mon: emptyDay(), tue: emptyDay(), wed: emptyDay(), thu: emptyDay(), fri: emptyDay(), sat: emptyDay(), sun: emptyDay(),
   });
 
   const [showTemplateForm, setShowTemplateForm] = useState(false);

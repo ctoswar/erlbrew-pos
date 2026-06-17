@@ -165,7 +165,20 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
     lines.push(`${padRight("Change:", W - 9)}${padLeft(formatCurrency(order.cashTendered - order.total).replace("₱", "").trim(), 9)}`);
   }
 
-  // 7. QR Code (optional)
+  // 7. WiFi Info (optional)
+  if (settings.showWifiInfo) {
+    lines.push(ln("-"));
+    if (settings.wifiAsQR) {
+      // QR mode: placeholder — actual QR rendered by print-server.py or ReceiptPreview
+      lines.push(padCenter("Connect to Wi-Fi"));
+      lines.push(padCenter("[ SCAN QR TO JOIN ]"));
+    } else {
+      lines.push(`WiFi: ${settings.wifiSsid}`);
+      lines.push(`Pass: ${settings.wifiPassword}`);
+    }
+  }
+
+  // 8. QR Code (optional)
   if (settings.showQRCode) {
     lines.push(ln("-"));
     if (settings.qrCodeUrl) {
@@ -179,7 +192,7 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
     }
   }
 
-  // 8. Footer
+  // 9. Footer
   if (settings.showCustomerCopy) {
     lines.push(ln("-"));
     lines.push(padCenter("Thank you for dining with us!"));
@@ -254,6 +267,12 @@ export async function printViaBluetooth(order: Order, settings: PrintSettings, d
   const baseUrl = (import.meta.env.VITE_API_URL as string) || '';
   const lines = buildReceiptLines(order, settings, discountAmount, discountLabel);
 
+  // Build WiFi QR data string (standard format: WIFI:T:<enc>;S:<ssid>;P:<pwd>;;)
+  let wifiQrData: string | null = null;
+  if (settings.showWifiInfo && settings.wifiAsQR && settings.wifiSsid) {
+    wifiQrData = `WIFI:T:WPA;S:${settings.wifiSsid};P:${settings.wifiPassword};;`;
+  }
+
   // Repeat lines for multi-copy
   const allLines = Array(settings.printCopies).fill(lines).flat();
 
@@ -264,6 +283,7 @@ export async function printViaBluetooth(order: Order, settings: PrintSettings, d
       lines: allLines,
       paperSize: settings.paperSize,
       qrCodeUrl: settings.showQRCode && settings.qrCodeUrl ? settings.qrCodeUrl : null,
+      wifiQrData: wifiQrData,
     }),
   });
 

@@ -132,7 +132,19 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
     lines.push(`${padRight("Change:", 22)}${padLeft(formatCurrency(tendered - total).replace("₱","").trim(), 9)}`);
   }
 
-  // 7. QR Code (optional)
+  // 7. WiFi Info (optional)
+  if (settings.showWifiInfo) {
+    lines.push(ln("-"));
+    if (settings.wifiAsQR) {
+      lines.push(padCenter("Connect to Wi-Fi"));
+      lines.push(padCenter("[ SCAN QR TO JOIN ]"));
+    } else {
+      lines.push(`WiFi: ${settings.wifiSsid}`);
+      lines.push(`Pass: ${settings.wifiPassword}`);
+    }
+  }
+
+  // 8. QR Code (optional)
   if (settings.showQRCode) {
     lines.push(ln("-"));
     if (settings.qrCodeUrl) {
@@ -144,7 +156,7 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
     }
   }
 
-  // 8. Footer
+  // 9. Footer
   if (settings.showCustomerCopy) {
     lines.push(ln("-"));
     lines.push(padCenter("Thank you for dining with us!"));

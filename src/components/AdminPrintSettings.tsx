@@ -16,6 +16,14 @@ export interface PrintSettings {
   printVia: "browser" | "bluetooth";
   /** GCash reference number for e-wallet payments */
   gcashNumber: string;
+  /** Show WiFi credentials on receipt */
+  showWifiInfo: boolean;
+  /** WiFi network name */
+  wifiSsid: string;
+  /** WiFi password */
+  wifiPassword: string;
+  /** true = QR code for auto-connect; false = plain text SSID/password */
+  wifiAsQR: boolean;
 }
 
 const DEFAULT_SETTINGS: PrintSettings = {
@@ -28,6 +36,10 @@ const DEFAULT_SETTINGS: PrintSettings = {
   printCopies: 1,
   printVia: "browser",
   gcashNumber: "",
+  showWifiInfo: false,
+  wifiSsid: "",
+  wifiPassword: "",
+  wifiAsQR: true,
 };
 
 const STORAGE_KEY = "erlbrew_print_settings";
@@ -458,6 +470,90 @@ export const AdminPrintSettings: React.FC = () => {
                 <div className="text-[11px] text-erl-text-faint mt-1.5">
                   Paste any link — Google Forms, GCash QR, feedback survey, etc.
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* WiFi Info toggle + SSID/password + QR/text option */}
+          <div className="py-3 border-t border-erl-border-subtle/60">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col mr-4">
+                <div className="text-[13px] font-semibold text-erl-text-primary">Wi-Fi Info</div>
+                <div className="text-[11px] text-erl-text-faint mt-0.5">Show cafe Wi-Fi credentials on receipt</div>
+              </div>
+              <button
+                onClick={() => toggle("showWifiInfo")}
+                className="w-12 h-[26px] rounded-full border-none cursor-pointer relative flex-shrink-0 transition-colors duration-200"
+                style={{ background: settings.showWifiInfo ? "var(--accent)" : "var(--color-border-medium)" }}
+                role="switch"
+                aria-checked={settings.showWifiInfo}
+              >
+                <div
+                  className="absolute top-[3px] w-[20px] h-[20px] rounded-full transition-all duration-200"
+                  style={{
+                    left: settings.showWifiInfo ? 26 : 3,
+                    background: settings.showWifiInfo ? "var(--bg-sidebar)" : "var(--text-muted)",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                  }}
+                />
+              </button>
+            </div>
+            {settings.showWifiInfo && (
+              <div className="mt-3 pl-1 flex flex-col gap-3">
+                {/* QR or Text toggle */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => update({ wifiAsQR: true })}
+                    className={`px-4 py-2 rounded-xl text-[11px] font-semibold cursor-pointer transition-all duration-200 ${
+                      settings.wifiAsQR
+                        ? "bg-erl-accent/15 border-[1.5px] border-erl-accent text-erl-accent"
+                        : "border-[1.5px] border-erl-border-default bg-transparent text-erl-text-secondary hover:border-erl-border-medium"
+                    }`}
+                  >
+                    QR Code
+                  </button>
+                  <button
+                    onClick={() => update({ wifiAsQR: false })}
+                    className={`px-4 py-2 rounded-xl text-[11px] font-semibold cursor-pointer transition-all duration-200 ${
+                      !settings.wifiAsQR
+                        ? "bg-erl-accent/15 border-[1.5px] border-erl-accent text-erl-accent"
+                        : "border-[1.5px] border-erl-border-default bg-transparent text-erl-text-secondary hover:border-erl-border-medium"
+                    }`}
+                  >
+                    Plain Text
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="text-[11px] text-erl-text-muted tracking-wider uppercase font-semibold">Wi-Fi Name (SSID)</div>
+                    <input
+                      type="text"
+                      value={settings.wifiSsid}
+                      onChange={(e) => update({ wifiSsid: e.target.value })}
+                      placeholder="Erlbrew Cafe Guest"
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="text-[11px] text-erl-text-muted tracking-wider uppercase font-semibold">Password</div>
+                    <input
+                      type="text"
+                      value={settings.wifiPassword}
+                      onChange={(e) => update({ wifiPassword: e.target.value })}
+                      placeholder="••••••••"
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+                {settings.wifiAsQR ? (
+                  <div className="text-[11px] text-erl-text-faint">
+                    Guests scan the QR to auto-join Wi-Fi (no typing needed)
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-erl-text-faint">
+                    SSID and password printed as text on the receipt
+                  </div>
+                )}
               </div>
             )}
           </div>

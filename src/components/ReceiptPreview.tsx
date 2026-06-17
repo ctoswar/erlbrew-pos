@@ -201,7 +201,34 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
               )}
             </div>
 
-            {/* 7. QR Code (optional) */}
+            {/* 7. WiFi Info (optional) */}
+            {settings.showWifiInfo && (
+              <>
+                <div className="border-t border-dashed border-[#aaa] mb-1.5" />
+                <div className="text-center py-1">
+                  <div className="text-[10px] font-bold tracking-wide mb-1">Wi-Fi</div>
+                  {settings.wifiAsQR && settings.wifiSsid ? (
+                    <>
+                      <QRCodeSVG
+                        value={`WIFI:T:WPA;S:${settings.wifiSsid};P:${settings.wifiPassword};;`}
+                        size={100}
+                        level="M"
+                        includeMargin={false}
+                        style={{ margin: "0 auto" }}
+                      />
+                      <div className="text-[8px] text-[#888] mt-1">Scan to join Wi-Fi</div>
+                    </>
+                  ) : (
+                    <div className="text-[10px] leading-relaxed">
+                      <div>Network: {settings.wifiSsid}</div>
+                      <div>Password: {settings.wifiPassword}</div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* 8. QR Code (optional) */}
             {settings.showQRCode && (
               <>
                 <div className="border-t border-dashed border-[#aaa] mb-1.5" />
@@ -221,7 +248,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
               </>
             )}
 
-            {/* 8. Footer */}
+            {/* 9. Footer */}
             {settings.showCustomerCopy && (
               <div className="border-t border-dashed border-[#aaa] pt-2 text-center text-[10px]">
                 <div className="mb-0.5">Thank you for dining with us!</div>

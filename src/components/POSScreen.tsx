@@ -71,7 +71,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     } catch {}
   }, [orderType, customerName, cart]);
 
-  const { orders, placeOrder, updateStatus, voidOrder, refundOrder, activeOrders, pendingCount } = useOrders();
+  const { orders, placeOrder, updateStatus, voidOrder, refundOrder, dismissOrder, activeOrders, pendingCount } = useOrders();
   useKitchenEvents();
 
   const handleNavigate = useCallback((s: Screen) => setScreen(s), []);
@@ -285,7 +285,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
           handleNavigate("pos");
         }} />;
       case "admin":
-        return <AdminScreen />;
+        return <AdminScreen onDismissOrder={dismissOrder} />;
       case "time":
         return <TimeKeeping staff={staff} />;
       default:

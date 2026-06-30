@@ -334,7 +334,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
               // Only log movement if the update actually changed rows (means stock was sufficient)
               if (updateResult.affectedRows > 0) {
                 const stockAfter = Math.max(0, newStock);
-                await logInventoryMovement(pool, {
+                await logInventoryMovement(conn, {
                   inventory_item_id: recipe.inventory_item_id,
                   movement_type: 'sale',
                   quantity: deduction,

@@ -413,5 +413,10 @@ export function useOrders() {
     setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status: "refunded" as const } : o));
   }, []);
 
-  return { orders, placeOrder, updateStatus, voidOrder, refundOrder, activeOrders, completedOrders, pendingCount };
+  const dismissOrder = useCallback((id: string) => {
+    // Remove order from local state entirely (no server call — just cleans up the kitchen board)
+    setOrders((prev) => prev.filter((o) => o.id !== id));
+  }, []);
+
+  return { orders, placeOrder, updateStatus, voidOrder, refundOrder, dismissOrder, activeOrders, completedOrders, pendingCount };
 }

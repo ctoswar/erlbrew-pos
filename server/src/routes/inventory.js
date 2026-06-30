@@ -320,7 +320,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       await conn.query('UPDATE inventory SET stock = ? WHERE id = ?', [stockAfter, inventory_item_id]);
 
       // Log movement
-      await logInventoryMovement(pool, {
+      await logInventoryMovement(conn, {
         inventory_item_id,
         movement_type,
         quantity: actualQty,

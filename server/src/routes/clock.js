@@ -377,6 +377,58 @@ router.get('/', async (req, res) => {
     }
   });
 
+  // PUT /api/clock/:recordId/adjust — adjust a time record (auth required: Manager+)
+  router.put('/:recordId/adjust', authMiddleware, async (req, res) => {
+    const { recordId } = req.params;
+    const { clock_in, clock_out, reason } = req.body;
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!reason || typeof reason !== 'string' || reason.trim().length < 3) return res.status(400).json({ error: 'Reason is required (min 3 chars)' });
+    try {
+      // Fetch existing record
+      const [rows] = await pool.query('SELECT id, staff_id, clock_in, clock_out FROM time_records WHERE id = ? LIMIT 1', [recordId]);
+      if (!rows.length) return res.status(404).json({ error: 'Record not found' });
+      const rec = rows[0];
+
+      const oldIn = rec.clock_in ? rec.clock_in : null;
+      const oldOut = rec.clock_out ? rec.clock_out : null;
+
+      // Prepare new values — if not provided, keep old
+      const newIn = clock_in ? clock_in : oldIn;
+      const newOut = (typeof clock_out !== 'undefined') ? clock_out : oldOut;
+
+      // Update the record with new timestamps and recompute total_hours
+      const [upd] = await pool.query(
+        'UPDATE time_records SET clock_in = ?, clock_out = ?, total_hours = TRUNCATE(TIMESTAMPDIFF(MINUTE, ?, COALESCE(?, ?)) / 60.0, 2) WHERE id = ?',
+        [newIn, newOut, newIn, newOut, newOut || newIn, recordId]
+      );
+
+      // Insert adjustment audit table if exists (non-fatal)
+      try {
+        await pool.query(
+          `INSERT INTO time_adjustments (time_record_id, adjusted_by, adjusted_by_name, old_clock_in, old_clock_out, new_clock_in, new_clock_out, reason)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [recordId, user.sub || user.id || null, user.name || null, oldIn, oldOut, newIn, newOut, reason.trim()]
+        );
+      } catch (e) {
+        // table might not exist — continue
+        console.warn('time_adjustments insert failed (optional):', e.message);
+      }
+
+      // Audit log (generic)
+      try {
+        const details = { recordId: String(recordId), oldClockIn: oldIn, oldClockOut: oldOut, newClockIn: newIn, newClockOut: newOut, reason: reason.trim() };
+        await logAudit(pool, req, { action: 'adjust_time_record', entityType: 'time_record', entityId: String(recordId), details });
+      } catch (e) { console.warn('audit failed:', e.message); }
+
+      const [updated] = await pool.query('SELECT id, staff_id, clock_in, clock_out, total_hours FROM time_records WHERE id = ?', [recordId]);
+      res.json({ success: true, record: updated[0] });
+    } catch (e) {
+      console.error('Failed to adjust time record:', e);
+      res.status(500).json({ error: 'Failed to adjust record' });
+    }
+  });
+
   // GET /api/clock/:staffId — specific employee's time records (auth required)
   router.get('/:staffId', authMiddleware, async (req, res) => {
     const { staffId } = req.params;

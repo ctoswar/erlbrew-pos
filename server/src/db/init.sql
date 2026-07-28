@@ -63,6 +63,21 @@ CREATE TABLE IF NOT EXISTS time_records (
   INDEX idx_staff_date (staff_id, date)
 );
 
+-- Time adjustment audit table: stores manual edits to time_records
+CREATE TABLE IF NOT EXISTS time_adjustments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  time_record_id INT NOT NULL,
+  adjusted_by INT NULL,
+  adjusted_by_name VARCHAR(128) NULL,
+  old_clock_in DATETIME NULL,
+  old_clock_out DATETIME NULL,
+  new_clock_in DATETIME NULL,
+  new_clock_out DATETIME NULL,
+  reason VARCHAR(512) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (time_record_id) REFERENCES time_records(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS recipes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   menu_item_id VARCHAR(64) NOT NULL,

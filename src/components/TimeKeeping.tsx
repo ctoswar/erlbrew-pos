@@ -140,6 +140,13 @@ export const TimeKeeping: React.FC<TimeKeepingProps> = ({ staff }) => {
   const [dayRecords, setDayRecords] = useState<DayRecord[]>([]);
   const [dayLoading, setDayLoading] = useState(false);
 
+  // Edit modal state
+  const [editingRecord, setEditingRecord] = useState<DayRecord | null>(null);
+  const [editClockIn, setEditClockIn] = useState<string | null>(null);
+  const [editClockOut, setEditClockOut] = useState<string | null>(null);
+  const [editReason, setEditReason] = useState<string>("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
   // ── Tab: Schedules ──
   const [templates, setTemplates] = useState<ScheduleTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
@@ -538,6 +545,73 @@ export const TimeKeeping: React.FC<TimeKeepingProps> = ({ staff }) => {
       {/* Body */}
       <div className="scroll-area flex-1 p-5 flex flex-col gap-5 overflow-y-auto min-h-0">
 
+        {/* Edit Modal */}
+        {editingRecord && (
+          <>
+            <div className="fixed inset-0 z-[998] bg-black/60" onClick={() => { if (!savingEdit) setEditingRecord(null); }} />
+            <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+              <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[420px]">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="font-display text-base font-bold text-erl-text-primary">Adjust Time Record</div>
+                    <div className="text-[11px] text-erl-text-faint">Record ID: {editingRecord.id} · {editingRecord.name}</div>
+                  </div>
+                  <button onClick={() => { if (!savingEdit) setEditingRecord(null); }} className="w-8 h-8 rounded-lg flex items-center justify-center text-erl-text-muted hover:text-erl-text-primary hover:bg-erl-surface transition-colors">✕</button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 mb-3">
+                  <div>
+                    <label className="text-[11px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1 block">Clock In</label>
+                    <input type="datetime-local" value={editClockIn || ""} onChange={(e) => setEditClockIn(e.target.value || null)} className="w-full text-sm bg-erl-base border border-erl-border-medium rounded-xl px-3 py-2.5 text-erl-text-primary outline-none focus:border-erl-accent" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1 block">Clock Out (optional)</label>
+                    <input type="datetime-local" value={editClockOut || ""} onChange={(e) => setEditClockOut(e.target.value || null)} className="w-full text-sm bg-erl-base border border-erl-border-medium rounded-xl px-3 py-2.5 text-erl-text-primary outline-none focus:border-erl-accent" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1 block">Reason</label>
+                    <textarea value={editReason} onChange={(e) => setEditReason(e.target.value)} placeholder="Reason for adjustment (required)" className="w-full text-sm bg-erl-base border border-erl-border-medium rounded-xl px-3 py-2.5 text-erl-text-primary outline-none focus:border-erl-accent h-24" />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 justify-end">
+                  <button onClick={() => { if (!savingEdit) setEditingRecord(null); }} disabled={savingEdit} className="btn btn-outline text-xs px-4 py-2.5">Cancel</button>
+                  <button onClick={async () => {
+                    if (!editingRecord) return;
+                    if (!editReason || editReason.trim().length < 3) { alert('Please provide a reason (min 3 characters)'); return; }
+                    setSavingEdit(true);
+                    const localToMySql = (dt: string | null) => {
+                      if (!dt) return null;
+                      if (dt.length === 16) return dt.replace('T', ' ') + ':00';
+                      return dt.replace('T', ' ').slice(0, 19);
+                    };
+                    try {
+                      await apiAdminPut(`/clock/${editingRecord.id}/adjust`, {
+                        clock_in: localToMySql(editClockIn),
+                        clock_out: editClockOut === "" ? null : localToMySql(editClockOut),
+                        reason: editReason,
+                      });
+                      setEditingRecord(null);
+                      setEditClockIn(null); setEditClockOut(null); setEditReason("");
+                      await loadToday();
+                      if (selectedDate) {
+                        setDayLoading(true);
+                        try { const recs = await apiGet<DayRecord[]>(`/clock/calendar/${selectedDate}`); setDayRecords(recs); } catch (e) { console.error(e); }
+                        setDayLoading(false);
+                      }
+                    } catch (e: any) {
+                      alert(e.message || 'Failed to save adjustment');
+                    } finally {
+                      setSavingEdit(false);
+                    }
+                  }} disabled={savingEdit} className="btn btn-accent text-xs px-4 py-2.5">Save Adjustment</button>
+                </div>
+
+              </div>
+            </div>
+          </>
+        )}
+
         {tab === "today" && (
           <>
             {/* Last tap feedback */}
@@ -839,6 +913,23 @@ export const TimeKeeping: React.FC<TimeKeepingProps> = ({ staff }) => {
                             {hours > 0 && (
                               <div className="text-[10px] text-erl-accent font-bold">
                                 {hours.toFixed(1)}h
+                              </div>
+                            )}
+
+                            {/* Edit button for admins */}
+                            {isAdmin && (
+                              <div className="mt-2 flex gap-2">
+                                <button onClick={() => {
+                                  setEditingRecord(rec);
+                                  const cin = rec.clock_in ? new Date(rec.clock_in) : null;
+                                  const cout = rec.clock_out ? new Date(rec.clock_out) : null;
+                                  const toLocal = (d: Date | null) => d ? new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16) : "";
+                                  setEditClockIn(cin ? toLocal(cin) : null);
+                                  setEditClockOut(cout ? toLocal(cout) : null);
+                                  setEditReason("");
+                                }} className="text-[11px] px-2 py-1 rounded-lg border border-erl-border-default text-erl-text-faint font-bold hover:border-erl-accent/30 hover:text-erl-accent transition-colors">
+                                  Edit
+                                </button>
                               </div>
                             )}
                           </div>

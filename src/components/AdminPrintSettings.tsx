@@ -4,7 +4,7 @@ import { useTheme } from "../hooks/useTheme";
 import { useFontSize, FONT_SIZE_LABELS, type FontSize } from "../hooks/useFontSize";
 
 export interface PrintSettings {
-  paperSize: "58mm" | "80mm";
+  paperSize: "57mm" | "58mm" | "80mm";
   showStoreHeader: boolean;
   showBIRInfo: boolean;
   showCustomerCopy: boolean;
@@ -307,7 +307,7 @@ export const AdminPrintSettings: React.FC = () => {
           {/* Paper Size */}
           <SettingsRow label="Paper Size" description="Thermal receipt width">
             <div className="flex gap-2">
-              {(["58mm", "80mm"] as const).map((size) => (
+              {(["57mm", "58mm", "80mm"] as const).map((size) => (
                 <button key={size} onClick={() => update({ paperSize: size })} className={`
                   px-4 py-2 rounded-xl text-[11px] font-semibold cursor-pointer transition-all duration-200
                   ${settings.paperSize === size

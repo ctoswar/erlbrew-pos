@@ -9,28 +9,29 @@ interface Props {
   onPrint?: () => void;
 }
 
-const PAPER_MM = 80;
 const FONT = "'Courier New', 'Lucida Console', monospace";
 const FONT_SIZE = 11;
-const W = 32;
 
-function padCenter(text: string, width = W): string {
-  const s = text.length <= width ? text : text.substring(0, width - 2) + "..";
-  const spaces = Math.max(0, Math.floor((width - s.length) / 2));
-  return " ".repeat(spaces) + s;
-}
-function padRight(text: string, width = W): string {
-  const s = text.length <= width ? text : text.substring(0, width - 1) + "…";
-  return s.padEnd(width);
-}
-function padLeft(text: string, width = W): string {
-  return text.padStart(width);
-}
-function ln(char = "-") { return char.repeat(W); }
 
 export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   const printRef = useRef<HTMLDivElement>(null);
   const settings = loadPrintSettings();
+
+  const PAPER_MM = settings.paperSize === '57mm' ? 57 : settings.paperSize === '58mm' ? 58 : 80;
+  const W = settings.paperSize === '57mm' ? 25 : settings.paperSize === '58mm' ? 26 : 32;
+
+  function padCenter(text: string, width = W): string {
+    const s = text.length <= width ? text : text.substring(0, width - 2) + '..';
+    return ' '.repeat(Math.max(0, Math.floor((width - s.length) / 2))) + s;
+  }
+  function padRight(text: string, width = W): string {
+    const s = text.length <= width ? text : text.substring(0, width - 1) + '…';
+    return s.padEnd(width);
+  }
+  function padLeft(text: string, width = W): string {
+    return text.padStart(width);
+  }
+  function ln(char = '-') { return char.repeat(W); }
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-PH", { month: "short", day: "2-digit", year: "numeric" });

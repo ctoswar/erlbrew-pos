@@ -70,7 +70,7 @@ export function getStoreInfo(): StoreInfo {
 const MONO = "'Courier New', 'Lucida Console', monospace";
 
 export function buildReceiptLines(order: Order, settings: PrintSettings, discountAmount?: number, discountLabel?: string): string[] {
-  const W = settings.paperSize === "58mm" ? 26 : 32;
+  const W = settings.paperSize === "57mm" ? 25 : settings.paperSize === "58mm" ? 26 : 32;
 
   function padCenter(text: string, width = W): string {
     const s = text.length <= width ? text : text.substring(0, width - 2) + "..";
@@ -208,7 +208,7 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
 
 export function openPrintWindow(order: Order, settings: PrintSettings, discountAmount?: number, discountLabel?: string): void {
   const lines = buildReceiptLines(order, settings, discountAmount, discountLabel);
-  const W_PX = settings.paperSize === "58mm" ? 226 : 302;
+  const W_PX = settings.paperSize === "57mm" ? 216 : settings.paperSize === "58mm" ? 226 : 302;
 
   const win = window.open("", "_blank", "width=440,height=700");
   if (!win) return;

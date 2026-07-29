@@ -11,6 +11,9 @@ dist/
 server/.env
 .env.*.local
 
+# MCP config with secrets (use .mcp-config.example instead)
+.mcp-config.json
+
 # IDE
 .vscode/
 .idea/

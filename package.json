@@ -12,11 +12,14 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "express": "^5.2.1",
+    "mysql2": "^3.23.2",
     "qrcode.react": "^4.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-is": "^19.2.5",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "sqlite3": "^6.0.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

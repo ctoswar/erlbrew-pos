@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Erlbrew POS - Architecture Graph</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet" type="text/css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0d0600 0%, #1e0e06 100%);
+      color: #f5f5f5;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .header {
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px 20px;
+      border-bottom: 2px solid #C9873A;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      color: #C9873A;
+    }
+
+    .search-box {
+      background: rgba(201, 135, 58, 0.1);
+      border: 1px solid #C9873A;
+      padding: 8px 12px;
+      border-radius: 4px;
+      color: #fff;
+      width: 250px;
+    }
+
+    .search-box::placeholder {
+      color: #888;
+    }
+
+    .container {
+      display: flex;
+      height: calc(100vh - 60px);
+      gap: 0;
+    }
+
+    #network {
+      flex: 1;
+      background: rgba(30, 14, 6, 0.9);
+      position: relative;
+    }
+
+    .sidebar {
+      width: 320px;
+      background: rgba(0, 0, 0, 0.8);
+      border-left: 2px solid #C9873A;
+      padding: 20px;
+      overflow-y: auto;
+      max-height: calc(100vh - 60px);
+    }
+
+    .sidebar h3 {
+      color: #C9873A;
+      margin-bottom: 15px;
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+
+    .communities {
+      margin-bottom: 25px;
+    }
+
+    .community-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .community-item:hover {
+      background: rgba(201, 135, 58, 0.1);
+    }
+
+    .community-item input[type="checkbox"] {
+      cursor: pointer;
+    }
+
+    .community-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .community-label {
+      font-size: 12px;
+      flex: 1;
+    }
+
+    .community-count {
+      font-size: 10px;
+      color: #888;
+    }
+
+    .stats {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #C9873A;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    .stat-label {
+      color: #aaa;
+    }
+
+    .stat-value {
+      color: #C9873A;
+      font-weight: bold;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(201, 135, 58, 0.05);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #C9873A;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #daa947;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🏗️ erlbrew-pos Architecture</h1>
+    <input type="text" class="search-box" id="search" placeholder="Search nodes...">
+  </div>
+
+  <div class="container">
+    <div id="network"></div>
+
+    <div class="sidebar">
+      <h3>📊 Communities</h3>
+      <div class="communities" id="communities"></div>
+
+      <div class="stats">
+        <h4 style="color: #C9873A; margin-bottom: 10px; font-size: 12px; text-transform: uppercase;">Statistics</h4>
+        <div class="stat-row">
+          <span class="stat-label">Total Nodes:</span>
+          <span class="stat-value" id="stat-nodes">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Total Edges:</span>
+          <span class="stat-value" id="stat-edges">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Components:</span>
+          <span class="stat-value" id="stat-components">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Endpoints:</span>
+          <span class="stat-value" id="stat-endpoints">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let network;
+    let graphData;
+    let allNodes = [];
+    let allEdges = [];
+    const communityColors = {
+      'frontend': '#FF6B6B',
+      'backend': '#4ECDC4',
+      'database': '#45B7D1',
+      'feature': '#FFA07A',
+      'external': '#FFD93D',
+      'config': '#A8E6CF',
+      'other': '#95E1D3'
+    };
+
+    async function loadGraph() {
+      try {
+        const response = await fetch('/api/graph');
+        graphData = await response.json();
+        initializeGraph();
+        renderGraph();
+        setupCommunityFilters();
+      } catch (error) {
+        console.error('Failed to load graph:', error);
+      }
+    }
+
+    function initializeGraph() {
+      allNodes = graphData.nodes.map(node => ({
+        id: node.id,
+        label: node.label,
+        title: `${node.type} - ${node.label}`,
+        color: communityColors[node.community] || '#C9873A',
+        font: { color: '#fff', size: 12 },
+        shape: node.type === 'table' ? 'database' : node.type === 'external' ? 'star' : node.type === 'hardware' ? 'triangle' : node.type === 'config' ? 'box' : node.type === 'type' ? 'diamond' : 'dot',
+        size: node.type === 'module' ? 35 : node.type === 'feature' ? 30 : 25,
+        community: node.community,
+        type: node.type
+      }));
+
+      allEdges = graphData.edges.map(edge => ({
+        from: edge.from,
+        to: edge.to,
+        label: edge.label,
+        font: { color: '#aaa', size: 10 },
+        color: { color: '#888', highlight: '#C9873A' },
+        smooth: { type: 'continuous' }
+      }));
+
+      updateStats();
+    }
+
+    function renderGraph() {
+      const nodes = new vis.DataSet(allNodes);
+      const edges = new vis.DataSet(allEdges);
+
+      const container = document.getElementById('network');
+      const data = { nodes, edges };
+      const options = {
+        physics: {
+          enabled: true,
+          stabilization: { iterations: 300 },
+          barnesHut: {
+            gravitationalConstant: -50000,
+            centralGravity: 0.3,
+            springLength: 250,
+            springConstant: 0.04
+          }
+        },
+        interaction: {
+          hover: true,
+          navigationButtons: true,
+          keyboard: true,
+          zoomView: true
+        }
+      };
+
+      network = new vis.Network(container, data, options);
+    }
+
+    function setupCommunityFilters() {
+      const communities = {};
+      allNodes.forEach(node => {
+        if (!communities[node.community]) {
+          communities[node.community] = 0;
+        }
+        communities[node.community]++;
+      });
+
+      let html = '';
+      Object.entries(communities).forEach(([community, count]) => {
+        html += `
+          <label class="community-item">
+            <input type="checkbox" data-community="${community}" checked>
+            <div class="community-color" style="background: ${communityColors[community] || '#C9873A'};"></div>
+            <span class="community-label">${community}</span>
+            <span class="community-count">${count}</span>
+          </label>
+        `;
+      });
+
+      document.getElementById('communities').innerHTML = html;
+
+      document.querySelectorAll('[data-community]').forEach(checkbox => {
+        checkbox.addEventListener('change', filterByCommunities);
+      });
+    }
+
+    function filterByCommunities() {
+      const checkedCommunities = Array.from(
+        document.querySelectorAll('[data-community]:checked')
+      ).map(cb => cb.dataset.community);
+
+      const filteredNodes = allNodes.filter(n => checkedCommunities.includes(n.community));
+      const nodeIds = new Set(filteredNodes.map(n => n.id));
+      const filteredEdges = allEdges.filter(e => nodeIds.has(e.from) && nodeIds.has(e.to));
+
+      const nodes = new vis.DataSet(filteredNodes);
+      const edges = new vis.DataSet(filteredEdges);
+      const data = { nodes, edges };
+
+      network.setData(data);
+    }
+
+    function updateStats() {
+      document.getElementById('stat-nodes').textContent = allNodes.length;
+      document.getElementById('stat-edges').textContent = allEdges.length;
+      document.getElementById('stat-components').textContent = allNodes.filter(n => n.type === 'component').length;
+      document.getElementById('stat-endpoints').textContent = allNodes.filter(n => n.type === 'endpoint' || n.type === 'external').length;
+    }
+
+    document.getElementById('search').addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      const filteredNodes = allNodes.filter(n => n.label.toLowerCase().includes(query));
+      const nodeIds = new Set(filteredNodes.map(n => n.id));
+      const filteredEdges = allEdges.filter(e => nodeIds.has(e.from) && nodeIds.has(e.to));
+
+      const nodes = new vis.DataSet(filteredNodes);
+      const edges = new vis.DataSet(filteredEdges);
+      network.setData({ nodes, edges });
+    });
+
+    loadGraph();
+  </script>
+</body>
+</html>
+

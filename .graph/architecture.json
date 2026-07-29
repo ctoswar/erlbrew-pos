@@ -1,0 +1,878 @@
+{
+  "nodes": [
+    {
+      "id": "comp-adminauditlog",
+      "label": "AdminAuditLog.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "AdminAuditLog.tsx"
+    },
+    {
+      "id": "comp-admincustomers",
+      "label": "AdminCustomers.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "AdminCustomers.tsx"
+    },
+    {
+      "id": "comp-admindashboard",
+      "label": "AdminDashboard.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "AdminDashboard.tsx"
+    },
+    {
+      "id": "comp-admininventory",
+      "label": "AdminInventory.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "AdminInventory.tsx"
+    },
+    {
+      "id": "comp-adminmenu",
+      "label": "AdminMenu.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "AdminMenu.tsx"
+    },
+    {
+      "id": "comp-adminpayroll",
+      "label": "AdminPayroll.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "AdminPayroll.tsx"
+    },
+    {
+      "id": "comp-adminprintsettings",
+      "label": "AdminPrintSettings.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "AdminPrintSettings.tsx"
+    },
+    {
+      "id": "comp-adminreports",
+      "label": "AdminReports.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "AdminReports.tsx"
+    },
+    {
+      "id": "comp-adminscreen",
+      "label": "AdminScreen.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "AdminScreen.tsx"
+    },
+    {
+      "id": "comp-adminstaff",
+      "label": "AdminStaff.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "AdminStaff.tsx"
+    },
+    {
+      "id": "comp-adminsupplierinvoices",
+      "label": "AdminSupplierInvoices.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "AdminSupplierInvoices.tsx"
+    },
+    {
+      "id": "comp-cartpanel",
+      "label": "CartPanel.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "CartPanel.tsx"
+    },
+    {
+      "id": "comp-cashdrawerscreen",
+      "label": "CashDrawerScreen.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "CashDrawerScreen.tsx"
+    },
+    {
+      "id": "comp-checkoutscreen",
+      "label": "CheckoutScreen.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "CheckoutScreen.tsx"
+    },
+    {
+      "id": "comp-customerdisplay",
+      "label": "CustomerDisplay.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "CustomerDisplay.tsx"
+    },
+    {
+      "id": "comp-dashboard",
+      "label": "Dashboard.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "Dashboard.tsx"
+    },
+    {
+      "id": "comp-discountmodal",
+      "label": "DiscountModal.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "DiscountModal.tsx"
+    },
+    {
+      "id": "comp-ingredienteditor",
+      "label": "IngredientEditor.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "IngredientEditor.tsx"
+    },
+    {
+      "id": "comp-kitchenboard",
+      "label": "KitchenBoard.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "KitchenBoard.tsx"
+    },
+    {
+      "id": "comp-loginscreen",
+      "label": "LoginScreen.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "LoginScreen.tsx"
+    },
+    {
+      "id": "comp-menugrid",
+      "label": "MenuGrid.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "MenuGrid.tsx"
+    },
+    {
+      "id": "comp-modifiereditor",
+      "label": "ModifierEditor.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "ModifierEditor.tsx"
+    },
+    {
+      "id": "comp-modifiermodal",
+      "label": "ModifierModal.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "ModifierModal.tsx"
+    },
+    {
+      "id": "comp-orderhistory",
+      "label": "OrderHistory.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "OrderHistory.tsx"
+    },
+    {
+      "id": "comp-paymentscreen",
+      "label": "PaymentScreen.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "PaymentScreen.tsx"
+    },
+    {
+      "id": "comp-posscreen",
+      "label": "POSScreen.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "POSScreen.tsx"
+    },
+    {
+      "id": "comp-receipt",
+      "label": "Receipt.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "Receipt.tsx"
+    },
+    {
+      "id": "comp-receiptpreview",
+      "label": "ReceiptPreview.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "ReceiptPreview.tsx"
+    },
+    {
+      "id": "comp-successscreen",
+      "label": "SuccessScreen.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "SuccessScreen.tsx"
+    },
+    {
+      "id": "comp-timekeeping",
+      "label": "TimeKeeping.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "TimeKeeping.tsx"
+    },
+    {
+      "id": "comp-topbar",
+      "label": "Topbar.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "Topbar.tsx"
+    },
+    {
+      "id": "comp-voidcredentialmodal",
+      "label": "VoidCredentialModal.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "VoidCredentialModal.tsx"
+    },
+    {
+      "id": "comp-zreportscreen",
+      "label": "ZReportScreen.tsx",
+      "type": "component",
+      "community": "frontend",
+      "file": "ZReportScreen.tsx"
+    },
+    {
+      "id": "hook-usecart",
+      "label": "useCart.ts",
+      "type": "hook",
+      "community": "frontend",
+      "file": "useCart.ts"
+    },
+    {
+      "id": "hook-useclock",
+      "label": "useClock.ts",
+      "type": "hook",
+      "community": "frontend",
+      "file": "useClock.ts"
+    },
+    {
+      "id": "hook-usefontsize",
+      "label": "useFontSize.ts",
+      "type": "hook",
+      "community": "frontend",
+      "file": "useFontSize.ts"
+    },
+    {
+      "id": "hook-usekitchenevents",
+      "label": "useKitchenEvents.ts",
+      "type": "hook",
+      "community": "frontend",
+      "file": "useKitchenEvents.ts"
+    },
+    {
+      "id": "hook-useorders",
+      "label": "useOrders.ts",
+      "type": "hook",
+      "community": "frontend",
+      "file": "useOrders.ts"
+    },
+    {
+      "id": "hook-usetheme",
+      "label": "useTheme.ts",
+      "type": "hook",
+      "community": "frontend",
+      "file": "useTheme.ts"
+    },
+    {
+      "id": "hook-useviewport",
+      "label": "useViewport.ts",
+      "type": "hook",
+      "community": "frontend",
+      "file": "useViewport.ts"
+    },
+    {
+      "id": "route-audit",
+      "label": "routes/audit.js",
+      "type": "endpoint",
+      "community": "backend",
+      "file": "audit.js"
+    },
+    {
+      "id": "route-clock",
+      "label": "routes/clock.js",
+      "type": "endpoint",
+      "community": "backend",
+      "file": "clock.js"
+    },
+    {
+      "id": "route-companysettings",
+      "label": "routes/companySettings.js",
+      "type": "endpoint",
+      "community": "backend",
+      "file": "companySettings.js"
+    },
+    {
+      "id": "route-customers",
+      "label": "routes/customers.js",
+      "type": "endpoint",
+      "community": "backend",
+      "file": "customers.js"
+    },
+    {
+      "id": "route-inventory",
+      "label": "routes/inventory.js",
+      "type": "endpoint",
+      "community": "backend",
+      "file": "inventory.js"
+    },
+    {
+      "id": "route-menu",
+      "label": "routes/menu.js",
+      "type": "endpoint",
+      "community": "backend",
+      "file": "menu.js"
+    },
+    {
+      "id": "route-orders",
+      "label": "routes/orders.js",
+      "type": "endpoint",
+      "community": "backend",
+      "file": "orders.js"
+    },
+    {
+      "id": "route-payroll",
+      "label": "routes/payroll.js",
+      "type": "endpoint",
+      "community": "backend",
+      "file": "payroll.js"
+    },
+    {
+      "id": "route-recipes",
+      "label": "routes/recipes.js",
+      "type": "endpoint",
+      "community": "backend",
+      "file": "recipes.js"
+    },
+    {
+      "id": "route-staff",
+      "label": "routes/staff.js",
+      "type": "endpoint",
+      "community": "backend",
+      "file": "staff.js"
+    },
+    {
+      "id": "route-staffschedules",
+      "label": "routes/staffSchedules.js",
+      "type": "endpoint",
+      "community": "backend",
+      "file": "staffSchedules.js"
+    },
+    {
+      "id": "route-supplierinvoices",
+      "label": "routes/supplierInvoices.js",
+      "type": "endpoint",
+      "community": "backend",
+      "file": "supplierInvoices.js"
+    },
+    {
+      "id": "route-upload",
+      "label": "routes/upload.js",
+      "type": "endpoint",
+      "community": "backend",
+      "file": "upload.js"
+    },
+    {
+      "id": "type-index",
+      "label": "index.ts",
+      "type": "type",
+      "community": "frontend",
+      "file": "index.ts"
+    },
+    {
+      "id": "frontend",
+      "label": "Frontend (React/Vite)",
+      "type": "module",
+      "community": "frontend"
+    },
+    {
+      "id": "backend",
+      "label": "Backend (Express)",
+      "type": "module",
+      "community": "backend"
+    },
+    {
+      "id": "database",
+      "label": "MySQL Database",
+      "type": "resource",
+      "community": "database"
+    },
+    {
+      "id": "util-receipt",
+      "label": "receiptUtils.ts",
+      "type": "utility",
+      "community": "frontend"
+    },
+    {
+      "id": "util-api",
+      "label": "api.ts",
+      "type": "utility",
+      "community": "frontend"
+    },
+    {
+      "id": "service-sheets",
+      "label": "services/googleSheets.js",
+      "type": "service",
+      "community": "backend"
+    },
+    {
+      "id": "middleware-auth",
+      "label": "authMiddleware",
+      "type": "middleware",
+      "community": "backend"
+    },
+    {
+      "id": "table-orders",
+      "label": "orders table",
+      "type": "table",
+      "community": "database"
+    },
+    {
+      "id": "table-staff",
+      "label": "staff table",
+      "type": "table",
+      "community": "database"
+    },
+    {
+      "id": "table-inventory",
+      "label": "inventory table",
+      "type": "table",
+      "community": "database"
+    },
+    {
+      "id": "table-time-records",
+      "label": "time_records table",
+      "type": "table",
+      "community": "database"
+    },
+    {
+      "id": "table-adjustments",
+      "label": "time_adjustments table",
+      "type": "table",
+      "community": "database"
+    },
+    {
+      "id": "table-menu",
+      "label": "menu_items table",
+      "type": "table",
+      "community": "database"
+    },
+    {
+      "id": "table-recipes",
+      "label": "recipes table",
+      "type": "table",
+      "community": "database"
+    },
+    {
+      "id": "feature-receipts",
+      "label": "Receipt Printing (57/58/80mm)",
+      "type": "feature",
+      "community": "feature"
+    },
+    {
+      "id": "feature-timekeeping",
+      "label": "Timekeeping & Time Adjustment",
+      "type": "feature",
+      "community": "feature"
+    },
+    {
+      "id": "feature-pos",
+      "label": "Point of Sale",
+      "type": "feature",
+      "community": "feature"
+    },
+    {
+      "id": "feature-inventory",
+      "label": "Inventory Management",
+      "type": "feature",
+      "community": "feature"
+    },
+    {
+      "id": "feature-sheets",
+      "label": "Google Sheets Sync",
+      "type": "feature",
+      "community": "feature"
+    },
+    {
+      "id": "ext-print-server",
+      "label": "Print Server (192.168.75.101:9100)",
+      "type": "external",
+      "community": "external"
+    },
+    {
+      "id": "ext-google-sheets",
+      "label": "Google Sheets API",
+      "type": "external",
+      "community": "external"
+    },
+    {
+      "id": "ext-thermal-printer",
+      "label": "Thermal Printer (58mm/80mm)",
+      "type": "hardware",
+      "community": "external"
+    },
+    {
+      "id": "config-frontend-env",
+      "label": ".env (Frontend)",
+      "type": "config",
+      "community": "config"
+    },
+    {
+      "id": "config-backend-env",
+      "label": ".env (Backend)",
+      "type": "config",
+      "community": "config"
+    },
+    {
+      "id": "config-package",
+      "label": "package.json",
+      "type": "config",
+      "community": "config"
+    },
+    {
+      "id": "config-tsconfig",
+      "label": "tsconfig.json",
+      "type": "config",
+      "community": "config"
+    }
+  ],
+  "edges": [
+    {
+      "from": "frontend",
+      "to": "backend",
+      "label": "HTTP/API"
+    },
+    {
+      "from": "backend",
+      "to": "database",
+      "label": "MySQL"
+    },
+    {
+      "from": "comp-pos",
+      "to": "frontend",
+      "label": "renders"
+    },
+    {
+      "from": "comp-dashboard",
+      "to": "frontend",
+      "label": "renders"
+    },
+    {
+      "from": "comp-payment",
+      "to": "frontend",
+      "label": "renders"
+    },
+    {
+      "from": "comp-admin",
+      "to": "frontend",
+      "label": "renders"
+    },
+    {
+      "from": "comp-receipt-preview",
+      "to": "frontend",
+      "label": "renders"
+    },
+    {
+      "from": "comp-print-settings",
+      "to": "frontend",
+      "label": "renders"
+    },
+    {
+      "from": "comp-kitchen",
+      "to": "frontend",
+      "label": "renders"
+    },
+    {
+      "from": "comp-timekeeping",
+      "to": "frontend",
+      "label": "renders"
+    },
+    {
+      "from": "hook-orders",
+      "to": "util-api",
+      "label": "calls"
+    },
+    {
+      "from": "hook-cart",
+      "to": "util-api",
+      "label": "calls"
+    },
+    {
+      "from": "comp-receipt-preview",
+      "to": "util-receipt",
+      "label": "uses"
+    },
+    {
+      "from": "util-api",
+      "to": "route-orders",
+      "label": "GET/POST"
+    },
+    {
+      "from": "util-api",
+      "to": "route-staff",
+      "label": "POST"
+    },
+    {
+      "from": "util-api",
+      "to": "route-clock",
+      "label": "PUT"
+    },
+    {
+      "from": "util-api",
+      "to": "route-print",
+      "label": "POST"
+    },
+    {
+      "from": "route-orders",
+      "to": "table-orders",
+      "label": "queries"
+    },
+    {
+      "from": "route-orders",
+      "to": "table-menu",
+      "label": "queries"
+    },
+    {
+      "from": "route-staff",
+      "to": "table-staff",
+      "label": "queries"
+    },
+    {
+      "from": "route-inventory",
+      "to": "table-inventory",
+      "label": "queries"
+    },
+    {
+      "from": "route-clock",
+      "to": "table-time-records",
+      "label": "queries"
+    },
+    {
+      "from": "route-clock",
+      "to": "table-adjustments",
+      "label": "inserts"
+    },
+    {
+      "from": "route-print",
+      "to": "table-orders",
+      "label": "queries"
+    },
+    {
+      "from": "middleware-auth",
+      "to": "route-orders",
+      "label": "protects"
+    },
+    {
+      "from": "middleware-auth",
+      "to": "route-clock",
+      "label": "protects"
+    },
+    {
+      "from": "middleware-auth",
+      "to": "route-print",
+      "label": "protects"
+    },
+    {
+      "from": "service-sheets",
+      "to": "route-orders",
+      "label": "called by"
+    },
+    {
+      "from": "feature-receipts",
+      "to": "comp-print-settings",
+      "label": "config"
+    },
+    {
+      "from": "feature-receipts",
+      "to": "comp-receipt-preview",
+      "label": "preview"
+    },
+    {
+      "from": "feature-receipts",
+      "to": "util-receipt",
+      "label": "generation"
+    },
+    {
+      "from": "feature-receipts",
+      "to": "api-print",
+      "label": "prints"
+    },
+    {
+      "from": "feature-timekeeping",
+      "to": "comp-timekeeping",
+      "label": "ui"
+    },
+    {
+      "from": "feature-timekeeping",
+      "to": "api-clock-adjust",
+      "label": "adjustment"
+    },
+    {
+      "from": "feature-timekeeping",
+      "to": "table-time-records",
+      "label": "records"
+    },
+    {
+      "from": "feature-timekeeping",
+      "to": "table-adjustments",
+      "label": "audit"
+    },
+    {
+      "from": "feature-pos",
+      "to": "comp-pos",
+      "label": "ui"
+    },
+    {
+      "from": "feature-pos",
+      "to": "comp-payment",
+      "label": "payment"
+    },
+    {
+      "from": "feature-pos",
+      "to": "api-orders-post",
+      "label": "create"
+    },
+    {
+      "from": "feature-inventory",
+      "to": "route-inventory",
+      "label": "api"
+    },
+    {
+      "from": "feature-sheets",
+      "to": "service-sheets",
+      "label": "integration"
+    },
+    {
+      "from": "api-login",
+      "to": "table-staff",
+      "label": "verify"
+    },
+    {
+      "from": "comp-admin",
+      "to": "feature-receipts",
+      "label": "manages"
+    },
+    {
+      "from": "comp-admin",
+      "to": "feature-inventory",
+      "label": "manages"
+    },
+    {
+      "from": "comp-dashboard",
+      "to": "api-orders-get",
+      "label": "fetches"
+    },
+    {
+      "from": "type-order",
+      "to": "hook-orders",
+      "label": "defines"
+    },
+    {
+      "from": "type-staff",
+      "to": "hook-orders",
+      "label": "defines"
+    },
+    {
+      "from": "type-menu",
+      "to": "comp-pos",
+      "label": "defines"
+    },
+    {
+      "from": "type-timekeeping",
+      "to": "comp-timekeeping",
+      "label": "defines"
+    },
+    {
+      "from": "table-orders",
+      "to": "table-menu",
+      "label": "FK: menu_item_id"
+    },
+    {
+      "from": "table-orders",
+      "to": "table-staff",
+      "label": "FK: staff_id"
+    },
+    {
+      "from": "table-time-records",
+      "to": "table-staff",
+      "label": "FK: staff_id"
+    },
+    {
+      "from": "table-adjustments",
+      "to": "table-time-records",
+      "label": "FK: record_id"
+    },
+    {
+      "from": "table-recipes",
+      "to": "table-menu",
+      "label": "FK: menu_item_id"
+    },
+    {
+      "from": "table-recipes",
+      "to": "table-inventory",
+      "label": "FK: inventory_id"
+    },
+    {
+      "from": "ext-print-server",
+      "to": "ext-thermal-printer",
+      "label": "controls"
+    },
+    {
+      "from": "route-print",
+      "to": "ext-print-server",
+      "label": "proxies to"
+    },
+    {
+      "from": "api-print",
+      "to": "ext-print-server",
+      "label": "sends jobs"
+    },
+    {
+      "from": "service-sheets",
+      "to": "ext-google-sheets",
+      "label": "append orders"
+    },
+    {
+      "from": "feature-receipts",
+      "to": "ext-thermal-printer",
+      "label": "prints to"
+    },
+    {
+      "from": "config-frontend-env",
+      "to": "frontend",
+      "label": "configures"
+    },
+    {
+      "from": "config-backend-env",
+      "to": "backend",
+      "label": "configures"
+    },
+    {
+      "from": "config-package",
+      "to": "frontend",
+      "label": "dependencies"
+    },
+    {
+      "from": "config-package",
+      "to": "backend",
+      "label": "dependencies"
+    },
+    {
+      "from": "config-tsconfig",
+      "to": "frontend",
+      "label": "typescript config"
+    }
+  ],
+  "metadata": {
+    "projectName": "erlbrew-pos",
+    "description": "Restaurant POS System with Timekeeping & Print Integration",
+    "version": "1.0.0",
+    "components": 33,
+    "hooks": 7,
+    "routes": 13,
+    "types": 1,
+    "total_nodes": 80,
+    "total_edges": 65,
+    "last_updated": "2026-07-29T05:32:51.340Z",
+    "auto_detected": true
+  }
+}

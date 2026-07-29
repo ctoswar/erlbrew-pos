@@ -1,0 +1,54 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "gh",
+      "args": ["api"],
+      "description": "GitHub API integration for issues, PRs, and repo data",
+      "enabled": true
+    },
+    "graphify": {
+      "command": "graphify",
+      "args": ["--project", "."],
+      "description": "Graph visualization and analysis for erlbrew-pos project",
+      "enabled": true
+    },
+    "obsidian": {
+      "command": "obsidian-mcp",
+      "args": ["--vault", "./docs", "--autoSync", "true"],
+      "description": "Obsidian vault integration for project documentation",
+      "env": {
+        "OBSIDIAN_WORKSPACE": "erlbrew-pos"
+      },
+      "enabled": true
+    },
+    "database": {
+      "command": "node",
+      "args": ["db-mcp-server.js"],
+      "description": "Query MySQL database directly (erlbrew_pos)",
+      "env": {
+        "DB_TYPE": "mysql",
+        "DB_HOST": "192.168.75.101",
+        "DB_USER": "your_db_user_here",
+        "DB_PASSWORD": "your_db_password_here",
+        "DB_NAME": "erlbrew_pos",
+        "DB_PORT": "3306"
+      },
+      "enabled": true
+    },
+    "filesystem": {
+      "command": "node",
+      "args": ["filesystem-mcp.js"],
+      "description": "Direct filesystem access to project files and directories",
+      "enabled": true
+    },
+    "docker": {
+      "command": "node",
+      "args": ["docker-mcp.js"],
+      "description": "Docker container inspection, logs, and health checks",
+      "enabled": true
+    }
+  },
+  "version": "1.0",
+  "projectPath": ".",
+  "projectName": "erlbrew-pos"
+}

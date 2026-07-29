@@ -1,0 +1,16 @@
+{
+  "vault": "erlbrew-pos",
+  "theme": "dark",
+  "baseFontSize": 16,
+  "obsidianCss": true,
+  "nativeMenus": true,
+  "showInlineTitle": false,
+  "showLineNumber": true,
+  "strictLineBreaks": false,
+  "translatedLanguage": "en",
+  "alwaysUpdateLinks": true,
+  "dailyNotesFormat": "YYYY-MM-DD",
+  "newFileFolderPath": "drafts",
+  "newFileLocation": "folder",
+  "trashInSystemTrash": false
+}

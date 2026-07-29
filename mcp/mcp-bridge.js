@@ -11,10 +11,11 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
 
 class MCPBridge {
   constructor() {
-    this.projectRoot = __dirname;
+    this.projectRoot = projectRoot;
     this.vaultPath = path.join(this.projectRoot, 'docs');
     this.graphPath = path.join(this.projectRoot, '.graph');
   }

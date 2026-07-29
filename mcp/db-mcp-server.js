@@ -12,6 +12,7 @@ import path from 'path';
 import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(__dirname, '..');
 
 class DatabaseMCPServer {
   constructor() {
@@ -38,7 +39,7 @@ class DatabaseMCPServer {
   }
 
   initSQLite() {
-    const dbPath = path.join(__dirname, 'erlbrew_pos.db');
+    const dbPath = path.join(projectRoot, 'erlbrew_pos.db');
     return new Promise((resolve, reject) => {
       const db = new sqlite3.Database(dbPath, (err) => {
         if (err) {

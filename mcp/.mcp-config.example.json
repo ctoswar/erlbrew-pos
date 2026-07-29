@@ -14,7 +14,7 @@
     },
     "obsidian": {
       "command": "obsidian-mcp",
-      "args": ["--vault", "./docs", "--autoSync", "true"],
+      "args": ["--vault", "../docs", "--autoSync", "true"],
       "description": "Obsidian vault integration for project documentation",
       "env": {
         "OBSIDIAN_WORKSPACE": "erlbrew-pos"
@@ -23,7 +23,7 @@
     },
     "database": {
       "command": "node",
-      "args": ["db-mcp-server.js"],
+      "args": ["mcp/db-mcp-server.js"],
       "description": "Query MySQL database directly (erlbrew_pos)",
       "env": {
         "DB_TYPE": "mysql",
@@ -37,13 +37,13 @@
     },
     "filesystem": {
       "command": "node",
-      "args": ["filesystem-mcp.js"],
+      "args": ["mcp/filesystem-mcp.js"],
       "description": "Direct filesystem access to project files and directories",
       "enabled": true
     },
     "docker": {
       "command": "node",
-      "args": ["docker-mcp.js"],
+      "args": ["mcp/docker-mcp.js"],
       "description": "Docker container inspection, logs, and health checks",
       "enabled": true
     }

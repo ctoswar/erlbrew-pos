@@ -10,10 +10,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(__dirname, '..');
 
 class FileSystemMCP {
   constructor() {
-    this.projectRoot = __dirname;
+    this.projectRoot = projectRoot;
     this.allowedPaths = [
       path.join(this.projectRoot, 'src'),
       path.join(this.projectRoot, 'server'),

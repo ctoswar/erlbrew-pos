@@ -11,10 +11,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(__dirname, '..');
 
 class GraphifyWatcher {
   constructor() {
-    this.projectRoot = __dirname;
+    this.projectRoot = projectRoot;
     this.srcDir = path.join(this.projectRoot, 'src');
     this.serverDir = path.join(this.projectRoot, 'server');
     this.graphFile = path.join(this.projectRoot, '.graph', 'architecture.json');

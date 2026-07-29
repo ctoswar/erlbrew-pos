@@ -4,15 +4,16 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(__dirname, '..');
 const app = express();
 
 // Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(projectRoot, 'public')));
 
 // API endpoint to get graph data
 app.get('/api/graph', (req, res) => {
   try {
-    const graphPath = path.join(__dirname, '.graph', 'architecture.json');
+    const graphPath = path.join(projectRoot, '.graph', 'architecture.json');
     const graphData = JSON.parse(fs.readFileSync(graphPath, 'utf8'));
     res.json(graphData);
   } catch (error) {
@@ -22,7 +23,7 @@ app.get('/api/graph', (req, res) => {
 
 // Serve the graph visualization HTML
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(projectRoot, 'public', 'index.html'));
 });
 
 const PORT = process.env.GRAPH_PORT || 5173;

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/app_models.dart';
 import '../theme/app_theme.dart';
+import '../widgets/fade_slide_in.dart';
+import '../widgets/pulse.dart';
 
 class PickupScreen extends StatefulWidget {
   const PickupScreen({super.key});
@@ -79,7 +81,9 @@ class _PickupScreenState extends State<PickupScreen> {
               itemCount: orders.length,
               itemBuilder: (context, index) {
                 final order = orders[index];
-                return Card(
+                return FadeSlideIn(
+                  delay: Duration(milliseconds: index * 70),
+                  child: Card(
                   margin: const EdgeInsets.only(bottom: 14),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -108,20 +112,23 @@ class _PickupScreenState extends State<PickupScreen> {
                                         fontWeight: FontWeight.w700)),
                               ],
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _statusColor(order.status)
-                                    .withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                _statusLabel(order.status),
-                                style: TextStyle(
-                                  color: _statusColor(order.status),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
+                            Pulse(
+                              active: order.status == PickupStatus.ready,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _statusColor(order.status)
+                                      .withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  _statusLabel(order.status),
+                                  style: TextStyle(
+                                    color: _statusColor(order.status),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
                             ),
@@ -159,6 +166,7 @@ class _PickupScreenState extends State<PickupScreen> {
                         ],
                       ],
                     ),
+                  ),
                   ),
                 );
               },

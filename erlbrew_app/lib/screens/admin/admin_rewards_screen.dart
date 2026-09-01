@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/fade_slide_in.dart';
 
 class AdminRewardsScreen extends StatefulWidget {
   const AdminRewardsScreen({super.key});
@@ -174,7 +175,9 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
               itemCount: MockData.catalog.length,
               itemBuilder: (context, i) {
                 final item = MockData.catalog[i];
-                return Padding(
+                return FadeSlideIn(
+                  delay: Duration(milliseconds: i * 60),
+                  child: Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Card(
                     child: Padding(
@@ -227,6 +230,7 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
                         ],
                       ),
                     ),
+                  ),
                   ),
                 );
               },

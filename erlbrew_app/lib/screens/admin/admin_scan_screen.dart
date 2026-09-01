@@ -12,13 +12,25 @@ class AdminScanScreen extends StatefulWidget {
   State<AdminScanScreen> createState() => _AdminScanScreenState();
 }
 
-class _AdminScanScreenState extends State<AdminScanScreen> {
+class _AdminScanScreenState extends State<AdminScanScreen>
+    with SingleTickerProviderStateMixin {
   final MobileScannerController _controller = MobileScannerController();
   bool _handling = false;
+  late final AnimationController _scanLineController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scanLineController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat(reverse: true);
+  }
 
   @override
   void dispose() {
     _controller.dispose();
+    _scanLineController.dispose();
     super.dispose();
   }
 
@@ -94,13 +106,48 @@ class _AdminScanScreenState extends State<AdminScanScreen> {
             child: Container(
               decoration: BoxDecoration(color: Colors.black.withOpacity(0.35)),
               child: Center(
-                child: Container(
+                child: SizedBox(
                   width: 240,
                   height: 240,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white, width: 2),
-                    borderRadius: BorderRadius.circular(20),
-                    color: Colors.transparent,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Corner brackets
+                      const _ScannerCorner(alignment: Alignment.topLeft),
+                      const _ScannerCorner(alignment: Alignment.topRight),
+                      const _ScannerCorner(alignment: Alignment.bottomLeft),
+                      const _ScannerCorner(alignment: Alignment.bottomRight),
+                      // Moving scan line
+                      AnimatedBuilder(
+                        animation: _scanLineController,
+                        builder: (context, child) {
+                          return Positioned(
+                            top: 8 + _scanLineController.value * 224,
+                            left: 8,
+                            right: 8,
+                            child: child!,
+                          );
+                        },
+                        child: Container(
+                          height: 2,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.gold.withOpacity(0),
+                                AppColors.gold,
+                                AppColors.gold.withOpacity(0),
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.gold.withOpacity(0.6),
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -126,6 +173,51 @@ class _AdminScanScreenState extends State<AdminScanScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One gold corner bracket of the scanner viewfinder — four of these
+/// combine to frame the square instead of a plain box border.
+class _ScannerCorner extends StatelessWidget {
+  final Alignment alignment;
+  const _ScannerCorner({required this.alignment});
+
+  @override
+  Widget build(BuildContext context) {
+    final isTop = alignment.y < 0;
+    final isLeft = alignment.x < 0;
+    return Align(
+      alignment: alignment,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          border: Border(
+            top: isTop
+                ? const BorderSide(color: AppColors.gold, width: 3)
+                : BorderSide.none,
+            bottom: !isTop
+                ? const BorderSide(color: AppColors.gold, width: 3)
+                : BorderSide.none,
+            left: isLeft
+                ? const BorderSide(color: AppColors.gold, width: 3)
+                : BorderSide.none,
+            right: !isLeft
+                ? const BorderSide(color: AppColors.gold, width: 3)
+                : BorderSide.none,
+          ),
+          borderRadius: BorderRadius.only(
+            topLeft: isTop && isLeft ? const Radius.circular(16) : Radius.zero,
+            topRight:
+                isTop && !isLeft ? const Radius.circular(16) : Radius.zero,
+            bottomLeft:
+                !isTop && isLeft ? const Radius.circular(16) : Radius.zero,
+            bottomRight:
+                !isTop && !isLeft ? const Radius.circular(16) : Radius.zero,
+          ),
+        ),
       ),
     );
   }
@@ -249,7 +341,15 @@ class _AwardSheetState extends State<_AwardSheet> {
                     '${_addStamp ? ' + 1 stamp' : ''}'),
               ),
             ] else ...[
-              Icon(Icons.check_circle, color: AppColors.success, size: 48),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.elasticOut,
+                builder: (context, t, child) =>
+                    Transform.scale(scale: t, child: child),
+                child: Icon(Icons.check_circle,
+                    color: AppColors.success, size: 48),
+              ),
               const SizedBox(height: 12),
               Text('Awarded to ${c.name}',
                   style: Theme.of(context).textTheme.titleLarge,

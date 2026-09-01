@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/app_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
+import '../widgets/fade_slide_in.dart';
 import '../widgets/luxury_button.dart';
 import 'admin/admin_home_shell.dart';
 import 'home_shell.dart';
@@ -67,10 +68,12 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              _HeroPanel(isAdmin: _isAdmin),
+              FadeSlideIn(child: _HeroPanel(isAdmin: _isAdmin)),
               Transform.translate(
                 offset: const Offset(0, -32),
-                child: Container(
+                child: FadeSlideIn(
+                  delay: const Duration(milliseconds: 160),
+                  child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 22),
                   padding: const EdgeInsets.fromLTRB(26, 28, 26, 26),
                   decoration: BoxDecoration(
@@ -187,6 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                   ),
+                ),
                 ),
               ),
             ],

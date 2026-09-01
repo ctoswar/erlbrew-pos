@@ -3,10 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 /// A richer primary action button than the default ElevatedButton —
-/// dark onyx-to-espresso gradient, a gold top hairline, and
-/// letter-spaced caps text. Used for the main call-to-action on
-/// login/signup so they feel like a boutique product, not a form.
-class LuxuryButton extends StatelessWidget {
+/// dark onyx-to-espresso gradient, a gold hairline border, letter-spaced
+/// caps text, and a tactile press-down scale so it feels responsive,
+/// not flat. Used for the main call-to-action on login/signup/rewards.
+class LuxuryButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool loading;
@@ -21,19 +21,36 @@ class LuxuryButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final disabled = onPressed == null || loading;
+  State<LuxuryButton> createState() => _LuxuryButtonState();
+}
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: disabled ? null : onPressed,
-        child: Container(
+class _LuxuryButtonState extends State<LuxuryButton> {
+  bool _pressed = false;
+
+  bool get _disabled => widget.onPressed == null || widget.loading;
+
+  void _setPressed(bool v) {
+    if (_disabled) return;
+    setState(() => _pressed = v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _setPressed(true),
+      onTapUp: (_) => _setPressed(false),
+      onTapCancel: () => _setPressed(false),
+      onTap: _disabled ? null : widget.onPressed,
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
           height: 56,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: disabled
+              colors: _disabled
                   ? [AppColors.slateGrey, AppColors.slateGrey]
                   : AppColors.onyxGradient,
               begin: Alignment.topLeft,
@@ -41,12 +58,12 @@ class LuxuryButton extends StatelessWidget {
             ),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: disabled
+              color: _disabled
                   ? Colors.transparent
-                  : AppColors.gold.withOpacity(0.6),
+                  : AppColors.gold.withOpacity(_pressed ? 0.85 : 0.6),
               width: 1,
             ),
-            boxShadow: disabled
+            boxShadow: _disabled || _pressed
                 ? []
                 : [
                     BoxShadow(
@@ -57,7 +74,7 @@ class LuxuryButton extends StatelessWidget {
                   ],
           ),
           alignment: Alignment.center,
-          child: loading
+          child: widget.loading
               ? const SizedBox(
                   height: 22,
                   width: 22,
@@ -69,12 +86,12 @@ class LuxuryButton extends StatelessWidget {
               : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (icon != null) ...[
-                      Icon(icon, color: AppColors.goldLight, size: 18),
+                    if (widget.icon != null) ...[
+                      Icon(widget.icon, color: AppColors.goldLight, size: 18),
                       const SizedBox(width: 10),
                     ],
                     Text(
-                      label.toUpperCase(),
+                      widget.label.toUpperCase(),
                       style: GoogleFonts.quicksand(
                         color: AppColors.goldLight,
                         fontWeight: FontWeight.w700,

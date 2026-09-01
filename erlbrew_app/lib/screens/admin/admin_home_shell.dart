@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/animated_counter.dart';
+import '../../widgets/fade_slide_in.dart';
 import '../login_screen.dart';
 import 'admin_customers_screen.dart';
 import 'admin_orders_screen.dart';
@@ -98,7 +100,8 @@ class _AdminDashboard extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Container(
+          FadeSlideIn(
+            child: Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -140,15 +143,18 @@ class _AdminDashboard extends StatelessWidget {
                 ),
               ],
             ),
+            ),
           ),
           const SizedBox(height: 20),
-          Row(
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 90),
+            child: Row(
             children: [
               Expanded(
                 child: _StatCard(
                   icon: Icons.hourglass_top,
                   label: 'Preparing',
-                  value: '$preparing',
+                  value: preparing,
                   color: AppColors.gold,
                 ),
               ),
@@ -157,20 +163,23 @@ class _AdminDashboard extends StatelessWidget {
                 child: _StatCard(
                   icon: Icons.check_circle_outline,
                   label: 'Ready',
-                  value: '$ready',
+                  value: ready,
                   color: AppColors.matcha,
                 ),
               ),
             ],
+            ),
           ),
           const SizedBox(height: 12),
-          Row(
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 150),
+            child: Row(
             children: [
               Expanded(
                 child: _StatCard(
                   icon: Icons.people_outline,
                   label: 'Customers',
-                  value: '$totalCustomers',
+                  value: totalCustomers,
                   color: AppColors.coffeeBrown,
                 ),
               ),
@@ -179,16 +188,25 @@ class _AdminDashboard extends StatelessWidget {
                 child: _StatCard(
                   icon: Icons.card_giftcard_outlined,
                   label: 'Points Outstanding',
-                  value: '$totalPointsIssued',
+                  value: totalPointsIssued,
                   color: AppColors.matchaDark,
                 ),
               ),
             ],
+            ),
           ),
           const SizedBox(height: 24),
-          Text('Recent Orders', style: Theme.of(context).textTheme.titleLarge),
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 200),
+            child: Text('Recent Orders',
+                style: Theme.of(context).textTheme.titleLarge),
+          ),
           const SizedBox(height: 12),
-          ...orders.take(3).map((o) => Padding(
+          ...orders.take(3).toList().asMap().entries.map((entry) {
+            final o = entry.value;
+            return FadeSlideIn(
+              delay: Duration(milliseconds: 240 + entry.key * 70),
+              child: Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Card(
                   child: ListTile(
@@ -213,7 +231,9 @@ class _AdminDashboard extends StatelessWidget {
                     ),
                   ),
                 ),
-              )),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -223,7 +243,7 @@ class _AdminDashboard extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String value;
+  final int value;
   final Color color;
 
   const _StatCard({
@@ -250,9 +270,11 @@ class _StatCard extends StatelessWidget {
               child: Icon(icon, color: color, size: 18),
             ),
             const SizedBox(height: 12),
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 22, fontWeight: FontWeight.bold)),
+            AnimatedCounter(
+              value: value,
+              style: const TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.bold),
+            ),
             Text(label,
                 style: TextStyle(fontSize: 12, color: AppColors.slateGrey)),
           ],

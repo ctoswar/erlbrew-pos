@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/app_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
+import '../widgets/fade_slide_in.dart';
 import '../widgets/luxury_button.dart';
 import 'home_shell.dart';
 
@@ -67,7 +68,8 @@ class _SignupScreenState extends State<SignupScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 8),
-          child: Form(
+          child: FadeSlideIn(
+            child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -156,6 +158,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 24),
               ],
             ),
+          ),
           ),
         ),
       ),

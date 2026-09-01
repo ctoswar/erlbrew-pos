@@ -67,6 +67,9 @@ flutter run
 
 ## Styling
 Colors and fonts in `lib/theme/app_theme.dart` and `lib/widgets/brand_mark.dart`
-follow Erlbrew's existing branding: Playfair Display + Quicksand for UI text,
-Cinzel + Cormorant Garamond for the wordmark, and a warm espresso/matcha
-palette.
+follow Erlbrew's own logo lockup — espresso/onyx darks, warm ivory backgrounds,
+metallic gold accents, hairline borders instead of heavy boxes, and underline
+inputs for a boutique feel. The real logo lives at
+`assets/images/erlbrew_logo.jpg` and is registered in `pubspec.yaml` — swap
+that file (keep the same name/path, or update the path in both places) if you
+get a higher-res version later.

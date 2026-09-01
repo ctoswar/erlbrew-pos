@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/fade_slide_in.dart';
 
 class AdminCustomersScreen extends StatefulWidget {
   const AdminCustomersScreen({super.key});
@@ -81,7 +82,9 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
                     itemCount: customers.length,
                     itemBuilder: (context, i) {
                       final c = customers[i];
-                      return Padding(
+                      return FadeSlideIn(
+                        delay: Duration(milliseconds: i * 60),
+                        child: Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Card(
                           child: ListTile(
@@ -117,6 +120,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
                             ),
                             onTap: () => _adjustPoints(c),
                           ),
+                        ),
                         ),
                       );
                     },

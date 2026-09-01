@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/fade_slide_in.dart';
 
 class AdminOrdersScreen extends StatefulWidget {
   const AdminOrdersScreen({super.key});
@@ -95,7 +96,9 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                     itemCount: orders.length,
                     itemBuilder: (context, i) {
                       final order = orders[i];
-                      return Padding(
+                      return FadeSlideIn(
+                        delay: Duration(milliseconds: i * 60),
+                        child: Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Card(
                           child: Padding(
@@ -190,6 +193,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                               ],
                             ),
                           ),
+                        ),
                         ),
                       );
                     },

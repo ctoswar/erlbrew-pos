@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { formatCurrency, formatDate } from "../utils";
+import { Order, Staff } from "../types";
 import { Customer, getCustomers, getTopCustomers, getCustomerOrders, updateCustomer } from "../utils/api";
 
 export const AdminCustomers: React.FC = () => {
@@ -53,8 +54,25 @@ export const AdminCustomers: React.FC = () => {
     setEditNotes(customer.notes || "");
     setView("detail");
     try {
-      const orders = await getCustomerOrders(customer.id);
-      setCustomerOrders(orders);
+      const rawOrders = await getCustomerOrders(customer.id);
+      setCustomerOrders(rawOrders.map((o: Record<string, unknown>) => ({
+        id: String(o.id ?? ''),
+        items: Array.isArray(o.items) ? o.items : [],
+        staff: o.staff_name ? {
+          id: Number(o.staff_id ?? 0), name: String(o.staff_name),
+          initials: String(o.staff_initials || ''), rfid: String(o.staff_rfid || ''),
+          role: (String(o.staff_role || 'Barista').charAt(0).toUpperCase() + String(o.staff_role || 'Barista').slice(1)) as Staff['role'],
+          color: String(o.staff_color || '#C9873A'), pin: ''
+        } : { rfid: '', pin: '', name: 'Unknown', role: 'Barista' as const, initials: '??', color: '#666' },
+        status: String(o.status ?? 'preparing') as Order['status'],
+        subtotal: Number(o.subtotal ?? 0), tax: Number(o.tax ?? 0), total: Number(o.total ?? 0),
+        createdAt: new Date(String(o.created_at ?? o.createdAt ?? new Date())),
+        completedAt: o.completed_at ? new Date(String(o.completed_at)) : o.completedAt ? new Date(String(o.completedAt)) : undefined,
+        customerName: String(o.customer_name ?? o.customerName ?? ''),
+        type: (o.type ?? 'dine-in') as Order['type'],
+        payMethod: String(o.payMethod || o.pay_method || 'cash') as Order['payMethod'],
+        referenceNumber: String(o.referenceNumber || o.reference_number || ''),
+      })));
     } catch (e) {
       console.error("Failed to fetch customer orders:", e);
     }
@@ -147,7 +165,7 @@ export const AdminCustomers: React.FC = () => {
               <tbody>
                 {customerOrders.map((o) => (
                   <tr key={o.id} className="border-b border-erl-border-subtle hover:bg-erl-surface/50 transition-colors">
-                    <td className="py-2 px-3 text-[10px] text-erl-text-secondary">{formatDate(new Date(o.created_at))}</td>
+                    <td className="py-2 px-3 text-[10px] text-erl-text-secondary">{formatDate(new Date(o.createdAt))}</td>
                     <td className="py-2 px-3">
                       <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md ${
                         o.status === 'completed' ? 'bg-erl-success/10 text-erl-success' :
@@ -157,7 +175,7 @@ export const AdminCustomers: React.FC = () => {
                       }`}>{o.status}</span>
                     </td>
                     <td className="py-2 px-3 text-[10px] text-erl-text-primary font-bold">{formatCurrency(o.total)}</td>
-                    <td className="py-2 px-3 text-[10px] text-erl-text-secondary capitalize">{o.pay_method}</td>
+                    <td className="py-2 px-3 text-[10px] text-erl-text-secondary capitalize">{o.payMethod}</td>
                   </tr>
                 ))}
               </tbody>

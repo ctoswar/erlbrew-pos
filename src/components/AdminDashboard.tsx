@@ -86,7 +86,11 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
         const parsed = JSON.parse(storedOrders);
         setOrders(parsed.map((o: Record<string, unknown>) => ({
           id: String(o.id ?? ''),
-          items: Array.isArray(o.items) ? o.items : [],
+        items: Array.isArray(o.items) ? o.items.map((it: any) => ({
+          item: { id: it.menu_item_id || '', name: it.menu_item_name || it.name || 'Unknown', category: '', price: Number(it.price) || 0, badge: '', description: '', emoji: '' },
+          qty: it.qty || 1, notes: it.notes || '',
+          modifiers: (it.modifiers || []).map((m: any) => ({ name: m.name || '', price: Number(m.price) || 0 })),
+        })) : [],
           staff: o.staff && typeof o.staff === 'object' ? o.staff : { rfid: '', pin: '', name: 'Unknown', role: 'Barista' as const, initials: '??', color: '#666' },
           status: String(o.status ?? 'preparing') as Order['status'],
           subtotal: Number(o.subtotal ?? 0),
@@ -207,7 +211,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
     reader.onload = (e) => {
       try {
         const data = JSON.parse(e.target?.result as string);
-        if (data.orders) { setOrders(data.orders.map((o: any) => ({ ...o, createdAt: new Date(o.createdAt) }))); localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(data.orders)); }
+        if (data.orders) { const mapped = data.orders.map((o: any) => ({ ...o, createdAt: new Date(o.createdAt) })); setOrders(mapped); localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(mapped)); }
         if (data.inventory) { setInventory(data.inventory); localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(data.inventory)); }
         alert('Data imported successfully!');
       } catch { alert('Invalid backup file'); }

@@ -103,21 +103,23 @@ class _AdminDashboard extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: AppColors.espressoGradient,
+                colors: AppColors.onyxGradient,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.gold.withOpacity(0.3)),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
+                    color: AppColors.gold.withOpacity(0.14),
                     shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.gold.withOpacity(0.4)),
                   ),
-                  child: const Icon(Icons.storefront, color: Colors.white),
+                  child: const Icon(Icons.storefront, color: AppColors.goldLight),
                 ),
                 const SizedBox(width: 14),
                 Expanded(

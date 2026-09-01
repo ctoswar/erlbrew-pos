@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/app_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
+import '../widgets/luxury_button.dart';
 import 'home_shell.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -58,20 +59,24 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Account')),
+      backgroundColor: AppColors.ivory,
+      appBar: AppBar(
+        title: const Text('Create Account'),
+        backgroundColor: AppColors.ivory,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 8),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 8),
-                const BrandMark(size: 56),
-                const SizedBox(height: 28),
+                const SizedBox(height: 4),
+                Center(child: const BrandMark(width: 108)),
+                const SizedBox(height: 26),
                 Text(
-                  'Join the rewards club',
+                  'Join the Rewards Club',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.displayMedium,
                 ),
@@ -79,26 +84,26 @@ class _SignupScreenState extends State<SignupScreen> {
                 Text(
                   'Earn points and stamps every time you order',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.slateGrey, fontSize: 14),
+                  style: TextStyle(color: AppColors.slateGrey, fontSize: 13.5),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 30),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
                     labelText: 'Full Name',
-                    prefixIcon: Icon(Icons.person_outline),
+                    prefixIcon: Icon(Icons.person_outline, size: 20),
                   ),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Enter your name'
                       : null,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 22),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                     labelText: 'Email',
-                    prefixIcon: Icon(Icons.mail_outline),
+                    prefixIcon: Icon(Icons.mail_outline, size: 20),
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return 'Enter your email';
@@ -106,29 +111,32 @@ class _SignupScreenState extends State<SignupScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 22),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(
                     labelText: 'Mobile Number',
-                    prefixIcon: Icon(Icons.phone_outlined),
+                    prefixIcon: Icon(Icons.phone_outlined, size: 20),
                   ),
                   validator: (v) => (v == null || v.trim().length < 7)
                       ? 'Enter a valid mobile number'
                       : null,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 22),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscure,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    prefixIcon: const Icon(Icons.lock_outline, size: 20),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscure
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined),
+                      icon: Icon(
+                        _obscure
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        size: 20,
+                      ),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
@@ -139,19 +147,11 @@ class _SignupScreenState extends State<SignupScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 28),
-                ElevatedButton(
-                  onPressed: _loading ? null : _handleSignup,
-                  child: _loading
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.4,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Create Account'),
+                const SizedBox(height: 32),
+                LuxuryButton(
+                  label: 'Create Account',
+                  loading: _loading,
+                  onPressed: _handleSignup,
                 ),
                 const SizedBox(height: 24),
               ],

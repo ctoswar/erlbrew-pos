@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/app_models.dart';
 import '../theme/app_theme.dart';
+import '../widgets/luxury_button.dart';
 import 'my_qr_screen.dart';
 
 class RewardsScreen extends StatefulWidget {
@@ -66,22 +67,23 @@ class _RewardsScreenState extends State<RewardsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // Points balance card
+          // Points balance card — styled like a membership card
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: AppColors.espressoGradient,
+                colors: AppColors.onyxGradient,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: AppColors.gold.withOpacity(0.35)),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.espresso.withOpacity(0.28),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
+                  color: AppColors.espresso.withOpacity(0.32),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
                 ),
               ],
             ),
@@ -98,11 +100,13 @@ class _RewardsScreenState extends State<RewardsScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.12),
+                        color: AppColors.gold.withOpacity(0.14),
                         shape: BoxShape.circle,
+                        border: Border.all(
+                            color: AppColors.gold.withOpacity(0.4)),
                       ),
                       child: const Icon(Icons.local_cafe,
-                          color: AppColors.gold, size: 18),
+                          color: AppColors.goldLight, size: 18),
                     ),
                   ],
                 ),
@@ -121,9 +125,11 @@ class _RewardsScreenState extends State<RewardsScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'points',
-                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                      style: TextStyle(
+                          color: AppColors.goldLight.withOpacity(0.85),
+                          fontSize: 16),
                     ),
                   ],
                 ),
@@ -132,6 +138,18 @@ class _RewardsScreenState extends State<RewardsScreen> {
                   'Keep ordering to unlock more rewards',
                   style: TextStyle(color: Colors.white54, fontSize: 12),
                 ),
+                const SizedBox(height: 14),
+                Container(height: 1, color: Colors.white.withOpacity(0.12)),
+                const SizedBox(height: 10),
+                Text(
+                  'ERLBREW MEMBER',
+                  style: TextStyle(
+                    color: AppColors.goldLight.withOpacity(0.6),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 2.4,
+                  ),
+                ),
               ],
             ),
           ),
@@ -139,14 +157,10 @@ class _RewardsScreenState extends State<RewardsScreen> {
 
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
+            child: LuxuryButton(
+              label: 'Show My QR Code',
+              icon: Icons.qr_code_2,
               onPressed: _showMyQr,
-              icon: const Icon(Icons.qr_code_2, size: 20),
-              label: const Text('Show My QR Code'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.matcha,
-                minimumSize: const Size.fromHeight(52),
-              ),
             ),
           ),
           const SizedBox(height: 18),
@@ -177,11 +191,11 @@ class _RewardsScreenState extends State<RewardsScreen> {
                           child: CircleAvatar(
                             radius: 16,
                             backgroundColor:
-                                filled ? AppColors.matcha : AppColors.latte,
+                                filled ? AppColors.espresso : AppColors.latte,
                             child: Icon(
                               filled ? Icons.local_cafe : Icons.local_cafe_outlined,
                               size: 16,
-                              color: filled ? Colors.white : AppColors.slateGrey,
+                              color: filled ? AppColors.goldLight : AppColors.slateGrey,
                             ),
                           ),
                         ),
@@ -196,7 +210,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
                       minHeight: 6,
                       backgroundColor: AppColors.latte,
                       valueColor:
-                          const AlwaysStoppedAnimation(AppColors.matcha),
+                          const AlwaysStoppedAnimation(AppColors.gold),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -255,8 +269,9 @@ class _RewardsScreenState extends State<RewardsScreen> {
                         child: FilledButton(
                           style: FilledButton.styleFrom(
                             backgroundColor: affordable
-                                ? AppColors.matcha
+                                ? AppColors.espresso
                                 : AppColors.slateGrey,
+                            foregroundColor: AppColors.goldLight,
                             minimumSize: const Size(0, 36),
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 14),

@@ -39,59 +39,6 @@ class FirebaseAuthService {
 
   String? get currentUserId => _auth?.currentUser?.uid;
 
-  Future<void> setUserRole({
-    required String uid,
-    required String role,
-    String? name,
-    String? email,
-  }) async {
-    await _ensureReady();
-    final normalizedRole = role == 'admin' ? 'admin' : 'customer';
-    final normalizedName = name?.trim().isNotEmpty == true ? name!.trim() : null;
-    final normalizedEmail = email?.trim().isNotEmpty == true ? email!.trim() : null;
-
-    await _firestore!.collection('users').doc(uid).set(
-      {
-        'uid': uid,
-        'role': normalizedRole,
-        'isAdmin': normalizedRole == 'admin',
-        if (normalizedName != null) 'name': normalizedName,
-        if (normalizedEmail != null) 'email': normalizedEmail,
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
-  }
-
-  Future<AppUser> createAdminAccount({
-    required String name,
-    required String email,
-    required String password,
-  }) async {
-    await _ensureReady();
-
-    final credential = await _auth!.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password.trim(),
-    );
-
-    final cleanName = name.trim();
-    await credential.user?.updateDisplayName(cleanName);
-    await setUserRole(
-      uid: credential.user!.uid,
-      role: 'admin',
-      name: cleanName,
-      email: email.trim(),
-    );
-
-    return AppUser(
-      id: credential.user!.uid,
-      name: cleanName,
-      email: email.trim(),
-      isAdmin: true,
-    );
-  }
-
   Future<AppUser> signInWithEmailPassword({
     required String email,
     required String password,

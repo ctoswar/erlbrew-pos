@@ -14,29 +14,37 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   PickupStatus? _filter;
 
   String _label(PickupStatus s) => switch (s) {
+        PickupStatus.pending => 'Payment Pending',
         PickupStatus.preparing => 'Preparing',
         PickupStatus.ready => 'Ready',
         PickupStatus.completed => 'Completed',
+        PickupStatus.cancelled => 'Cancelled',
       };
 
   Color _color(PickupStatus s) => switch (s) {
+        PickupStatus.pending => AppColors.gold,
         PickupStatus.preparing => AppColors.gold,
         PickupStatus.ready => AppColors.matcha,
         PickupStatus.completed => AppColors.slateGrey,
+        PickupStatus.cancelled => AppColors.error,
       };
 
   IconData _icon(PickupStatus s) => switch (s) {
+        PickupStatus.pending => Icons.hourglass_empty,
         PickupStatus.preparing => Icons.hourglass_top,
         PickupStatus.ready => Icons.check_circle_outline,
         PickupStatus.completed => Icons.task_alt,
+        PickupStatus.cancelled => Icons.cancel_outlined,
       };
 
   void _advance(PickupOrder order) {
     setState(() {
       order.status = switch (order.status) {
+        PickupStatus.pending => PickupStatus.pending,
         PickupStatus.preparing => PickupStatus.ready,
         PickupStatus.ready => PickupStatus.completed,
         PickupStatus.completed => PickupStatus.completed,
+        PickupStatus.cancelled => PickupStatus.cancelled,
       };
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -150,7 +158,9 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                                               color: AppColors.slateGrey,
                                               fontSize: 13)),
                                       const SizedBox(height: 12),
-                                      if (order.status != PickupStatus.completed)
+                                      if (order.status != PickupStatus.completed &&
+                                          order.status != PickupStatus.pending &&
+                                          order.status != PickupStatus.cancelled)
                                         SizedBox(
                                           width: double.infinity,
                                           child: FilledButton(
@@ -179,7 +189,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                                                 size: 16,
                                                 color: AppColors.success),
                                             const SizedBox(width: 6),
-                                            Text('Completed',
+                                            Text(_label(order.status),
                                                 style: TextStyle(
                                                     color: AppColors.success,
                                                     fontWeight:

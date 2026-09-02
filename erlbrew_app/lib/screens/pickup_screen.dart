@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../models/app_models.dart';
+import '../services/paymongo_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/pulse.dart';
@@ -13,25 +16,76 @@ class PickupScreen extends StatefulWidget {
 }
 
 class _PickupScreenState extends State<PickupScreen> {
+  Timer? _statusTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _statusTimer = Timer.periodic(
+      const Duration(seconds: 8),
+      (_) => _refreshPendingOrders(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshPendingOrders() async {
+    final pending = MockData.orders
+        .where((order) => order.status == PickupStatus.pending)
+        .toList();
+    for (final order in pending) {
+      try {
+        final status =
+            await PayMongoService.instance.fetchOrderStatus(order.id);
+        if (status != order.status && mounted) {
+          setState(() {
+            order.status = status;
+            if (status == PickupStatus.preparing ||
+                status == PickupStatus.ready ||
+                status == PickupStatus.completed) {
+              order.paymentStatus = PickupPaymentStatus.paid;
+            } else if (status == PickupStatus.cancelled) {
+              order.paymentStatus = PickupPaymentStatus.cancelled;
+            }
+          });
+        }
+      } catch (_) {
+        // A temporary network failure should not disrupt the pickup screen.
+      }
+    }
+  }
+
   String _statusLabel(PickupStatus s) {
     switch (s) {
+      case PickupStatus.pending:
+        return 'Payment Pending';
       case PickupStatus.preparing:
         return 'Preparing';
       case PickupStatus.ready:
         return 'Ready for Pickup';
       case PickupStatus.completed:
         return 'Completed';
+      case PickupStatus.cancelled:
+        return 'Payment Cancelled';
     }
   }
 
   Color _statusColor(PickupStatus s) {
     switch (s) {
+      case PickupStatus.pending:
+        return AppColors.gold;
       case PickupStatus.preparing:
         return AppColors.gold;
       case PickupStatus.ready:
         return AppColors.matcha;
       case PickupStatus.completed:
         return AppColors.slateGrey;
+      case PickupStatus.cancelled:
+        return AppColors.error;
     }
   }
 
@@ -57,8 +111,7 @@ class _PickupScreenState extends State<PickupScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.coffee_outlined,
-                      size: 48, color: AppColors.latte),
+                  Icon(Icons.coffee_outlined, size: 48, color: AppColors.latte),
                   const SizedBox(height: 12),
                   Text(
                     'No pickup orders yet',
@@ -75,100 +128,111 @@ class _PickupScreenState extends State<PickupScreen> {
                 return FadeSlideIn(
                   delay: Duration(milliseconds: index * 70),
                   child: Card(
-                  margin: const EdgeInsets.only(bottom: 14),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 36,
-                                  height: 36,
+                    margin: const EdgeInsets.only(bottom: 14),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.latte,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: const Icon(Icons.receipt_long,
+                                        size: 18, color: AppColors.coffeeBrown),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text('#${order.id}',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                              Pulse(
+                                active: order.status == PickupStatus.ready,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppColors.latte,
-                                    borderRadius: BorderRadius.circular(10),
+                                    color: _statusColor(order.status)
+                                        .withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(20),
                                   ),
-                                  alignment: Alignment.center,
-                                  child: const Icon(Icons.receipt_long,
-                                      size: 18, color: AppColors.coffeeBrown),
+                                  child: Text(
+                                    _statusLabel(order.status),
+                                    style: TextStyle(
+                                      color: _statusColor(order.status),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
-                                const SizedBox(width: 10),
-                                Text('#${order.id}',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w700)),
-                              ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(order.itemSummary,
+                              style: TextStyle(color: AppColors.slateGrey)),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Placed ${order.placedAt.hour.toString().padLeft(2, '0')}:${order.placedAt.minute.toString().padLeft(2, '0')}',
+                            style: TextStyle(
+                                color: AppColors.slateGrey, fontSize: 12),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Payment: ${order.paymentMethod == PickupPaymentMethod.gcash ? 'GCash' : 'QRPh'}'
+                            '${order.paymentStatus == PickupPaymentStatus.pending ? ' · Awaiting confirmation' : ''}'
+                            '${order.paymentStatus == PickupPaymentStatus.failed ? ' · Failed' : ''}'
+                            '${order.paymentStatus == PickupPaymentStatus.cancelled ? ' · Cancelled' : ''}',
+                            style: TextStyle(
+                              color: AppColors.coffeeBrown,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
-                            Pulse(
-                              active: order.status == PickupStatus.ready,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: _statusColor(order.status)
-                                      .withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
+                          ),
+                          if (order.status == PickupStatus.pending) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              'Complete payment in the checkout window. We will start preparing your order after PayMongo confirms it.',
+                              style: TextStyle(
+                                color: AppColors.slateGrey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ] else if (order.status != PickupStatus.completed &&
+                              order.status != PickupStatus.cancelled) ...[
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    order.status =
+                                        order.status == PickupStatus.preparing
+                                            ? PickupStatus.ready
+                                            : PickupStatus.completed;
+                                  });
+                                },
                                 child: Text(
-                                  _statusLabel(order.status),
-                                  style: TextStyle(
-                                    color: _statusColor(order.status),
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 12,
-                                  ),
+                                  order.status == PickupStatus.preparing
+                                      ? 'Simulate: Mark Ready'
+                                      : "I've Picked This Up",
                                 ),
                               ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(order.itemSummary,
-                            style: TextStyle(color: AppColors.slateGrey)),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Placed ${order.placedAt.hour.toString().padLeft(2, '0')}:${order.placedAt.minute.toString().padLeft(2, '0')}',
-                          style: TextStyle(
-                              color: AppColors.slateGrey, fontSize: 12),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          order.paymentMethod == PickupPaymentMethod.gcash
-                              ? 'Payment: GCash'
-                              : 'Payment: QRPh',
-                          style: TextStyle(
-                            color: AppColors.coffeeBrown,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (order.status != PickupStatus.completed) ...[
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton(
-                              onPressed: () {
-                                setState(() {
-                                  order.status =
-                                      order.status == PickupStatus.preparing
-                                          ? PickupStatus.ready
-                                          : PickupStatus.completed;
-                                });
-                              },
-                              child: Text(
-                                order.status == PickupStatus.preparing
-                                    ? 'Simulate: Mark Ready'
-                                    : "I've Picked This Up",
-                              ),
-                            ),
-                          ),
                         ],
-                      ],
+                      ),
                     ),
-                  ),
                   ),
                 );
               },

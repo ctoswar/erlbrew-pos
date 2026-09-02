@@ -1,0 +1,17 @@
+{
+  "name": "erlbrew-paymongo-functions",
+  "private": true,
+  "description": "Secure PayMongo checkout and webhook handlers for Erlbrew",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "build": "node --check index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.2",
+    "firebase-functions": "^6.4.0"
+  }
+}

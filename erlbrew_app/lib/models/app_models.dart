@@ -45,20 +45,32 @@ class RewardItem {
 /// pick from when placing a pickup order (different from [RewardItem],
 /// which is what points get redeemed for).
 class MenuItem {
+  final String id;
   String name;
   String category;
   double price;
   String emoji;
 
   MenuItem({
+    required this.id,
     required this.name,
     required this.category,
     required this.price,
     required this.emoji,
   });
+
+  factory MenuItem.fromMap(Map<String, dynamic> data) {
+    return MenuItem(
+      id: (data['id'] ?? '').toString(),
+      name: (data['name'] ?? 'Menu item').toString(),
+      category: (data['category'] ?? 'Menu').toString(),
+      price: (data['price'] as num?)?.toDouble() ?? 0,
+      emoji: (data['emoji'] ?? '☕').toString(),
+    );
+  }
 }
 
-enum PickupStatus { preparing, ready, completed }
+enum PickupStatus { pending, preparing, ready, completed, cancelled }
 
 class PickupOrder {
   final String id;
@@ -66,6 +78,9 @@ class PickupOrder {
   final String itemSummary;
   final DateTime placedAt;
   final PickupPaymentMethod paymentMethod;
+  final double? total;
+  final String? checkoutUrl;
+  PickupPaymentStatus paymentStatus;
   PickupStatus status;
 
   PickupOrder({
@@ -74,11 +89,16 @@ class PickupOrder {
     required this.itemSummary,
     required this.placedAt,
     this.paymentMethod = PickupPaymentMethod.gcash,
+    this.total,
+    this.checkoutUrl,
+    this.paymentStatus = PickupPaymentStatus.paid,
     this.status = PickupStatus.preparing,
   });
 }
 
 enum PickupPaymentMethod { gcash, qrph }
+
+enum PickupPaymentStatus { pending, paid, failed, cancelled }
 
 /// A tiny in-memory "backend" so the UI has something to react to.
 /// Replace with real API calls later.
@@ -122,14 +142,54 @@ class MockData {
   /// The actual café menu customers order from when placing a pickup
   /// order. Fully editable by admins (add/edit/delete).
   static final List<MenuItem> menu = [
-    MenuItem(name: 'Hot Brewed Coffee', category: 'Coffee', price: 120, emoji: '☕'),
-    MenuItem(name: 'Cappuccino', category: 'Coffee', price: 150, emoji: '☕'),
-    MenuItem(name: 'Caramel Macchiato', category: 'Coffee', price: 165, emoji: '☕'),
-    MenuItem(name: 'Iced Matcha Latte', category: 'Matcha', price: 170, emoji: '🍵'),
-    MenuItem(name: 'Hot Matcha Latte', category: 'Matcha', price: 160, emoji: '🍵'),
-    MenuItem(name: 'Croissant', category: 'Pastries', price: 95, emoji: '🥐'),
-    MenuItem(name: 'Blueberry Muffin', category: 'Pastries', price: 85, emoji: '🧁'),
-    MenuItem(name: 'Pandesal Set', category: 'Pastries', price: 60, emoji: '🍞'),
+    MenuItem(
+        id: 'm1',
+        name: 'Hot Brewed Coffee',
+        category: 'Coffee',
+        price: 120,
+        emoji: '☕'),
+    MenuItem(
+        id: 'm2',
+        name: 'Cappuccino',
+        category: 'Coffee',
+        price: 150,
+        emoji: '☕'),
+    MenuItem(
+        id: 'm3',
+        name: 'Caramel Macchiato',
+        category: 'Coffee',
+        price: 165,
+        emoji: '☕'),
+    MenuItem(
+        id: 'm4',
+        name: 'Iced Matcha Latte',
+        category: 'Matcha',
+        price: 170,
+        emoji: '🍵'),
+    MenuItem(
+        id: 'm5',
+        name: 'Hot Matcha Latte',
+        category: 'Matcha',
+        price: 160,
+        emoji: '🍵'),
+    MenuItem(
+        id: 'm6',
+        name: 'Croissant',
+        category: 'Pastries',
+        price: 95,
+        emoji: '🥐'),
+    MenuItem(
+        id: 'm7',
+        name: 'Blueberry Muffin',
+        category: 'Pastries',
+        price: 85,
+        emoji: '🧁'),
+    MenuItem(
+        id: 'm8',
+        name: 'Pandesal Set',
+        category: 'Pastries',
+        price: 60,
+        emoji: '🍞'),
   ];
 
   static final List<PickupOrder> orders = [

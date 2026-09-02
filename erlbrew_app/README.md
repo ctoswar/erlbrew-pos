@@ -1,8 +1,8 @@
-# Erlbrew Café — Rewards & Pickup App (Front-end only)
+# Erlbrew Café — Rewards & Pickup App
 
-A Flutter front-end for a café loyalty + pickup app. No backend — all data is
-mocked in `lib/models/app_models.dart` so you can see the full flow and wire
-up your real API later.
+A Flutter customer app for café loyalty and pickup orders. Rewards and the
+demo menu remain mocked locally, while PayMongo checkout and payment-confirmed
+order status use the Firebase Functions project under `functions/`.
 
 ## Screens
 
@@ -45,6 +45,50 @@ fields.
   Rewards catalog. `MockData.menu` is the shared source of truth both
   screens read from.
 
+## PayMongo checkout (GCash and QRPh)
+
+The New Order sheet calls the Firebase callable
+`createPayMongoCheckout`. The Flutter app sends menu IDs and quantities, never
+prices or PayMongo credentials, then opens only the HTTPS hosted checkout URL
+returned by PayMongo. The callable prices items from the trusted catalog in
+`functions/index.js`, creates a pending Firestore order, and returns the
+hosted URL. `payMongoWebhook` verifies the `Paymongo-Signature` HMAC before
+changing an order to paid/preparing (or failed/cancelled).
+
+The functions project is intentionally inside this app at `functions/`; do
+not use or deploy a sibling POS server for payments. Real payment
+confirmation is not available until the functions are deployed and PayMongo
+credentials plus the webhook URL are configured:
+
+1. Install/use the Firebase CLI, then from `erlbrew_app/` run
+   `firebase login` and `firebase use erlbrew`.
+2. Install dependencies with `npm --prefix functions install`.
+3. Store the PayMongo secrets in Firebase Secret Manager (never in Flutter,
+   source control, or a committed `.env`):
+   ```bash
+   firebase functions:secrets:set PAYMONGO_SECRET_KEY
+   firebase functions:secrets:set PAYMONGO_WEBHOOK_SECRET
+   ```
+4. Configure the non-secret `PAYMONGO_SUCCESS_URL` and
+   `PAYMONGO_CANCEL_URL` deployment parameters when prompted. Use HTTPS URLs
+   that return the customer to an appropriate app/web page.
+5. Deploy with:
+   ```bash
+   firebase deploy --only functions
+   ```
+6. Register this webhook URL in the PayMongo dashboard:
+   `https://asia-southeast1-erlbrew.cloudfunctions.net/payMongoWebhook`
+   Subscribe to `checkout_session.payment.paid` and failed payment events,
+   then use that endpoint's signing secret for
+   `PAYMONGO_WEBHOOK_SECRET`.
+
+The deployed function region is `asia-southeast1`, matching the Flutter
+callable client. Keep the server catalog synchronized with the production
+menu; client-submitted prices are deliberately ignored. A successful browser
+redirect is never treated as proof of payment — only a verified webhook can
+start preparation. `getPayMongoOrderStatus` is used by the pickup screen to
+refresh pending orders.
+
 ### Camera permissions (required for the Scan tab)
 This project ships as `lib/` + `pubspec.yaml` only — no platform folders yet.
 After you unzip it and run `flutter create .` inside the project (to generate
@@ -64,8 +108,8 @@ After you unzip it and run `flutter create .` inside the project (to generate
   permission the first time you open the Scan tab. This only works over
   `localhost` or HTTPS, which `flutter run -d chrome` already uses.
 
-Run `flutter pub get` again after unzipping since two new packages
-(`qr_flutter`, `mobile_scanner`) were added.
+Run `flutter pub get` again after unzipping since the Firebase and scanner
+packages (`cloud_functions`, `qr_flutter`, `mobile_scanner`) are required.
 
 ## Run it
 ```bash

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/app_models.dart';
+import '../services/paymongo_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/luxury_button.dart';
 
@@ -25,11 +27,12 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
   // menu item -> quantity in cart
   final Map<MenuItem, int> _cart = {};
   PickupPaymentMethod _paymentMethod = PickupPaymentMethod.gcash;
+  bool _placingOrder = false;
 
   int get _totalItems => _cart.values.fold(0, (a, b) => a + b);
 
-  double get _totalPrice => _cart.entries
-      .fold(0.0, (sum, e) => sum + e.key.price * e.value);
+  double get _totalPrice =>
+      _cart.entries.fold(0.0, (sum, e) => sum + e.key.price * e.value);
 
   void _addOne(MenuItem item) {
     setState(() => _cart[item] = (_cart[item] ?? 0) + 1);
@@ -46,22 +49,70 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
     });
   }
 
-  void _placeOrder() {
+  Future<void> _placeOrder() async {
     if (_cart.isEmpty) return;
-    final summary = _cart.entries
-        .map((e) => '${e.value}x ${e.key.name}')
-        .join(', ');
+    final summary =
+        _cart.entries.map((e) => '${e.value}x ${e.key.name}').join(', ');
 
-    final order = PickupOrder(
-      id: 'EB-${1000 + MockData.orders.length + 43}',
-      customerName: MockData.currentUser?.name ?? 'Walk-in Customer',
-      itemSummary: summary,
-      placedAt: DateTime.now(),
-      paymentMethod: _paymentMethod,
-      status: PickupStatus.preparing,
-    );
-    MockData.orders.insert(0, order);
-    Navigator.of(context).pop(order);
+    final customer = MockData.currentUser;
+    if (customer == null) return;
+
+    setState(() => _placingOrder = true);
+    try {
+      final checkout = await PayMongoService.instance.createCheckout(
+        items: [
+          for (final entry in _cart.entries)
+            CartLine(item: entry.key, quantity: entry.value),
+        ],
+        paymentMethod: _paymentMethod,
+      );
+      final opened = await launchUrl(
+        Uri.parse(checkout.checkoutUrl),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened) {
+        throw const PosApiException('Unable to open the secure checkout page.');
+      }
+
+      final order = PickupOrder(
+        id: checkout.orderId,
+        customerName: customer.name,
+        itemSummary: summary,
+        placedAt: DateTime.now(),
+        paymentMethod: _paymentMethod,
+        total: checkout.total,
+        checkoutUrl: checkout.checkoutUrl,
+        paymentStatus: PickupPaymentStatus.pending,
+        // A client redirect is not proof of payment. The API changes this to
+        // preparing only after PayMongo's signed webhook arrives.
+        status: PickupStatus.pending,
+      );
+      MockData.orders.insert(0, order);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Checkout opened. Your order will stay pending until payment is confirmed.'),
+          ),
+        );
+        Navigator.of(context).pop(order);
+      }
+    } on PosApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Unable to start checkout. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _placingOrder = false);
+    }
   }
 
   @override
@@ -96,7 +147,8 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('New Order', style: Theme.of(context).textTheme.displayMedium),
+                    Text('New Order',
+                        style: Theme.of(context).textTheme.displayMedium),
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.of(context).pop(),
@@ -166,7 +218,8 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
                                   ButtonSegment(
                                     value: PickupPaymentMethod.gcash,
                                     label: Text('GCash'),
-                                    icon: Icon(Icons.account_balance_wallet_outlined),
+                                    icon: Icon(
+                                        Icons.account_balance_wallet_outlined),
                                   ),
                                   ButtonSegment(
                                     value: PickupPaymentMethod.qrph,
@@ -176,7 +229,8 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
                                 ],
                                 selected: {_paymentMethod},
                                 onSelectionChanged: (selection) {
-                                  setState(() => _paymentMethod = selection.first);
+                                  setState(
+                                      () => _paymentMethod = selection.first);
                                 },
                               ),
                             ),
@@ -192,12 +246,14 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
                                   Text(
                                     '$_totalItems item${_totalItems == 1 ? '' : 's'}',
                                     style: TextStyle(
-                                        color: AppColors.slateGrey, fontSize: 12),
+                                        color: AppColors.slateGrey,
+                                        fontSize: 12),
                                   ),
                                   Text(
                                     '₱${_totalPrice.toStringAsFixed(0)}',
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.w800, fontSize: 18),
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 18),
                                   ),
                                 ],
                               ),
@@ -206,8 +262,10 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
                             SizedBox(
                               width: 180,
                               child: LuxuryButton(
-                                label: 'Place Order',
-                                onPressed: _placeOrder,
+                                label: _placingOrder
+                                    ? 'Opening checkout…'
+                                    : 'Continue to checkout',
+                                onPressed: _placingOrder ? null : _placeOrder,
                               ),
                             ),
                           ],

@@ -164,3 +164,5 @@ print-server/Dockerfile
 print-server/requirements.txt
 server/migrate-sun.js
 .github/agents/fullstack.agent.md
+erlbrew_app/lib/firebase_options.dart
+erlbrew_app/firebase_options.dart

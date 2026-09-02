@@ -1,0 +1,289 @@
+import 'package:flutter/material.dart';
+import '../models/app_models.dart';
+import '../theme/app_theme.dart';
+import '../widgets/luxury_button.dart';
+
+/// Opens the "New Order" pull-up sheet. Returns the created [PickupOrder]
+/// if the customer placed one, or null if they dismissed the sheet.
+Future<PickupOrder?> showNewOrderSheet(BuildContext context) {
+  return showModalBottomSheet<PickupOrder>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => const _NewOrderSheet(),
+  );
+}
+
+class _NewOrderSheet extends StatefulWidget {
+  const _NewOrderSheet();
+
+  @override
+  State<_NewOrderSheet> createState() => _NewOrderSheetState();
+}
+
+class _NewOrderSheetState extends State<_NewOrderSheet> {
+  // menu item -> quantity in cart
+  final Map<MenuItem, int> _cart = {};
+
+  int get _totalItems => _cart.values.fold(0, (a, b) => a + b);
+
+  double get _totalPrice => _cart.entries
+      .fold(0.0, (sum, e) => sum + e.key.price * e.value);
+
+  void _addOne(MenuItem item) {
+    setState(() => _cart[item] = (_cart[item] ?? 0) + 1);
+  }
+
+  void _removeOne(MenuItem item) {
+    setState(() {
+      final current = _cart[item] ?? 0;
+      if (current <= 1) {
+        _cart.remove(item);
+      } else {
+        _cart[item] = current - 1;
+      }
+    });
+  }
+
+  void _placeOrder() {
+    if (_cart.isEmpty) return;
+    final summary = _cart.entries
+        .map((e) => '${e.value}x ${e.key.name}')
+        .join(', ');
+
+    final order = PickupOrder(
+      id: 'EB-${1000 + MockData.orders.length + 43}',
+      customerName: MockData.currentUser?.name ?? 'Walk-in Customer',
+      itemSummary: summary,
+      placedAt: DateTime.now(),
+      status: PickupStatus.preparing,
+    );
+    MockData.orders.insert(0, order);
+    Navigator.of(context).pop(order);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = MockData.menu.map((m) => m.category).toSet().toList();
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.ivory,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.hairline,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('New Order', style: Theme.of(context).textTheme.displayMedium),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
+                  children: [
+                    for (final category in categories) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16, bottom: 10),
+                        child: Text(
+                          category.toUpperCase(),
+                          style: TextStyle(
+                            color: AppColors.gold,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                            letterSpacing: 1.6,
+                          ),
+                        ),
+                      ),
+                      ...MockData.menu
+                          .where((m) => m.category == category)
+                          .map((item) => _MenuRow(
+                                item: item,
+                                quantity: _cart[item] ?? 0,
+                                onAdd: () => _addOne(item),
+                                onRemove: () => _removeOne(item),
+                              )),
+                    ],
+                  ],
+                ),
+              ),
+              if (_cart.isNotEmpty)
+                Container(
+                  padding: EdgeInsets.fromLTRB(
+                    22,
+                    14,
+                    22,
+                    14 + MediaQuery.of(context).padding.bottom,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: const Border(
+                        top: BorderSide(color: AppColors.hairline)),
+                    boxShadow: [AppColors.softShadow],
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '$_totalItems item${_totalItems == 1 ? '' : 's'}',
+                                style: TextStyle(
+                                    color: AppColors.slateGrey, fontSize: 12),
+                              ),
+                              Text(
+                                '₱${_totalPrice.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w800, fontSize: 18),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        SizedBox(
+                          width: 180,
+                          child: LuxuryButton(
+                            label: 'Place Order',
+                            onPressed: _placeOrder,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MenuRow extends StatelessWidget {
+  final MenuItem item;
+  final int quantity;
+  final VoidCallback onAdd;
+  final VoidCallback onRemove;
+
+  const _MenuRow({
+    required this.item,
+    required this.quantity,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final inCart = quantity > 0;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.latte,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: Text(item.emoji, style: const TextStyle(fontSize: 18)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.name,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text('₱${item.price.toStringAsFixed(0)}',
+                        style: TextStyle(
+                            color: AppColors.slateGrey, fontSize: 12.5)),
+                  ],
+                ),
+              ),
+              if (!inCart)
+                OutlinedButton(
+                  onPressed: onAdd,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 34),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  child: const Text('Add'),
+                )
+              else
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.espresso,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove, size: 16),
+                        color: AppColors.goldLight,
+                        onPressed: onRemove,
+                        constraints:
+                            const BoxConstraints(minWidth: 32, minHeight: 32),
+                        padding: EdgeInsets.zero,
+                      ),
+                      SizedBox(
+                        width: 20,
+                        child: Text(
+                          '$quantity',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add, size: 16),
+                        color: AppColors.goldLight,
+                        onPressed: onAdd,
+                        constraints:
+                            const BoxConstraints(minWidth: 32, minHeight: 32),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

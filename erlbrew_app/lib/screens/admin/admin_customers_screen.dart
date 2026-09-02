@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/fade_slide_in.dart';
 
 class AdminCustomersScreen extends StatefulWidget {
   const AdminCustomersScreen({super.key});
@@ -81,7 +82,9 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
                     itemCount: customers.length,
                     itemBuilder: (context, i) {
                       final c = customers[i];
-                      return Padding(
+                      return FadeSlideIn(
+                        delay: Duration(milliseconds: i * 60),
+                        child: Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Card(
                           child: ListTile(
@@ -102,21 +105,13 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
                             subtitle: Text(c.email,
                                 style: TextStyle(
                                     color: AppColors.slateGrey, fontSize: 12.5)),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text('${c.points} pts',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.matchaDark)),
-                                Text('${c.stamps}/${c.stampsGoal} stamps',
-                                    style: TextStyle(
-                                        fontSize: 11, color: AppColors.slateGrey)),
-                              ],
-                            ),
+                            trailing: Text('${c.points} pts',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.matchaDark)),
                             onTap: () => _adjustPoints(c),
                           ),
+                        ),
                         ),
                       );
                     },

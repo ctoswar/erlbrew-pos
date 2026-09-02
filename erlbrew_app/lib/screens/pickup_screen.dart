@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/app_models.dart';
 import '../theme/app_theme.dart';
+import '../widgets/fade_slide_in.dart';
+import '../widgets/pulse.dart';
+import 'order_sheet.dart';
 
 class PickupScreen extends StatefulWidget {
   const PickupScreen({super.key});
@@ -32,19 +35,9 @@ class _PickupScreenState extends State<PickupScreen> {
     }
   }
 
-  void _newMockOrder() {
-    setState(() {
-      MockData.orders.insert(
-        0,
-        PickupOrder(
-          id: 'EB-${1000 + MockData.orders.length + 43}',
-          customerName: MockData.currentUser?.name ?? 'Walk-in Customer',
-          itemSummary: '1x Cappuccino, 1x Blueberry Muffin',
-          placedAt: DateTime.now(),
-          status: PickupStatus.preparing,
-        ),
-      );
-    });
+  void _openNewOrder() async {
+    final order = await showNewOrderSheet(context);
+    if (order != null && mounted) setState(() {});
   }
 
   @override
@@ -54,7 +47,7 @@ class _PickupScreenState extends State<PickupScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Pickup')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _newMockOrder,
+        onPressed: _openNewOrder,
         backgroundColor: AppColors.coffeeBrown,
         icon: const Icon(Icons.add),
         label: const Text('New Order'),
@@ -79,7 +72,9 @@ class _PickupScreenState extends State<PickupScreen> {
               itemCount: orders.length,
               itemBuilder: (context, index) {
                 final order = orders[index];
-                return Card(
+                return FadeSlideIn(
+                  delay: Duration(milliseconds: index * 70),
+                  child: Card(
                   margin: const EdgeInsets.only(bottom: 14),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -108,20 +103,23 @@ class _PickupScreenState extends State<PickupScreen> {
                                         fontWeight: FontWeight.w700)),
                               ],
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _statusColor(order.status)
-                                    .withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                _statusLabel(order.status),
-                                style: TextStyle(
-                                  color: _statusColor(order.status),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
+                            Pulse(
+                              active: order.status == PickupStatus.ready,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _statusColor(order.status)
+                                      .withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  _statusLabel(order.status),
+                                  style: TextStyle(
+                                    color: _statusColor(order.status),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
                             ),
@@ -159,6 +157,7 @@ class _PickupScreenState extends State<PickupScreen> {
                         ],
                       ],
                     ),
+                  ),
                   ),
                 );
               },

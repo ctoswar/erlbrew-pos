@@ -1,54 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
+/// The café's actual logo lockup, presented like a small framed plaque
+/// with a soft gold glow — used wherever the brand needs to make a
+/// strong first impression (login hero, splash, etc).
 class BrandMark extends StatelessWidget {
-  final double size;
-  const BrandMark({super.key, this.size = 64});
+  final double width;
+  final bool framed;
+
+  const BrandMark({super.key, this.width = 172, this.framed = true});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: AppColors.espresso,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.gold, width: 2),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            'EB',
-            style: GoogleFonts.cinzel(
-              color: AppColors.cream,
-              fontWeight: FontWeight.w700,
-              fontSize: size * 0.32,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'ERLBREW',
-          style: GoogleFonts.cinzel(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 4,
-            color: AppColors.espresso,
-          ),
-        ),
-        Text(
-          'CAFÉ',
-          style: GoogleFonts.cormorantGaramond(
-            fontSize: 14,
-            fontStyle: FontStyle.italic,
-            letterSpacing: 3,
-            color: AppColors.slateGrey,
-          ),
-        ),
-      ],
+    final logo = Image.asset(
+      'assets/images/erlbrew_logo.jpg',
+      width: width,
+      fit: BoxFit.contain,
+    );
+
+    if (!framed) return logo;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.gold.withOpacity(0.55), width: 1.2),
+        boxShadow: [AppColors.goldGlow],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: logo,
+      ),
     );
   }
 }

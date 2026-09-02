@@ -81,17 +81,6 @@ class FirebaseAuthService {
         'isAdmin': isAdminAccount,
       });
 
-      await _firestore!.collection('users').doc(credential.user!.uid).set(
-        {
-          'email': credential.user!.email ?? email,
-          'name': currentUser.name,
-          'lastLoginAt': FieldValue.serverTimestamp(),
-          'role': storedRole,
-          'isAdmin': isAdminAccount,
-        },
-        SetOptions(merge: true),
-      );
-
       return currentUser;
     } on FirebaseAuthException {
       rethrow;

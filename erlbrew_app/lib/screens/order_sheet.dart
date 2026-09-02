@@ -24,6 +24,7 @@ class _NewOrderSheet extends StatefulWidget {
 class _NewOrderSheetState extends State<_NewOrderSheet> {
   // menu item -> quantity in cart
   final Map<MenuItem, int> _cart = {};
+  PickupPaymentMethod _paymentMethod = PickupPaymentMethod.gcash;
 
   int get _totalItems => _cart.values.fold(0, (a, b) => a + b);
 
@@ -56,6 +57,7 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
       customerName: MockData.currentUser?.name ?? 'Walk-in Customer',
       itemSummary: summary,
       placedAt: DateTime.now(),
+      paymentMethod: _paymentMethod,
       status: PickupStatus.preparing,
     );
     MockData.orders.insert(0, order);
@@ -149,32 +151,66 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
                   ),
                   child: SafeArea(
                     top: false,
-                    child: Row(
+                    child: Column(
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '$_totalItems item${_totalItems == 1 ? '' : 's'}',
-                                style: TextStyle(
-                                    color: AppColors.slateGrey, fontSize: 12),
+                        Row(
+                          children: [
+                            const Text(
+                              'Pay with',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: SegmentedButton<PickupPaymentMethod>(
+                                segments: const [
+                                  ButtonSegment(
+                                    value: PickupPaymentMethod.gcash,
+                                    label: Text('GCash'),
+                                    icon: Icon(Icons.account_balance_wallet_outlined),
+                                  ),
+                                  ButtonSegment(
+                                    value: PickupPaymentMethod.qrph,
+                                    label: Text('QRPh'),
+                                    icon: Icon(Icons.qr_code_2),
+                                  ),
+                                ],
+                                selected: {_paymentMethod},
+                                onSelectionChanged: (selection) {
+                                  setState(() => _paymentMethod = selection.first);
+                                },
                               ),
-                              Text(
-                                '₱${_totalPrice.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w800, fontSize: 18),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        SizedBox(
-                          width: 180,
-                          child: LuxuryButton(
-                            label: 'Place Order',
-                            onPressed: _placeOrder,
-                          ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$_totalItems item${_totalItems == 1 ? '' : 's'}',
+                                    style: TextStyle(
+                                        color: AppColors.slateGrey, fontSize: 12),
+                                  ),
+                                  Text(
+                                    '₱${_totalPrice.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w800, fontSize: 18),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            SizedBox(
+                              width: 180,
+                              child: LuxuryButton(
+                                label: 'Place Order',
+                                onPressed: _placeOrder,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

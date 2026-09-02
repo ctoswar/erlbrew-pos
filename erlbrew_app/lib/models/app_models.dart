@@ -65,6 +65,7 @@ class PickupOrder {
   final String customerName;
   final String itemSummary;
   final DateTime placedAt;
+  final PickupPaymentMethod paymentMethod;
   PickupStatus status;
 
   PickupOrder({
@@ -72,9 +73,12 @@ class PickupOrder {
     required this.customerName,
     required this.itemSummary,
     required this.placedAt,
+    this.paymentMethod = PickupPaymentMethod.gcash,
     this.status = PickupStatus.preparing,
   });
 }
+
+enum PickupPaymentMethod { gcash, qrph }
 
 /// A tiny in-memory "backend" so the UI has something to react to.
 /// Replace with real API calls later.

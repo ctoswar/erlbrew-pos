@@ -134,6 +134,17 @@ class _PickupScreenState extends State<PickupScreen> {
                           style: TextStyle(
                               color: AppColors.slateGrey, fontSize: 12),
                         ),
+                        const SizedBox(height: 4),
+                        Text(
+                          order.paymentMethod == PickupPaymentMethod.gcash
+                              ? 'Payment: GCash'
+                              : 'Payment: QRPh',
+                          style: TextStyle(
+                            color: AppColors.coffeeBrown,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         if (order.status != PickupStatus.completed) ...[
                           const SizedBox(height: 12),
                           SizedBox(

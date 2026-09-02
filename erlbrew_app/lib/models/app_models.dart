@@ -12,6 +12,19 @@ class AppUser {
     this.points = 0,
     this.isAdmin = false,
   });
+
+  factory AppUser.fromMap(String uid, Map<String, dynamic> data) {
+    final rawName = (data['name'] ?? '').toString();
+    final rawEmail = (data['email'] ?? '').toString();
+    final roleFlag = data['isAdmin'] == true || data['role'] == 'admin';
+    return AppUser(
+      id: uid,
+      name: rawName.isNotEmpty ? rawName : 'Erlbrew User',
+      email: rawEmail.isNotEmpty ? rawEmail : 'user@erlbrew.cafe',
+      points: (data['points'] is int) ? data['points'] as int : 0,
+      isAdmin: roleFlag,
+    );
+  }
 }
 
 class RewardItem {

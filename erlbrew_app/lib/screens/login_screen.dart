@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/app_models.dart';
+import '../services/firebase_auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/fade_slide_in.dart';
@@ -19,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final FirebaseAuthService _authService = FirebaseAuthService.instance;
   bool _obscure = true;
   bool _loading = false;
   bool _isAdmin = false;
@@ -34,29 +37,43 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
 
-    // Front-end only: simulate a network call, then sign the user in
-    // with mock data. Wire this up to a real auth API later, and check
-    // the account's actual role instead of a local toggle.
-    await Future.delayed(const Duration(milliseconds: 700));
-
-    if (!mounted) return;
-    setState(() => _loading = false);
-
-    if (_isAdmin) {
-      MockData.currentUser = MockData.adminUser;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AdminHomeShell()),
+    try {
+      final user = await _authService.signInWithEmailPassword(
+        email: _emailController.text,
+        password: _passwordController.text,
+        isAdmin: _isAdmin,
       );
-      return;
+
+      MockData.currentUser = user;
+
+      if (!mounted) return;
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => _isAdmin ? const AdminHomeShell() : const HomeShell(),
+        ),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error.message ?? 'Unable to sign in with Firebase. Please try again.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong while signing in.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
-
-    MockData.currentUser ??= MockData.customers.firstWhere(
-      (c) => c.id == 'cust-1',
-    );
-
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeShell()),
-    );
   }
 
   @override
@@ -88,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          _isAdmin ? 'Staff Sign In' : 'Welcome Back',
+                          _isAdmin ? 'Staff Sign In' : 'Welcome back',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.displayMedium,
                         ),

@@ -91,12 +91,12 @@ class _LuxuryButtonState extends State<LuxuryButton> {
                       const SizedBox(width: 10),
                     ],
                     Text(
-                      widget.label.toUpperCase(),
+                      widget.label,
                       style: GoogleFonts.quicksand(
                         color: AppColors.goldLight,
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
-                        letterSpacing: 1.6,
+                        letterSpacing: 1.2,
                       ),
                     ),
                   ],

@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/app_models.dart';
+import '../services/firebase_auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/fade_slide_in.dart';
@@ -19,6 +21,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  final FirebaseAuthService _authService = FirebaseAuthService.instance;
   bool _obscure = true;
   bool _loading = false;
 
@@ -35,25 +38,42 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
 
-    // Front-end only: simulate account creation, then log the user in
-    // with mock data. Wire this up to a real signup API later.
-    await Future.delayed(const Duration(milliseconds: 700));
+    try {
+      final newUser = await _authService.signUp(
+        name: _nameController.text,
+        email: _emailController.text,
+        phone: _phoneController.text,
+        password: _passwordController.text,
+      );
 
-    final newUser = AppUser(
-      id: 'cust-${DateTime.now().millisecondsSinceEpoch}',
-      name: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      points: 0,
-    );
-    MockData.customers.add(newUser);
-    MockData.currentUser = newUser;
+      MockData.currentUser = newUser;
+      MockData.customers.add(newUser);
 
-    if (!mounted) return;
-    setState(() => _loading = false);
-
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeShell()),
-    );
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeShell()),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error.message ?? 'Unable to create your account right now.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong while creating your account.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
   }
 
   @override

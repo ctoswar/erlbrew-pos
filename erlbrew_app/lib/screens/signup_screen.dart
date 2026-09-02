@@ -44,7 +44,6 @@ class _SignupScreenState extends State<SignupScreen> {
       name: _nameController.text.trim(),
       email: _emailController.text.trim(),
       points: 0,
-      stamps: 0,
     );
     MockData.customers.add(newUser);
     MockData.currentUser = newUser;
@@ -84,7 +83,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Earn points and stamps every time you order',
+                  'Earn points every time you order',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.slateGrey, fontSize: 13.5),
                 ),

@@ -7,7 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/fade_slide_in.dart';
 
 /// Shown to the customer at checkout so the barista can scan it and
-/// award points/stamps. Encodes just enough to identify the account —
+/// award points. Encodes just enough to identify the account —
 /// swap the payload for a signed token from your real backend later.
 class MyQrScreen extends StatelessWidget {
   const MyQrScreen({super.key});
@@ -37,7 +37,7 @@ class MyQrScreen extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'The barista scans this to add your points and stamps',
+                'The barista scans this to add your points',
                 style: TextStyle(color: AppColors.slateGrey, fontSize: 13),
                 textAlign: TextAlign.center,
               ),

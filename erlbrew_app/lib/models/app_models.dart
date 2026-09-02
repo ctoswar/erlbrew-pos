@@ -3,8 +3,6 @@ class AppUser {
   final String name;
   final String email;
   int points;
-  int stamps;
-  final int stampsGoal;
   final bool isAdmin;
 
   AppUser({
@@ -12,8 +10,6 @@ class AppUser {
     required this.name,
     required this.email,
     this.points = 0,
-    this.stamps = 0,
-    this.stampsGoal = 8,
     this.isAdmin = false,
   });
 }
@@ -28,6 +24,23 @@ class RewardItem {
     required this.title,
     required this.description,
     required this.pointsCost,
+    required this.emoji,
+  });
+}
+
+/// A single orderable item on the café's actual menu — what customers
+/// pick from when placing a pickup order (different from [RewardItem],
+/// which is what points get redeemed for).
+class MenuItem {
+  String name;
+  String category;
+  double price;
+  String emoji;
+
+  MenuItem({
+    required this.name,
+    required this.category,
+    required this.price,
     required this.emoji,
   });
 }
@@ -89,6 +102,19 @@ class MockData {
     ),
   ];
 
+  /// The actual café menu customers order from when placing a pickup
+  /// order. Fully editable by admins (add/edit/delete).
+  static final List<MenuItem> menu = [
+    MenuItem(name: 'Hot Brewed Coffee', category: 'Coffee', price: 120, emoji: '☕'),
+    MenuItem(name: 'Cappuccino', category: 'Coffee', price: 150, emoji: '☕'),
+    MenuItem(name: 'Caramel Macchiato', category: 'Coffee', price: 165, emoji: '☕'),
+    MenuItem(name: 'Iced Matcha Latte', category: 'Matcha', price: 170, emoji: '🍵'),
+    MenuItem(name: 'Hot Matcha Latte', category: 'Matcha', price: 160, emoji: '🍵'),
+    MenuItem(name: 'Croissant', category: 'Pastries', price: 95, emoji: '🥐'),
+    MenuItem(name: 'Blueberry Muffin', category: 'Pastries', price: 85, emoji: '🧁'),
+    MenuItem(name: 'Pandesal Set', category: 'Pastries', price: 60, emoji: '🍞'),
+  ];
+
   static final List<PickupOrder> orders = [
     PickupOrder(
       id: 'EB-1042',
@@ -120,21 +146,18 @@ class MockData {
       name: 'Erlbrew Regular',
       email: 'regular@example.com',
       points: 120,
-      stamps: 5,
     ),
     AppUser(
       id: 'cust-2',
       name: 'Migs Santos',
       email: 'migs.santos@example.com',
       points: 60,
-      stamps: 2,
     ),
     AppUser(
       id: 'cust-3',
       name: 'Anna Reyes',
       email: 'anna.reyes@example.com',
       points: 210,
-      stamps: 7,
     ),
   ];
 }

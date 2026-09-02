@@ -9,7 +9,7 @@ up your real API later.
 ### Customer
 - **Login** (`lib/screens/login_screen.dart`) — email + password, with a Customer/Admin toggle at the top
 - **Sign Up** (`lib/screens/signup_screen.dart`) — name, email, phone, password
-- **Rewards** (`lib/screens/rewards_screen.dart`) — points balance, stamp card, redeem catalog
+- **Rewards** (`lib/screens/rewards_screen.dart`) — points balance, redeem catalog
 - **Pickup** (`lib/screens/pickup_screen.dart`) — list of pickup orders with status (Preparing → Ready → Completed)
 - **Profile** (inside `lib/screens/home_shell.dart`) — account info, log out
 
@@ -17,14 +17,33 @@ up your real API later.
 Flip the toggle on the login screen to "Admin" and log in with any email/password
 (front-end only, no real auth yet) to reach:
 - **Overview** (`lib/screens/admin/admin_home_shell.dart`) — dashboard stats: orders in progress, customer count, points outstanding, recent orders
-- **Scan** (`lib/screens/admin/admin_scan_screen.dart`) — scans a customer's QR code and lets you award points and/or a stamp in one tap
+- **Scan** (`lib/screens/admin/admin_scan_screen.dart`) — scans a customer's QR code and lets you award points in one tap
 - **Orders** (`lib/screens/admin/admin_orders_screen.dart`) — every customer's pickup order, filterable by status, with a one-tap "Mark Ready" / "Mark Completed" action
+- **Menu** (`lib/screens/admin/admin_menu_screen.dart`) — add, edit, or remove items on the actual café menu customers order from
 - **Rewards** (`lib/screens/admin/admin_rewards_screen.dart`) — add, edit, or remove items in the redeemable rewards catalog
 - **Customers** (`lib/screens/admin/admin_customers_screen.dart`) — searchable customer directory, tap a customer to manually adjust their points
 
 ## Earning points via QR (new)
 - Customers tap **"Show My QR Code"** on the Rewards screen (`lib/screens/my_qr_screen.dart`). It encodes `{"type":"erlbrew_customer","id":..., "name":...}` — swap this for a signed token from your real backend later.
-- Admins open the **Scan** tab, point the camera at it, choose how many points (and whether to add a stamp), and tap Award. The change applies instantly to the shared mock customer record, so it shows up next time the customer opens Rewards.
+- Admins open the **Scan** tab, point the camera at it, choose how many points to award, and tap Award. The change applies instantly to the shared mock customer record, so it shows up next time the customer opens Rewards.
+
+## Reward system (simplified)
+There used to be two parallel reward tracks — points and a stamp card — but
+they overlapped in purpose, so the stamp card was removed. **Points are now
+the single currency**: earned via QR scan at checkout, spent on whatever's
+in the Redeem Points catalog. `AppUser` no longer has `stamps`/`stampsGoal`
+fields.
+
+## Placing a real order (new)
+- Tapping **"New Order"** on the customer Pickup screen now opens a pull-up
+  menu (`lib/screens/order_sheet.dart`) instead of generating a random mock
+  order. It lists the actual café menu grouped by category, lets the
+  customer add/remove items with a quantity stepper, shows a running total,
+  and "Place Order" creates a real `PickupOrder` from whatever's in the cart.
+- Admins manage that menu — add, edit, delete items — from the new **Menu**
+  tab (`lib/screens/admin/admin_menu_screen.dart`), same CRUD pattern as the
+  Rewards catalog. `MockData.menu` is the shared source of truth both
+  screens read from.
 
 ### Camera permissions (required for the Scan tab)
 This project ships as `lib/` + `pubspec.yaml` only — no platform folders yet.

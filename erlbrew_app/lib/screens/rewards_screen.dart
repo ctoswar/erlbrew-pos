@@ -19,7 +19,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const MyQrScreen()),
     );
-    // Points/stamps may have been updated by an admin scan while this
+    // Points may have been updated by an admin scan while this
     // screen was hidden — refresh to reflect the shared mock data.
     if (mounted) setState(() {});
   }
@@ -60,7 +60,6 @@ class _RewardsScreenState extends State<RewardsScreen> {
   @override
   Widget build(BuildContext context) {
     final user = MockData.currentUser!;
-    final stampProgress = user.stamps / user.stampsGoal;
 
     return Scaffold(
       appBar: AppBar(
@@ -180,87 +179,9 @@ class _RewardsScreenState extends State<RewardsScreen> {
           ),
           const SizedBox(height: 18),
 
-          // Stamp card
-          FadeSlideIn(
-            delay: const Duration(milliseconds: 160),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Stamp Card',
-                            style: TextStyle(fontWeight: FontWeight.w600)),
-                        Text('${user.stamps}/${user.stampsGoal}',
-                            style: TextStyle(color: AppColors.slateGrey)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: List.generate(user.stampsGoal, (i) {
-                        final filled = i < user.stamps;
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 3),
-                            child: TweenAnimationBuilder<double>(
-                              tween: Tween(begin: 0, end: 1),
-                              duration: Duration(milliseconds: 350 + i * 60),
-                              curve: Curves.elasticOut,
-                              builder: (context, t, child) =>
-                                  Transform.scale(scale: t, child: child),
-                              child: CircleAvatar(
-                                radius: 16,
-                                backgroundColor: filled
-                                    ? AppColors.espresso
-                                    : AppColors.latte,
-                                child: Icon(
-                                  filled
-                                      ? Icons.local_cafe
-                                      : Icons.local_cafe_outlined,
-                                  size: 16,
-                                  color: filled
-                                      ? AppColors.goldLight
-                                      : AppColors.slateGrey,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: stampProgress),
-                        duration: const Duration(milliseconds: 800),
-                        curve: Curves.easeOutCubic,
-                        builder: (context, value, _) => LinearProgressIndicator(
-                          value: value,
-                          minHeight: 6,
-                          backgroundColor: AppColors.latte,
-                          valueColor:
-                              const AlwaysStoppedAnimation(AppColors.gold),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${user.stampsGoal - user.stamps} more to a free drink',
-                      style: TextStyle(fontSize: 12, color: AppColors.slateGrey),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
           const SizedBox(height: 24),
           FadeSlideIn(
-            delay: const Duration(milliseconds: 220),
+            delay: const Duration(milliseconds: 160),
             child: Text('Redeem Points',
                 style: Theme.of(context).textTheme.titleLarge),
           ),
@@ -271,7 +192,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
             final item = entry.value;
             final affordable = user.points >= item.pointsCost;
             return FadeSlideIn(
-              delay: Duration(milliseconds: 260 + index * 70),
+              delay: Duration(milliseconds: 200 + index * 70),
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Card(

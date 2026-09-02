@@ -224,7 +224,7 @@ class _ScannerCorner extends StatelessWidget {
 }
 
 /// Bottom sheet shown once a valid customer QR has been scanned, letting
-/// the barista award points and/or a stamp with one tap.
+/// the barista award points with one tap.
 class _AwardSheet extends StatefulWidget {
   final AppUser customer;
   const _AwardSheet({required this.customer});
@@ -235,7 +235,6 @@ class _AwardSheet extends StatefulWidget {
 
 class _AwardSheetState extends State<_AwardSheet> {
   int _pointsToAdd = 10;
-  bool _addStamp = true;
   bool _applied = false;
 
   static const _pointOptions = [10, 25, 50, 90];
@@ -243,10 +242,6 @@ class _AwardSheetState extends State<_AwardSheet> {
   void _apply() {
     setState(() {
       widget.customer.points += _pointsToAdd;
-      if (_addStamp) {
-        widget.customer.stamps =
-            (widget.customer.stamps + 1).clamp(0, widget.customer.stampsGoal);
-      }
       _applied = true;
     });
   }
@@ -296,7 +291,7 @@ class _AwardSheetState extends State<_AwardSheet> {
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
                         Text(
-                            '${c.points} pts · ${c.stamps}/${c.stampsGoal} stamps',
+                            '${c.points} pts',
                             style: TextStyle(
                                 color: AppColors.slateGrey, fontSize: 12.5)),
                       ],
@@ -326,19 +321,10 @@ class _AwardSheetState extends State<_AwardSheet> {
                         ))
                     .toList(),
               ),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Also add a stamp'),
-                value: _addStamp,
-                activeColor: AppColors.matcha,
-                onChanged: (v) => setState(() => _addStamp = v),
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _apply,
-                child: Text('Award $_pointsToAdd pts'
-                    '${_addStamp ? ' + 1 stamp' : ''}'),
+                child: Text('Award $_pointsToAdd pts'),
               ),
             ] else ...[
               TweenAnimationBuilder<double>(
@@ -355,7 +341,7 @@ class _AwardSheetState extends State<_AwardSheet> {
                   style: Theme.of(context).textTheme.titleLarge,
                   textAlign: TextAlign.center),
               const SizedBox(height: 6),
-              Text('New balance: ${c.points} pts · ${c.stamps}/${c.stampsGoal} stamps',
+              Text('New balance: ${c.points} pts',
                   style: TextStyle(color: AppColors.slateGrey),
                   textAlign: TextAlign.center),
               const SizedBox(height: 20),

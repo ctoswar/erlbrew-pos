@@ -105,19 +105,10 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
                             subtitle: Text(c.email,
                                 style: TextStyle(
                                     color: AppColors.slateGrey, fontSize: 12.5)),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text('${c.points} pts',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.matchaDark)),
-                                Text('${c.stamps}/${c.stampsGoal} stamps',
-                                    style: TextStyle(
-                                        fontSize: 11, color: AppColors.slateGrey)),
-                              ],
-                            ),
+                            trailing: Text('${c.points} pts',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.matchaDark)),
                             onTap: () => _adjustPoints(c),
                           ),
                         ),

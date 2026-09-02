@@ -3,6 +3,7 @@ import '../models/app_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/pulse.dart';
+import 'order_sheet.dart';
 
 class PickupScreen extends StatefulWidget {
   const PickupScreen({super.key});
@@ -34,19 +35,9 @@ class _PickupScreenState extends State<PickupScreen> {
     }
   }
 
-  void _newMockOrder() {
-    setState(() {
-      MockData.orders.insert(
-        0,
-        PickupOrder(
-          id: 'EB-${1000 + MockData.orders.length + 43}',
-          customerName: MockData.currentUser?.name ?? 'Walk-in Customer',
-          itemSummary: '1x Cappuccino, 1x Blueberry Muffin',
-          placedAt: DateTime.now(),
-          status: PickupStatus.preparing,
-        ),
-      );
-    });
+  void _openNewOrder() async {
+    final order = await showNewOrderSheet(context);
+    if (order != null && mounted) setState(() {});
   }
 
   @override
@@ -56,7 +47,7 @@ class _PickupScreenState extends State<PickupScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Pickup')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _newMockOrder,
+        onPressed: _openNewOrder,
         backgroundColor: AppColors.coffeeBrown,
         icon: const Icon(Icons.add),
         label: const Text('New Order'),

@@ -5,6 +5,7 @@ import '../../widgets/animated_counter.dart';
 import '../../widgets/fade_slide_in.dart';
 import '../login_screen.dart';
 import 'admin_customers_screen.dart';
+import 'admin_menu_screen.dart';
 import 'admin_orders_screen.dart';
 import 'admin_rewards_screen.dart';
 import 'admin_scan_screen.dart';
@@ -23,6 +24,7 @@ class _AdminHomeShellState extends State<AdminHomeShell> {
     _AdminDashboard(),
     AdminScanScreen(),
     AdminOrdersScreen(),
+    AdminMenuScreen(),
     AdminRewardsScreen(),
     AdminCustomersScreen(),
   ];
@@ -51,6 +53,11 @@ class _AdminHomeShellState extends State<AdminHomeShell> {
             icon: Icon(Icons.receipt_long_outlined),
             selectedIcon: Icon(Icons.receipt_long),
             label: 'Orders',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.restaurant_menu_outlined),
+            selectedIcon: Icon(Icons.restaurant_menu),
+            label: 'Menu',
           ),
           NavigationDestination(
             icon: Icon(Icons.card_giftcard_outlined),

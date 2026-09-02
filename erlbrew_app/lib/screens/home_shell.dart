@@ -90,14 +90,6 @@ class _ProfileScreen extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w700)),
             ),
           ),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.local_cafe_outlined),
-              title: const Text('Stamps collected'),
-              trailing: Text('${user.stamps}/${user.stampsGoal}',
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
-            ),
-          ),
           const SizedBox(height: 20),
           OutlinedButton.icon(
             onPressed: () {

@@ -197,6 +197,34 @@ class FirebaseAuthService {
     await _auth!.signOut();
   }
 
+  Future<void> updateDisplayName(String name) async {
+    await _ensureReady();
+
+    final user = _auth!.currentUser;
+    final cleanName = name.trim();
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'not-authenticated',
+        message: 'You must be signed in to update your name.',
+      );
+    }
+    if (cleanName.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'invalid-name',
+        message: 'Enter a valid name.',
+      );
+    }
+
+    await user.updateDisplayName(cleanName);
+    await _firestore!.collection('users').doc(user.uid).set(
+      {
+        'name': cleanName,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
+  }
+
   Future<AppUser?> getSignedInUserProfile() async {
     await _ensureReady();
 

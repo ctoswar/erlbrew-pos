@@ -17,15 +17,20 @@ service cloud.firestore {
     match /users/{userId} {
       allow create: if isOwner(userId)
         && request.resource.data.email == request.auth.token.email
-        && request.resource.data.role in ['customer', 'admin']
-        && request.resource.data.isAdmin == (request.resource.data.role == 'admin');
+        && request.resource.data.role == 'customer'
+        && request.resource.data.isAdmin == false;
 
       allow read: if isOwner(userId) || isAdmin();
 
-      allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role)
-        || (isAdmin() && request.resource.data.role in ['customer', 'admin']);
+      allow update: if (isOwner(userId)
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.isAdmin == resource.data.isAdmin
+          && request.resource.data.isAdmin == false)
+        || (isAdmin()
+          && request.resource.data.role in ['customer', 'admin']
+          && request.resource.data.isAdmin == (request.resource.data.role == 'admin'));
 
-      allow delete: if isAdmin() || isOwner(userId);
+      allow delete: if isAdmin();
     }
 
     match /{document=**} {

@@ -111,6 +111,7 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
                             : emojiController.text.trim();
                       } else {
                         MockData.menu.add(MenuItem(
+                          id: 'local-${DateTime.now().millisecondsSinceEpoch}',
                           name: nameController.text.trim(),
                           category: categoryController.text.trim(),
                           price: double.parse(priceController.text.trim()),

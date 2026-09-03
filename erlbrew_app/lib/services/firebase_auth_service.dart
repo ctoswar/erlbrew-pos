@@ -185,9 +185,37 @@ class FirebaseAuthService {
       final data = snapshot.data() ?? <String, dynamic>{};
       final currentPoints = (data['points'] as num?)?.toInt() ?? 0;
       final updatedPoints = currentPoints + points;
+      final notificationRef = customerRef.collection('notifications').doc();
+
       transaction.update(customerRef, {'points': updatedPoints});
+      transaction.set(notificationRef, {
+        'type': 'points_awarded',
+        'title': 'Points received',
+        'message': 'You received $points points at Erlbrew Café.',
+        'points': points,
+        'createdAt': FieldValue.serverTimestamp(),
+        'read': false,
+      });
       return updatedPoints;
     });
+  }
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> customerProfileStream(
+    String customerId,
+  ) {
+    return FirebaseFirestore.instance.collection('users').doc(customerId).snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> customerNotificationsStream(
+    String customerId,
+  ) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(customerId)
+        .collection('notifications')
+        .orderBy('createdAt', descending: true)
+        .limit(1)
+        .snapshots();
   }
 
   Future<AppUser?> getSignedInUserProfile() async {

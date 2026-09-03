@@ -22,6 +22,51 @@ const paymongoCancelUrl = defineString("PAYMONGO_CANCEL_URL", {
   default: "https://erlbrew.web.app/payment/cancelled",
 });
 
+exports.awardCustomerPoints = onCall({ region: REGION }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in as staff before awarding points.");
+  }
+
+  const staffSnapshot = await db.collection("users").doc(request.auth.uid).get();
+  const staff = staffSnapshot.data() || {};
+  if (staff.role !== "admin" && staff.isAdmin !== true) {
+    throw new HttpsError("permission-denied", "Only staff can award points.");
+  }
+
+  const customerId = typeof request.data?.customer_id === "string"
+    ? request.data.customer_id.trim()
+    : "";
+  const points = request.data?.points;
+  if (!customerId || !Number.isSafeInteger(points) || points <= 0 || points > 10000) {
+    throw new HttpsError("invalid-argument", "Provide a valid customer and points amount.");
+  }
+
+  const customerRef = db.collection("users").doc(customerId);
+  return db.runTransaction(async (transaction) => {
+    const customerSnapshot = await transaction.get(customerRef);
+    if (!customerSnapshot.exists) {
+      throw new HttpsError("not-found", "This customer account could not be found.");
+    }
+
+    const customer = customerSnapshot.data() || {};
+    const currentPoints = Number.isSafeInteger(customer.points) ? customer.points : 0;
+    const newBalance = currentPoints + points;
+    const notificationRef = customerRef.collection("notifications").doc();
+
+    transaction.update(customerRef, { points: newBalance });
+    transaction.set(notificationRef, {
+      type: "points_awarded",
+      title: "Points received",
+      message: `You received ${points} points at Erlbrew Café.`,
+      points,
+      createdAt: FieldValue.serverTimestamp(),
+      read: false,
+    });
+
+    return { new_balance: newBalance };
+  });
+});
+
 // The client submits IDs and quantities only. Keep prices in trusted server
 // code until the menu is migrated to an admin-controlled Firestore collection.
 const MENU_CATALOG = Object.freeze({

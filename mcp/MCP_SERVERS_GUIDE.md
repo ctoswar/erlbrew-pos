@@ -86,7 +86,7 @@ SELECT * FROM time_adjustments ORDER BY created_at DESC
 
 ## 📁 4. **Filesystem** — Direct File Access
 **Status:** ✅ Ready  
-**Scope:** `src/`, `server/`, `docs/`, `public/`
+**Scope:** `src/`, `server/`, the complete `erlbrew_app/` project, `docs/`, `public/`
 
 **What It Does:**
 - Read/write files directly
@@ -165,6 +165,17 @@ node docker-mcp.js compose
 ---
 
 ## 🎯 **Typical Workflow:**
+
+### **Architecture Graph with Flutter App:**
+```bash
+# Keep the architecture graph updated for web, backend, and Flutter changes
+node mcp/graphify-watcher.js
+
+# In another terminal, serve the graph dashboard
+node mcp/graph-server.js
+```
+
+Open `http://localhost:5173` to view the graph. The complete Flutter project is shown in the `flutter` community; generated build files, `.dart_tool`, and dependency folders are excluded.
 
 ### **1. Morning Check-In:**
 ```bash

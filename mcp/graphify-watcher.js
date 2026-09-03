@@ -18,6 +18,15 @@ class GraphifyWatcher {
     this.projectRoot = projectRoot;
     this.srcDir = path.join(this.projectRoot, 'src');
     this.serverDir = path.join(this.projectRoot, 'server');
+    this.flutterDir = path.join(this.projectRoot, 'erlbrew_app');
+    this.flutterIgnoredDirectories = new Set([
+      '.dart_tool',
+      '.git',
+      '.idea',
+      'build',
+      'functions',
+      'node_modules'
+    ]);
     this.graphFile = path.join(this.projectRoot, '.graph', 'architecture.json');
     this.watchers = [];
     this.debounceTimer = null;
@@ -141,6 +150,48 @@ class GraphifyWatcher {
   }
 
   /**
+   * Scan the complete Flutter project, excluding generated and dependency files
+   */
+  scanFlutterFiles() {
+    const files = [];
+
+    if (!fs.existsSync(this.flutterDir)) return files;
+
+    const scanDirectory = (directory, relativeDirectory = '') => {
+      fs.readdirSync(directory, { withFileTypes: true }).forEach(entry => {
+        if (entry.isDirectory() && this.flutterIgnoredDirectories.has(entry.name)) {
+          return;
+        }
+
+        const fullPath = path.join(directory, entry.name);
+        const relativePath = path.join(relativeDirectory, entry.name);
+
+        if (entry.isDirectory()) {
+          scanDirectory(fullPath, relativePath);
+        } else if (entry.name !== '.flutter-plugins-dependencies') {
+          const configFile = /\.(json|lock|rules|yaml|yml|gradle|properties|plist|xml)$/.test(entry.name);
+
+          files.push({
+            id: `flutter-${relativePath.replace(/[\\/]/g, '-').replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase()}`,
+            label: relativePath.replace(/\\/g, '/'),
+            type: configFile ? 'config' : 'mobile',
+            community: 'flutter',
+            file: path.join('erlbrew_app', relativePath).replace(/\\/g, '/')
+          });
+        }
+      });
+    };
+
+    try {
+      scanDirectory(this.flutterDir);
+    } catch (error) {
+      console.error('Error scanning Flutter files:', error.message);
+    }
+
+    return files;
+  }
+
+  /**
    * Load the current architecture.json
    */
   loadCurrentGraph() {
@@ -180,17 +231,19 @@ class GraphifyWatcher {
     const newHooks = this.scanHooks();
     const newRoutes = this.scanRoutes();
     const newTypes = this.scanTypes();
+    const newFlutterFiles = this.scanFlutterFiles();
 
     const autoDetectedNodes = [
       ...newComponents,
       ...newHooks,
       ...newRoutes,
-      ...newTypes
+      ...newTypes,
+      ...newFlutterFiles
     ];
 
     // Keep manual nodes (those not auto-detected)
     const manualNodes = currentGraph.nodes.filter(node => 
-      !['component', 'hook', 'endpoint', 'type'].includes(node.type) ||
+      !['component', 'hook', 'endpoint', 'type', 'mobile'].includes(node.type) ||
       node.community === 'external' ||
       node.community === 'config' ||
       node.community === 'database'
@@ -224,6 +277,7 @@ class GraphifyWatcher {
         hooks: newHooks.length,
         routes: newRoutes.length,
         types: newTypes.length,
+        flutter_files: newFlutterFiles.length,
         total_nodes: mergedNodes.length,
         total_edges: (currentGraph.edges || []).length,
         last_updated: new Date().toISOString(),
@@ -244,6 +298,7 @@ class GraphifyWatcher {
         console.log(`   - Hooks: ${newHooks.length}`);
         console.log(`   - Routes: ${newRoutes.length}`);
         console.log(`   - Types: ${newTypes.length}`);
+        console.log(`   - Flutter files: ${newFlutterFiles.length}`);
         return true;
       } catch (error) {
         console.error('❌ Error writing graph:', error.message);
@@ -257,7 +312,7 @@ class GraphifyWatcher {
    * Setup file watchers with debounce
    */
   setupWatchers() {
-    const dirs = [this.srcDir, this.serverDir];
+    const dirs = [this.srcDir, this.serverDir, this.flutterDir];
 
     dirs.forEach(dir => {
       if (!fs.existsSync(dir)) {
@@ -266,8 +321,19 @@ class GraphifyWatcher {
       }
 
       const watcher = fs.watch(dir, { recursive: true }, (eventType, filename) => {
-        if (!filename.startsWith('.') && 
-            (filename.endsWith('.ts') || filename.endsWith('.tsx') || filename.endsWith('.js'))) {
+        const changedPath = filename ? filename.toString().replace(/\\/g, '/') : '';
+        const isIgnoredChange = changedPath.split('/').some(part =>
+          this.flutterIgnoredDirectories.has(part)
+        );
+
+        if (!isIgnoredChange && !changedPath.startsWith('.') && 
+            (changedPath.endsWith('.ts') || changedPath.endsWith('.tsx') ||
+             changedPath.endsWith('.js') || changedPath.endsWith('.dart') ||
+             changedPath.endsWith('.yaml') || changedPath.endsWith('.json') ||
+             changedPath.endsWith('.rules') || changedPath.endsWith('.kt') ||
+             changedPath.endsWith('.gradle') || changedPath.endsWith('.xml') ||
+             changedPath.endsWith('.plist') || changedPath.endsWith('.swift') ||
+             changedPath.endsWith('.html') || changedPath.endsWith('.css'))) {
           
           // Debounce: clear previous timer and set new one
           clearTimeout(this.debounceTimer);
@@ -289,7 +355,8 @@ class GraphifyWatcher {
     console.log('🚀 Graphify Auto-Watcher Started\n');
     console.log('📁 Monitoring directories:');
     console.log(`   • ${this.srcDir}`);
-    console.log(`   • ${this.serverDir}\n`);
+    console.log(`   • ${this.serverDir}`);
+    console.log(`   • ${this.flutterDir} (excluding generated/dependency folders)\n`);
 
     // Initial regeneration
     this.regenerateGraph();

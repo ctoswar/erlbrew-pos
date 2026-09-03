@@ -261,6 +261,19 @@ class FirebaseAuthService {
         .map((snapshot) => snapshot.docs.map(_pickupOrderFromDocument).toList());
   }
 
+  Stream<List<PickupOrder>> customerOrdersStream(String customerId) {
+    return FirebaseFirestore.instance
+        .collection('orders')
+        .where('userId', isEqualTo: customerId)
+        .snapshots()
+        .map((snapshot) {
+          final orders =
+              snapshot.docs.map(_pickupOrderFromDocument).toList();
+          orders.sort((a, b) => b.placedAt.compareTo(a.placedAt));
+          return orders;
+        });
+  }
+
   PickupOrder _pickupOrderFromDocument(
     QueryDocumentSnapshot<Map<String, dynamic>> document,
   ) {

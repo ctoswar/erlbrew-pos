@@ -1,7 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_models.dart';
+import '../services/firebase_auth_service.dart';
 import '../services/paymongo_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/fade_slide_in.dart';
@@ -16,49 +16,6 @@ class PickupScreen extends StatefulWidget {
 }
 
 class _PickupScreenState extends State<PickupScreen> {
-  Timer? _statusTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _statusTimer = Timer.periodic(
-      const Duration(seconds: 8),
-      (_) => _refreshPendingOrders(),
-    );
-  }
-
-  @override
-  void dispose() {
-    _statusTimer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _refreshPendingOrders() async {
-    final pending = MockData.orders
-        .where((order) => order.status == PickupStatus.pending)
-        .toList();
-    for (final order in pending) {
-      try {
-        final status =
-            await PayMongoService.instance.fetchOrderStatus(order.id);
-        if (status != order.status && mounted) {
-          setState(() {
-            order.status = status;
-            if (status == PickupStatus.preparing ||
-                status == PickupStatus.ready ||
-                status == PickupStatus.completed) {
-              order.paymentStatus = PickupPaymentStatus.paid;
-            } else if (status == PickupStatus.cancelled) {
-              order.paymentStatus = PickupPaymentStatus.cancelled;
-            }
-          });
-        }
-      } catch (_) {
-        // A temporary network failure should not disrupt the pickup screen.
-      }
-    }
-  }
-
   String _statusLabel(PickupStatus s) {
     switch (s) {
       case PickupStatus.pending:
@@ -96,7 +53,7 @@ class _PickupScreenState extends State<PickupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final orders = MockData.orders;
+    final customerId = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Pickup')),
@@ -106,7 +63,22 @@ class _PickupScreenState extends State<PickupScreen> {
         icon: const Icon(Icons.add),
         label: const Text('New Order'),
       ),
-      body: orders.isEmpty
+      body: customerId == null
+          ? const Center(child: Text('Sign in to view your pickup orders.'))
+          : StreamBuilder<List<PickupOrder>>(
+        stream: FirebaseAuthService.instance.customerOrdersStream(customerId),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text(
+              'Unable to load pickup orders: ${snapshot.error}',
+              textAlign: TextAlign.center,
+            ));
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final orders = snapshot.data!;
+          return orders.isEmpty
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -234,9 +206,11 @@ class _PickupScreenState extends State<PickupScreen> {
                       ),
                     ),
                   ),
-                );
-              },
-            ),
+                      );
+                    },
+                  );
+        },
+      ),
     );
   }
 }

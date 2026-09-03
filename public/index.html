@@ -13,18 +13,32 @@
       box-sizing: border-box;
     }
 
+    :root {
+      --ink: #2b2118;
+      --muted: #796d61;
+      --cream: #f8f3ea;
+      --paper: rgba(255, 253, 248, 0.88);
+      --line: #dccdb8;
+      --accent: #c36d3d;
+      --accent-dark: #8e472c;
+    }
+
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #0d0600 0%, #1e0e06 100%);
-      color: #f5f5f5;
+      font-family: Georgia, 'Times New Roman', serif;
+      background:
+        radial-gradient(circle at 14% 12%, rgba(255, 223, 164, 0.7), transparent 28%),
+        radial-gradient(circle at 82% 80%, rgba(218, 238, 231, 0.8), transparent 30%),
+        linear-gradient(135deg, #fbf7ef 0%, #f2e8d8 100%);
+      color: var(--ink);
       height: 100vh;
       overflow: hidden;
     }
 
     .header {
-      background: rgba(0, 0, 0, 0.8);
-      padding: 15px 20px;
-      border-bottom: 2px solid #C9873A;
+      background: rgba(255, 253, 248, 0.92);
+      padding: 14px 20px;
+      border-bottom: 2px solid var(--accent);
+      box-shadow: 0 4px 18px rgba(102, 70, 39, 0.09);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -32,20 +46,28 @@
 
     .header h1 {
       font-size: 24px;
-      color: #C9873A;
+      color: var(--accent-dark);
+      letter-spacing: -0.5px;
     }
 
     .search-box {
-      background: rgba(201, 135, 58, 0.1);
-      border: 1px solid #C9873A;
+      background: #fffdf8;
+      border: 1px solid #cda57d;
       padding: 8px 12px;
-      border-radius: 4px;
-      color: #fff;
+      border-radius: 999px;
+      color: var(--ink);
       width: 250px;
+      outline: none;
+      box-shadow: 0 2px 8px rgba(102, 70, 39, 0.08);
     }
 
     .search-box::placeholder {
-      color: #888;
+      color: #a09384;
+    }
+
+    .search-box:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(195, 109, 61, 0.16);
     }
 
     .container {
@@ -56,24 +78,26 @@
 
     #network {
       flex: 1;
-      background: rgba(30, 14, 6, 0.9);
+      background: rgba(255, 252, 246, 0.48);
       position: relative;
     }
 
     .sidebar {
       width: 320px;
-      background: rgba(0, 0, 0, 0.8);
-      border-left: 2px solid #C9873A;
+      background: var(--paper);
+      border-left: 2px solid var(--accent);
       padding: 20px;
       overflow-y: auto;
       max-height: calc(100vh - 60px);
+      box-shadow: -8px 0 24px rgba(102, 70, 39, 0.08);
     }
 
     .sidebar h3 {
-      color: #C9873A;
+      color: var(--accent-dark);
       margin-bottom: 15px;
       font-size: 14px;
       text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     .communities {
@@ -92,7 +116,7 @@
     }
 
     .community-item:hover {
-      background: rgba(201, 135, 58, 0.1);
+      background: #f4e7d5;
     }
 
     .community-item input[type="checkbox"] {
@@ -108,18 +132,19 @@
 
     .community-label {
       font-size: 12px;
+      color: var(--ink);
       flex: 1;
     }
 
     .community-count {
       font-size: 10px;
-      color: #888;
+      color: var(--muted);
     }
 
     .stats {
       margin-top: 20px;
       padding-top: 20px;
-      border-top: 1px solid #C9873A;
+      border-top: 1px solid var(--line);
     }
 
     .stat-row {
@@ -130,11 +155,11 @@
     }
 
     .stat-label {
-      color: #aaa;
+      color: var(--muted);
     }
 
     .stat-value {
-      color: #C9873A;
+      color: var(--accent-dark);
       font-weight: bold;
     }
 
@@ -143,16 +168,30 @@
     }
 
     ::-webkit-scrollbar-track {
-      background: rgba(201, 135, 58, 0.05);
+      background: #eee4d5;
     }
 
     ::-webkit-scrollbar-thumb {
-      background: #C9873A;
+      background: #d19a69;
       border-radius: 3px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-      background: #daa947;
+      background: var(--accent);
+    }
+
+    .sidebar h4,
+    .sidebar [style*="color: #C9873A"] {
+      color: var(--accent-dark) !important;
+    }
+
+    .sidebar [style*="border-top: 1px solid #C9873A"] {
+      border-top-color: var(--line) !important;
+    }
+
+    .sidebar [style*="color: #888"],
+    .sidebar [style*="color: #aaa"] {
+      color: var(--muted) !important;
     }
   </style>
 </head>
@@ -208,7 +247,7 @@
           <div style="font-size: 10px; color: #888; margin-bottom: 4px;">Graphify Watcher</div>
           <div class="stat-row">
             <span class="stat-label">Watch Dirs</span>
-            <span class="stat-value" style="font-size: 9px;">src/ + server/</span>
+            <span class="stat-value" style="font-size: 9px;">src/ + server/ + erlbrew_app/</span>
           </div>
           <div class="stat-row">
             <span class="stat-label">Auto-detect</span>
@@ -261,13 +300,14 @@
     let allNodes = [];
     let allEdges = [];
     const communityColors = {
-      'frontend': '#FF6B6B',
-      'backend': '#4ECDC4',
-      'database': '#45B7D1',
-      'feature': '#FFA07A',
-      'external': '#FFD93D',
-      'config': '#A8E6CF',
-      'other': '#95E1D3'
+      'frontend': '#e76f51',
+      'backend': '#2a9d8f',
+      'flutter': '#d9903d',
+      'database': '#3d8fb8',
+      'feature': '#d88c9a',
+      'external': '#d5a928',
+      'config': '#72a98f',
+      'other': '#6c9a9a'
     };
 
     async function loadGraph() {
@@ -287,8 +327,8 @@
         id: node.id,
         label: node.label,
         title: `${node.type} - ${node.label}`,
-        color: communityColors[node.community] || '#C9873A',
-        font: { color: '#fff', size: 12 },
+        color: communityColors[node.community] || '#c36d3d',
+        font: { color: '#2b2118', size: 12 },
         shape: node.type === 'table' ? 'database' : node.type === 'external' ? 'star' : node.type === 'hardware' ? 'triangle' : node.type === 'config' ? 'box' : node.type === 'type' ? 'diamond' : 'dot',
         size: node.type === 'module' ? 35 : node.type === 'feature' ? 30 : 25,
         community: node.community,
@@ -299,8 +339,8 @@
         from: edge.from,
         to: edge.to,
         label: edge.label,
-        font: { color: '#aaa', size: 10 },
-        color: { color: '#888', highlight: '#C9873A' },
+        font: { color: '#796d61', size: 10 },
+        color: { color: '#b9a996', highlight: '#c36d3d' },
         smooth: { type: 'continuous' }
       }));
 
@@ -349,7 +389,7 @@
         html += `
           <label class="community-item">
             <input type="checkbox" data-community="${community}" checked>
-            <div class="community-color" style="background: ${communityColors[community] || '#C9873A'};"></div>
+            <div class="community-color" style="background: ${communityColors[community] || '#c36d3d'};"></div>
             <span class="community-label">${community}</span>
             <span class="community-count">${count}</span>
           </label>
@@ -401,4 +441,3 @@
   </script>
 </body>
 </html>
-

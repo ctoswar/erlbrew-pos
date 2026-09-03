@@ -73,15 +73,6 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final orders = MockData.orders
-        .where((o) => _filter == null || o.status == _filter)
-        .toList();
-
-    final counts = {
-      for (final s in PickupStatus.values)
-        s: MockData.orders.where((o) => o.status == s).length,
-    };
-
     return Scaffold(
       appBar: AppBar(title: const Text('Orders')),
       body: Column(
@@ -94,7 +85,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                 scrollDirection: Axis.horizontal,
                 children: [
                   _FilterChip(
-                    label: 'All (${MockData.orders.length})',
+                    label: 'All',
                     selected: _filter == null,
                     onTap: () => setState(() => _filter = null),
                   ),
@@ -102,7 +93,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                   ...PickupStatus.values.map((s) => Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: _FilterChip(
-                          label: '${_label(s)} (${counts[s]})',
+                          label: _label(s),
                           selected: _filter == s,
                           color: _color(s),
                           onTap: () => setState(() => _filter = s),
@@ -113,12 +104,29 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
             ),
           ),
           Expanded(
-            child: orders.isEmpty
-                ? Center(
+            child: StreamBuilder<List<PickupOrder>>(
+              stream: FirebaseAuthService.instance.adminOrdersStream(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text(
+                    'Unable to load orders: ${snapshot.error}',
+                    style: TextStyle(color: AppColors.error),
+                    textAlign: TextAlign.center,
+                  ));
+                }
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final orders = snapshot.data!
+                    .where((o) => _filter == null || o.status == _filter)
+                    .toList();
+                if (orders.isEmpty) {
+                  return Center(
                     child: Text('No orders in this filter',
                         style: TextStyle(color: AppColors.slateGrey)),
-                  )
-                : ListView.builder(
+                  );
+                }
+                return ListView.builder(
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
                     itemCount: orders.length,
                     itemBuilder: (context, i) {
@@ -226,7 +234,9 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                         ),
                       );
                     },
-                  ),
+                  );
+              },
+            ),
           ),
         ],
       ),

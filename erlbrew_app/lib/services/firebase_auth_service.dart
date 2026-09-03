@@ -253,6 +253,56 @@ class FirebaseAuthService {
     );
   }
 
+  Stream<List<PickupOrder>> adminOrdersStream() {
+    return FirebaseFirestore.instance
+        .collection('orders')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map(_pickupOrderFromDocument).toList());
+  }
+
+  PickupOrder _pickupOrderFromDocument(
+    QueryDocumentSnapshot<Map<String, dynamic>> document,
+  ) {
+    final data = document.data();
+    final rawCreatedAt = data['createdAt'];
+    final placedAt = rawCreatedAt is Timestamp
+        ? rawCreatedAt.toDate()
+        : DateTime.tryParse(rawCreatedAt?.toString() ?? '') ?? DateTime.now();
+    final status = PickupStatus.values.firstWhere(
+      (value) => value.name == data['status'],
+      orElse: () => PickupStatus.pending,
+    );
+    final paymentMethod = PickupPaymentMethod.values.firstWhere(
+      (value) => value.name == data['paymentMethod'],
+      orElse: () => PickupPaymentMethod.gcash,
+    );
+    final paymentStatus = PickupPaymentStatus.values.firstWhere(
+      (value) => value.name == data['paymentStatus'],
+      orElse: () => PickupPaymentStatus.pending,
+    );
+    final rawItems = data['items'];
+    final itemSummary = rawItems is List
+        ? rawItems.map((item) {
+            if (item is Map) {
+              return '${item['quantity'] ?? item['qty'] ?? 1}x ${item['name'] ?? 'Item'}';
+            }
+            return item.toString();
+          }).join(', ')
+        : 'Order items unavailable';
+
+    return PickupOrder(
+      id: (data['id'] ?? document.id).toString(),
+      customerName: (data['customerName'] ?? 'Erlbrew Customer').toString(),
+      itemSummary: itemSummary,
+      placedAt: placedAt,
+      paymentMethod: paymentMethod,
+      total: (data['total'] as num?)?.toDouble(),
+      paymentStatus: paymentStatus,
+      status: status,
+    );
+  }
+
   Stream<QuerySnapshot<Map<String, dynamic>>> customerNotificationsStream(
     String customerId,
   ) {

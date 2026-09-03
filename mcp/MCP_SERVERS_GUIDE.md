@@ -86,7 +86,7 @@ SELECT * FROM time_adjustments ORDER BY created_at DESC
 
 ## 📁 4. **Filesystem** — Direct File Access
 **Status:** ✅ Ready  
-**Scope:** `src/`, `server/`, the complete `erlbrew_app/` project, `docs/`, `public/`
+**Scope:** All POS source/config files in `src/`, `server/`, `public/`, `scripts/`, and `mcp/`, plus the complete `erlbrew_app/` project and `docs/`
 
 **What It Does:**
 - Read/write files directly
@@ -175,7 +175,7 @@ node mcp/graphify-watcher.js
 node mcp/graph-server.js
 ```
 
-Open `http://localhost:5173` to view the graph. The complete Flutter project is shown in the `flutter` community; generated build files, `.dart_tool`, and dependency folders are excluded.
+Open `http://localhost:5173` to view the graph. All POS source/config files are shown alongside the complete Flutter project. Generated build files, `.dart_tool`, `.idea`, and dependency folders are excluded.
 
 ### **1. Morning Check-In:**
 ```bash

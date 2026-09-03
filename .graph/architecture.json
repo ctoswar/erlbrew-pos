@@ -379,788 +379,1145 @@
       "file": "index.ts"
     },
     {
-      "id": "flutter--firebaserc",
+      "id": "flutter-2e66697265626173657263",
       "label": ".firebaserc",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/.firebaserc"
     },
     {
-      "id": "flutter--gitignore",
+      "id": "flutter-2e67697469676e6f7265",
       "label": ".gitignore",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/.gitignore"
     },
     {
-      "id": "flutter--metadata",
+      "id": "flutter-2e6d65746164617461",
       "label": ".metadata",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/.metadata"
     },
     {
-      "id": "flutter-analysis_options-yaml",
+      "id": "flutter-616e616c797369735f6f7074696f6e732e79616d6c",
       "label": "analysis_options.yaml",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/analysis_options.yaml"
     },
     {
-      "id": "flutter-android--gitignore",
+      "id": "flutter-616e64726f69645c2e67697469676e6f7265",
       "label": "android/.gitignore",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/.gitignore"
     },
     {
-      "id": "flutter-android--gradle-9-3-1-checksums-checksums-lock",
-      "label": "android/.gradle/9.3.1/checksums/checksums.lock",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/checksums/checksums.lock"
-    },
-    {
-      "id": "flutter-android--gradle-9-3-1-checksums-md5-checksums-bin",
-      "label": "android/.gradle/9.3.1/checksums/md5-checksums.bin",
-      "type": "mobile",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/checksums/md5-checksums.bin"
-    },
-    {
-      "id": "flutter-android--gradle-9-3-1-checksums-sha1-checksums-bin",
-      "label": "android/.gradle/9.3.1/checksums/sha1-checksums.bin",
-      "type": "mobile",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/checksums/sha1-checksums.bin"
-    },
-    {
-      "id": "flutter-android--gradle-9-3-1-executionhistory-executionhistory-bin",
-      "label": "android/.gradle/9.3.1/executionHistory/executionHistory.bin",
-      "type": "mobile",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/executionHistory/executionHistory.bin"
-    },
-    {
-      "id": "flutter-android--gradle-9-3-1-executionhistory-executionhistory-lock",
-      "label": "android/.gradle/9.3.1/executionHistory/executionHistory.lock",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/executionHistory/executionHistory.lock"
-    },
-    {
-      "id": "flutter-android--gradle-9-3-1-filechanges-last-build-bin",
-      "label": "android/.gradle/9.3.1/fileChanges/last-build.bin",
-      "type": "mobile",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/fileChanges/last-build.bin"
-    },
-    {
-      "id": "flutter-android--gradle-9-3-1-filehashes-filehashes-bin",
-      "label": "android/.gradle/9.3.1/fileHashes/fileHashes.bin",
-      "type": "mobile",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/fileHashes/fileHashes.bin"
-    },
-    {
-      "id": "flutter-android--gradle-9-3-1-filehashes-filehashes-lock",
-      "label": "android/.gradle/9.3.1/fileHashes/fileHashes.lock",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/fileHashes/fileHashes.lock"
-    },
-    {
-      "id": "flutter-android--gradle-9-3-1-filehashes-resourcehashescache-bin",
-      "label": "android/.gradle/9.3.1/fileHashes/resourceHashesCache.bin",
-      "type": "mobile",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/fileHashes/resourceHashesCache.bin"
-    },
-    {
-      "id": "flutter-android--gradle-9-3-1-gc-properties",
-      "label": "android/.gradle/9.3.1/gc.properties",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/gc.properties"
-    },
-    {
-      "id": "flutter-android--gradle-buildoutputcleanup-buildoutputcleanup-lock",
-      "label": "android/.gradle/buildOutputCleanup/buildOutputCleanup.lock",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock"
-    },
-    {
-      "id": "flutter-android--gradle-buildoutputcleanup-cache-properties",
-      "label": "android/.gradle/buildOutputCleanup/cache.properties",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/buildOutputCleanup/cache.properties"
-    },
-    {
-      "id": "flutter-android--gradle-buildoutputcleanup-outputfiles-bin",
-      "label": "android/.gradle/buildOutputCleanup/outputFiles.bin",
-      "type": "mobile",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/buildOutputCleanup/outputFiles.bin"
-    },
-    {
-      "id": "flutter-android--gradle-file-system-probe",
-      "label": "android/.gradle/file-system.probe",
-      "type": "mobile",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/file-system.probe"
-    },
-    {
-      "id": "flutter-android--gradle-noversion-buildlogic-lock",
-      "label": "android/.gradle/noVersion/buildLogic.lock",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/noVersion/buildLogic.lock"
-    },
-    {
-      "id": "flutter-android--gradle-vcs-1-gc-properties",
-      "label": "android/.gradle/vcs-1/gc.properties",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/vcs-1/gc.properties"
-    },
-    {
-      "id": "flutter-android-app-build-gradle-kts",
+      "id": "flutter-616e64726f69645c6170705c6275696c642e677261646c652e6b7473",
       "label": "android/app/build.gradle.kts",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/app/build.gradle.kts"
     },
     {
-      "id": "flutter-android-app-src-debug-androidmanifest-xml",
+      "id": "flutter-616e64726f69645c6170705c7372635c64656275675c416e64726f69644d616e69666573742e786d6c",
       "label": "android/app/src/debug/AndroidManifest.xml",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/debug/AndroidManifest.xml"
     },
     {
-      "id": "flutter-android-app-src-main-androidmanifest-xml",
+      "id": "flutter-616e64726f69645c6170705c7372635c6d61696e5c416e64726f69644d616e69666573742e786d6c",
       "label": "android/app/src/main/AndroidManifest.xml",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/main/AndroidManifest.xml"
     },
     {
-      "id": "flutter-android-app-src-main-java-io-flutter-plugins-generatedpluginregistrant-java",
+      "id": "flutter-616e64726f69645c6170705c7372635c6d61696e5c6a6176615c696f5c666c75747465725c706c7567696e735c47656e657261746564506c7567696e52656769737472616e742e6a617661",
       "label": "android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java"
     },
     {
-      "id": "flutter-android-app-src-main-kotlin-com-example-erlbrew_app-mainactivity-kt",
+      "id": "flutter-616e64726f69645c6170705c7372635c6d61696e5c6b6f746c696e5c636f6d5c6578616d706c655c65726c627265775f6170705c4d61696e41637469766974792e6b74",
       "label": "android/app/src/main/kotlin/com/example/erlbrew_app/MainActivity.kt",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/main/kotlin/com/example/erlbrew_app/MainActivity.kt"
     },
     {
-      "id": "flutter-android-app-src-main-res-drawable-launch_background-xml",
+      "id": "flutter-616e64726f69645c6170705c7372635c6d61696e5c7265735c6472617761626c655c6c61756e63685f6261636b67726f756e642e786d6c",
       "label": "android/app/src/main/res/drawable/launch_background.xml",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/main/res/drawable/launch_background.xml"
     },
     {
-      "id": "flutter-android-app-src-main-res-drawable-v21-launch_background-xml",
+      "id": "flutter-616e64726f69645c6170705c7372635c6d61696e5c7265735c6472617761626c652d7632315c6c61756e63685f6261636b67726f756e642e786d6c",
       "label": "android/app/src/main/res/drawable-v21/launch_background.xml",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/main/res/drawable-v21/launch_background.xml"
     },
     {
-      "id": "flutter-android-app-src-main-res-mipmap-hdpi-ic_launcher-png",
+      "id": "flutter-616e64726f69645c6170705c7372635c6d61696e5c7265735c6d69706d61702d686470695c69635f6c61756e636865722e706e67",
       "label": "android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/main/res/mipmap-hdpi/ic_launcher.png"
     },
     {
-      "id": "flutter-android-app-src-main-res-mipmap-mdpi-ic_launcher-png",
+      "id": "flutter-616e64726f69645c6170705c7372635c6d61696e5c7265735c6d69706d61702d6d6470695c69635f6c61756e636865722e706e67",
       "label": "android/app/src/main/res/mipmap-mdpi/ic_launcher.png",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/main/res/mipmap-mdpi/ic_launcher.png"
     },
     {
-      "id": "flutter-android-app-src-main-res-mipmap-xhdpi-ic_launcher-png",
+      "id": "flutter-616e64726f69645c6170705c7372635c6d61696e5c7265735c6d69706d61702d78686470695c69635f6c61756e636865722e706e67",
       "label": "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png"
     },
     {
-      "id": "flutter-android-app-src-main-res-mipmap-xxhdpi-ic_launcher-png",
+      "id": "flutter-616e64726f69645c6170705c7372635c6d61696e5c7265735c6d69706d61702d7878686470695c69635f6c61756e636865722e706e67",
       "label": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png"
     },
     {
-      "id": "flutter-android-app-src-main-res-mipmap-xxxhdpi-ic_launcher-png",
+      "id": "flutter-616e64726f69645c6170705c7372635c6d61696e5c7265735c6d69706d61702d787878686470695c69635f6c61756e636865722e706e67",
       "label": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"
     },
     {
-      "id": "flutter-android-app-src-main-res-values-styles-xml",
+      "id": "flutter-616e64726f69645c6170705c7372635c6d61696e5c7265735c76616c7565735c7374796c65732e786d6c",
       "label": "android/app/src/main/res/values/styles.xml",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/main/res/values/styles.xml"
     },
     {
-      "id": "flutter-android-app-src-main-res-values-night-styles-xml",
+      "id": "flutter-616e64726f69645c6170705c7372635c6d61696e5c7265735c76616c7565732d6e696768745c7374796c65732e786d6c",
       "label": "android/app/src/main/res/values-night/styles.xml",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/main/res/values-night/styles.xml"
     },
     {
-      "id": "flutter-android-app-src-profile-androidmanifest-xml",
+      "id": "flutter-616e64726f69645c6170705c7372635c70726f66696c655c416e64726f69644d616e69666573742e786d6c",
       "label": "android/app/src/profile/AndroidManifest.xml",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/android/app/src/profile/AndroidManifest.xml"
     },
     {
-      "id": "flutter-android-build-gradle-kts",
+      "id": "flutter-616e64726f69645c6275696c642e677261646c652e6b7473",
       "label": "android/build.gradle.kts",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/build.gradle.kts"
     },
     {
-      "id": "flutter-android-erlbrew_app_android-iml",
+      "id": "flutter-616e64726f69645c65726c627265775f6170705f616e64726f69642e696d6c",
       "label": "android/erlbrew_app_android.iml",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/erlbrew_app_android.iml"
     },
     {
-      "id": "flutter-android-gradle-wrapper-gradle-wrapper-jar",
+      "id": "flutter-616e64726f69645c677261646c655c777261707065725c677261646c652d777261707065722e6a6172",
       "label": "android/gradle/wrapper/gradle-wrapper.jar",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/gradle/wrapper/gradle-wrapper.jar"
     },
     {
-      "id": "flutter-android-gradle-wrapper-gradle-wrapper-properties",
+      "id": "flutter-616e64726f69645c677261646c655c777261707065725c677261646c652d777261707065722e70726f70657274696573",
       "label": "android/gradle/wrapper/gradle-wrapper.properties",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/android/gradle/wrapper/gradle-wrapper.properties"
     },
     {
-      "id": "flutter-android-gradle-properties",
+      "id": "flutter-616e64726f69645c677261646c652e70726f70657274696573",
       "label": "android/gradle.properties",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/android/gradle.properties"
     },
     {
-      "id": "flutter-android-gradlew",
+      "id": "flutter-616e64726f69645c677261646c6577",
       "label": "android/gradlew",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/gradlew"
     },
     {
-      "id": "flutter-android-gradlew-bat",
+      "id": "flutter-616e64726f69645c677261646c65772e626174",
       "label": "android/gradlew.bat",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/gradlew.bat"
     },
     {
-      "id": "flutter-android-local-properties",
+      "id": "flutter-616e64726f69645c6c6f63616c2e70726f70657274696573",
       "label": "android/local.properties",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/android/local.properties"
     },
     {
-      "id": "flutter-android-settings-gradle-kts",
+      "id": "flutter-616e64726f69645c73657474696e67732e677261646c652e6b7473",
       "label": "android/settings.gradle.kts",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/android/settings.gradle.kts"
     },
     {
-      "id": "flutter-assets-images-erlbrew_logo-jpg",
+      "id": "flutter-6173736574735c696d616765735c65726c627265775f6c6f676f2e6a7067",
       "label": "assets/images/erlbrew_logo.jpg",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/assets/images/erlbrew_logo.jpg"
     },
     {
-      "id": "flutter-erlbrew_app-iml",
+      "id": "flutter-65726c627265775f6170702e696d6c",
       "label": "erlbrew_app.iml",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/erlbrew_app.iml"
     },
     {
-      "id": "flutter-firebase-json",
+      "id": "flutter-66697265626173652e6a736f6e",
       "label": "firebase.json",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/firebase.json"
     },
     {
-      "id": "flutter-firestore-rules",
+      "id": "flutter-6669726573746f72652e72756c6573",
       "label": "firestore.rules",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/firestore.rules"
     },
     {
-      "id": "flutter-lib-firebase_options-dart",
+      "id": "flutter-6c69625c66697265626173655f6f7074696f6e732e64617274",
       "label": "lib/firebase_options.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/firebase_options.dart"
     },
     {
-      "id": "flutter-lib-main-dart",
+      "id": "flutter-6c69625c6d61696e2e64617274",
       "label": "lib/main.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/main.dart"
     },
     {
-      "id": "flutter-lib-models-app_models-dart",
+      "id": "flutter-6c69625c6d6f64656c735c6170705f6d6f64656c732e64617274",
       "label": "lib/models/app_models.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/models/app_models.dart"
     },
     {
-      "id": "flutter-lib-screens-admin-admin_customers_screen-dart",
+      "id": "flutter-6c69625c73637265656e735c61646d696e5c61646d696e5f637573746f6d6572735f73637265656e2e64617274",
       "label": "lib/screens/admin/admin_customers_screen.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/screens/admin/admin_customers_screen.dart"
     },
     {
-      "id": "flutter-lib-screens-admin-admin_home_shell-dart",
+      "id": "flutter-6c69625c73637265656e735c61646d696e5c61646d696e5f686f6d655f7368656c6c2e64617274",
       "label": "lib/screens/admin/admin_home_shell.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/screens/admin/admin_home_shell.dart"
     },
     {
-      "id": "flutter-lib-screens-admin-admin_menu_screen-dart",
+      "id": "flutter-6c69625c73637265656e735c61646d696e5c61646d696e5f6d656e755f73637265656e2e64617274",
       "label": "lib/screens/admin/admin_menu_screen.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/screens/admin/admin_menu_screen.dart"
     },
     {
-      "id": "flutter-lib-screens-admin-admin_orders_screen-dart",
+      "id": "flutter-6c69625c73637265656e735c61646d696e5c61646d696e5f6f72646572735f73637265656e2e64617274",
       "label": "lib/screens/admin/admin_orders_screen.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/screens/admin/admin_orders_screen.dart"
     },
     {
-      "id": "flutter-lib-screens-admin-admin_rewards_screen-dart",
+      "id": "flutter-6c69625c73637265656e735c61646d696e5c61646d696e5f726577617264735f73637265656e2e64617274",
       "label": "lib/screens/admin/admin_rewards_screen.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/screens/admin/admin_rewards_screen.dart"
     },
     {
-      "id": "flutter-lib-screens-admin-admin_scan_screen-dart",
+      "id": "flutter-6c69625c73637265656e735c61646d696e5c61646d696e5f7363616e5f73637265656e2e64617274",
       "label": "lib/screens/admin/admin_scan_screen.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/screens/admin/admin_scan_screen.dart"
     },
     {
-      "id": "flutter-lib-screens-home_shell-dart",
+      "id": "flutter-6c69625c73637265656e735c686f6d655f7368656c6c2e64617274",
       "label": "lib/screens/home_shell.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/screens/home_shell.dart"
     },
     {
-      "id": "flutter-lib-screens-login_screen-dart",
+      "id": "flutter-6c69625c73637265656e735c6c6f67696e5f73637265656e2e64617274",
       "label": "lib/screens/login_screen.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/screens/login_screen.dart"
     },
     {
-      "id": "flutter-lib-screens-my_qr_screen-dart",
+      "id": "flutter-6c69625c73637265656e735c6d795f71725f73637265656e2e64617274",
       "label": "lib/screens/my_qr_screen.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/screens/my_qr_screen.dart"
     },
     {
-      "id": "flutter-lib-screens-order_sheet-dart",
+      "id": "flutter-6c69625c73637265656e735c6f726465725f73686565742e64617274",
       "label": "lib/screens/order_sheet.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/screens/order_sheet.dart"
     },
     {
-      "id": "flutter-lib-screens-pickup_screen-dart",
+      "id": "flutter-6c69625c73637265656e735c7069636b75705f73637265656e2e64617274",
       "label": "lib/screens/pickup_screen.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/screens/pickup_screen.dart"
     },
     {
-      "id": "flutter-lib-screens-rewards_screen-dart",
+      "id": "flutter-6c69625c73637265656e735c726577617264735f73637265656e2e64617274",
       "label": "lib/screens/rewards_screen.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/screens/rewards_screen.dart"
     },
     {
-      "id": "flutter-lib-screens-signup_screen-dart",
+      "id": "flutter-6c69625c73637265656e735c7369676e75705f73637265656e2e64617274",
       "label": "lib/screens/signup_screen.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/screens/signup_screen.dart"
     },
     {
-      "id": "flutter-lib-services-firebase_auth_service-dart",
+      "id": "flutter-6c69625c73657276696365735c66697265626173655f617574685f736572766963652e64617274",
       "label": "lib/services/firebase_auth_service.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/services/firebase_auth_service.dart"
     },
     {
-      "id": "flutter-lib-services-paymongo_service-dart",
+      "id": "flutter-6c69625c73657276696365735c7061796d6f6e676f5f736572766963652e64617274",
       "label": "lib/services/paymongo_service.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/services/paymongo_service.dart"
     },
     {
-      "id": "flutter-lib-theme-app_theme-dart",
+      "id": "flutter-6c69625c7468656d655c6170705f7468656d652e64617274",
       "label": "lib/theme/app_theme.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/theme/app_theme.dart"
     },
     {
-      "id": "flutter-lib-widgets-animated_counter-dart",
+      "id": "flutter-6c69625c776964676574735c616e696d617465645f636f756e7465722e64617274",
       "label": "lib/widgets/animated_counter.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/widgets/animated_counter.dart"
     },
     {
-      "id": "flutter-lib-widgets-brand_mark-dart",
+      "id": "flutter-6c69625c776964676574735c6272616e645f6d61726b2e64617274",
       "label": "lib/widgets/brand_mark.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/widgets/brand_mark.dart"
     },
     {
-      "id": "flutter-lib-widgets-fade_slide_in-dart",
+      "id": "flutter-6c69625c776964676574735c666164655f736c6964655f696e2e64617274",
       "label": "lib/widgets/fade_slide_in.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/widgets/fade_slide_in.dart"
     },
     {
-      "id": "flutter-lib-widgets-luxury_button-dart",
+      "id": "flutter-6c69625c776964676574735c6c75787572795f627574746f6e2e64617274",
       "label": "lib/widgets/luxury_button.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/widgets/luxury_button.dart"
     },
     {
-      "id": "flutter-lib-widgets-pulse-dart",
+      "id": "flutter-6c69625c776964676574735c70756c73652e64617274",
       "label": "lib/widgets/pulse.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/lib/widgets/pulse.dart"
     },
     {
-      "id": "flutter-pubspec-lock",
+      "id": "flutter-707562737065632e6c6f636b",
       "label": "pubspec.lock",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/pubspec.lock"
     },
     {
-      "id": "flutter-pubspec-yaml",
+      "id": "flutter-707562737065632e79616d6c",
       "label": "pubspec.yaml",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/pubspec.yaml"
     },
     {
-      "id": "flutter-readme-md",
+      "id": "flutter-524541444d452e6d64",
       "label": "README.md",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/README.md"
     },
     {
-      "id": "flutter-test-widget_test-dart",
+      "id": "flutter-746573745c7769646765745f746573742e64617274",
       "label": "test/widget_test.dart",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/test/widget_test.dart"
     },
     {
-      "id": "flutter-web-favicon-png",
+      "id": "flutter-7765625c66617669636f6e2e706e67",
       "label": "web/favicon.png",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/web/favicon.png"
     },
     {
-      "id": "flutter-web-icons-icon-192-png",
+      "id": "flutter-7765625c69636f6e735c49636f6e2d3139322e706e67",
       "label": "web/icons/Icon-192.png",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/web/icons/Icon-192.png"
     },
     {
-      "id": "flutter-web-icons-icon-512-png",
+      "id": "flutter-7765625c69636f6e735c49636f6e2d3531322e706e67",
       "label": "web/icons/Icon-512.png",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/web/icons/Icon-512.png"
     },
     {
-      "id": "flutter-web-icons-icon-maskable-192-png",
+      "id": "flutter-7765625c69636f6e735c49636f6e2d6d61736b61626c652d3139322e706e67",
       "label": "web/icons/Icon-maskable-192.png",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/web/icons/Icon-maskable-192.png"
     },
     {
-      "id": "flutter-web-icons-icon-maskable-512-png",
+      "id": "flutter-7765625c69636f6e735c49636f6e2d6d61736b61626c652d3531322e706e67",
       "label": "web/icons/Icon-maskable-512.png",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/web/icons/Icon-maskable-512.png"
     },
     {
-      "id": "flutter-web-index-html",
+      "id": "flutter-7765625c696e6465782e68746d6c",
       "label": "web/index.html",
       "type": "mobile",
       "community": "flutter",
       "file": "erlbrew_app/web/index.html"
     },
     {
-      "id": "flutter-web-manifest-json",
+      "id": "flutter-7765625c6d616e69666573742e6a736f6e",
       "label": "web/manifest.json",
       "type": "config",
       "community": "flutter",
       "file": "erlbrew_app/web/manifest.json"
     },
     {
-      "id": "flutter-analysis_options",
-      "label": "analysis_options.yaml",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/analysis_options.yaml"
+      "id": "file-7372632f4170702e747378",
+      "label": "src/App.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/App.tsx"
     },
     {
-      "id": "flutter-android-.gradle-9.3.1-checksums-checksums",
-      "label": "android/.gradle/9.3.1/checksums/checksums.lock",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/checksums/checksums.lock"
+      "id": "file-7372632f636f6d706f6e656e74732f41646d696e41756469744c6f672e747378",
+      "label": "src/components/AdminAuditLog.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/AdminAuditLog.tsx"
     },
     {
-      "id": "flutter-android-.gradle-9.3.1-executionhistory-executionhistory",
-      "label": "android/.gradle/9.3.1/executionHistory/executionHistory.lock",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/executionHistory/executionHistory.lock"
+      "id": "file-7372632f636f6d706f6e656e74732f41646d696e437573746f6d6572732e747378",
+      "label": "src/components/AdminCustomers.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/AdminCustomers.tsx"
     },
     {
-      "id": "flutter-android-.gradle-9.3.1-filehashes-filehashes",
-      "label": "android/.gradle/9.3.1/fileHashes/fileHashes.lock",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/fileHashes/fileHashes.lock"
+      "id": "file-7372632f636f6d706f6e656e74732f41646d696e44617368626f6172642e747378",
+      "label": "src/components/AdminDashboard.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/AdminDashboard.tsx"
     },
     {
-      "id": "flutter-android-.gradle-9.3.1-gc",
-      "label": "android/.gradle/9.3.1/gc.properties",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/9.3.1/gc.properties"
+      "id": "file-7372632f636f6d706f6e656e74732f41646d696e496e76656e746f72792e747378",
+      "label": "src/components/AdminInventory.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/AdminInventory.tsx"
     },
     {
-      "id": "flutter-android-.gradle-buildoutputcleanup-buildoutputcleanup",
-      "label": "android/.gradle/buildOutputCleanup/buildOutputCleanup.lock",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock"
+      "id": "file-7372632f636f6d706f6e656e74732f41646d696e4d656e752e747378",
+      "label": "src/components/AdminMenu.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/AdminMenu.tsx"
     },
     {
-      "id": "flutter-android-.gradle-buildoutputcleanup-cache",
-      "label": "android/.gradle/buildOutputCleanup/cache.properties",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/buildOutputCleanup/cache.properties"
+      "id": "file-7372632f636f6d706f6e656e74732f41646d696e506179726f6c6c2e747378",
+      "label": "src/components/AdminPayroll.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/AdminPayroll.tsx"
     },
     {
-      "id": "flutter-android-.gradle-noversion-buildlogic",
-      "label": "android/.gradle/noVersion/buildLogic.lock",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/noVersion/buildLogic.lock"
+      "id": "file-7372632f636f6d706f6e656e74732f41646d696e5072696e7453657474696e67732e747378",
+      "label": "src/components/AdminPrintSettings.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/AdminPrintSettings.tsx"
     },
     {
-      "id": "flutter-android-.gradle-vcs-1-gc",
-      "label": "android/.gradle/vcs-1/gc.properties",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/.gradle/vcs-1/gc.properties"
+      "id": "file-7372632f636f6d706f6e656e74732f41646d696e5265706f7274732e747378",
+      "label": "src/components/AdminReports.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/AdminReports.tsx"
     },
     {
-      "id": "flutter-android-app-src-debug-androidmanifest",
-      "label": "android/app/src/debug/AndroidManifest.xml",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/app/src/debug/AndroidManifest.xml"
+      "id": "file-7372632f636f6d706f6e656e74732f41646d696e53637265656e2e747378",
+      "label": "src/components/AdminScreen.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/AdminScreen.tsx"
     },
     {
-      "id": "flutter-android-app-src-main-androidmanifest",
-      "label": "android/app/src/main/AndroidManifest.xml",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/app/src/main/AndroidManifest.xml"
+      "id": "file-7372632f636f6d706f6e656e74732f41646d696e53746166662e747378",
+      "label": "src/components/AdminStaff.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/AdminStaff.tsx"
     },
     {
-      "id": "flutter-android-app-src-main-res-drawable-launch_background",
-      "label": "android/app/src/main/res/drawable/launch_background.xml",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/app/src/main/res/drawable/launch_background.xml"
+      "id": "file-7372632f636f6d706f6e656e74732f41646d696e537570706c696572496e766f696365732e747378",
+      "label": "src/components/AdminSupplierInvoices.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/AdminSupplierInvoices.tsx"
     },
     {
-      "id": "flutter-android-app-src-main-res-drawable-v21-launch_background",
-      "label": "android/app/src/main/res/drawable-v21/launch_background.xml",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/app/src/main/res/drawable-v21/launch_background.xml"
+      "id": "file-7372632f636f6d706f6e656e74732f4361727450616e656c2e747378",
+      "label": "src/components/CartPanel.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/CartPanel.tsx"
     },
     {
-      "id": "flutter-android-app-src-main-res-values-styles",
-      "label": "android/app/src/main/res/values/styles.xml",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/app/src/main/res/values/styles.xml"
+      "id": "file-7372632f636f6d706f6e656e74732f4361736844726177657253637265656e2e747378",
+      "label": "src/components/CashDrawerScreen.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/CashDrawerScreen.tsx"
     },
     {
-      "id": "flutter-android-app-src-main-res-values-night-styles",
-      "label": "android/app/src/main/res/values-night/styles.xml",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/app/src/main/res/values-night/styles.xml"
+      "id": "file-7372632f636f6d706f6e656e74732f436865636b6f757453637265656e2e747378",
+      "label": "src/components/CheckoutScreen.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/CheckoutScreen.tsx"
     },
     {
-      "id": "flutter-android-app-src-profile-androidmanifest",
-      "label": "android/app/src/profile/AndroidManifest.xml",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/app/src/profile/AndroidManifest.xml"
+      "id": "file-7372632f636f6d706f6e656e74732f437573746f6d6572446973706c61792e747378",
+      "label": "src/components/CustomerDisplay.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/CustomerDisplay.tsx"
     },
     {
-      "id": "flutter-android-gradle-wrapper-gradle-wrapper",
-      "label": "android/gradle/wrapper/gradle-wrapper.properties",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/gradle/wrapper/gradle-wrapper.properties"
+      "id": "file-7372632f636f6d706f6e656e74732f44617368626f6172642e747378",
+      "label": "src/components/Dashboard.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/Dashboard.tsx"
     },
     {
-      "id": "flutter-android-gradle",
-      "label": "android/gradle.properties",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/gradle.properties"
+      "id": "file-7372632f636f6d706f6e656e74732f446973636f756e744d6f64616c2e747378",
+      "label": "src/components/DiscountModal.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/DiscountModal.tsx"
     },
     {
-      "id": "flutter-android-local",
-      "label": "android/local.properties",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/android/local.properties"
+      "id": "file-7372632f636f6d706f6e656e74732f496e6772656469656e74456469746f722e747378",
+      "label": "src/components/IngredientEditor.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/IngredientEditor.tsx"
     },
     {
-      "id": "flutter-firebase",
-      "label": "firebase.json",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/firebase.json"
+      "id": "file-7372632f636f6d706f6e656e74732f4b69746368656e426f6172642e747378",
+      "label": "src/components/KitchenBoard.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/KitchenBoard.tsx"
     },
     {
-      "id": "flutter-firestore",
-      "label": "firestore.rules",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/firestore.rules"
+      "id": "file-7372632f636f6d706f6e656e74732f4c6f67696e53637265656e2e747378",
+      "label": "src/components/LoginScreen.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/LoginScreen.tsx"
     },
     {
-      "id": "flutter-pubspec",
-      "label": "pubspec.lock",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/pubspec.lock"
+      "id": "file-7372632f636f6d706f6e656e74732f4d656e75477269642e747378",
+      "label": "src/components/MenuGrid.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/MenuGrid.tsx"
     },
     {
-      "id": "flutter-web-manifest",
-      "label": "web/manifest.json",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/web/manifest.json"
+      "id": "file-7372632f636f6d706f6e656e74732f4d6f646966696572456469746f722e747378",
+      "label": "src/components/ModifierEditor.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/ModifierEditor.tsx"
     },
     {
-      "id": "flutter-.idea-libraries-dart_sdk",
-      "label": ".idea/libraries/Dart_SDK.xml",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/.idea/libraries/Dart_SDK.xml"
+      "id": "file-7372632f636f6d706f6e656e74732f4d6f6469666965724d6f64616c2e747378",
+      "label": "src/components/ModifierModal.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/ModifierModal.tsx"
     },
     {
-      "id": "flutter-.idea-libraries-kotlinjavaruntime",
-      "label": ".idea/libraries/KotlinJavaRuntime.xml",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/.idea/libraries/KotlinJavaRuntime.xml"
+      "id": "file-7372632f636f6d706f6e656e74732f4f72646572486973746f72792e747378",
+      "label": "src/components/OrderHistory.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/OrderHistory.tsx"
     },
     {
-      "id": "flutter-.idea-modules",
-      "label": ".idea/modules.xml",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/.idea/modules.xml"
+      "id": "file-7372632f636f6d706f6e656e74732f5061796d656e7453637265656e2e747378",
+      "label": "src/components/PaymentScreen.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/PaymentScreen.tsx"
     },
     {
-      "id": "flutter-.idea-runconfigurations-main_dart",
-      "label": ".idea/runConfigurations/main_dart.xml",
-      "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/.idea/runConfigurations/main_dart.xml"
+      "id": "file-7372632f636f6d706f6e656e74732f504f5353637265656e2e747378",
+      "label": "src/components/POSScreen.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/POSScreen.tsx"
     },
     {
-      "id": "flutter-.idea-workspace",
-      "label": ".idea/workspace.xml",
+      "id": "file-7372632f636f6d706f6e656e74732f526563656970742e747378",
+      "label": "src/components/Receipt.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/Receipt.tsx"
+    },
+    {
+      "id": "file-7372632f636f6d706f6e656e74732f52656365697074507265766965772e747378",
+      "label": "src/components/ReceiptPreview.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/ReceiptPreview.tsx"
+    },
+    {
+      "id": "file-7372632f636f6d706f6e656e74732f5375636365737353637265656e2e747378",
+      "label": "src/components/SuccessScreen.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/SuccessScreen.tsx"
+    },
+    {
+      "id": "file-7372632f636f6d706f6e656e74732f54696d654b656570696e672e747378",
+      "label": "src/components/TimeKeeping.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/TimeKeeping.tsx"
+    },
+    {
+      "id": "file-7372632f636f6d706f6e656e74732f546f706261722e747378",
+      "label": "src/components/Topbar.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/Topbar.tsx"
+    },
+    {
+      "id": "file-7372632f636f6d706f6e656e74732f566f696443726564656e7469616c4d6f64616c2e747378",
+      "label": "src/components/VoidCredentialModal.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/VoidCredentialModal.tsx"
+    },
+    {
+      "id": "file-7372632f636f6d706f6e656e74732f5a5265706f727453637265656e2e747378",
+      "label": "src/components/ZReportScreen.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/components/ZReportScreen.tsx"
+    },
+    {
+      "id": "file-7372632f646174612f696e6465782e7473",
+      "label": "src/data/index.ts",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/data/index.ts"
+    },
+    {
+      "id": "file-7372632f686f6f6b732f757365436172742e7473",
+      "label": "src/hooks/useCart.ts",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/hooks/useCart.ts"
+    },
+    {
+      "id": "file-7372632f686f6f6b732f757365436c6f636b2e7473",
+      "label": "src/hooks/useClock.ts",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/hooks/useClock.ts"
+    },
+    {
+      "id": "file-7372632f686f6f6b732f757365466f6e7453697a652e7473",
+      "label": "src/hooks/useFontSize.ts",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/hooks/useFontSize.ts"
+    },
+    {
+      "id": "file-7372632f686f6f6b732f7573654b69746368656e4576656e74732e7473",
+      "label": "src/hooks/useKitchenEvents.ts",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/hooks/useKitchenEvents.ts"
+    },
+    {
+      "id": "file-7372632f686f6f6b732f7573654f72646572732e7473",
+      "label": "src/hooks/useOrders.ts",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/hooks/useOrders.ts"
+    },
+    {
+      "id": "file-7372632f686f6f6b732f7573655468656d652e7473",
+      "label": "src/hooks/useTheme.ts",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/hooks/useTheme.ts"
+    },
+    {
+      "id": "file-7372632f686f6f6b732f75736556696577706f72742e7473",
+      "label": "src/hooks/useViewport.ts",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/hooks/useViewport.ts"
+    },
+    {
+      "id": "file-7372632f6d61696e2e747378",
+      "label": "src/main.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/main.tsx"
+    },
+    {
+      "id": "file-7372632f7374796c65732f676c6f62616c2e637373",
+      "label": "src/styles/global.css",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/styles/global.css"
+    },
+    {
+      "id": "file-7372632f74797065732f696e6465782e7473",
+      "label": "src/types/index.ts",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/types/index.ts"
+    },
+    {
+      "id": "file-7372632f7574696c732f6170692e7473",
+      "label": "src/utils/api.ts",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/utils/api.ts"
+    },
+    {
+      "id": "file-7372632f7574696c732f696e6465782e7473",
+      "label": "src/utils/index.ts",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/utils/index.ts"
+    },
+    {
+      "id": "file-7372632f7574696c732f726563656970745574696c732e747378",
+      "label": "src/utils/receiptUtils.tsx",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/utils/receiptUtils.tsx"
+    },
+    {
+      "id": "file-7372632f766974652d656e762e642e7473",
+      "label": "src/vite-env.d.ts",
+      "type": "file",
+      "community": "frontend",
+      "file": "src/vite-env.d.ts"
+    },
+    {
+      "id": "file-7365727665722f6d6967726174652d73756e2e6a73",
+      "label": "server/migrate-sun.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/migrate-sun.js"
+    },
+    {
+      "id": "file-7365727665722f7061636b6167652d6c6f636b2e6a736f6e",
+      "label": "server/package-lock.json",
       "type": "config",
-      "community": "flutter",
-      "file": "erlbrew_app/.idea/workspace.xml"
+      "community": "backend",
+      "file": "server/package-lock.json"
+    },
+    {
+      "id": "file-7365727665722f7061636b6167652e6a736f6e",
+      "label": "server/package.json",
+      "type": "config",
+      "community": "backend",
+      "file": "server/package.json"
+    },
+    {
+      "id": "file-7365727665722f7372632f6372656174652d696e76656e746f72792e6d6a73",
+      "label": "server/src/create-inventory.mjs",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/create-inventory.mjs"
+    },
+    {
+      "id": "file-7365727665722f7372632f6372656174652d726563697065732e6d6a73",
+      "label": "server/src/create-recipes.mjs",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/create-recipes.mjs"
+    },
+    {
+      "id": "file-7365727665722f7372632f6372656174652d74696d652e6d6a73",
+      "label": "server/src/create-time.mjs",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/create-time.mjs"
+    },
+    {
+      "id": "file-7365727665722f7372632f696e6465782e6a73",
+      "label": "server/src/index.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/index.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f6d6964646c65776172652f617574682e6a73",
+      "label": "server/src/middleware/auth.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/middleware/auth.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f6d6967726174652d636f7374696e672e6d6a73",
+      "label": "server/src/migrate-costing.mjs",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/migrate-costing.mjs"
+    },
+    {
+      "id": "file-7365727665722f7372632f6d6967726174652d70696e732e6d6a73",
+      "label": "server/src/migrate-pins.mjs",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/migrate-pins.mjs"
+    },
+    {
+      "id": "file-7365727665722f7372632f726f757465732f61756469742e6a73",
+      "label": "server/src/routes/audit.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/routes/audit.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f726f757465732f636c6f636b2e6a73",
+      "label": "server/src/routes/clock.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/routes/clock.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f726f757465732f636f6d70616e7953657474696e67732e6a73",
+      "label": "server/src/routes/companySettings.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/routes/companySettings.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f726f757465732f637573746f6d6572732e6a73",
+      "label": "server/src/routes/customers.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/routes/customers.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f726f757465732f696e76656e746f72792e6a73",
+      "label": "server/src/routes/inventory.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/routes/inventory.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f726f757465732f6d656e752e6a73",
+      "label": "server/src/routes/menu.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/routes/menu.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f726f757465732f6f72646572732e6a73",
+      "label": "server/src/routes/orders.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/routes/orders.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f726f757465732f706179726f6c6c2e6a73",
+      "label": "server/src/routes/payroll.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/routes/payroll.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f726f757465732f726563697065732e6a73",
+      "label": "server/src/routes/recipes.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/routes/recipes.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f726f757465732f73746166662e6a73",
+      "label": "server/src/routes/staff.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/routes/staff.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f726f757465732f73746166665363686564756c65732e6a73",
+      "label": "server/src/routes/staffSchedules.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/routes/staffSchedules.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f726f757465732f737570706c696572496e766f696365732e6a73",
+      "label": "server/src/routes/supplierInvoices.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/routes/supplierInvoices.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f726f757465732f75706c6f61642e6a73",
+      "label": "server/src/routes/upload.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/routes/upload.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f73657276696365732f61756469742e6a73",
+      "label": "server/src/services/audit.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/services/audit.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f73657276696365732f676f6f676c655368656574732e6a73",
+      "label": "server/src/services/googleSheets.js",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/services/googleSheets.js"
+    },
+    {
+      "id": "file-7365727665722f7372632f746573742d7368656574732e6d6a73",
+      "label": "server/src/test-sheets.mjs",
+      "type": "file",
+      "community": "backend",
+      "file": "server/src/test-sheets.mjs"
+    },
+    {
+      "id": "file-7075626c69632f696e6465782e68746d6c",
+      "label": "public/index.html",
+      "type": "file",
+      "community": "frontend",
+      "file": "public/index.html"
+    },
+    {
+      "id": "file-736372697074732f636865636b2d7265662d64656275672e6d6a73",
+      "label": "scripts/check-ref-debug.mjs",
+      "type": "file",
+      "community": "frontend",
+      "file": "scripts/check-ref-debug.mjs"
+    },
+    {
+      "id": "file-736372697074732f64656275672d746573742e6d6a73",
+      "label": "scripts/debug-test.mjs",
+      "type": "file",
+      "community": "frontend",
+      "file": "scripts/debug-test.mjs"
+    },
+    {
+      "id": "file-736372697074732f6472617765722d746573742e6d6a73",
+      "label": "scripts/drawer-test.mjs",
+      "type": "file",
+      "community": "frontend",
+      "file": "scripts/drawer-test.mjs"
+    },
+    {
+      "id": "file-736372697074732f66756c6c2d746573742e6d6a73",
+      "label": "scripts/full-test.mjs",
+      "type": "file",
+      "community": "frontend",
+      "file": "scripts/full-test.mjs"
+    },
+    {
+      "id": "file-736372697074732f6e6574776f726b2d746573742e6d6a73",
+      "label": "scripts/network-test.mjs",
+      "type": "file",
+      "community": "frontend",
+      "file": "scripts/network-test.mjs"
+    },
+    {
+      "id": "file-736372697074732f73637265656e73686f742e6a73",
+      "label": "scripts/screenshot.js",
+      "type": "file",
+      "community": "frontend",
+      "file": "scripts/screenshot.js"
+    },
+    {
+      "id": "file-736372697074732f73637265656e73686f742e6d6a73",
+      "label": "scripts/screenshot.mjs",
+      "type": "file",
+      "community": "frontend",
+      "file": "scripts/screenshot.mjs"
+    },
+    {
+      "id": "file-736372697074732f746573742d64622d636f6e6e656374696f6e2e6a73",
+      "label": "scripts/test-db-connection.js",
+      "type": "file",
+      "community": "frontend",
+      "file": "scripts/test-db-connection.js"
+    },
+    {
+      "id": "file-736372697074732f746573742d7265662d6669782e6d6a73",
+      "label": "scripts/test-ref-fix.mjs",
+      "type": "file",
+      "community": "frontend",
+      "file": "scripts/test-ref-fix.mjs"
+    },
+    {
+      "id": "file-6d63702f2e6d63702d636f6e6669672e6578616d706c652e6a736f6e",
+      "label": "mcp/.mcp-config.example.json",
+      "type": "config",
+      "community": "tooling",
+      "file": "mcp/.mcp-config.example.json"
+    },
+    {
+      "id": "file-6d63702f2e6d63702d636f6e6669672e6a736f6e",
+      "label": "mcp/.mcp-config.json",
+      "type": "config",
+      "community": "tooling",
+      "file": "mcp/.mcp-config.json"
+    },
+    {
+      "id": "file-6d63702f44415441424153455f4d43505f524541444d452e6d64",
+      "label": "mcp/DATABASE_MCP_README.md",
+      "type": "config",
+      "community": "tooling",
+      "file": "mcp/DATABASE_MCP_README.md"
+    },
+    {
+      "id": "file-6d63702f64622d6d63702d7365727665722e6a73",
+      "label": "mcp/db-mcp-server.js",
+      "type": "file",
+      "community": "tooling",
+      "file": "mcp/db-mcp-server.js"
+    },
+    {
+      "id": "file-6d63702f646f636b65722d6d63702e6a73",
+      "label": "mcp/docker-mcp.js",
+      "type": "file",
+      "community": "tooling",
+      "file": "mcp/docker-mcp.js"
+    },
+    {
+      "id": "file-6d63702f66696c6573797374656d2d6d63702e6a73",
+      "label": "mcp/filesystem-mcp.js",
+      "type": "file",
+      "community": "tooling",
+      "file": "mcp/filesystem-mcp.js"
+    },
+    {
+      "id": "file-6d63702f67726170682d7365727665722e6a73",
+      "label": "mcp/graph-server.js",
+      "type": "file",
+      "community": "tooling",
+      "file": "mcp/graph-server.js"
+    },
+    {
+      "id": "file-6d63702f67726170686966792d776174636865722e6a73",
+      "label": "mcp/graphify-watcher.js",
+      "type": "file",
+      "community": "tooling",
+      "file": "mcp/graphify-watcher.js"
+    },
+    {
+      "id": "file-6d63702f6d63702d6272696467652e6a73",
+      "label": "mcp/mcp-bridge.js",
+      "type": "file",
+      "community": "tooling",
+      "file": "mcp/mcp-bridge.js"
+    },
+    {
+      "id": "file-6d63702f4d43505f534552564552535f47554944452e6d64",
+      "label": "mcp/MCP_SERVERS_GUIDE.md",
+      "type": "config",
+      "community": "tooling",
+      "file": "mcp/MCP_SERVERS_GUIDE.md"
     },
     {
       "id": "frontend",
@@ -1654,10 +2011,11 @@
     "hooks": 7,
     "routes": 13,
     "types": 1,
-    "flutter_files": 84,
-    "total_nodes": 192,
+    "flutter_files": 68,
+    "project_files": 95,
+    "total_nodes": 243,
     "total_edges": 65,
-    "last_updated": "2026-09-03T17:18:32.985Z",
+    "last_updated": "2026-09-03T17:28:46.054Z",
     "auto_detected": true
   }
 }

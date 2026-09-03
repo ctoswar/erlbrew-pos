@@ -92,13 +92,29 @@ class _AdminScanScreenState extends State<AdminScanScreen>
         _showError('Not an Erlbrew customer code');
         return;
       }
-      final id = data['id'] as String?;
-      customer = MockData.customers.firstWhere(
-        (c) => c.id == id,
-        orElse: () => throw StateError('not found'),
-      );
-    } catch (_) {
-      _showError('Couldn\'t read that QR code');
+      final id = data['id']?.toString().trim();
+      if (id == null || id.isEmpty) {
+        _showError('This customer QR code is missing an account ID');
+        return;
+      }
+
+      final name = data['name']?.toString().trim();
+      final existingCustomer = MockData.customers.where((c) => c.id == id);
+      customer = existingCustomer.isNotEmpty
+          ? existingCustomer.first
+          : AppUser(
+              id: id,
+              name: name == null || name.isEmpty ? 'Erlbrew Customer' : name,
+              email: 'customer@erlbrew.cafe',
+            );
+      if (existingCustomer.isEmpty) {
+        MockData.customers.add(customer);
+      }
+    } on FormatException {
+      _showError('Couldn\'t read that QR code. Please show the Erlbrew QR code.');
+      return;
+    } on TypeError {
+      _showError('This QR code has an invalid Erlbrew format');
       return;
     }
 

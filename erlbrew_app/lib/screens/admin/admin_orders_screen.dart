@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/app_models.dart';
+import '../../services/firebase_auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/fade_slide_in.dart';
 
@@ -37,16 +39,33 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
         PickupStatus.cancelled => Icons.cancel_outlined,
       };
 
-  void _advance(PickupOrder order) {
+  Future<void> _advance(PickupOrder order) async {
+    final nextStatus = switch (order.status) {
+      PickupStatus.preparing => PickupStatus.ready,
+      PickupStatus.ready => PickupStatus.completed,
+      _ => order.status,
+    };
+    if (nextStatus == order.status) return;
     setState(() {
-      order.status = switch (order.status) {
-        PickupStatus.pending => PickupStatus.pending,
-        PickupStatus.preparing => PickupStatus.ready,
-        PickupStatus.ready => PickupStatus.completed,
-        PickupStatus.completed => PickupStatus.completed,
-        PickupStatus.cancelled => PickupStatus.cancelled,
-      };
+      order.status = nextStatus;
     });
+    try {
+      await FirebaseAuthService.instance.updateOrderStatus(
+        orderId: order.id,
+        status: order.status.name,
+      );
+    } on FirebaseException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        order.status = order.status == PickupStatus.ready
+            ? PickupStatus.preparing
+            : PickupStatus.ready;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? 'Unable to save order status.')),
+      );
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${order.id} marked ${_label(order.status)}')),
     );

@@ -27,9 +27,7 @@ service cloud.firestore {
           && request.resource.data.role == resource.data.role
           && request.resource.data.isAdmin == resource.data.isAdmin
           && request.resource.data.isAdmin == false)
-        || (isAdmin(database)
-          && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['points', 'updatedAt']));
+        || isAdmin(database);
 
       allow delete: if isAdmin(database);
     }
@@ -38,6 +36,15 @@ service cloud.firestore {
       allow read: if isOwner(userId) || isAdmin(database);
       allow create: if isAdmin(database);
       allow update, delete: if isOwner(userId) || isAdmin(database);
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAdmin(database)
+        || (isSignedIn() && resource.data.customer_id == request.auth.uid);
+      allow create: if isAdmin(database)
+        || (isSignedIn() && request.resource.data.customer_id == request.auth.uid);
+      allow update: if isAdmin(database);
+      allow delete: if isAdmin(database);
     }
 
     match /{document=**} {

@@ -200,10 +200,57 @@ class FirebaseAuthService {
     });
   }
 
+  Future<int> adjustCustomerPoints({
+    required String customerId,
+    required int delta,
+  }) async {
+    await _ensureReady();
+    final customerRef = _firestore!.collection('users').doc(customerId);
+    return _firestore!.runTransaction<int>((transaction) async {
+      final snapshot = await transaction.get(customerRef);
+      if (!snapshot.exists) {
+        throw FirebaseException(
+          plugin: 'cloud_firestore',
+          code: 'customer-not-found',
+          message: 'This customer account could not be found.',
+        );
+      }
+      final data = snapshot.data() ?? <String, dynamic>{};
+      final current = (data['points'] as num?)?.toInt() ?? 0;
+      final updated = (current + delta).clamp(0, 999999);
+      transaction.update(customerRef, {'points': updated});
+      return updated;
+    });
+  }
+
+  Future<void> updateOrderStatus({
+    required String orderId,
+    required String status,
+  }) async {
+    await _ensureReady();
+    await _firestore!.collection('orders').doc(orderId).set(
+      {
+        'status': status,
+        'updated_at': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
+  }
+
   Stream<DocumentSnapshot<Map<String, dynamic>>> customerProfileStream(
     String customerId,
   ) {
     return FirebaseFirestore.instance.collection('users').doc(customerId).snapshots();
+  }
+
+  Stream<List<AppUser>> adminCustomersStream() {
+    return FirebaseFirestore.instance.collection('users').snapshots().map(
+      (snapshot) => snapshot.docs
+          .map((doc) => AppUser.fromMap(doc.id, doc.data()))
+          .where((user) => !user.isAdmin)
+          .toList()
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())),
+    );
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> customerNotificationsStream(

@@ -8,9 +8,10 @@ service cloud.firestore {
     return isSignedIn() && request.auth.uid == userId;
   }
 
-  function isAdmin() {
+  function isAdmin(database) {
     return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-      && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true);
   }
 
   match /databases/{database}/documents {
@@ -20,17 +21,30 @@ service cloud.firestore {
         && request.resource.data.role == 'customer'
         && request.resource.data.isAdmin == false;
 
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdmin(database);
 
       allow update: if (isOwner(userId)
           && request.resource.data.role == resource.data.role
           && request.resource.data.isAdmin == resource.data.isAdmin
           && request.resource.data.isAdmin == false)
-        || (isAdmin()
-          && request.resource.data.role in ['customer', 'admin']
-          && request.resource.data.isAdmin == (request.resource.data.role == 'admin'));
+        || isAdmin(database);
 
-      allow delete: if isAdmin();
+      allow delete: if isAdmin(database);
+    }
+
+    match /users/{userId}/notifications/{notificationId} {
+      allow read: if isOwner(userId) || isAdmin(database);
+      allow create: if isAdmin(database);
+      allow update, delete: if isOwner(userId) || isAdmin(database);
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAdmin(database)
+        || (isSignedIn() && resource.data.customer_id == request.auth.uid);
+      allow create: if isAdmin(database)
+        || (isSignedIn() && request.resource.data.customer_id == request.auth.uid);
+      allow update: if isAdmin(database);
+      allow delete: if isAdmin(database);
     }
 
     match /{document=**} {

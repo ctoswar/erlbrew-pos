@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/app_models.dart';
+import '../services/firebase_auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_counter.dart';
 import '../widgets/fade_slide_in.dart';
@@ -15,6 +17,48 @@ class RewardsScreen extends StatefulWidget {
 }
 
 class _RewardsScreenState extends State<RewardsScreen> {
+  bool _notificationShown = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = MockData.currentUser!;
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseAuthService.instance.customerProfileStream(user.id),
+      builder: (context, snapshot) {
+        final profile = snapshot.data?.data();
+        final points = (profile?['points'] as num?)?.toInt();
+        if (points != null && points != user.points) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => user.points = points);
+          });
+        }
+        return _buildRewards(context, user);
+      },
+    );
+  }
+
+  Widget _buildRewards(BuildContext context, AppUser user) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseAuthService.instance.customerNotificationsStream(user.id),
+      builder: (context, snapshot) {
+        final notification = snapshot.data == null || snapshot.data!.docs.isEmpty
+            ? null
+            : snapshot.data!.docs.first.data();
+        if (notification != null && !_notificationShown) {
+          _notificationShown = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(notification['message']?.toString() ?? 'Points received.')),
+            );
+          });
+        }
+        return _buildRewardsContent(context, user);
+      },
+    );
+  }
+
+  Widget _buildRewardsContent(BuildContext context, AppUser user) {
   void _showMyQr() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const MyQrScreen()),
@@ -56,10 +100,6 @@ class _RewardsScreenState extends State<RewardsScreen> {
       ),
     );
   }
-
-  @override
-  Widget build(BuildContext context) {
-    final user = MockData.currentUser!;
 
     return Scaffold(
       appBar: AppBar(

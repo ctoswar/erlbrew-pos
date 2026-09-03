@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
+import '../../services/firebase_auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/animated_counter.dart';
 import '../../widgets/fade_slide_in.dart';
@@ -20,19 +21,19 @@ class AdminHomeShell extends StatefulWidget {
 class _AdminHomeShellState extends State<AdminHomeShell> {
   int _index = 0;
 
-  final _screens = const [
-    _AdminDashboard(),
-    AdminScanScreen(),
-    AdminOrdersScreen(),
-    AdminMenuScreen(),
-    AdminRewardsScreen(),
-    AdminCustomersScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final screens = [
+      const _AdminDashboard(),
+      AdminScanScreen(isActive: _index == 1),
+      const AdminOrdersScreen(),
+      const AdminMenuScreen(),
+      const AdminRewardsScreen(),
+      const AdminCustomersScreen(),
+    ];
+
     return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
+      body: IndexedStack(index: _index, children: screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
@@ -80,13 +81,35 @@ class _AdminDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final orders = MockData.orders;
+    return StreamBuilder<List<PickupOrder>>(
+      stream: FirebaseAuthService.instance.adminOrdersStream(),
+      builder: (context, ordersSnapshot) {
+        return StreamBuilder<List<AppUser>>(
+          stream: FirebaseAuthService.instance.adminCustomersStream(),
+          builder: (context, customersSnapshot) {
+            if (ordersSnapshot.hasError || customersSnapshot.hasError) {
+              return Scaffold(
+                appBar: AppBar(title: const Text('Admin Dashboard')),
+                body: Center(
+                  child: Text(
+                    'Unable to load dashboard data.',
+                    style: TextStyle(color: AppColors.error),
+                  ),
+                ),
+              );
+            }
+            if (!ordersSnapshot.hasData || !customersSnapshot.hasData) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final orders = ordersSnapshot.data!;
+            final customers = customersSnapshot.data!;
     final preparing =
         orders.where((o) => o.status == PickupStatus.preparing).length;
     final ready = orders.where((o) => o.status == PickupStatus.ready).length;
-    final totalCustomers = MockData.customers.length;
-    final totalPointsIssued =
-        MockData.customers.fold<int>(0, (sum, c) => sum + c.points);
+    final totalCustomers = customers.length;
+    final totalPointsIssued = customers.fold<int>(0, (sum, c) => sum + c.points);
 
     return Scaffold(
       appBar: AppBar(
@@ -243,6 +266,10 @@ class _AdminDashboard extends StatelessWidget {
           }),
         ],
       ),
+    );
+          },
+        );
+      },
     );
   }
 }

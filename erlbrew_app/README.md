@@ -89,6 +89,11 @@ redirect is never treated as proof of payment — only a verified webhook can
 start preparation. `getPayMongoOrderStatus` is used by the pickup screen to
 refresh pending orders.
 
+Admin accounts must be created outside the client app through Firebase
+Authentication and assigned an admin profile by a trusted administrator or
+Admin SDK process. The Flutter client intentionally has no admin-account
+creation method.
+
 ### Camera permissions (required for the Scan tab)
 This project ships as `lib/` + `pubspec.yaml` only — no platform folders yet.
 After you unzip it and run `flutter create .` inside the project (to generate

@@ -81,17 +81,6 @@ class FirebaseAuthService {
         'isAdmin': isAdminAccount,
       });
 
-      await _firestore!.collection('users').doc(credential.user!.uid).set(
-        {
-          'email': credential.user!.email ?? email,
-          'name': currentUser.name,
-          'lastLoginAt': FieldValue.serverTimestamp(),
-          'role': storedRole,
-          'isAdmin': isAdminAccount,
-        },
-        SetOptions(merge: true),
-      );
-
       return currentUser;
     } on FirebaseAuthException {
       rethrow;
@@ -155,6 +144,7 @@ class FirebaseAuthService {
         message: 'You must be signed in to update your name.',
       );
     }
+
     if (cleanName.isEmpty) {
       throw FirebaseAuthException(
         code: 'invalid-name',
@@ -170,6 +160,172 @@ class FirebaseAuthService {
       },
       SetOptions(merge: true),
     );
+  }
+
+  Future<int> awardPoints({
+    required String customerId,
+    required int points,
+  }) async {
+    if (points <= 0) {
+      throw ArgumentError.value(points, 'points', 'Must be greater than zero.');
+    }
+    await _ensureReady();
+
+    final customerRef = _firestore!.collection('users').doc(customerId);
+    return _firestore!.runTransaction<int>((transaction) async {
+      final snapshot = await transaction.get(customerRef);
+      if (!snapshot.exists) {
+        throw FirebaseException(
+          plugin: 'cloud_firestore',
+          code: 'customer-not-found',
+          message: 'This customer account could not be found.',
+        );
+      }
+
+      final data = snapshot.data() ?? <String, dynamic>{};
+      final currentPoints = (data['points'] as num?)?.toInt() ?? 0;
+      final updatedPoints = currentPoints + points;
+      final notificationRef = customerRef.collection('notifications').doc();
+
+      transaction.update(customerRef, {'points': updatedPoints});
+      transaction.set(notificationRef, {
+        'type': 'points_awarded',
+        'title': 'Points received',
+        'message': 'You received $points points at Erlbrew Café.',
+        'points': points,
+        'createdAt': FieldValue.serverTimestamp(),
+        'read': false,
+      });
+      return updatedPoints;
+    });
+  }
+
+  Future<int> adjustCustomerPoints({
+    required String customerId,
+    required int delta,
+  }) async {
+    await _ensureReady();
+    final customerRef = _firestore!.collection('users').doc(customerId);
+    return _firestore!.runTransaction<int>((transaction) async {
+      final snapshot = await transaction.get(customerRef);
+      if (!snapshot.exists) {
+        throw FirebaseException(
+          plugin: 'cloud_firestore',
+          code: 'customer-not-found',
+          message: 'This customer account could not be found.',
+        );
+      }
+      final data = snapshot.data() ?? <String, dynamic>{};
+      final current = (data['points'] as num?)?.toInt() ?? 0;
+      final updated = (current + delta).clamp(0, 999999);
+      transaction.update(customerRef, {'points': updated});
+      return updated;
+    });
+  }
+
+  Future<void> updateOrderStatus({
+    required String orderId,
+    required String status,
+  }) async {
+    await _ensureReady();
+    await _firestore!.collection('orders').doc(orderId).set(
+      {
+        'status': status,
+        'updated_at': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
+  }
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> customerProfileStream(
+    String customerId,
+  ) {
+    return FirebaseFirestore.instance.collection('users').doc(customerId).snapshots();
+  }
+
+  Stream<List<AppUser>> adminCustomersStream() {
+    return FirebaseFirestore.instance.collection('users').snapshots().map(
+      (snapshot) => snapshot.docs
+          .map((doc) => AppUser.fromMap(doc.id, doc.data()))
+          .where((user) => !user.isAdmin)
+          .toList()
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())),
+    );
+  }
+
+  Stream<List<PickupOrder>> adminOrdersStream() {
+    return FirebaseFirestore.instance
+        .collection('orders')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map(_pickupOrderFromDocument).toList());
+  }
+
+  Stream<List<PickupOrder>> customerOrdersStream(String customerId) {
+    return FirebaseFirestore.instance
+        .collection('orders')
+        .where('userId', isEqualTo: customerId)
+        .snapshots()
+        .map((snapshot) {
+          final orders =
+              snapshot.docs.map(_pickupOrderFromDocument).toList();
+          orders.sort((a, b) => b.placedAt.compareTo(a.placedAt));
+          return orders;
+        });
+  }
+
+  PickupOrder _pickupOrderFromDocument(
+    QueryDocumentSnapshot<Map<String, dynamic>> document,
+  ) {
+    final data = document.data();
+    final rawCreatedAt = data['createdAt'];
+    final placedAt = rawCreatedAt is Timestamp
+        ? rawCreatedAt.toDate()
+        : DateTime.tryParse(rawCreatedAt?.toString() ?? '') ?? DateTime.now();
+    final status = PickupStatus.values.firstWhere(
+      (value) => value.name == data['status'],
+      orElse: () => PickupStatus.pending,
+    );
+    final paymentMethod = PickupPaymentMethod.values.firstWhere(
+      (value) => value.name == data['paymentMethod'],
+      orElse: () => PickupPaymentMethod.gcash,
+    );
+    final paymentStatus = PickupPaymentStatus.values.firstWhere(
+      (value) => value.name == data['paymentStatus'],
+      orElse: () => PickupPaymentStatus.pending,
+    );
+    final rawItems = data['items'];
+    final itemSummary = rawItems is List
+        ? rawItems.map((item) {
+            if (item is Map) {
+              return '${item['quantity'] ?? item['qty'] ?? 1}x ${item['name'] ?? 'Item'}';
+            }
+            return item.toString();
+          }).join(', ')
+        : 'Order items unavailable';
+
+    return PickupOrder(
+      id: (data['id'] ?? document.id).toString(),
+      customerName: (data['customerName'] ?? 'Erlbrew Customer').toString(),
+      itemSummary: itemSummary,
+      placedAt: placedAt,
+      paymentMethod: paymentMethod,
+      total: (data['total'] as num?)?.toDouble(),
+      paymentStatus: paymentStatus,
+      status: status,
+    );
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> customerNotificationsStream(
+    String customerId,
+  ) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(customerId)
+        .collection('notifications')
+        .orderBy('createdAt', descending: true)
+        .limit(1)
+        .snapshots();
   }
 
   Future<AppUser?> getSignedInUserProfile() async {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/app_models.dart';
+import '../../services/firebase_auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/fade_slide_in.dart';
 
@@ -14,7 +16,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
   final _searchController = TextEditingController();
   String _query = '';
 
-  void _adjustPoints(AppUser customer) {
+  Future<void> _adjustPoints(AppUser customer) async {
     final controller = TextEditingController();
     showDialog(
       context: context,
@@ -33,13 +35,24 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               final delta = int.tryParse(controller.text.trim()) ?? 0;
-              setState(() {
-                customer.points =
-                    (customer.points + delta).clamp(0, 999999);
-              });
-              Navigator.of(context).pop();
+              if (delta == 0) return;
+              try {
+                final updated = await FirebaseAuthService.instance
+                    .adjustCustomerPoints(customerId: customer.id, delta: delta);
+                if (!mounted) return;
+                setState(() => customer.points = updated);
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${customer.name} now has $updated points.')),
+                );
+              } on FirebaseException catch (error) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(error.message ?? 'Unable to update points.')),
+                );
+              }
             },
             child: const Text('Apply'),
           ),
@@ -50,12 +63,6 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final customers = MockData.customers
-        .where((c) =>
-            c.name.toLowerCase().contains(_query.toLowerCase()) ||
-            c.email.toLowerCase().contains(_query.toLowerCase()))
-        .toList();
-
     return Scaffold(
       appBar: AppBar(title: const Text('Customers')),
       body: Column(
@@ -72,12 +79,33 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
             ),
           ),
           Expanded(
-            child: customers.isEmpty
-                ? Center(
+            child: StreamBuilder<List<AppUser>>(
+              stream: FirebaseAuthService.instance.adminCustomersStream(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Unable to load customers: ${snapshot.error}',
+                      style: TextStyle(color: AppColors.error),
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                }
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final customers = snapshot.data!
+                    .where((c) =>
+                        c.name.toLowerCase().contains(_query.toLowerCase()) ||
+                        c.email.toLowerCase().contains(_query.toLowerCase()))
+                    .toList();
+                if (customers.isEmpty) {
+                  return Center(
                     child: Text('No customers found',
                         style: TextStyle(color: AppColors.slateGrey)),
-                  )
-                : ListView.builder(
+                  );
+                }
+                return ListView.builder(
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
                     itemCount: customers.length,
                     itemBuilder: (context, i) {
@@ -115,7 +143,9 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
                         ),
                       );
                     },
-                  ),
+                  );
+              },
+            ),
           ),
         ],
       ),

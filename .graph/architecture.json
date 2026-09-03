@@ -379,6 +379,790 @@
       "file": "index.ts"
     },
     {
+      "id": "flutter--firebaserc",
+      "label": ".firebaserc",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/.firebaserc"
+    },
+    {
+      "id": "flutter--gitignore",
+      "label": ".gitignore",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/.gitignore"
+    },
+    {
+      "id": "flutter--metadata",
+      "label": ".metadata",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/.metadata"
+    },
+    {
+      "id": "flutter-analysis_options-yaml",
+      "label": "analysis_options.yaml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/analysis_options.yaml"
+    },
+    {
+      "id": "flutter-android--gitignore",
+      "label": "android/.gitignore",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gitignore"
+    },
+    {
+      "id": "flutter-android--gradle-9-3-1-checksums-checksums-lock",
+      "label": "android/.gradle/9.3.1/checksums/checksums.lock",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/checksums/checksums.lock"
+    },
+    {
+      "id": "flutter-android--gradle-9-3-1-checksums-md5-checksums-bin",
+      "label": "android/.gradle/9.3.1/checksums/md5-checksums.bin",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/checksums/md5-checksums.bin"
+    },
+    {
+      "id": "flutter-android--gradle-9-3-1-checksums-sha1-checksums-bin",
+      "label": "android/.gradle/9.3.1/checksums/sha1-checksums.bin",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/checksums/sha1-checksums.bin"
+    },
+    {
+      "id": "flutter-android--gradle-9-3-1-executionhistory-executionhistory-bin",
+      "label": "android/.gradle/9.3.1/executionHistory/executionHistory.bin",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/executionHistory/executionHistory.bin"
+    },
+    {
+      "id": "flutter-android--gradle-9-3-1-executionhistory-executionhistory-lock",
+      "label": "android/.gradle/9.3.1/executionHistory/executionHistory.lock",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/executionHistory/executionHistory.lock"
+    },
+    {
+      "id": "flutter-android--gradle-9-3-1-filechanges-last-build-bin",
+      "label": "android/.gradle/9.3.1/fileChanges/last-build.bin",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/fileChanges/last-build.bin"
+    },
+    {
+      "id": "flutter-android--gradle-9-3-1-filehashes-filehashes-bin",
+      "label": "android/.gradle/9.3.1/fileHashes/fileHashes.bin",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/fileHashes/fileHashes.bin"
+    },
+    {
+      "id": "flutter-android--gradle-9-3-1-filehashes-filehashes-lock",
+      "label": "android/.gradle/9.3.1/fileHashes/fileHashes.lock",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/fileHashes/fileHashes.lock"
+    },
+    {
+      "id": "flutter-android--gradle-9-3-1-filehashes-resourcehashescache-bin",
+      "label": "android/.gradle/9.3.1/fileHashes/resourceHashesCache.bin",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/fileHashes/resourceHashesCache.bin"
+    },
+    {
+      "id": "flutter-android--gradle-9-3-1-gc-properties",
+      "label": "android/.gradle/9.3.1/gc.properties",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/gc.properties"
+    },
+    {
+      "id": "flutter-android--gradle-buildoutputcleanup-buildoutputcleanup-lock",
+      "label": "android/.gradle/buildOutputCleanup/buildOutputCleanup.lock",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock"
+    },
+    {
+      "id": "flutter-android--gradle-buildoutputcleanup-cache-properties",
+      "label": "android/.gradle/buildOutputCleanup/cache.properties",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/buildOutputCleanup/cache.properties"
+    },
+    {
+      "id": "flutter-android--gradle-buildoutputcleanup-outputfiles-bin",
+      "label": "android/.gradle/buildOutputCleanup/outputFiles.bin",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/buildOutputCleanup/outputFiles.bin"
+    },
+    {
+      "id": "flutter-android--gradle-file-system-probe",
+      "label": "android/.gradle/file-system.probe",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/file-system.probe"
+    },
+    {
+      "id": "flutter-android--gradle-noversion-buildlogic-lock",
+      "label": "android/.gradle/noVersion/buildLogic.lock",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/noVersion/buildLogic.lock"
+    },
+    {
+      "id": "flutter-android--gradle-vcs-1-gc-properties",
+      "label": "android/.gradle/vcs-1/gc.properties",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/vcs-1/gc.properties"
+    },
+    {
+      "id": "flutter-android-app-build-gradle-kts",
+      "label": "android/app/build.gradle.kts",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/build.gradle.kts"
+    },
+    {
+      "id": "flutter-android-app-src-debug-androidmanifest-xml",
+      "label": "android/app/src/debug/AndroidManifest.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/debug/AndroidManifest.xml"
+    },
+    {
+      "id": "flutter-android-app-src-main-androidmanifest-xml",
+      "label": "android/app/src/main/AndroidManifest.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/AndroidManifest.xml"
+    },
+    {
+      "id": "flutter-android-app-src-main-java-io-flutter-plugins-generatedpluginregistrant-java",
+      "label": "android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java"
+    },
+    {
+      "id": "flutter-android-app-src-main-kotlin-com-example-erlbrew_app-mainactivity-kt",
+      "label": "android/app/src/main/kotlin/com/example/erlbrew_app/MainActivity.kt",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/kotlin/com/example/erlbrew_app/MainActivity.kt"
+    },
+    {
+      "id": "flutter-android-app-src-main-res-drawable-launch_background-xml",
+      "label": "android/app/src/main/res/drawable/launch_background.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/res/drawable/launch_background.xml"
+    },
+    {
+      "id": "flutter-android-app-src-main-res-drawable-v21-launch_background-xml",
+      "label": "android/app/src/main/res/drawable-v21/launch_background.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/res/drawable-v21/launch_background.xml"
+    },
+    {
+      "id": "flutter-android-app-src-main-res-mipmap-hdpi-ic_launcher-png",
+      "label": "android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/res/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+      "id": "flutter-android-app-src-main-res-mipmap-mdpi-ic_launcher-png",
+      "label": "android/app/src/main/res/mipmap-mdpi/ic_launcher.png",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/res/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+      "id": "flutter-android-app-src-main-res-mipmap-xhdpi-ic_launcher-png",
+      "label": "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+      "id": "flutter-android-app-src-main-res-mipmap-xxhdpi-ic_launcher-png",
+      "label": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+      "id": "flutter-android-app-src-main-res-mipmap-xxxhdpi-ic_launcher-png",
+      "label": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+      "id": "flutter-android-app-src-main-res-values-styles-xml",
+      "label": "android/app/src/main/res/values/styles.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/res/values/styles.xml"
+    },
+    {
+      "id": "flutter-android-app-src-main-res-values-night-styles-xml",
+      "label": "android/app/src/main/res/values-night/styles.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/res/values-night/styles.xml"
+    },
+    {
+      "id": "flutter-android-app-src-profile-androidmanifest-xml",
+      "label": "android/app/src/profile/AndroidManifest.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/profile/AndroidManifest.xml"
+    },
+    {
+      "id": "flutter-android-build-gradle-kts",
+      "label": "android/build.gradle.kts",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/build.gradle.kts"
+    },
+    {
+      "id": "flutter-android-erlbrew_app_android-iml",
+      "label": "android/erlbrew_app_android.iml",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/erlbrew_app_android.iml"
+    },
+    {
+      "id": "flutter-android-gradle-wrapper-gradle-wrapper-jar",
+      "label": "android/gradle/wrapper/gradle-wrapper.jar",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/gradle/wrapper/gradle-wrapper.jar"
+    },
+    {
+      "id": "flutter-android-gradle-wrapper-gradle-wrapper-properties",
+      "label": "android/gradle/wrapper/gradle-wrapper.properties",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/gradle/wrapper/gradle-wrapper.properties"
+    },
+    {
+      "id": "flutter-android-gradle-properties",
+      "label": "android/gradle.properties",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/gradle.properties"
+    },
+    {
+      "id": "flutter-android-gradlew",
+      "label": "android/gradlew",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/gradlew"
+    },
+    {
+      "id": "flutter-android-gradlew-bat",
+      "label": "android/gradlew.bat",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/gradlew.bat"
+    },
+    {
+      "id": "flutter-android-local-properties",
+      "label": "android/local.properties",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/local.properties"
+    },
+    {
+      "id": "flutter-android-settings-gradle-kts",
+      "label": "android/settings.gradle.kts",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/android/settings.gradle.kts"
+    },
+    {
+      "id": "flutter-assets-images-erlbrew_logo-jpg",
+      "label": "assets/images/erlbrew_logo.jpg",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/assets/images/erlbrew_logo.jpg"
+    },
+    {
+      "id": "flutter-erlbrew_app-iml",
+      "label": "erlbrew_app.iml",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/erlbrew_app.iml"
+    },
+    {
+      "id": "flutter-firebase-json",
+      "label": "firebase.json",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/firebase.json"
+    },
+    {
+      "id": "flutter-firestore-rules",
+      "label": "firestore.rules",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/firestore.rules"
+    },
+    {
+      "id": "flutter-lib-firebase_options-dart",
+      "label": "lib/firebase_options.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/firebase_options.dart"
+    },
+    {
+      "id": "flutter-lib-main-dart",
+      "label": "lib/main.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/main.dart"
+    },
+    {
+      "id": "flutter-lib-models-app_models-dart",
+      "label": "lib/models/app_models.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/models/app_models.dart"
+    },
+    {
+      "id": "flutter-lib-screens-admin-admin_customers_screen-dart",
+      "label": "lib/screens/admin/admin_customers_screen.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/screens/admin/admin_customers_screen.dart"
+    },
+    {
+      "id": "flutter-lib-screens-admin-admin_home_shell-dart",
+      "label": "lib/screens/admin/admin_home_shell.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/screens/admin/admin_home_shell.dart"
+    },
+    {
+      "id": "flutter-lib-screens-admin-admin_menu_screen-dart",
+      "label": "lib/screens/admin/admin_menu_screen.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/screens/admin/admin_menu_screen.dart"
+    },
+    {
+      "id": "flutter-lib-screens-admin-admin_orders_screen-dart",
+      "label": "lib/screens/admin/admin_orders_screen.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/screens/admin/admin_orders_screen.dart"
+    },
+    {
+      "id": "flutter-lib-screens-admin-admin_rewards_screen-dart",
+      "label": "lib/screens/admin/admin_rewards_screen.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/screens/admin/admin_rewards_screen.dart"
+    },
+    {
+      "id": "flutter-lib-screens-admin-admin_scan_screen-dart",
+      "label": "lib/screens/admin/admin_scan_screen.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/screens/admin/admin_scan_screen.dart"
+    },
+    {
+      "id": "flutter-lib-screens-home_shell-dart",
+      "label": "lib/screens/home_shell.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/screens/home_shell.dart"
+    },
+    {
+      "id": "flutter-lib-screens-login_screen-dart",
+      "label": "lib/screens/login_screen.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/screens/login_screen.dart"
+    },
+    {
+      "id": "flutter-lib-screens-my_qr_screen-dart",
+      "label": "lib/screens/my_qr_screen.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/screens/my_qr_screen.dart"
+    },
+    {
+      "id": "flutter-lib-screens-order_sheet-dart",
+      "label": "lib/screens/order_sheet.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/screens/order_sheet.dart"
+    },
+    {
+      "id": "flutter-lib-screens-pickup_screen-dart",
+      "label": "lib/screens/pickup_screen.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/screens/pickup_screen.dart"
+    },
+    {
+      "id": "flutter-lib-screens-rewards_screen-dart",
+      "label": "lib/screens/rewards_screen.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/screens/rewards_screen.dart"
+    },
+    {
+      "id": "flutter-lib-screens-signup_screen-dart",
+      "label": "lib/screens/signup_screen.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/screens/signup_screen.dart"
+    },
+    {
+      "id": "flutter-lib-services-firebase_auth_service-dart",
+      "label": "lib/services/firebase_auth_service.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/services/firebase_auth_service.dart"
+    },
+    {
+      "id": "flutter-lib-services-paymongo_service-dart",
+      "label": "lib/services/paymongo_service.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/services/paymongo_service.dart"
+    },
+    {
+      "id": "flutter-lib-theme-app_theme-dart",
+      "label": "lib/theme/app_theme.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/theme/app_theme.dart"
+    },
+    {
+      "id": "flutter-lib-widgets-animated_counter-dart",
+      "label": "lib/widgets/animated_counter.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/widgets/animated_counter.dart"
+    },
+    {
+      "id": "flutter-lib-widgets-brand_mark-dart",
+      "label": "lib/widgets/brand_mark.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/widgets/brand_mark.dart"
+    },
+    {
+      "id": "flutter-lib-widgets-fade_slide_in-dart",
+      "label": "lib/widgets/fade_slide_in.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/widgets/fade_slide_in.dart"
+    },
+    {
+      "id": "flutter-lib-widgets-luxury_button-dart",
+      "label": "lib/widgets/luxury_button.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/widgets/luxury_button.dart"
+    },
+    {
+      "id": "flutter-lib-widgets-pulse-dart",
+      "label": "lib/widgets/pulse.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/lib/widgets/pulse.dart"
+    },
+    {
+      "id": "flutter-pubspec-lock",
+      "label": "pubspec.lock",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/pubspec.lock"
+    },
+    {
+      "id": "flutter-pubspec-yaml",
+      "label": "pubspec.yaml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/pubspec.yaml"
+    },
+    {
+      "id": "flutter-readme-md",
+      "label": "README.md",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/README.md"
+    },
+    {
+      "id": "flutter-test-widget_test-dart",
+      "label": "test/widget_test.dart",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/test/widget_test.dart"
+    },
+    {
+      "id": "flutter-web-favicon-png",
+      "label": "web/favicon.png",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/web/favicon.png"
+    },
+    {
+      "id": "flutter-web-icons-icon-192-png",
+      "label": "web/icons/Icon-192.png",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/web/icons/Icon-192.png"
+    },
+    {
+      "id": "flutter-web-icons-icon-512-png",
+      "label": "web/icons/Icon-512.png",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/web/icons/Icon-512.png"
+    },
+    {
+      "id": "flutter-web-icons-icon-maskable-192-png",
+      "label": "web/icons/Icon-maskable-192.png",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/web/icons/Icon-maskable-192.png"
+    },
+    {
+      "id": "flutter-web-icons-icon-maskable-512-png",
+      "label": "web/icons/Icon-maskable-512.png",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/web/icons/Icon-maskable-512.png"
+    },
+    {
+      "id": "flutter-web-index-html",
+      "label": "web/index.html",
+      "type": "mobile",
+      "community": "flutter",
+      "file": "erlbrew_app/web/index.html"
+    },
+    {
+      "id": "flutter-web-manifest-json",
+      "label": "web/manifest.json",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/web/manifest.json"
+    },
+    {
+      "id": "flutter-analysis_options",
+      "label": "analysis_options.yaml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/analysis_options.yaml"
+    },
+    {
+      "id": "flutter-android-.gradle-9.3.1-checksums-checksums",
+      "label": "android/.gradle/9.3.1/checksums/checksums.lock",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/checksums/checksums.lock"
+    },
+    {
+      "id": "flutter-android-.gradle-9.3.1-executionhistory-executionhistory",
+      "label": "android/.gradle/9.3.1/executionHistory/executionHistory.lock",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/executionHistory/executionHistory.lock"
+    },
+    {
+      "id": "flutter-android-.gradle-9.3.1-filehashes-filehashes",
+      "label": "android/.gradle/9.3.1/fileHashes/fileHashes.lock",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/fileHashes/fileHashes.lock"
+    },
+    {
+      "id": "flutter-android-.gradle-9.3.1-gc",
+      "label": "android/.gradle/9.3.1/gc.properties",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/9.3.1/gc.properties"
+    },
+    {
+      "id": "flutter-android-.gradle-buildoutputcleanup-buildoutputcleanup",
+      "label": "android/.gradle/buildOutputCleanup/buildOutputCleanup.lock",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock"
+    },
+    {
+      "id": "flutter-android-.gradle-buildoutputcleanup-cache",
+      "label": "android/.gradle/buildOutputCleanup/cache.properties",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/buildOutputCleanup/cache.properties"
+    },
+    {
+      "id": "flutter-android-.gradle-noversion-buildlogic",
+      "label": "android/.gradle/noVersion/buildLogic.lock",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/noVersion/buildLogic.lock"
+    },
+    {
+      "id": "flutter-android-.gradle-vcs-1-gc",
+      "label": "android/.gradle/vcs-1/gc.properties",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/.gradle/vcs-1/gc.properties"
+    },
+    {
+      "id": "flutter-android-app-src-debug-androidmanifest",
+      "label": "android/app/src/debug/AndroidManifest.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/debug/AndroidManifest.xml"
+    },
+    {
+      "id": "flutter-android-app-src-main-androidmanifest",
+      "label": "android/app/src/main/AndroidManifest.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/AndroidManifest.xml"
+    },
+    {
+      "id": "flutter-android-app-src-main-res-drawable-launch_background",
+      "label": "android/app/src/main/res/drawable/launch_background.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/res/drawable/launch_background.xml"
+    },
+    {
+      "id": "flutter-android-app-src-main-res-drawable-v21-launch_background",
+      "label": "android/app/src/main/res/drawable-v21/launch_background.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/res/drawable-v21/launch_background.xml"
+    },
+    {
+      "id": "flutter-android-app-src-main-res-values-styles",
+      "label": "android/app/src/main/res/values/styles.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/res/values/styles.xml"
+    },
+    {
+      "id": "flutter-android-app-src-main-res-values-night-styles",
+      "label": "android/app/src/main/res/values-night/styles.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/main/res/values-night/styles.xml"
+    },
+    {
+      "id": "flutter-android-app-src-profile-androidmanifest",
+      "label": "android/app/src/profile/AndroidManifest.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/app/src/profile/AndroidManifest.xml"
+    },
+    {
+      "id": "flutter-android-gradle-wrapper-gradle-wrapper",
+      "label": "android/gradle/wrapper/gradle-wrapper.properties",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/gradle/wrapper/gradle-wrapper.properties"
+    },
+    {
+      "id": "flutter-android-gradle",
+      "label": "android/gradle.properties",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/gradle.properties"
+    },
+    {
+      "id": "flutter-android-local",
+      "label": "android/local.properties",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/android/local.properties"
+    },
+    {
+      "id": "flutter-firebase",
+      "label": "firebase.json",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/firebase.json"
+    },
+    {
+      "id": "flutter-firestore",
+      "label": "firestore.rules",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/firestore.rules"
+    },
+    {
+      "id": "flutter-pubspec",
+      "label": "pubspec.lock",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/pubspec.lock"
+    },
+    {
+      "id": "flutter-web-manifest",
+      "label": "web/manifest.json",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/web/manifest.json"
+    },
+    {
+      "id": "flutter-.idea-libraries-dart_sdk",
+      "label": ".idea/libraries/Dart_SDK.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/.idea/libraries/Dart_SDK.xml"
+    },
+    {
+      "id": "flutter-.idea-libraries-kotlinjavaruntime",
+      "label": ".idea/libraries/KotlinJavaRuntime.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/.idea/libraries/KotlinJavaRuntime.xml"
+    },
+    {
+      "id": "flutter-.idea-modules",
+      "label": ".idea/modules.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/.idea/modules.xml"
+    },
+    {
+      "id": "flutter-.idea-runconfigurations-main_dart",
+      "label": ".idea/runConfigurations/main_dart.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/.idea/runConfigurations/main_dart.xml"
+    },
+    {
+      "id": "flutter-.idea-workspace",
+      "label": ".idea/workspace.xml",
+      "type": "config",
+      "community": "flutter",
+      "file": "erlbrew_app/.idea/workspace.xml"
+    },
+    {
       "id": "frontend",
       "label": "Frontend (React/Vite)",
       "type": "module",
@@ -870,9 +1654,10 @@
     "hooks": 7,
     "routes": 13,
     "types": 1,
-    "total_nodes": 80,
+    "flutter_files": 84,
+    "total_nodes": 192,
     "total_edges": 65,
-    "last_updated": "2026-07-29T05:32:51.340Z",
+    "last_updated": "2026-09-03T17:18:32.985Z",
     "auto_detected": true
   }
 }

@@ -20,19 +20,19 @@ class AdminHomeShell extends StatefulWidget {
 class _AdminHomeShellState extends State<AdminHomeShell> {
   int _index = 0;
 
-  final _screens = const [
-    _AdminDashboard(),
-    AdminScanScreen(),
-    AdminOrdersScreen(),
-    AdminMenuScreen(),
-    AdminRewardsScreen(),
-    AdminCustomersScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final screens = [
+      const _AdminDashboard(),
+      AdminScanScreen(isActive: _index == 1),
+      const AdminOrdersScreen(),
+      const AdminMenuScreen(),
+      const AdminRewardsScreen(),
+      const AdminCustomersScreen(),
+    ];
+
     return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
+      body: IndexedStack(index: _index, children: screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),

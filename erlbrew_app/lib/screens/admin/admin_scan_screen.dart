@@ -6,7 +6,12 @@ import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
 
 class AdminScanScreen extends StatefulWidget {
-  const AdminScanScreen({super.key});
+  final bool isActive;
+
+  const AdminScanScreen({
+    super.key,
+    required this.isActive,
+  });
 
   @override
   State<AdminScanScreen> createState() => _AdminScanScreenState();
@@ -14,8 +19,14 @@ class AdminScanScreen extends StatefulWidget {
 
 class _AdminScanScreenState extends State<AdminScanScreen>
     with SingleTickerProviderStateMixin {
-  final MobileScannerController _controller = MobileScannerController();
+  final MobileScannerController _controller =
+      MobileScannerController(
+        autoStart: false,
+        useNewCameraSelector: true,
+      );
   bool _handling = false;
+  bool _cameraErrorNotified = false;
+  bool _cameraReadyNotified = false;
   late final AnimationController _scanLineController;
 
   @override
@@ -25,13 +36,47 @@ class _AdminScanScreenState extends State<AdminScanScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     )..repeat(reverse: true);
+    _controller.addListener(_onCameraStateChanged);
+    if (widget.isActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _startCamera());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant AdminScanScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _startCamera();
+    } else if (!widget.isActive && oldWidget.isActive) {
+      _controller.stop();
+    }
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onCameraStateChanged);
     _controller.dispose();
     _scanLineController.dispose();
     super.dispose();
+  }
+
+  void _onCameraStateChanged() {
+    if (!_controller.value.isInitialized ||
+        _cameraReadyNotified ||
+        !mounted) {
+      return;
+    }
+
+    _cameraReadyNotified = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Camera access is allowed on this device. Ready to scan.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    });
   }
 
   void _onDetect(BarcodeCapture capture) {
@@ -69,6 +114,39 @@ class _AdminScanScreenState extends State<AdminScanScreen>
     );
   }
 
+  void _notifyCameraError(MobileScannerException error) {
+    if (_cameraErrorNotified || !mounted) return;
+    _cameraErrorNotified = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showError(
+        error.errorCode.name == 'permissionDenied'
+            ? 'Camera permission is required to scan QR codes. Allow it in Settings, then tap Try again.'
+            : error.errorCode.name == 'unsupported'
+                ? 'This device does not have a supported camera for QR scanning.'
+                : 'Camera unavailable (${error.errorCode.name}). Close other camera apps and try again.',
+      );
+    });
+  }
+
+  Future<void> _retryCamera() async {
+    _cameraErrorNotified = false;
+    _cameraReadyNotified = false;
+    await _controller.stop();
+    await _startCamera();
+  }
+
+  Future<void> _startCamera() async {
+    if (!mounted || !widget.isActive || _controller.value.isRunning) {
+      return;
+    }
+    try {
+      await _controller.start();
+    } on MobileScannerException catch (error) {
+      _notifyCameraError(error);
+    }
+  }
+
   void _openAwardSheet(AppUser customer) {
     showModalBottomSheet(
       context: context,
@@ -78,7 +156,7 @@ class _AdminScanScreenState extends State<AdminScanScreen>
     ).whenComplete(() {
       if (!mounted) return;
       setState(() => _handling = false);
-      _controller.start();
+      _startCamera();
     });
   }
 
@@ -100,6 +178,13 @@ class _AdminScanScreenState extends State<AdminScanScreen>
           MobileScanner(
             controller: _controller,
             onDetect: _onDetect,
+            errorBuilder: (context, error, child) {
+              _notifyCameraError(error);
+              return _CameraErrorView(
+                error: error,
+                onRetry: _retryCamera,
+              );
+            },
           ),
           // Dim overlay with a viewfinder cutout
           IgnorePointer(
@@ -173,6 +258,79 @@ class _AdminScanScreenState extends State<AdminScanScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CameraErrorView extends StatelessWidget {
+  final MobileScannerException error;
+  final Future<void> Function() onRetry;
+
+  const _CameraErrorView({
+    required this.error,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final permissionDenied = error.errorCode.name == 'permissionDenied';
+    return Container(
+      color: AppColors.onyx,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(28),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 340),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          decoration: BoxDecoration(
+            color: AppColors.espresso,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.gold.withOpacity(0.45)),
+            boxShadow: [AppColors.goldGlow],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.no_photography_outlined,
+                color: AppColors.goldLight,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                permissionDenied ? 'Camera permission needed' : 'Camera unavailable',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                permissionDenied
+                    ? 'Allow camera access so Erlbrew can scan customer QR codes.'
+                    : error.errorCode.name == 'unsupported'
+                        ? 'This device does not have a supported camera.'
+                        : 'Close other camera apps and tap Try again. Error: ${error.errorCode.name}.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try again'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: AppColors.onyx,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

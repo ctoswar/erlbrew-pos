@@ -22,7 +22,6 @@ class _AdminScanScreenState extends State<AdminScanScreen>
   final MobileScannerController _controller =
       MobileScannerController(
         autoStart: false,
-        useNewCameraSelector: true,
       );
   bool _handling = false;
   bool _cameraErrorNotified = false;
@@ -178,7 +177,7 @@ class _AdminScanScreenState extends State<AdminScanScreen>
           MobileScanner(
             controller: _controller,
             onDetect: _onDetect,
-            errorBuilder: (context, error, child) {
+            errorBuilder: (context, error) {
               _notifyCameraError(error);
               return _CameraErrorView(
                 error: error,

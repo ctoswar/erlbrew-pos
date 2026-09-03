@@ -144,6 +144,7 @@ class FirebaseAuthService {
         message: 'You must be signed in to update your name.',
       );
     }
+
     if (cleanName.isEmpty) {
       throw FirebaseAuthException(
         code: 'invalid-name',
@@ -159,6 +160,34 @@ class FirebaseAuthService {
       },
       SetOptions(merge: true),
     );
+  }
+
+  Future<int> awardPoints({
+    required String customerId,
+    required int points,
+  }) async {
+    if (points <= 0) {
+      throw ArgumentError.value(points, 'points', 'Must be greater than zero.');
+    }
+    await _ensureReady();
+
+    final customerRef = _firestore!.collection('users').doc(customerId);
+    return _firestore!.runTransaction<int>((transaction) async {
+      final snapshot = await transaction.get(customerRef);
+      if (!snapshot.exists) {
+        throw FirebaseException(
+          plugin: 'cloud_firestore',
+          code: 'customer-not-found',
+          message: 'This customer account could not be found.',
+        );
+      }
+
+      final data = snapshot.data() ?? <String, dynamic>{};
+      final currentPoints = (data['points'] as num?)?.toInt() ?? 0;
+      final updatedPoints = currentPoints + points;
+      transaction.update(customerRef, {'points': updatedPoints});
+      return updatedPoints;
+    });
   }
 
   Future<AppUser?> getSignedInUserProfile() async {

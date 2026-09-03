@@ -2,7 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../../models/app_models.dart';
+import '../../services/firebase_auth_service.dart';
 import '../../theme/app_theme.dart';
 
 class AdminScanScreen extends StatefulWidget {
@@ -409,14 +411,45 @@ class _AwardSheet extends StatefulWidget {
 class _AwardSheetState extends State<_AwardSheet> {
   int _pointsToAdd = 10;
   bool _applied = false;
+  bool _saving = false;
 
   static const _pointOptions = [10, 25, 50, 90];
 
-  void _apply() {
-    setState(() {
-      widget.customer.points += _pointsToAdd;
-      _applied = true;
-    });
+  Future<void> _apply() async {
+    setState(() => _saving = true);
+    try {
+      final newBalance = await FirebaseAuthService.instance.awardPoints(
+        customerId: widget.customer.id,
+        points: _pointsToAdd,
+      );
+      if (!mounted) return;
+      setState(() {
+        widget.customer.points = newBalance;
+        _applied = true;
+        _saving = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '+$_pointsToAdd points added to ${widget.customer.name}.',
+          ),
+        ),
+      );
+    } on FirebaseException catch (error) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.message ?? 'Unable to save points.'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to save points. Please try again.')),
+      );
+    }
   }
 
   @override
@@ -496,8 +529,14 @@ class _AwardSheetState extends State<_AwardSheet> {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _apply,
-                child: Text('Award $_pointsToAdd pts'),
+                onPressed: _saving ? null : _apply,
+                child: _saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text('Award $_pointsToAdd pts'),
               ),
             ] else ...[
               TweenAnimationBuilder<double>(

@@ -18,7 +18,7 @@
     "googleapis": "^178.0.0",
     "jsonwebtoken": "^9.0.0",
     "multer": "^2.2.0",
-    "mysql2": "^3.23.1",
+    "mysql2": "^3.24.4",
     "node-cron": "^4.2.1",
     "undici": "^6.28.0",
     "uuid": "^14.0.2"
@@ -27,5 +27,11 @@
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.0"
+  },
+  "overrides": {
+    "qs": "6.16.0",
+    "googleapis-common": {
+      "uuid": "^14.0.2"
+    }
   }
 }

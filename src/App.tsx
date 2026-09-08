@@ -45,10 +45,13 @@ const App: React.FC = () => {
   // Manager role goes to Admin Dashboard, others go to POS
   if (staff.role === 'Manager') {
     return (
-      <AdminDashboard
-        staff={staff}
-        onLogout={() => setStaff(null)}
-      />
+      <>
+        <OnlineStatus />
+        <AdminDashboard
+          staff={staff}
+          onLogout={() => setStaff(null)}
+        />
+      </>
     );
   }
 

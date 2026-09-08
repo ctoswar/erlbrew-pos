@@ -19,15 +19,42 @@ const storage = multer.diskStorage({
   },
 });
 
+// SECURITY FIX: Validate file types and MIME types
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+
 const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return cb(new Error('Invalid file extension. Allowed: ' + ALLOWED_EXTENSIONS.join(', ')));
+    }
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      return cb(new Error('Invalid file type. Allowed: ' + ALLOWED_MIME_TYPES.join(', ')));
+    }
+    cb(null, true);
+  },
 });
 
 export default function uploadRouter(pool) {
   const router = express.Router();
 
-  router.post('/menu/:id/image', authMiddleware, upload.single('image'), async (req, res) => {
+  router.post('/menu/:id/image', authMiddleware, (req, res, next) => {
+    upload.single('image')(req, res, (err) => {
+      if (err) {
+        if (err instanceof multer.MulterError) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
+          }
+          return res.status(400).json({ error: `Upload error: ${err.message}` });
+        }
+        return res.status(400).json({ error: err.message });
+      }
+      next();
+    });
+  }, async (req, res) => {
     const { id } = req.params;
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });

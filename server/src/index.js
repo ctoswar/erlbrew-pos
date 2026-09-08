@@ -485,7 +485,9 @@ function printServerRequest(urlStr, options = {}, attempt = 1) {
         ...(options.headers || {}),
         'Content-Length': Buffer.byteLength(bodyStr),
       },
-      rejectUnauthorized: false,
+      // SECURITY FIX: Enable TLS certificate validation by default
+      // Only disable for local print server with self-signed certs
+      rejectUnauthorized: process.env.NODE_ENV === 'production' ? true : false,
     };
     // First attempt: try the protocol from the URL
     // On EPROTO/TLS error and first attempt, retry with the other protocol

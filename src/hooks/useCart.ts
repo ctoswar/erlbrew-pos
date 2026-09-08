@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { CartItem, MenuItem, Discount, DiscountType, CartItemModifier } from "../types";
+import { cacheMenuItems, getCachedMenuItems, OfflineMenuItem } from "../utils/offlineDb";
 
 export function useCart() {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -15,6 +16,35 @@ export function useCart() {
     } catch (err) {
       console.error("Failed to hydrate cart from localStorage:", err);
     }
+  }, []);
+
+  // Cache menu items to IndexedDB when they change
+  const cacheMenu = useCallback(async (items: MenuItem[]) => {
+    const offlineItems: OfflineMenuItem[] = items.map(item => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      price: item.price,
+      badge: item.badge,
+      description: item.description,
+      emoji: item.emoji,
+      available: true,
+    }));
+    await cacheMenuItems(offlineItems);
+  }, []);
+
+  // Get cached menu items for offline use
+  const getCachedMenu = useCallback(async (): Promise<MenuItem[]> => {
+    const cached = await getCachedMenuItems();
+    return cached.map(item => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      price: item.price,
+      badge: item.badge,
+      description: item.description,
+      emoji: item.emoji,
+    }));
   }, []);
 
   // Persist cart and discount to localStorage
@@ -92,5 +122,5 @@ export function useCart() {
 
   const removeDiscount = useCallback(() => setDiscount(null), []);
 
-  return { cart, discount, addItem, updateQty, removeItem, clearCart, addNote, applyDiscount, removeDiscount };
+  return { cart, discount, addItem, updateQty, removeItem, clearCart, addNote, applyDiscount, removeDiscount, cacheMenu, getCachedMenu };
 }

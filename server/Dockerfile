@@ -1,13 +1,10 @@
 # ── Erlbrew POS Backend Dockerfile ──────────────────────────────────────────
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
-
-# Update npm to latest version
-RUN npm install -g npm@latest
 
 # Copy package files first for layer caching
 COPY package*.json ./

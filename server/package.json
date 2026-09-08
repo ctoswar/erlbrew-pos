@@ -18,14 +18,20 @@
     "googleapis": "^105.0.0",
     "jsonwebtoken": "^9.0.0",
     "multer": "^2.1.1",
-    "mysql2": "^2.3.3",
+    "mysql2": "^3.24.4",
     "node-cron": "^4.2.1",
     "undici": "^6.21.0",
-    "uuid": "^9.0.0"
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.14",
     "tailwindcss": "^4.3.0"
+  },
+  "overrides": {
+    "qs": "6.16.0",
+    "googleapis-common": {
+      "uuid": "^11.1.1"
+    }
   }
 }

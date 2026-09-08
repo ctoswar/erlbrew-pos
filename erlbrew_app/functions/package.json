@@ -13,5 +13,9 @@
   "dependencies": {
     "firebase-admin": "^13.0.2",
     "firebase-functions": "^6.4.0"
+  },
+  "overrides": {
+    "qs": "6.16.0",
+    "uuid": "^11.1.1"
   }
 }

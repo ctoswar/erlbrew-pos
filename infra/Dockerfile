@@ -4,6 +4,8 @@
 # Stage 1: Build the React app
 FROM node:18-alpine AS builder
 WORKDIR /app
+# Update npm to latest version
+RUN npm install -g npm@latest
 # Force install the Alpine (musl) native build of rollup — npm's optional dep resolution
 # is broken when lockfile was generated on a different platform (Windows/glibc → Alpine/musl)
 COPY package*.json ./

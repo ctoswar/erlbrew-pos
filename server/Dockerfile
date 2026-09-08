@@ -6,6 +6,9 @@ WORKDIR /app
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
 
+# Update npm to latest version
+RUN npm install -g npm@latest
+
 # Copy package files first for layer caching
 COPY package*.json ./
 

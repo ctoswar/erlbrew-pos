@@ -4,6 +4,7 @@ import { LoginScreen } from "./components/LoginScreen";
 import { POSScreen } from "./components/POSScreen";
 import { CustomerDisplay } from "./components/CustomerDisplay";
 import { AdminDashboard } from "./components/AdminDashboard";
+import { OnlineStatus } from "./components/OnlineStatus";
 import { getStoredTheme } from "./hooks/useTheme";
 import { getStoredFontSize, applyFontSize } from "./hooks/useFontSize";
 import "./styles/global.css";
@@ -52,10 +53,13 @@ const App: React.FC = () => {
   }
 
   return (
-    <POSScreen
-      staff={staff}
-      onLogout={() => setStaff(null)}
-    />
+    <>
+      <OnlineStatus />
+      <POSScreen
+        staff={staff}
+        onLogout={() => setStaff(null)}
+      />
+    </>
   );
 };
 

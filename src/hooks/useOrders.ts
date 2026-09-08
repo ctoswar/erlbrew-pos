@@ -2,9 +2,9 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Order, CartItem, Staff, OrderStatus, OrderType, PayMethod, MenuItem, Role, Discount } from "../types";
 import { calcSubtotal, calcTax, calcGrand, generateOrderId } from "../utils";
 import { apiGet, apiPost, apiAdminPost, apiAdminPut, getAuthToken } from "../utils/api";
+import { addOfflineOrder, getOfflineOrders, removeOfflineOrder } from "../utils/offlineDb";
 
 const POLL_INTERVAL = 15000; // 15s — sync with server for multi-device
-const QUEUE_KEY = 'erlbrew_pending_queue';
 
 interface PendingPayload {
   id: string;        // local order id
@@ -12,31 +12,24 @@ interface PendingPayload {
   createdAt: string;
 }
 
-function readQueue(): PendingPayload[] {
-  try {
-    const raw = localStorage.getItem(QUEUE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+async function readQueue(): Promise<PendingPayload[]> {
+  const orders = await getOfflineOrders();
+  return orders.map(o => ({ id: o.id, payload: o.payload, createdAt: o.createdAt }));
 }
 
-function writeQueue(queue: PendingPayload[]) {
-  try {
-    if (queue.length > 0) localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-    else localStorage.removeItem(QUEUE_KEY);
-  } catch { /* storage full — silently drop */ }
-}
-
-function addToQueue(payload: Record<string, unknown>, localId: string) {
-  const queue = readQueue();
-  // Don't duplicate
+async function addToQueue(payload: Record<string, unknown>, localId: string) {
+  const queue = await readQueue();
   if (queue.some(q => q.id === localId)) return;
-  queue.push({ id: localId, payload, createdAt: new Date().toISOString() });
-  writeQueue(queue);
+  await addOfflineOrder({
+    id: localId,
+    payload,
+    createdAt: new Date().toISOString(),
+    synced: false,
+  });
 }
 
-function removeFromQueue(localId: string) {
-  const queue = readQueue().filter(q => q.id !== localId);
-  writeQueue(queue);
+async function removeFromQueue(localId: string) {
+  await removeOfflineOrder(localId);
 }
 
 // Raw server order item shape (snake_case fields from DB/API)
@@ -149,7 +142,7 @@ export function useOrders() {
       }));
     } catch { return []; }
   });
-  const [pendingCount, setPendingCount] = useState(() => readQueue().length);
+  const [pendingCount, setPendingCount] = useState(0);
   const syncedRef = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Track recently-placed local orders to prevent SSE race-condition duplicates
@@ -159,24 +152,24 @@ export function useOrders() {
   const pendingLocalRef = useRef<Map<string, { createdAt: number; items: string; total: number }>>(new Map());
 
   // Retry pending offline orders
-  const retryPending = useCallback(() => {
-    const queue = readQueue();
+  const retryPending = useCallback(async () => {
+    const queue = await readQueue();
     const token = getAuthToken();
     if (queue.length === 0 || !token) return;
 
-    let changed = false;
-    queue.forEach((pending) => {
-      apiAdminPost<{ id?: string }>('/orders', pending.payload).then((data) => {
+    for (const pending of queue) {
+      try {
+        const data = await apiAdminPost<{ id?: string }>('/orders', pending.payload);
         setOrders((prev) =>
           prev.map((o) => (o.id === pending.id ? { ...o, id: data.id || o.id } : o))
         );
-        removeFromQueue(pending.id);
-        setPendingCount(readQueue().length);
-      }).catch(() => {
+        await removeFromQueue(pending.id);
+      } catch {
         // Still offline — leave in queue
-      });
-    });
-    if (changed) setPendingCount(readQueue().length);
+      }
+    }
+    const updatedQueue = await readQueue();
+    setPendingCount(updatedQueue.length);
   }, []);
 
   // Sync today's orders from backend on mount (once)
@@ -254,7 +247,7 @@ export function useOrders() {
 
     // Retry pending queue on mount (from prior session)
     retryPending();
-    setPendingCount(readQueue().length);
+    readQueue().then(q => setPendingCount(q.length));
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -355,7 +348,7 @@ export function useOrders() {
           );
         }).catch((err) => {
           console.error("Failed to persist order to server (admin):", err);
-          // Offline — save to pending queue for later retry
+          // Offline — save to IndexedDB for later retry
           addToQueue(payload, localOrder.id);
         });
       } else {

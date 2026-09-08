@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Order, Staff, InventoryItem, DiscountType } from "../types";
 import { formatCurrency } from "../utils";
-import { apiGet, clearAllOrders } from "../utils/api";
+import { apiGet, apiAdminGet, clearAllOrders } from "../utils/api";
 import { useViewport } from "../hooks/useViewport";
 import { AdminStaff } from "./AdminStaff";
 import { AdminMenu } from "./AdminMenu";
@@ -161,7 +161,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
       setOrders(transformedOrders);
       localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(transformedOrders));
 
-      const invData = await apiGet<InventoryItem[]>('/inventory');
+      const invData = await apiAdminGet<InventoryItem[]>('/inventory');
       setInventory(invData);
       localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(invData));
 

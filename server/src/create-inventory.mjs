@@ -1,11 +1,9 @@
 import 'dotenv/config';
 import mysql from 'mysql2/promise';
 
+// SECURITY FIX: Use environment variables instead of hardcoded credentials
 const conn = await mysql.createConnection({
-  host: '192.168.75.101',
-  user: 'root',
-  password: 'gameclub11',
-  database: 'erlbrew_pos',
+  uri: process.env.DATABASE_URL,
 });
 
 // Create inventory table

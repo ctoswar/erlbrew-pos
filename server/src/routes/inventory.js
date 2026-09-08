@@ -39,8 +39,8 @@ export default function inventoryRouter(pool, googleSheets) {
     return null;
   }
 
-  // GET all inventory
-  router.get('/', async (req, res) => {
+  // GET all inventory (requires authentication)
+  router.get('/', authMiddleware, async (req, res) => {
     try {
       // Check if cost columns exist before selecting them (graceful if migration not applied)
       let hasCost = false;
@@ -264,7 +264,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
       }
 
       const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
-      const limitClause = limit ? `LIMIT ${Number(limit)}` : 'LIMIT 500';
+      // SECURITY FIX: Use parameterized query for limit to prevent SQL injection
+      const limitValue = limit ? Math.min(Math.max(parseInt(String(limit), 10) || 500, 1), 1000) : 500;
+      const limitClause = 'LIMIT ?';
+      params.push(limitValue);
 
       const [rows] = await pool.query(`
         SELECT im.id, im.inventory_item_id, im.movement_type, im.quantity,

@@ -1,167 +1,180 @@
-# ☕ Erlbrew Café POS System
+# Erlbrew POS
 
-A tablet-optimized Point of Sale system built with **React + TypeScript + Vite**, designed to match the Erlbrew Café brand aesthetic.
+A tablet-optimized Point of Sale system for Erlbrew Cafe, built with React + TypeScript frontend and Express + MySQL backend.
 
----
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
 
-## 🗂 Project Structure
+## Features
+
+- **POS Terminal** - Touch-optimized interface for taking orders
+- **Kitchen Board** - Real-time Kanban view for order preparation
+- **Dashboard** - Sales analytics and reporting
+- **Inventory Management** - Track stock levels and costs
+- **Staff Management** - RFID/PIN login, time tracking, scheduling
+- **Multiple Payment Methods** - Cash, Card, E-Wallet (GCash/Maya)
+- **Receipt Printing** - Bluetooth printer integration via Raspberry Pi
+- **Google Sheets Sync** - Optional cloud backup of orders and reports
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS |
+| Backend | Express 5, Node.js |
+| Database | MySQL 8 |
+| Containerization | Docker, Docker Compose |
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js v18 or higher
+- npm v9 or higher
+- MySQL 8 (or Docker)
+
+### Local Development
+
+```bash
+# Clone the repository
+git clone https://github.com/ctoswar/erlbrew-pos.git
+cd erlbrew-pos
+
+# Install frontend dependencies
+npm install
+
+# Install backend dependencies
+cd server
+npm install
+
+# Set up environment
+cp .env.example .env
+# Edit .env with your database credentials
+
+# Start frontend (terminal 1)
+cd ..
+npm run dev
+
+# Start backend (terminal 2)
+cd server
+npm run dev
+```
+
+Frontend: http://localhost:3000
+Backend API: http://localhost:3001
+
+### Docker Deployment
+
+```bash
+cd infra
+
+# Start all services
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop services
+docker compose down
+```
+
+Services:
+- Frontend: http://localhost:3004
+- Backend API: http://localhost:3001
+
+## Environment Variables
+
+### Backend (server/.env)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | MySQL connection string |
+| `JWT_SECRET` | Yes | Secret for JWT tokens (generate with `openssl rand -hex 32`) |
+| `PORT` | No | Server port (default: 3001) |
+| `CORS_ORIGINS` | No | Comma-separated allowed origins |
+| `GOOGLE_SHEETS_ID` | No | Google Sheets ID for cloud sync |
+| `GOOGLE_SERVICE_ACCOUNT_KEY` | No | Google service account JSON |
+| `PRINT_SERVER_URL` | No | Raspberry Pi print server URL |
+
+### Frontend (.env)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_PRINT_SERVER_URL` | No | Print server URL for receipts |
+
+## API Documentation
+
+### Public Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/staff/login` | Staff login (RFID+PIN or username+password) |
+| GET | `/api/menu` | Get menu items |
+| GET | `/api/orders` | Get all orders |
+| GET | `/api/orders/today` | Get today's orders |
+
+### Protected Endpoints (require Bearer token)
+
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| POST | `/api/orders` | Staff | Create new order |
+| PUT | `/api/orders/:id/status` | Staff | Update order status |
+| GET | `/api/orders/cogs` | Staff | Get cost of goods sold |
+| GET | `/api/inventory` | Staff | Get inventory items |
+| POST | `/api/inventory` | Admin | Create inventory item |
+| PUT | `/api/inventory/:id` | Admin | Update inventory item |
+| GET | `/api/staff` | Admin | Get all staff |
+| POST | `/api/staff` | Admin | Create staff member |
+
+### Admin-Only Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| DELETE | `/api/orders/:id` | Void order |
+| POST | `/api/orders/:id/void` | Void with reason |
+| POST | `/api/orders/:id/refund` | Refund order |
+| DELETE | `/api/orders/all` | Clear all orders (fresh start) |
+
+## Demo Credentials
+
+| Name | Role | RFID | PIN |
+|------|------|------|-----|
+| Jane Dela Cruz | Senior Barista | RF001 | 1234 |
+| Marco Santos | Barista | RF002 | 5678 |
+| Ana Reyes | Shift Supervisor | RF003 | 9012 |
+| Luis Garcia | Manager | RF004 | 3456 |
+
+## Project Structure
 
 ```
 erlbrew-pos/
-├── index.html
-├── package.json
-├── tsconfig.json
-├── tsconfig.node.json
-├── vite.config.ts
-└── src/
-    ├── main.tsx                   # Entry point
-    ├── App.tsx                    # Root component (login/POS router)
-    ├── types/
-    │   └── index.ts               # All TypeScript interfaces & types
-    ├── data/
-    │   └── index.ts               # Staff & menu data
-    ├── utils/
-    │   └── index.ts               # Formatting, calc, summary helpers
-    ├── hooks/
-    │   ├── useCart.ts             # Cart state management
-    │   ├── useOrders.ts           # Order lifecycle management
-    │   └── useClock.ts            # Live clock hook
-    ├── styles/
-    │   └── global.css             # CSS variables, animations, base styles
-    └── components/
-        ├── LoginScreen.tsx        # RFID + PIN login
-        ├── Topbar.tsx             # Navigation bar
-        ├── POSScreen.tsx          # Main POS orchestrator
-        ├── MenuGrid.tsx           # Menu browsing & item cards
-        ├── CartPanel.tsx          # Cart sidebar with totals
-        ├── CheckoutScreen.tsx     # Order summary before payment
-        ├── PaymentScreen.tsx      # Cash / Card / E-Wallet payment
-        ├── SuccessScreen.tsx      # Order confirmation
-        ├── KitchenBoard.tsx       # Kitchen order queue (3-column kanban)
-        └── Dashboard.tsx          # Daily sales summary & analytics
+├── src/                    # Frontend (React + TypeScript)
+│   ├── components/         # UI components
+│   ├── hooks/              # React hooks
+│   ├── types/              # TypeScript types
+│   └── utils/              # Utility functions
+├── server/                 # Backend (Express + MySQL)
+│   ├── src/
+│   │   ├── routes/         # API routes
+│   │   ├── middleware/      # Auth middleware
+│   │   ├── services/       # Google Sheets integration
+│   │   └── index.js        # Server entry point
+│   └── Dockerfile
+├── infra/                  # Docker configuration
+│   ├── docker-compose.yml
+│   └── Dockerfile
+└── erlbrew_app/            # Firebase functions (optional)
 ```
 
----
+## Contributing
 
-## 🚀 Getting Started
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for guidelines.
 
-### Prerequisites
-- Node.js v18 or higher
-- npm v9 or higher
+## Security
 
-### Install & Run
+Report security vulnerabilities via [SECURITY.md](SECURITY.md).
 
-```bash
-# 1. Install dependencies
-npm install
+## License
 
-# 2. Start the dev server
-npm run dev
-
-# 3. Open in browser or tablet
-# Local:   http://localhost:3000
-# Tablet:  http://YOUR_PC_IP:3000  (same WiFi network)
-```
-
-### Build for Production
-
-```bash
-npm run build
-npm run preview
-```
-
----
-
-## 🔐 Demo Login Credentials
-
-| Name            | Role             | RFID  | PIN  |
-|-----------------|------------------|-------|------|
-| Jane Dela Cruz  | Senior Barista   | RF001 | 1234 |
-| Marco Santos    | Barista          | RF002 | 5678 |
-| Ana Reyes       | Shift Supervisor | RF003 | 9012 |
-| Luis Garcia     | Manager          | RF004 | 3456 |
-
-> **RFID in production:** Replace `simulateScan()` in `LoginScreen.tsx` with a WebSocket or Web Serial API listener that reads from your physical RFID reader hardware.
-
----
-
-## 📱 Tablet Deployment
-
-### Recommended Setup
-- **Device:** iPad (landscape) or Android tablet 10"+
-- **Browser:** Chrome or Safari in fullscreen / kiosk mode
-- **Network:** Same WiFi as the machine running the dev/production server
-
-### Kiosk Mode (Android)
-1. Build the project: `npm run build`
-2. Serve the `dist/` folder via any static server (e.g., `npx serve dist`)
-3. Open Chrome → address bar → ⋮ → "Add to Home Screen"
-4. Enable kiosk mode via Android's "Screen Pinning" feature
-
-### iPad
-1. Open in Safari → Share → "Add to Home Screen"
-2. Launches in full-screen app mode automatically
-
----
-
-## 💳 Payment Methods Supported
-
-| Method   | Notes                                        |
-|----------|----------------------------------------------|
-| Cash     | Quick-amount buttons + change calculator     |
-| Card     | Shows "tap card to terminal" instructions    |
-| E-Wallet | QR code display (GCash / Maya / PayMaya)     |
-
----
-
-## 🍳 Kitchen Board
-
-The Kitchen Board (`/kitchen` nav tab) shows a 3-column Kanban:
-
-- **Preparing** → barista working on the order
-- **Ready to Serve** → order complete, waiting for pickup
-- **Completed** → delivered to customer
-
-Orders automatically show a **Late** badge after 10 minutes in "Preparing".
-
----
-
-## 📊 Dashboard
-
-The Dashboard tab shows:
-- Total revenue, order count, average ticket value
-- Top 5 best-selling items with visual bars
-- Revenue breakdown by category
-- Payment method distribution
-- Recent orders table with live status
-
----
-
-## 🛠 Customization
-
-### Adding Menu Items
-Edit `src/data/index.ts` → `MENU` array.
-
-### Adding Staff
-Edit `src/data/index.ts` → `STAFF` array.
-
-### Changing Tax Rate
-Edit `src/utils/index.ts` → `calcTax()` function (currently 12% VAT for PH).
-
-### Connecting a Real RFID Reader
-In `src/components/LoginScreen.tsx`, replace `simulateScan()` with:
-```ts
-// Web Serial API example
-const port = await navigator.serial.requestPort();
-await port.open({ baudRate: 9600 });
-// Read RFID tag ID from serial stream, then match against STAFF array
-```
-
----
-
-## 🎨 Design System
-
-Built to match the Erlbrew Café website:
-- **Fonts:** Playfair Display (headings) + Lato (body)
-- **Colors:** Deep espresso browns (`#0d0600`, `#1e0e06`) + warm gold (`#C9873A`)
-- **CSS Variables:** All tokens defined in `src/styles/global.css`
+This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.

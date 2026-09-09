@@ -88,7 +88,7 @@ export const AdminInventory: React.FC = () => {
         // Fallback to cached inventory when offline
         const cached = await getCachedInventoryItems();
         if (cached.length > 0) {
-          setItems(cached as InventoryItem[]);
+          setItems(cached);
         } else {
           setError("Failed to load inventory");
         }

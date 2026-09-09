@@ -66,13 +66,38 @@ interface CompanyInfo {
   company_email: string;
   company_logo: string;
   print_server_url: string;
+  company_tin: string;
+  bir_cor_no: string;
+  bir_atp_no: string;
+  bir_atp_date: string;
+  bir_serial: string;
+  bir_ptu_no: string;
+  bir_machine_no: string;
+  bir_pos_acc_no: string;
 }
+
+const DEFAULT_COMPANY: CompanyInfo = {
+  company_name: 'Erlbrew Cafe',
+  company_address: '',
+  company_phone: '',
+  company_email: '',
+  company_logo: '',
+  print_server_url: '',
+  company_tin: '',
+  bir_cor_no: '',
+  bir_atp_no: '',
+  bir_atp_date: '',
+  bir_serial: '',
+  bir_ptu_no: '',
+  bir_machine_no: '',
+  bir_pos_acc_no: '',
+};
 
 function loadCompanySettings(): CompanyInfo {
   try {
     const s = localStorage.getItem("erlbrew_company_settings");
-    return s ? JSON.parse(s) : { company_name: 'Erlbrew Cafe', company_address: '', company_phone: '', company_email: '', company_logo: '', print_server_url: '' };
-  } catch { return { company_name: 'Erlbrew Cafe', company_address: '', company_phone: '', company_email: '', company_logo: '', print_server_url: '' }; }
+    return s ? { ...DEFAULT_COMPANY, ...JSON.parse(s) } : DEFAULT_COMPANY;
+  } catch { return DEFAULT_COMPANY; }
 }
 
 function saveCompanySettingsLocal(s: CompanyInfo) {
@@ -93,13 +118,21 @@ export const AdminPrintSettings: React.FC = () => {
   useEffect(() => {
     getCompanySettings()
       .then((data: any) => {
-        const info = {
+        const info: CompanyInfo = {
           company_name: data.company_name || 'Erlbrew Cafe',
           company_address: data.company_address || '',
           company_phone: data.company_phone || '',
           company_email: data.company_email || '',
           company_logo: data.company_logo || '',
           print_server_url: data.print_server_url || '',
+          company_tin: data.company_tin || '',
+          bir_cor_no: data.bir_cor_no || '',
+          bir_atp_no: data.bir_atp_no || '',
+          bir_atp_date: data.bir_atp_date || '',
+          bir_serial: data.bir_serial || '',
+          bir_ptu_no: data.bir_ptu_no || '',
+          bir_machine_no: data.bir_machine_no || '',
+          bir_pos_acc_no: data.bir_pos_acc_no || '',
         };
         setCompanyInfo(info);
         if (info.company_logo) setLogoPreview(info.company_logo);
@@ -557,6 +590,111 @@ export const AdminPrintSettings: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* ── Divider ─────────────────────────────────────────── */}
+        <div className="h-px bg-erl-border-subtle" />
+
+        {/* ── Section: BIR Accreditation Details ────────────────── */}
+        <div>
+          <SectionTitle title="BIR Accreditation" subtitle="Required details for official receipts (BIR POS compliance)" />
+
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormSection label="TIN Number">
+                <input
+                  type="text"
+                  value={companyInfo.company_tin}
+                  onChange={(e) => setCompanyInfo(c => ({ ...c, company_tin: e.target.value }))}
+                  placeholder="000-000-000-000"
+                  className="w-full"
+                />
+              </FormSection>
+              <FormSection label="COR Number">
+                <input
+                  type="text"
+                  value={companyInfo.bir_cor_no}
+                  onChange={(e) => setCompanyInfo(c => ({ ...c, bir_cor_no: e.target.value }))}
+                  placeholder="COR-2024-00-00000"
+                  className="w-full"
+                />
+              </FormSection>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormSection label="ATP Number">
+                <input
+                  type="text"
+                  value={companyInfo.bir_atp_no}
+                  onChange={(e) => setCompanyInfo(c => ({ ...c, bir_atp_no: e.target.value }))}
+                  placeholder="ATP-2024-00-00000"
+                  className="w-full"
+                />
+              </FormSection>
+              <FormSection label="ATP Date">
+                <input
+                  type="text"
+                  value={companyInfo.bir_atp_date}
+                  onChange={(e) => setCompanyInfo(c => ({ ...c, bir_atp_date: e.target.value }))}
+                  placeholder="Jan 01, 2024"
+                  className="w-full"
+                />
+              </FormSection>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormSection label="Serial Number">
+                <input
+                  type="text"
+                  value={companyInfo.bir_serial}
+                  onChange={(e) => setCompanyInfo(c => ({ ...c, bir_serial: e.target.value }))}
+                  placeholder="ERL-2024-00001"
+                  className="w-full"
+                />
+              </FormSection>
+              <FormSection label="PTU Number">
+                <input
+                  type="text"
+                  value={companyInfo.bir_ptu_no}
+                  onChange={(e) => setCompanyInfo(c => ({ ...c, bir_ptu_no: e.target.value }))}
+                  placeholder="PTU-2024-00-00000"
+                  className="w-full"
+                />
+              </FormSection>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormSection label="Machine Number">
+                <input
+                  type="text"
+                  value={companyInfo.bir_machine_no}
+                  onChange={(e) => setCompanyInfo(c => ({ ...c, bir_machine_no: e.target.value }))}
+                  placeholder="POS-01"
+                  className="w-full"
+                />
+              </FormSection>
+              <FormSection label="POS Accreditation No">
+                <input
+                  type="text"
+                  value={companyInfo.bir_pos_acc_no}
+                  onChange={(e) => setCompanyInfo(c => ({ ...c, bir_pos_acc_no: e.target.value }))}
+                  placeholder="ACC-2024-0001"
+                  className="w-full"
+                />
+              </FormSection>
+            </div>
+          </div>
+
+          {companyError && (
+            <div className="mt-3 px-4 py-2.5 bg-erl-danger-bg border border-erl-danger-border rounded-xl text-[12px] text-erl-danger">
+              {companyError}
+            </div>
+          )}
+
+          <button
+            onClick={handleSaveCompany}
+            disabled={savingCompany}
+            className="mt-3 btn btn-accent text-[12px] py-2.5 px-6"
+          >
+            {savingCompany ? "Saving…" : companySaved ? "✓ Saved!" : "Save BIR Info"}
+          </button>
         </div>
 
         {/* ── Tip ────────────────────────────────────────────── */}

@@ -19,14 +19,14 @@ function loadCompanySettings() {
         addr2: addr2 || (addr.length <= 30 ? '' : '123 Main St, BGC, Taguig'),
         tel: data.company_phone || '(02) 8888-8888',
         logo: data.company_logo || '',
-        tin: '000-000-000-000',
-        birCorNo: 'COR-2024-00-00000',
-        atpNo: 'ATP-2024-00-00000',
-        atpDate: 'Jan 01, 2024',
-        serial: 'ERL-2024-00001',
-        ptuNo: 'PTU-2024-00-00000',
-        machineNo: 'POS-01',
-        posAccNo: 'ACC-2024-0001',
+        tin: data.company_tin || '000-000-000-000',
+        birCorNo: data.bir_cor_no || 'COR-2024-00-00000',
+        atpNo: data.bir_atp_no || 'ATP-2024-00-00000',
+        atpDate: data.bir_atp_date || 'Jan 01, 2024',
+        serial: data.bir_serial || 'ERL-2024-00001',
+        ptuNo: data.bir_ptu_no || 'PTU-2024-00-00000',
+        machineNo: data.bir_machine_no || 'POS-01',
+        posAccNo: data.bir_pos_acc_no || 'ACC-2024-0001',
       };
     }
   } catch {}

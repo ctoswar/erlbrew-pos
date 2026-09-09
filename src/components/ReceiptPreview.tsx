@@ -40,7 +40,8 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
     }
   };
 
-  const PAPER_WIDTH = settings.paperSize === "57mm" ? 230 : settings.paperSize === "58mm" ? 240 : 280;
+  // Pixel widths matching the print output at Courier New 11px
+  const PAPER_WIDTH = settings.paperSize === "57mm" ? 216 : settings.paperSize === "58mm" ? 226 : 302;
 
   // Resolve store address: use company_address, splitting on commas if long
   const addressLines = STORE.addr1

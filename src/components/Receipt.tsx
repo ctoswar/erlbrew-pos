@@ -18,7 +18,11 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   const settings = loadPrintSettings();
 
   const PAPER_MM = settings.paperSize === '57mm' ? 57 : settings.paperSize === '58mm' ? 58 : 80;
-  const W = settings.paperSize === '57mm' ? 25 : settings.paperSize === '58mm' ? 26 : 32;
+  // Character widths that fit each paper size at Courier New 11px
+  const W = settings.paperSize === '57mm' ? 32 : settings.paperSize === '58mm' ? 34 : 44;
+  // Column layout: QTY(3) + gap(2) + NAME + gap(1) + AMOUNT(8) = W
+  const NAME_WIDTH = W - 11;
+  const AMOUNT_WIDTH = 8;
 
   function padCenter(text: string, width = W): string {
     const s = text.length <= width ? text : text.substring(0, width - 2) + '..';
@@ -83,7 +87,7 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   lines.push(ln("-"));
 
   // 4. Line Items
-  lines.push("QTY  ITEM              AMOUNT");
+  lines.push(`QTY  ${"ITEM".padEnd(NAME_WIDTH)} ${"AMOUNT".padStart(AMOUNT_WIDTH)}`);
   lines.push(ln("-"));
   items.forEach((ci) => {
     const ciMods = (ci as CartItem).modifiers || [];
@@ -91,8 +95,9 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
     const lineTotal = (ci.item.price + modifierPrice) * ci.qty;
     const qtyStr = String(ci.qty).padStart(3);
     const amtStr = formatCurrency(lineTotal).replace("₱", "").trim();
-    const name = ci.item.name.length > 17 ? ci.item.name.substring(0, 16) + "…" : ci.item.name;
-    lines.push(`${qtyStr}  ${padRight(name, 17)} ${padLeft(amtStr, 8)}`);
+    const maxNameLen = NAME_WIDTH - 1;
+    const name = ci.item.name.length > maxNameLen ? ci.item.name.substring(0, maxNameLen - 1) + "…" : ci.item.name;
+    lines.push(`${qtyStr}  ${padRight(name, NAME_WIDTH)} ${padLeft(amtStr, AMOUNT_WIDTH)}`);
     if (ci.qty > 1) {
       const unitPrice = ci.item.price + modifierPrice;
       lines.push(`     @ ${formatCurrency(unitPrice).replace("₱","").trim()} ea`);

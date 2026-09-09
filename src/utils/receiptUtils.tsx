@@ -70,7 +70,11 @@ export function getStoreInfo(): StoreInfo {
 const MONO = "'Courier New', 'Lucida Console', monospace";
 
 export function buildReceiptLines(order: Order, settings: PrintSettings, discountAmount?: number, discountLabel?: string): string[] {
-  const W = settings.paperSize === "57mm" ? 25 : settings.paperSize === "58mm" ? 26 : 32;
+  // Character widths that fit each paper size at Courier New 11px
+  const W = settings.paperSize === "57mm" ? 32 : settings.paperSize === "58mm" ? 34 : 44;
+  // Column layout: QTY(3) + gap(2) + NAME + gap(1) + AMOUNT(8) = W
+  const NAME_WIDTH = W - 11;
+  const AMOUNT_WIDTH = 8;
 
   function padCenter(text: string, width = W): string {
     const s = text.length <= width ? text : text.substring(0, width - 2) + "..";
@@ -125,15 +129,16 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
   lines.push(ln("-"));
 
   // 4. Line Items
-  lines.push("QTY  ITEM              AMOUNT");
+  lines.push(`QTY  ${"ITEM".padEnd(NAME_WIDTH)} ${"AMOUNT".padStart(AMOUNT_WIDTH)}`);
   lines.push(ln("-"));
   order.items.forEach((ci) => {
     const modifierTotal = (ci.modifiers || []).reduce((s, m) => s + m.price, 0);
     const lineTotal = (ci.item.price + modifierTotal) * ci.qty;
     const qtyStr = String(ci.qty).padStart(3);
     const amtStr = formatCurrency(lineTotal).replace("₱", "").trim();
-    const name = ci.item.name.length > 17 ? ci.item.name.substring(0, 16) + "…" : ci.item.name;
-    lines.push(`${qtyStr}  ${padRight(name, 17)} ${padLeft(amtStr, 8)}`);
+    const maxNameLen = NAME_WIDTH - 1;
+    const name = ci.item.name.length > maxNameLen ? ci.item.name.substring(0, maxNameLen - 1) + "…" : ci.item.name;
+    lines.push(`${qtyStr}  ${padRight(name, NAME_WIDTH)} ${padLeft(amtStr, AMOUNT_WIDTH)}`);
     if (ci.qty > 1) lines.push(`     @ ${formatCurrency(ci.item.price + modifierTotal).replace("₱", "").trim()} ea`);
     if (ci.modifiers && ci.modifiers.length > 0) {
       ci.modifiers.forEach(m => {
@@ -208,6 +213,7 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
 
 export function openPrintWindow(order: Order, settings: PrintSettings, discountAmount?: number, discountLabel?: string): void {
   const lines = buildReceiptLines(order, settings, discountAmount, discountLabel);
+  // Pixel widths matching character counts at Courier New 11px (≈6.6px/char)
   const W_PX = settings.paperSize === "57mm" ? 216 : settings.paperSize === "58mm" ? 226 : 302;
 
   const win = window.open("", "_blank", "width=440,height=700");

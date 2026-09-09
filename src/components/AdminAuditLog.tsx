@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { formatDate, formatTime } from "../utils";
+import { formatDate, formatTime, toLocalDateStr } from "../utils";
 import { getAuditLogs, AuditLog } from "../utils/api";
 
 const ACTION_LABELS: Record<string, string> = {
@@ -21,9 +21,9 @@ export const AdminAuditLog: React.FC = () => {
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
-    return d.toISOString().split("T")[0];
+    return toLocalDateStr(d);
   });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [endDate, setEndDate] = useState(() => toLocalDateStr());
   const [actionFilter, setActionFilter] = useState("");
   const [offset, setOffset] = useState(0);
   const limit = 50;

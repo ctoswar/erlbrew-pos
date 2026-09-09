@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Order, CartItem, DiscountType } from "../types";
-import { buildDailySummary, formatCurrency, formatTime } from "../utils";
+import { buildDailySummary, formatCurrency, formatTime, toLocalDateStr } from "../utils";
 import { apiAdminGet, apiGet, resetCogs, resetInventoryCosts } from "../utils/api";
 import { ReceiptPreview } from "./ReceiptPreview";
 
@@ -23,14 +23,14 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
   const [reprintOrder, setReprintOrder] = useState<Order | null>(null);
   const [_syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'ok' | 'error'>('idle');
   const [dateRange, setDateRange] = useState<'today' | 'this_week' | 'last_week' | 'this_month' | 'last_2_weeks' | 'custom'>('today');
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [startDate, setStartDate] = useState(() => toLocalDateStr());
+  const [endDate, setEndDate] = useState(() => toLocalDateStr());
   const [resetMsg, setResetMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [yesterdayOrders, setYesterdayOrders] = useState<Order[]>([]);
   const [hourlyData, setHourlyData] = useState<{ hour: number; revenue: number; count: number }[]>([]);
   const [lowStockItems, setLowStockItems] = useState<{ name: string; stock: number; threshold: number }[]>([]);
 
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  const fmt = (d: Date) => toLocalDateStr(d);
 
   const getDateRange = (): { start: string; end: string } => {
     const today = new Date();

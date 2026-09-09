@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { formatCurrency } from "../utils";
+import { formatCurrency, toLocalDateStr } from "../utils";
 import { apiAdminGet, getSalesReport, getStaffReport, DailySalesReport, SalesReportSummary, StaffReport } from "../utils/api";
 import {
   LineChart,
@@ -22,9 +22,9 @@ export const AdminReports: React.FC = () => {
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
-    return d.toISOString().split("T")[0];
+    return toLocalDateStr(d);
   });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [endDate, setEndDate] = useState(() => toLocalDateStr());
   const [loading, setLoading] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printType, setPrintType] = useState<"summary" | "items" | "staff" | "stock">("summary");
@@ -41,7 +41,7 @@ export const AdminReports: React.FC = () => {
   // Staff report data
   const [staffStats, setStaffStats] = useState<StaffReport[]>([]);
 
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  const fmt = (d: Date) => toLocalDateStr(d);
 
   const customStartRef = useRef(startDate);
   const customEndRef = useRef(endDate);

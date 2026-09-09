@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Graphify Auto-Watcher
- * Monitors src/ and server/ directories for changes
- * Auto-detects new files and regenerates architecture.json
+ * Graphify Auto-Watcher (Fixed)
+ * Monitors src/ and server/ for architectural components only
+ * Skips individual source files — only tracks components, hooks, routes, services
  */
 
 import fs from 'fs';
@@ -18,28 +18,11 @@ class GraphifyWatcher {
     this.projectRoot = projectRoot;
     this.srcDir = path.join(this.projectRoot, 'src');
     this.serverDir = path.join(this.projectRoot, 'server');
-    this.projectScanRoots = ['src', 'server', 'public', 'scripts', 'mcp'];
-    this.projectIgnoredDirectories = new Set([
-      '.git',
-      '.graph',
-      'build',
-      'dist',
-      'node_modules'
-    ]);
     this.flutterDir = path.join(this.projectRoot, 'erlbrew_app');
-    this.flutterIgnoredDirectories = new Set([
-      '.dart_tool',
-      '.gradle',
-      '.git',
-      '.idea',
-      'build',
-      'functions',
-      'node_modules'
-    ]);
     this.graphFile = path.join(this.projectRoot, '.graph', 'architecture.json');
     this.watchers = [];
     this.debounceTimer = null;
-    this.debounceDelay = 2000; // 2 seconds
+    this.debounceDelay = 2000;
   }
 
   /**
@@ -47,12 +30,11 @@ class GraphifyWatcher {
    */
   scanComponents() {
     const components = [];
-    const componentsDir = path.join(this.srcDir, 'components');
-
-    if (!fs.existsSync(componentsDir)) return components;
+    const dir = path.join(this.srcDir, 'components');
+    if (!fs.existsSync(dir)) return components;
 
     try {
-      fs.readdirSync(componentsDir).forEach(file => {
+      fs.readdirSync(dir).forEach(file => {
         if (file.endsWith('.tsx') || file.endsWith('.ts')) {
           const name = file.replace(/\.(tsx|ts)$/, '');
           components.push({
@@ -64,10 +46,7 @@ class GraphifyWatcher {
           });
         }
       });
-    } catch (error) {
-      console.error('Error scanning components:', error.message);
-    }
-
+    } catch (e) { console.error('Error scanning components:', e.message); }
     return components;
   }
 
@@ -76,12 +55,11 @@ class GraphifyWatcher {
    */
   scanHooks() {
     const hooks = [];
-    const hooksDir = path.join(this.srcDir, 'hooks');
-
-    if (!fs.existsSync(hooksDir)) return hooks;
+    const dir = path.join(this.srcDir, 'hooks');
+    if (!fs.existsSync(dir)) return hooks;
 
     try {
-      fs.readdirSync(hooksDir).forEach(file => {
+      fs.readdirSync(dir).forEach(file => {
         if (file.startsWith('use') && (file.endsWith('.ts') || file.endsWith('.tsx'))) {
           const name = file.replace(/\.(tsx|ts)$/, '');
           hooks.push({
@@ -93,11 +71,33 @@ class GraphifyWatcher {
           });
         }
       });
-    } catch (error) {
-      console.error('Error scanning hooks:', error.message);
-    }
-
+    } catch (e) { console.error('Error scanning hooks:', e.message); }
     return hooks;
+  }
+
+  /**
+   * Scan src/utils for utility modules
+   */
+  scanUtils() {
+    const utils = [];
+    const dir = path.join(this.srcDir, 'utils');
+    if (!fs.existsSync(dir)) return utils;
+
+    try {
+      fs.readdirSync(dir).forEach(file => {
+        if (file.endsWith('.ts') || file.endsWith('.tsx')) {
+          const name = file.replace(/\.(tsx|ts)$/, '');
+          utils.push({
+            id: `util-${name.toLowerCase()}`,
+            label: `${name}.ts`,
+            type: 'util',
+            community: 'frontend',
+            file: file
+          });
+        }
+      });
+    } catch (e) { console.error('Error scanning utils:', e.message); }
+    return utils;
   }
 
   /**
@@ -105,344 +105,232 @@ class GraphifyWatcher {
    */
   scanRoutes() {
     const routes = [];
-    const routesDir = path.join(this.serverDir, 'src', 'routes');
-
-    if (!fs.existsSync(routesDir)) return routes;
+    const dir = path.join(this.serverDir, 'src', 'routes');
+    if (!fs.existsSync(dir)) return routes;
 
     try {
-      fs.readdirSync(routesDir).forEach(file => {
+      fs.readdirSync(dir).forEach(file => {
         if (file.endsWith('.js')) {
           const name = file.replace(/\.js$/, '');
           routes.push({
             id: `route-${name.toLowerCase()}`,
             label: `routes/${name}.js`,
-            type: 'endpoint',
+            type: 'route',
             community: 'backend',
             file: file
           });
         }
       });
-    } catch (error) {
-      console.error('Error scanning routes:', error.message);
-    }
-
+    } catch (e) { console.error('Error scanning routes:', e.message); }
     return routes;
   }
 
   /**
-   * Scan src/types for TypeScript definitions
+   * Scan server/src/services
    */
-  scanTypes() {
-    const types = [];
-    const typesDir = path.join(this.srcDir, 'types');
-
-    if (!fs.existsSync(typesDir)) return types;
+  scanServices() {
+    const services = [];
+    const dir = path.join(this.serverDir, 'src', 'services');
+    if (!fs.existsSync(dir)) return services;
 
     try {
-      fs.readdirSync(typesDir).forEach(file => {
-        if (file.endsWith('.ts') || file.endsWith('.tsx')) {
-          const name = file.replace(/\.(tsx|ts)$/, '');
-          types.push({
-            id: `type-${name.toLowerCase()}`,
-            label: `${name}.ts`,
-            type: 'type',
-            community: 'frontend',
+      fs.readdirSync(dir).forEach(file => {
+        if (file.endsWith('.js')) {
+          const name = file.replace(/\.js$/, '');
+          services.push({
+            id: `service-${name.toLowerCase()}`,
+            label: `services/${name}.js`,
+            type: 'service',
+            community: 'backend',
             file: file
           });
         }
       });
-    } catch (error) {
-      console.error('Error scanning types:', error.message);
-    }
-
-    return types;
+    } catch (e) { console.error('Error scanning services:', e.message); }
+    return services;
   }
 
   /**
-   * Scan the complete Flutter project, excluding generated and dependency files
+   * Scan Flutter lib/screens only (not every file)
    */
-  scanFlutterFiles() {
-    const files = [];
+  scanFlutterScreens() {
+    const screens = [];
+    const screensDir = path.join(this.flutterDir, 'lib', 'screens');
+    if (!fs.existsSync(screensDir)) return screens;
 
-    if (!fs.existsSync(this.flutterDir)) return files;
-
-    const scanDirectory = (directory, relativeDirectory = '') => {
-      fs.readdirSync(directory, { withFileTypes: true }).forEach(entry => {
-        if (entry.isDirectory() && this.flutterIgnoredDirectories.has(entry.name)) {
-          return;
-        }
-
-        const fullPath = path.join(directory, entry.name);
-        const relativePath = path.join(relativeDirectory, entry.name);
-
-        if (entry.isDirectory()) {
-          scanDirectory(fullPath, relativePath);
-        } else if (entry.name !== '.flutter-plugins-dependencies') {
-          const configFile = /\.(json|lock|rules|yaml|yml|gradle|properties|plist|xml)$/.test(entry.name);
-
-          files.push({
-            id: `flutter-${Buffer.from(relativePath).toString('hex')}`,
-            label: relativePath.replace(/\\/g, '/'),
-            type: configFile ? 'config' : 'mobile',
-            community: 'flutter',
-            file: path.join('erlbrew_app', relativePath).replace(/\\/g, '/')
-          });
-        }
-      });
+    const scanDir = (dir, prefix = '') => {
+      try {
+        fs.readdirSync(dir, { withFileTypes: true }).forEach(entry => {
+          if (entry.isDirectory()) {
+            scanDir(path.join(dir, entry.name), `${prefix}${entry.name}/`);
+          } else if (entry.name.endsWith('.dart')) {
+            const name = entry.name.replace('.dart', '');
+            screens.push({
+              id: `flutter-${prefix.replace(/\//g, '-')}${name}`.toLowerCase(),
+              label: `screens/${prefix}${name}.dart`,
+              type: 'screen',
+              community: 'mobile',
+              file: `erlbrew_app/lib/screens/${prefix}${name}.dart`
+            });
+          }
+        });
+      } catch (e) {}
     };
 
-    try {
-      scanDirectory(this.flutterDir);
-    } catch (error) {
-      console.error('Error scanning Flutter files:', error.message);
-    }
-
-    return files;
+    scanDir(screensDir);
+    return screens;
   }
 
   /**
-   * Include every tracked source/config file in the POS tooling areas
-   */
-  scanProjectFiles() {
-    const files = [];
-    const supportedFile = /\.(css|html|js|json|md|mjs|scss|ts|tsx|yaml|yml)$/i;
-
-    const scanDirectory = (directory, relativeDirectory = '') => {
-      fs.readdirSync(directory, { withFileTypes: true }).forEach(entry => {
-        if (entry.isDirectory() && this.projectIgnoredDirectories.has(entry.name)) {
-          return;
-        }
-
-        const fullPath = path.join(directory, entry.name);
-        const relativePath = path.join(relativeDirectory, entry.name);
-
-        if (entry.isDirectory()) {
-          scanDirectory(fullPath, relativePath);
-        } else if (supportedFile.test(entry.name)) {
-          const normalizedPath = relativePath.replace(/\\/g, '/');
-          const root = normalizedPath.split('/')[0];
-          const isConfig = /\.(json|yaml|yml|md)$/i.test(entry.name);
-
-          files.push({
-            id: `file-${Buffer.from(normalizedPath).toString('hex')}`,
-            label: normalizedPath,
-            type: isConfig ? 'config' : 'file',
-            community: root === 'server' ? 'backend' : root === 'mcp' ? 'tooling' : 'frontend',
-            file: normalizedPath
-          });
-        }
-      });
-    };
-
-    this.projectScanRoots.forEach(root => {
-      const directory = path.join(this.projectRoot, root);
-      if (fs.existsSync(directory)) scanDirectory(directory, root);
-    });
-
-    return files;
-  }
-
-  /**
-   * Load the current architecture.json
+   * Load existing edges from architecture.json
    */
   loadCurrentGraph() {
     try {
       if (fs.existsSync(this.graphFile)) {
         return JSON.parse(fs.readFileSync(this.graphFile, 'utf8'));
       }
-    } catch (error) {
-      console.error('Error loading graph:', error.message);
-    }
+    } catch (e) { console.error('Error loading graph:', e.message); }
     return null;
   }
 
   /**
-   * Check if two graphs are different
-   */
-  graphsAreDifferent(oldGraph, newNodes) {
-    if (!oldGraph) return true;
-    
-    const oldNodeCount = oldGraph.nodes ? oldGraph.nodes.length : 0;
-    const newNodeCount = newNodes.length;
-    
-    return oldNodeCount !== newNodeCount;
-  }
-
-  /**
-   * Regenerate architecture.json
+   * Regenerate architecture.json with only architectural nodes
    */
   regenerateGraph() {
     console.log('🔄 Regenerating graph...');
 
-    // Load existing graph to preserve manual entries
-    const currentGraph = this.loadCurrentGraph() || { nodes: [], edges: [], metadata: {} };
+    const currentGraph = this.loadCurrentGraph() || { nodes: [], edges: [] };
 
-    // Scan all directories
-    const newComponents = this.scanComponents();
-    const newHooks = this.scanHooks();
-    const newRoutes = this.scanRoutes();
-    const newTypes = this.scanTypes();
-    const newFlutterFiles = this.scanFlutterFiles();
-    const newProjectFiles = this.scanProjectFiles();
+    // Scan only architectural components
+    const components = this.scanComponents();
+    const hooks = this.scanHooks();
+    const utils = this.scanUtils();
+    const routes = this.scanRoutes();
+    const services = this.scanServices();
+    const flutterScreens = this.scanFlutterScreens();
 
-    const autoDetectedNodes = [
-      ...newComponents,
-      ...newHooks,
-      ...newRoutes,
-      ...newTypes,
-      ...newFlutterFiles,
-      ...newProjectFiles
+    // Fixed architectural nodes (always include)
+    const fixedNodes = [
+      // Entry points
+      { id: 'app', label: 'App.tsx', type: 'entry', community: 'frontend' },
+      { id: 'server', label: 'server/index.js', type: 'server', community: 'backend' },
+      { id: 'db', label: 'MySQL Database', type: 'database', community: 'data' },
+      
+      // Types
+      { id: 'types', label: 'types/index.ts', type: 'types', community: 'frontend' },
+      
+      // Middleware
+      { id: 'middleware-auth', label: 'middleware/auth.js', type: 'middleware', community: 'backend' },
+      
+      // Database tables
+      { id: 'table-staff', label: 'staff', type: 'table', community: 'data' },
+      { id: 'table-menu', label: 'menu_items', type: 'table', community: 'data' },
+      { id: 'table-orders', label: 'orders', type: 'table', community: 'data' },
+      { id: 'table-orderitems', label: 'order_items', type: 'table', community: 'data' },
+      { id: 'table-inventory', label: 'inventory', type: 'table', community: 'data' },
+      { id: 'table-inventorymovements', label: 'inventory_movements', type: 'table', community: 'data' },
+      { id: 'table-recipes', label: 'recipes', type: 'table', community: 'data' },
+      { id: 'table-cashdrawer', label: 'cash_drawer', type: 'table', community: 'data' },
+      { id: 'table-cashdrawertransactions', label: 'cash_drawer_transactions', type: 'table', community: 'data' },
+      { id: 'table-timerecords', label: 'time_records', type: 'table', community: 'data' },
+      { id: 'table-companysettings', label: 'company_settings', type: 'table', community: 'data' },
+      { id: 'table-supplierinvoices', label: 'supplier_invoices', type: 'table', community: 'data' },
+      { id: 'table-auditlog', label: 'audit_log', type: 'table', community: 'data' },
+      
+      // Flutter entry
+      { id: 'flutter-app', label: 'erlbrew_app (Flutter)', type: 'entry', community: 'mobile' },
     ];
 
-    // Keep manual nodes (those not auto-detected)
-    const manualNodes = currentGraph.nodes.filter(node => 
-      (!['component', 'hook', 'endpoint', 'type', 'mobile', 'file'].includes(node.type) &&
-       !node.id.startsWith('flutter-') &&
-       !node.id.startsWith('file-')) ||
-      node.community === 'external' ||
-      node.community === 'config' ||
-      node.community === 'database'
-    );
-
-    // Merge auto-detected with manual
-    const allNodeIds = new Set();
-    const mergedNodes = [];
-
-    autoDetectedNodes.forEach(node => {
-      allNodeIds.add(node.id);
-      mergedNodes.push(node);
+    // Merge: fixed + auto-detected (deduplicate by id)
+    const allNodes = new Map();
+    fixedNodes.forEach(n => allNodes.set(n.id, n));
+    [...components, ...hooks, ...utils, ...routes, ...services, ...flutterScreens].forEach(n => {
+      if (!allNodes.has(n.id)) allNodes.set(n.id, n);
     });
 
-    manualNodes.forEach(node => {
-      if (!allNodeIds.has(node.id)) {
-        allNodeIds.add(node.id);
-        mergedNodes.push(node);
-      }
-    });
+    const mergedNodes = Array.from(allNodes.values());
 
-    // Update metadata
+    // Keep existing edges
+    const edges = currentGraph.edges || [];
+
     const updatedGraph = {
       nodes: mergedNodes,
-      edges: currentGraph.edges || [],
+      edges: edges,
       metadata: {
         projectName: 'erlbrew-pos',
         description: 'Restaurant POS System with Timekeeping & Print Integration',
-        version: '1.0.0',
-        components: newComponents.length,
-        hooks: newHooks.length,
-        routes: newRoutes.length,
-        types: newTypes.length,
-        flutter_files: newFlutterFiles.length,
-        project_files: newProjectFiles.length,
+        version: '2.0.0',
+        components: components.length,
+        hooks: hooks.length,
+        utils: utils.length,
+        routes: routes.length,
+        services: services.length,
+        flutter_screens: flutterScreens.length,
         total_nodes: mergedNodes.length,
-        total_edges: (currentGraph.edges || []).length,
-        last_updated: new Date().toISOString(),
-        auto_detected: true
+        total_edges: edges.length,
+        last_updated: new Date().toISOString()
       }
     };
 
-    // Check if graph changed before writing
-    if (this.graphsAreDifferent(currentGraph, mergedNodes)) {
-      try {
-        if (!fs.existsSync(path.join(this.projectRoot, '.graph'))) {
-          fs.mkdirSync(path.join(this.projectRoot, '.graph'), { recursive: true });
-        }
-
-        fs.writeFileSync(this.graphFile, JSON.stringify(updatedGraph, null, 2));
-        console.log(`✅ Graph updated! (${mergedNodes.length} nodes detected)`);
-        console.log(`   - Components: ${newComponents.length}`);
-        console.log(`   - Hooks: ${newHooks.length}`);
-        console.log(`   - Routes: ${newRoutes.length}`);
-        console.log(`   - Types: ${newTypes.length}`);
-        console.log(`   - Flutter files: ${newFlutterFiles.length}`);
-        console.log(`   - Project files: ${newProjectFiles.length}`);
-        return true;
-      } catch (error) {
-        console.error('❌ Error writing graph:', error.message);
+    try {
+      if (!fs.existsSync(path.join(this.projectRoot, '.graph'))) {
+        fs.mkdirSync(path.join(this.projectRoot, '.graph'), { recursive: true });
       }
+      fs.writeFileSync(this.graphFile, JSON.stringify(updatedGraph, null, 2));
+      console.log(`✅ Graph updated: ${mergedNodes.length} nodes, ${edges.length} edges`);
+      console.log(`   Components: ${components.length} | Hooks: ${hooks.length} | Utils: ${utils.length}`);
+      console.log(`   Routes: ${routes.length} | Services: ${services.length} | Flutter: ${flutterScreens.length}`);
+      return true;
+    } catch (e) {
+      console.error('❌ Error writing graph:', e.message);
+      return false;
     }
-
-    return false;
   }
 
   /**
-   * Setup file watchers with debounce
+   * Setup file watchers
    */
   setupWatchers() {
     const dirs = [
-      ...this.projectScanRoots.map(root => path.join(this.projectRoot, root)),
-      this.flutterDir
+      path.join(this.srcDir, 'components'),
+      path.join(this.srcDir, 'hooks'),
+      path.join(this.srcDir, 'utils'),
+      path.join(this.serverDir, 'src', 'routes'),
+      path.join(this.serverDir, 'src', 'services'),
+      path.join(this.flutterDir, 'lib', 'screens')
     ];
 
     dirs.forEach(dir => {
-      if (!fs.existsSync(dir)) {
-        console.log(`⚠️  Directory not found: ${dir}`);
-        return;
-      }
+      if (!fs.existsSync(dir)) return;
 
       const watcher = fs.watch(dir, { recursive: true }, (eventType, filename) => {
-        const changedPath = filename ? filename.toString().replace(/\\/g, '/') : '';
-        const isIgnoredChange = changedPath.split('/').some(part =>
-          this.flutterIgnoredDirectories.has(part) ||
-          this.projectIgnoredDirectories.has(part)
-        );
-
-        if (!isIgnoredChange && !changedPath.startsWith('.') && 
-            (changedPath.endsWith('.ts') || changedPath.endsWith('.tsx') ||
-             changedPath.endsWith('.js') || changedPath.endsWith('.dart') ||
-             changedPath.endsWith('.yaml') || changedPath.endsWith('.json') ||
-             changedPath.endsWith('.rules') || changedPath.endsWith('.kt') ||
-             changedPath.endsWith('.gradle') || changedPath.endsWith('.xml') ||
-             changedPath.endsWith('.plist') || changedPath.endsWith('.swift') ||
-             changedPath.endsWith('.html') || changedPath.endsWith('.css'))) {
-          
-          // Debounce: clear previous timer and set new one
+        if (!filename) return;
+        const ext = path.extname(filename);
+        if (['.ts', '.tsx', '.js', '.dart'].includes(ext)) {
           clearTimeout(this.debounceTimer);
-          this.debounceTimer = setTimeout(() => {
-            this.regenerateGraph();
-          }, this.debounceDelay);
+          this.debounceTimer = setTimeout(() => this.regenerateGraph(), this.debounceDelay);
         }
       });
 
       this.watchers.push(watcher);
-      console.log(`👁️  Watching: ${dir}`);
+      console.log(`👁️  Watching: ${path.relative(this.projectRoot, dir)}`);
     });
   }
 
-  /**
-   * Start the watcher
-   */
   start() {
     console.log('🚀 Graphify Auto-Watcher Started\n');
-    console.log('📁 Monitoring directories:');
-    console.log(`   • ${this.srcDir}`);
-    console.log(`   • ${this.serverDir}`);
-    console.log(`   • ${this.flutterDir} (excluding generated/dependency folders)\n`);
-
-    // Initial regeneration
     this.regenerateGraph();
-
-    // Setup watchers
     this.setupWatchers();
-
-    console.log('✅ Watcher is live! New files will auto-update the graph.\n');
-    console.log('Press Ctrl+C to stop.\n');
+    console.log('\n✅ Watcher is live! Press Ctrl+C to stop.\n');
   }
 
-  /**
-   * Stop the watcher
-   */
   stop() {
-    console.log('\n🛑 Stopping watcher...');
-    this.watchers.forEach(watcher => watcher.close());
+    this.watchers.forEach(w => w.close());
     process.exit(0);
   }
 }
 
-// Start the watcher
 const watcher = new GraphifyWatcher();
 watcher.start();
-
-// Handle graceful shutdown
 process.on('SIGINT', () => watcher.stop());
 process.on('SIGTERM', () => watcher.stop());

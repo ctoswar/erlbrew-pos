@@ -1,4 +1,6 @@
 // IndexedDB wrapper for offline data storage
+import { InventoryItem } from '../types';
+
 const DB_NAME = 'erlbrew-pos-offline';
 const DB_VERSION = 1;
 
@@ -19,6 +21,8 @@ export interface OfflineMenuItem {
   emoji: string;
   available: boolean;
 }
+
+export type OfflineInventoryItem = InventoryItem;
 
 let dbInstance: IDBDatabase | null = null;
 
@@ -143,7 +147,7 @@ export async function getCachedMenuItems(): Promise<OfflineMenuItem[]> {
 }
 
 // Inventory Cache
-export async function cacheInventoryItems(items: { id: string; [key: string]: unknown }[]): Promise<void> {
+export async function cacheInventoryItems(items: InventoryItem[]): Promise<void> {
   const db = await openDB();
   const tx = db.transaction('inventory', 'readwrite');
   const store = tx.objectStore('inventory');
@@ -152,7 +156,7 @@ export async function cacheInventoryItems(items: { id: string; [key: string]: un
   }
 }
 
-export async function getCachedInventoryItems(): Promise<{ id: string; [key: string]: unknown }[]> {
+export async function getCachedInventoryItems(): Promise<InventoryItem[]> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction('inventory', 'readonly');

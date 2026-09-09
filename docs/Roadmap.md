@@ -28,7 +28,7 @@ The core POS system is fully functional with order management, inventory trackin
 
 ### Priority: Medium
 
-- [ ] **Offline Mode**
+- [x] **Offline Mode**
   - Service worker for POS
   - Local order queue
   - Sync when reconnected

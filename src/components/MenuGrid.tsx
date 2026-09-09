@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { MenuItem, CartItem, CartItemModifier } from "../types";
 import { formatCurrency } from "../utils";
 import { apiGet } from "../utils/api";
+import { cacheMenuItems, getCachedMenuItems } from "../utils/offlineDb";
 import { ModifierModal } from "./ModifierModal";
 
 interface Props {
@@ -53,8 +54,37 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
         if (cats.length > 0 && !activeCategory) {
           setActiveCategory(cats[0]);
         }
+        // Cache menu items in IndexedDB for offline use
+        cacheMenuItems(items.map(item => ({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          price: item.price,
+          badge: item.badge,
+          description: item.description,
+          emoji: item.emoji,
+          available: true,
+        }))).catch(console.error);
       })
-      .catch(() => setMenuItems([]))
+      .catch(async () => {
+        // Fallback to cached menu items when offline
+        const cached = await getCachedMenuItems();
+        if (cached.length > 0) {
+          const items: MenuItem[] = cached.map((d) => ({
+            ...d,
+            price: Number(d.price) || 0,
+            popular: false,
+            modifiers: [],
+          }));
+          setMenuItems(items);
+          const cats = [...new Set(items.map((i) => i.category))];
+          if (cats.length > 0 && !activeCategory) {
+            setActiveCategory(cats[0]);
+          }
+        } else {
+          setMenuItems([]);
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 

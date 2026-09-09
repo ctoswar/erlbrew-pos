@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { InventoryItem, InventoryMovement, MovementType } from "../types";
 import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete } from "../utils/api";
+import { cacheInventoryItems, getCachedInventoryItems } from "../utils/offlineDb";
 
 const CATEGORIES = ["Cups", "Lids", "Supplies", "Milk", "Coffee", "Syrups", "Powders", "Tea", "Other"];
 const UNITS = ["pcs", "kg", "g", "L", "ml", "boxes", "packs"];
@@ -69,8 +70,29 @@ export const AdminInventory: React.FC = () => {
   const loadItems = () => {
     setLoading(true);
     apiAdminGet<InventoryItem[]>("/inventory")
-      .then(setItems)
-      .catch(() => setError("Failed to load inventory"))
+      .then((data) => {
+        setItems(data);
+        // Cache inventory items in IndexedDB for offline use
+        cacheInventoryItems(data.map(item => ({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          unit: item.unit,
+          stock: item.stock,
+          low_stock_threshold: item.low_stock_threshold,
+          purchase_cost: item.purchase_cost,
+          unit_cost: item.unit_cost,
+        }))).catch(console.error);
+      })
+      .catch(async () => {
+        // Fallback to cached inventory when offline
+        const cached = await getCachedInventoryItems();
+        if (cached.length > 0) {
+          setItems(cached as InventoryItem[]);
+        } else {
+          setError("Failed to load inventory");
+        }
+      })
       .finally(() => setLoading(false));
   };
 

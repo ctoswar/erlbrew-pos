@@ -266,11 +266,25 @@
     {"from": "flutter-admincustomers", "to": "flutter-models", "label": "uses"},
     {"from": "flutter-fbauth", "to": "server", "label": "Firebase Auth"},
     {"from": "flutter-paymongo", "to": "cf-paymongo", "label": "calls"},
-    {"from": "cf-paymongo", "to": "server", "label": "HTTP"}
+    {"from": "cf-paymongo", "to": "server", "label": "HTTP"},
+    {"from": "comp-receipt", "to": "util-receipt", "label": "uses"},
+    {"from": "comp-receipt", "to": "util-api", "label": "uses"},
+    {"from": "comp-modifiermodal", "to": "comp-modifiereditor", "label": "used by"},
+    {"from": "types", "to": "comp-posscreen", "label": "imported by"},
+    {"from": "types", "to": "comp-dashboard", "label": "imported by"},
+    {"from": "types", "to": "comp-kitchenboard", "label": "imported by"},
+    {"from": "types", "to": "util-api", "label": "imported by"},
+    {"from": "types", "to": "hook-useorders", "label": "imported by"},
+    {"from": "flutter-theme", "to": "flutter-app", "label": "used by"},
+    {"from": "flutter-theme", "to": "flutter-login", "label": "used by"},
+    {"from": "flutter-theme", "to": "flutter-home", "label": "used by"},
+    {"from": "flutter-widgets", "to": "flutter-app", "label": "used by"},
+    {"from": "flutter-widgets", "to": "flutter-home", "label": "used by"},
+    {"from": "flutter-widgets", "to": "flutter-order", "label": "used by"}
   ],
   "metadata": {
-    "total_nodes": 105,
-    "total_edges": 142,
+    "total_nodes": 97,
+    "total_edges": 183,
     "communities": ["frontend", "backend", "data", "mobile"]
   }
 }

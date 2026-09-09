@@ -425,7 +425,7 @@ export const CashDrawerScreen: React.FC = () => {
                       {tx.reason || '—'}
                     </td>
                     <td className="px-1.5 py-[5px] text-right text-erl-text-faint whitespace-nowrap">
-                      {new Date(tx.created_at).toLocaleTimeString()}
+                      {new Date(tx.created_at).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" })}
                     </td>
                   </tr>
                 ))}

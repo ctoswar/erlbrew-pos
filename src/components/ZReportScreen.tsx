@@ -98,10 +98,10 @@ export const ZReportScreen: React.FC = () => {
                 <span className="text-[20px]">📊</span>
                 <div>
                   <div className="text-[14px] font-bold text-erl-text-primary">
-                    Report — {new Date(lastReport.period_end).toLocaleTimeString()}
+                    Report — {new Date(lastReport.period_end).toLocaleTimeString("en-PH", { timeZone: "Asia/Manila" })}
                   </div>
                   <div className="text-[11px] text-erl-text-faint">
-                    {new Date(lastReport.period_start).toLocaleString()} → {new Date(lastReport.period_end).toLocaleString()}
+                    {new Date(lastReport.period_start).toLocaleString("en-PH", { timeZone: "Asia/Manila" })} → {new Date(lastReport.period_end).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
                   </div>
                 </div>
               </div>
@@ -155,7 +155,7 @@ export const ZReportScreen: React.FC = () => {
                       {r.report_date}
                     </div>
                     <div className="text-[11px] text-erl-text-faint mt-0.5">
-                      {new Date(r.period_start).toLocaleTimeString()} → {new Date(r.period_end).toLocaleTimeString()}
+                      {new Date(r.period_start).toLocaleTimeString("en-PH", { timeZone: "Asia/Manila" })} → {new Date(r.period_end).toLocaleTimeString("en-PH", { timeZone: "Asia/Manila" })}
                       <span className="mx-1.5">·</span>
                       {r.total_orders} order{r.total_orders !== 1 ? "s" : ""}
                     </div>

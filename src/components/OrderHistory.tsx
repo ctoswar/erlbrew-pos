@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { Order } from "../types";
-import { formatCurrency, formatTime } from "../utils";
+import { formatCurrency, formatTime, toLocalDateStr } from "../utils";
 import { apiGet } from "../utils/api";
 import { serverOrderToOrder } from "../hooks/useOrders";
 import { ReceiptPreview } from "./ReceiptPreview";
@@ -20,9 +20,9 @@ export const OrderHistory: React.FC = () => {
   const [reprintOrder, setReprintOrder] = useState<Order | null>(null);
   const [startDate, setStartDate] = useState(() => {
     const d = new Date(); d.setDate(d.getDate() - 7);
-    return d.toISOString().split("T")[0];
+    return toLocalDateStr(d);
   });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [endDate, setEndDate] = useState(() => toLocalDateStr());
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [offset, setOffset] = useState(0);
@@ -125,7 +125,7 @@ export const OrderHistory: React.FC = () => {
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs text-erl-text-muted mb-2.5">
-                      <div>{o.createdAt.toLocaleDateString("en-PH", { month: "short", day: "2-digit" })} {formatTime(o.createdAt)}</div>
+                      <div>{o.createdAt.toLocaleDateString("en-PH", { month: "short", day: "2-digit", timeZone: "Asia/Manila" })} {formatTime(o.createdAt)}</div>
                       <div>{o.staff?.name?.split(" ")[0] ?? '—'}</div>
                       <div>{o.type === "dine-in" ? o.customerName || "Dine-in" : "Takeout"}</div>
                       <div className="capitalize">{o.payMethod}</div>
@@ -161,7 +161,7 @@ export const OrderHistory: React.FC = () => {
                           #{o.id.slice(0, 8).toUpperCase()}
                         </td>
                         <td className="py-1.5 pr-2 text-erl-muted text-[10px]">
-                          {o.createdAt.toLocaleDateString("en-PH", { month: "short", day: "2-digit" })}
+                          {o.createdAt.toLocaleDateString("en-PH", { month: "short", day: "2-digit", timeZone: "Asia/Manila" })}
                         </td>
                         <td className="py-1.5 pr-2 text-erl-muted text-[10px]">
                           {formatTime(o.createdAt)}

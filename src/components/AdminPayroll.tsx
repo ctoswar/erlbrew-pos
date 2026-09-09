@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { formatCurrency } from "../utils";
+import { formatCurrency, toLocalDateStr } from "../utils";
 import {
   apiAdminGet,
   apiAdminPost,
@@ -62,9 +62,9 @@ function getSemiMonthlyDates(which: "first" | "second"): {
     const to = new Date(year, month, 15);
     const payDate = new Date(year, month, 20);
     return {
-      from: from.toISOString().split("T")[0],
-      to: to.toISOString().split("T")[0],
-      payDate: payDate.toISOString().split("T")[0],
+      from: toLocalDateStr(from),
+      to: toLocalDateStr(to),
+      payDate: toLocalDateStr(payDate),
     };
   }
   const lastDay = new Date(year, month + 1, 0).getDate();
@@ -72,9 +72,9 @@ function getSemiMonthlyDates(which: "first" | "second"): {
   const to = new Date(year, month, lastDay);
   const payDate = new Date(year, month + 1, 5);
   return {
-    from: from.toISOString().split("T")[0],
-    to: to.toISOString().split("T")[0],
-    payDate: payDate.toISOString().split("T")[0],
+    from: toLocalDateStr(from),
+    to: toLocalDateStr(to),
+    payDate: toLocalDateStr(payDate),
   };
 }
 

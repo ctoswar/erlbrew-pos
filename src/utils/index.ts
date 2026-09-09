@@ -1,18 +1,35 @@
 import { CartItem, Order, DailySummary, PayMethod, Category, Discount } from "../types";
 
+// ── Timezone constants ──────────────────────────────────────
+const TZ = "Asia/Manila"; // UTC+8 — always use this for display
+
+/** Get today's date as YYYY-MM-DD in local (Manila) time, not UTC */
+export const toLocalDateStr = (d: Date = new Date()): string => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const y = parts.find(p => p.type === "year")?.value ?? "0000";
+  const m = parts.find(p => p.type === "month")?.value ?? "01";
+  const dd = parts.find(p => p.type === "day")?.value ?? "01";
+  return `${y}-${m}-${dd}`;
+};
+
 export const formatCurrency = (n: number | string): string => {
   const num = Number(n);
   return `₱${(isNaN(num) ? 0 : num).toFixed(2)}`;
 };
 
 export const formatTime = (d: Date): string =>
-  d.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" });
+  d.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
 
 export const formatDate = (d: Date): string =>
-  d.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" });
+  d.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric", timeZone: TZ });
 
 export const formatFullDate = (d: Date): string =>
-  d.toLocaleDateString("en-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  d.toLocaleDateString("en-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: TZ });
 
 export const generateOrderId = (): string =>
   `#${Math.floor(1000 + Math.random() * 9000)}`;

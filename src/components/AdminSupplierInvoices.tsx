@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { formatCurrency } from "../utils";
+import { formatCurrency, toLocalDateStr } from "../utils";
 import { SupplierInvoice, SupplierInvoiceItem, getSupplierInvoices, getSupplierInvoice, createSupplierInvoice, updateSupplierInvoice, deleteSupplierInvoice } from "../utils/api";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -16,7 +16,7 @@ const EMPTY_FORM = {
   contact_person: "",
   contact_phone: "",
   contact_email: "",
-  invoice_date: new Date().toISOString().split("T")[0],
+  invoice_date: toLocalDateStr(),
   due_date: "",
   subtotal: "",
   tax_amount: "",

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Staff } from "../types";
 import { apiGet, apiPost, apiAdminGet, apiAdminPut, apiAdminPost, apiAdminDelete } from "../utils/api";
+import { toLocalDateStr } from "../utils";
 
 interface ScheduleDay {
   shift_start: string | null;
@@ -157,9 +158,9 @@ export const TimeKeeping: React.FC<TimeKeepingProps> = ({ staff }) => {
 
   // ── Print ──
   const [showPrintPicker, setShowPrintPicker] = useState(false);
-  const getTodayStr = () => new Date().toISOString().split("T")[0];
-  const [printFrom, setPrintFrom] = useState(getTodayStr);
-  const [printTo, setPrintTo] = useState(getTodayStr);
+const getTodayStr = () => toLocalDateStr();
+const [printFrom, setPrintFrom] = useState(getTodayStr);
+const [printTo, setPrintTo] = useState(getTodayStr);
 
   // Template form
   const DAYS_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -288,8 +289,8 @@ export const TimeKeeping: React.FC<TimeKeepingProps> = ({ staff }) => {
               } else {
                 for (let ri = 0; ri < s.records.length; ri++) {
                   const r = s.records[ri];
-                  const cin = new Date(r.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" });
-                  const cout = r.clock_out ? new Date(r.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" }) : '<span style="color:#7abf7a">Active</span>';
+                  const cin = new Date(r.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" });
+                  const cout = r.clock_out ? new Date(r.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" }) : '<span style="color:#7abf7a">Active</span>';
                   const hrs = r.total_hours ? Number(r.total_hours).toFixed(2) : '\u2014';
                   if (ri === 0) {
                     rows += '<tr><td>' + s.name + '</td><td>' + (schedName ? '<span class="shift-badge">' + schedName + '</span>' : '\u2014') + '</td><td>' + cin + '</td><td>' + cout + '</td><td>' + hrs + '</td></tr>';
@@ -444,7 +445,7 @@ export const TimeKeeping: React.FC<TimeKeepingProps> = ({ staff }) => {
   // Build calendar grid
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
   const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = toLocalDateStr();
 
   const days: (number | null)[] = Array(firstDay).fill(null);
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
@@ -647,8 +648,8 @@ export const TimeKeeping: React.FC<TimeKeepingProps> = ({ staff }) => {
                       </div>
                       {lastTap.record?.clock_in && (
                         <div className="text-xs text-erl-text-muted mt-1 font-medium">
-                          {`In: ${new Date(lastTap.record.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`}
-                          {lastTap.record?.clock_out ? `  Out: ${new Date(lastTap.record.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}` : ""}
+                          {`In: ${new Date(lastTap.record.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" })}`}
+                          {lastTap.record?.clock_out ? `  Out: ${new Date(lastTap.record.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" })}` : ""}
                         </div>
                       )}
                     </div>
@@ -900,9 +901,9 @@ export const TimeKeeping: React.FC<TimeKeepingProps> = ({ staff }) => {
                           {/* Times */}
                           <div className="text-right flex-shrink-0 flex flex-col items-end gap-0.5">
                             <div className="text-xs text-erl-text-secondary font-semibold">
-                              {new Date(rec.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}
+                              {new Date(rec.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" })}
                               {rec.clock_out ? (
-                                <span className="text-erl-text-faint"> → {new Date(rec.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}</span>
+                                <span className="text-erl-text-faint"> → {new Date(rec.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" })}</span>
                               ) : (
                                 <span className="ml-1.5 inline-flex items-center gap-1">
                                   <span className="animate-pulse text-erl-success">●</span>
@@ -1288,7 +1289,7 @@ function fmtTime(t: string | null): string {
   const [h, m] = t.split(":").map(Number);
   const d = new Date();
   d.setHours(h, m);
-  return d.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", hour12: true });
+  return d.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Manila" });
 }
 
 function fmtShort(t: string | null): string {
@@ -1391,9 +1392,9 @@ const StaffGroup: React.FC<{
                 {rec ? (
                   <div className="flex flex-col items-end gap-0.5">
                     <div className="text-xs text-erl-text-secondary font-semibold">
-                      {new Date(rec.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}
+                      {new Date(rec.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" })}
                       {rec.clock_out ? (
-                        <span className="text-erl-text-faint"> → {new Date(rec.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}</span>
+                        <span className="text-erl-text-faint"> → {new Date(rec.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" })}</span>
                       ) : (
                         <span className="ml-1.5 inline-flex items-center gap-1">
                           <span className="animate-pulse" style={{ color: statusColor }}>●</span>

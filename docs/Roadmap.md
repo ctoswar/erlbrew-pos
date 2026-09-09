@@ -10,6 +10,14 @@ The core POS system is fully functional with order management, inventory trackin
 
 ### Priority: High
 
+- [x] **Offline Mode**
+  - [x] Service worker for POS
+  - [x] Local order queue
+  - [x] IndexedDB for menu/inventory cache
+  - [x] Background sync when reconnected
+  - [x] Visual indicator for online/offline status
+  - [x] Queue orders locally, push to server on reconnect
+
 - [ ] **Multi-location Support**
   - Store-level configuration
   - Cross-location inventory transfer
@@ -25,13 +33,6 @@ The core POS system is fully functional with order management, inventory trackin
   - Points accumulation
   - Reward redemption
   - Customer profiles with order history
-
-### Priority: Medium
-
-- [x] **Offline Mode**
-  - Service worker for POS
-  - Local order queue
-  - Sync when reconnected
 
 - [ ] **Receipt Customization**
   - Custom receipt templates

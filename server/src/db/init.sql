@@ -145,15 +145,15 @@ ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id);
 
 -- Seed admin (password_hash = NULL means first-time login, API will set it)
 INSERT INTO staff (rfid, pin, name, role, initials, color, password_hash) VALUES
-('ADMIN001', 'admin123', 'admin', 'Manager', 'AD', '#000000', NULL)
+('ADMIN_EXAMPLE', '0000', 'Demo Admin', 'Manager', 'DA', '#000000', NULL)
 ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id);
 
--- Seed 4 staff (example)
+-- Seed 4 staff (example — replace RFID/PIN with real values before production)
 INSERT INTO staff (rfid, pin, name, role, initials, color, password_hash) VALUES
-  ('RF001','1234','Jane Dela Cruz','Senior Barista','JD','#C9873A', NULL),
-  ('RF002','5678','Marco Santos','Barista','MS','#6e9e6a', NULL),
-  ('RF003','9012','Ana Reyes','Shift Supervisor','AR','#7a6eb0', NULL),
-  ('RF004','3456','Luis Garcia','Manager','LG','#b06e6e', NULL);
+  ('RFID_EXAMPLE_1','0000','Jane Dela Cruz','Senior Barista','JD','#C9873A', NULL),
+  ('RFID_EXAMPLE_2','0000','Marco Santos','Barista','MS','#6e9e6a', NULL),
+  ('RFID_EXAMPLE_3','0000','Ana Reyes','Shift Supervisor','AR','#7a6eb0', NULL),
+  ('RFID_EXAMPLE_4','0000','Luis Garcia','Manager','LG','#b06e6e', NULL);
 
 -- Seed 16 menu items (example) -- replace with real data as needed
 INSERT INTO menu_items (id, name, category, price, badge, description, emoji, popular) VALUES

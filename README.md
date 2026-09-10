@@ -177,4 +177,4 @@ Report security vulnerabilities via [SECURITY.md](SECURITY.md).
 
 ## License
 
-This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
+This project is source-available for reference only. See [LICENSE](./LICENSE) — all rights reserved.

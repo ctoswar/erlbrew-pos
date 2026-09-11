@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 type DateRange = "today" | "this_week" | "this_month" | "last_month" | "last_2_weeks" | "custom" | "jan" | "feb" | "mar" | "apr" | "may" | "jun" | "jul" | "aug" | "sep" | "oct" | "nov" | "dec" | "year_to_date";
 
@@ -261,7 +261,7 @@ export const AdminReports: React.FC = () => {
         ["Gross Profit", formatCurrency(salesSummary.grossProfit)],
         ["Margin", salesSummary.totalRevenue > 0 ? `${((salesSummary.grossProfit / salesSummary.totalRevenue) * 100).toFixed(1)}%` : "0%"],
       ];
-      const summaryResult = autoTable(doc, {
+      autoTable(doc, {
         startY,
         head: [["Metric", "Value"]],
         body: summaryData,
@@ -270,7 +270,7 @@ export const AdminReports: React.FC = () => {
         styles: { fontSize: 9 },
         margin: { left: 14 },
       });
-      startY = (summaryResult as any).finalY + 10;
+      startY = (doc as any).lastAutoTable.finalY + 10;
 
       // Daily breakdown
       autoTable(doc, {
@@ -302,7 +302,7 @@ export const AdminReports: React.FC = () => {
     } else {
       // Inventory
       const turnoverData = computeTurnoverByCategory();
-      const turnoverResult = autoTable(doc, {
+      autoTable(doc, {
         startY,
         head: [["Category", "Items", "Total Stock Value", "Turnover Rate", "Days of Supply"]],
         body: turnoverData.map(t => [
@@ -317,7 +317,7 @@ export const AdminReports: React.FC = () => {
         styles: { fontSize: 8 },
         margin: { left: 14 },
       });
-      startY = (turnoverResult as any).finalY + 10;
+      startY = (doc as any).lastAutoTable.finalY + 10;
 
       autoTable(doc, {
         startY,
@@ -341,73 +341,100 @@ export const AdminReports: React.FC = () => {
   };
 
   // Excel Export
-  const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
+  const exportExcel = async () => {
+    const wb = new ExcelJS.Workbook();
     const filename = `${activeReport}-report-${startDate}-to-${endDate}.xlsx`;
 
+    const headerStyle = {
+      font: { bold: true, color: { argb: "FFFFFFFF" } } as ExcelJS.Font,
+      fill: { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FFC9873A" } },
+    };
+
     if (activeReport === "sales") {
-      // Summary sheet
-      const summaryRows = [
-        ["Metric", "Value"],
-        ["Total Revenue", salesSummary.totalRevenue],
-        ["Total Orders", salesSummary.totalOrders],
-        ["Avg Order", salesSummary.avgOrder],
-        ["COGS", salesSummary.totalCOGS],
-        ["Gross Profit", salesSummary.grossProfit],
-        ["Margin %", salesSummary.totalRevenue > 0 ? (salesSummary.grossProfit / salesSummary.totalRevenue) * 100 : 0],
-      ];
-      const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
-      XLSX.utils.book_append_sheet(wb, summarySheet, "Summary");
+      const summarySheet = wb.addWorksheet("Summary");
+      summarySheet.columns = [{ header: "Metric", key: "metric", width: 20 }, { header: "Value", key: "value", width: 20 }];
+      summarySheet.getRow(1).eachCell((cell) => { cell.font = headerStyle.font; cell.fill = headerStyle.fill; });
+      [
+        { metric: "Total Revenue", value: salesSummary.totalRevenue },
+        { metric: "Total Orders", value: salesSummary.totalOrders },
+        { metric: "Avg Order", value: salesSummary.avgOrder },
+        { metric: "COGS", value: salesSummary.totalCOGS },
+        { metric: "Gross Profit", value: salesSummary.grossProfit },
+        { metric: "Margin %", value: salesSummary.totalRevenue > 0 ? (salesSummary.grossProfit / salesSummary.totalRevenue) * 100 : 0 },
+      ].forEach(row => summarySheet.addRow(row));
 
-      // Daily breakdown sheet
-      const dailyRows = [
-        ["Date", "Orders", "Revenue", "COGS", "Profit"],
-        ...salesData.map(d => [d.date, d.orders, d.revenue, d.cogs, d.profit]),
+      const dailySheet = wb.addWorksheet("Daily Breakdown");
+      dailySheet.columns = [
+        { header: "Date", key: "date", width: 15 },
+        { header: "Orders", key: "orders", width: 10 },
+        { header: "Revenue", key: "revenue", width: 15 },
+        { header: "COGS", key: "cogs", width: 15 },
+        { header: "Profit", key: "profit", width: 15 },
       ];
-      const dailySheet = XLSX.utils.aoa_to_sheet(dailyRows);
-      XLSX.utils.book_append_sheet(wb, dailySheet, "Daily Breakdown");
+      dailySheet.getRow(1).eachCell((cell) => { cell.font = headerStyle.font; cell.fill = headerStyle.fill; });
+      salesData.forEach(d => dailySheet.addRow(d));
     } else if (activeReport === "staff") {
-      const staffRows = [
-        ["Staff", "Orders", "Revenue", "Avg/Order", "Hours", "Revenue/Hr"],
-        ...staffStats.map(s => [
-          s.name,
-          s.orders,
-          s.revenue,
-          s.orders > 0 ? s.revenue / s.orders : 0,
-          s.hoursWorked,
-          s.hoursWorked > 0 ? s.revenue / s.hoursWorked : 0,
-        ]),
+      const sheet = wb.addWorksheet("Staff Performance");
+      sheet.columns = [
+        { header: "Staff", key: "name", width: 20 },
+        { header: "Orders", key: "orders", width: 10 },
+        { header: "Revenue", key: "revenue", width: 15 },
+        { header: "Avg/Order", key: "avg", width: 15 },
+        { header: "Hours", key: "hours", width: 10 },
+        { header: "Revenue/Hr", key: "revHr", width: 15 },
       ];
-      const sheet = XLSX.utils.aoa_to_sheet(staffRows);
-      XLSX.utils.book_append_sheet(wb, sheet, "Staff Performance");
+      sheet.getRow(1).eachCell((cell) => { cell.font = headerStyle.font; cell.fill = headerStyle.fill; });
+      staffStats.forEach(s => sheet.addRow({
+        name: s.name,
+        orders: s.orders,
+        revenue: s.revenue,
+        avg: s.orders > 0 ? s.revenue / s.orders : 0,
+        hours: s.hoursWorked,
+        revHr: s.hoursWorked > 0 ? s.revenue / s.hoursWorked : 0,
+      }));
     } else {
-      // Turnover sheet
       const turnoverData = computeTurnoverByCategory();
-      const turnoverRows = [
-        ["Category", "Items", "Total Stock Value", "Turnover Rate", "Days of Supply"],
-        ...turnoverData.map(t => [t.category, t.itemCount, t.totalValue, t.turnoverRate, t.daysOfSupply]),
+      const turnoverSheet = wb.addWorksheet("Turnover Analysis");
+      turnoverSheet.columns = [
+        { header: "Category", key: "category", width: 20 },
+        { header: "Items", key: "itemCount", width: 10 },
+        { header: "Total Stock Value", key: "totalValue", width: 18 },
+        { header: "Turnover Rate", key: "turnoverRate", width: 15 },
+        { header: "Days of Supply", key: "daysOfSupply", width: 15 },
       ];
-      const turnoverSheet = XLSX.utils.aoa_to_sheet(turnoverRows);
-      XLSX.utils.book_append_sheet(wb, turnoverSheet, "Turnover Analysis");
+      turnoverSheet.getRow(1).eachCell((cell) => { cell.font = headerStyle.font; cell.fill = headerStyle.fill; });
+      turnoverData.forEach(t => turnoverSheet.addRow(t));
 
-      // Inventory sheet
-      const invRows = [
-        ["Item", "Category", "Stock", "Unit", "Purchase Cost", "Unit Cost", "Stock Value"],
-        ...inventoryItems.map((i: any) => [
-          i.name,
-          i.category,
-          i.stock,
-          i.unit,
-          i.purchase_cost ?? "",
-          i.unit_cost ?? "",
-          i.unit_cost ? i.stock * i.unit_cost : "",
-        ]),
+      const invSheet = wb.addWorksheet("Inventory Items");
+      invSheet.columns = [
+        { header: "Item", key: "name", width: 25 },
+        { header: "Category", key: "category", width: 15 },
+        { header: "Stock", key: "stock", width: 10 },
+        { header: "Unit", key: "unit", width: 10 },
+        { header: "Purchase Cost", key: "purchase_cost", width: 15 },
+        { header: "Unit Cost", key: "unit_cost", width: 15 },
+        { header: "Stock Value", key: "stockValue", width: 15 },
       ];
-      const invSheet = XLSX.utils.aoa_to_sheet(invRows);
-      XLSX.utils.book_append_sheet(wb, invSheet, "Inventory Items");
+      invSheet.getRow(1).eachCell((cell) => { cell.font = headerStyle.font; cell.fill = headerStyle.fill; });
+      inventoryItems.forEach((i: any) => invSheet.addRow({
+        name: i.name,
+        category: i.category,
+        stock: i.stock,
+        unit: i.unit,
+        purchase_cost: i.purchase_cost ?? "",
+        unit_cost: i.unit_cost ?? "",
+        stockValue: i.unit_cost ? i.stock * i.unit_cost : "",
+      }));
     }
 
-    XLSX.writeFile(wb, filename);
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // Inventory Turnover Computation
@@ -472,7 +499,7 @@ export const AdminReports: React.FC = () => {
           <button onClick={exportPDF} className="flex-1 sm:flex-none px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-erl-danger bg-erl-danger/10 text-erl-danger">
             📥 PDF
           </button>
-          <button onClick={exportExcel} className="flex-1 sm:flex-none px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-[#217346] bg-[#217346]/10 text-[#217346]">
+          <button onClick={() => exportExcel()} className="flex-1 sm:flex-none px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-[#217346] bg-[#217346]/10 text-[#217346]">
             📥 Excel
           </button>
           <button onClick={() => setShowPrintModal(true)} className="flex-1 sm:flex-none px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-erl-accent bg-erl-accent/10 text-erl-accent">

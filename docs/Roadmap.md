@@ -23,11 +23,11 @@ The core POS system is fully functional with order management, inventory trackin
   - Cross-location inventory transfer
   - Consolidated reporting
 
-- [ ] **Advanced Reporting**
-  - Date range custom reports
-  - Export to PDF/Excel
-  - Staff performance metrics
-  - Inventory turnover analysis
+- [x] **Advanced Reporting**
+  - [x] Date range custom reports
+  - [x] Export to PDF/Excel
+  - [x] Staff performance metrics
+  - [x] Inventory turnover analysis
 
 - [ ] **Customer Loyalty Program**
   - Points accumulation

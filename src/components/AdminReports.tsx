@@ -13,6 +13,9 @@ import {
   Bar,
   Legend,
 } from "recharts";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 type DateRange = "today" | "this_week" | "this_month" | "last_month" | "last_2_weeks" | "custom" | "jan" | "feb" | "mar" | "apr" | "may" | "jun" | "jul" | "aug" | "sep" | "oct" | "nov" | "dec" | "year_to_date";
 
@@ -221,6 +224,224 @@ export const AdminReports: React.FC = () => {
     exportCSV(`inventory-report-${new Date().toISOString().split("T")[0]}.csv`, rows);
   };
 
+  // PDF Export
+  const getCompanyName = () => {
+    try {
+      const s = localStorage.getItem('erlbrew_company_settings');
+      return s ? JSON.parse(s).company_name || 'Erlbrew Café POS' : 'Erlbrew Café POS';
+    } catch { return 'Erlbrew Café POS'; }
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    const company = getCompanyName();
+    const reportType = activeReport === "sales" ? "Sales Report" : activeReport === "staff" ? "Staff Report" : "Inventory Report";
+    const filename = `${activeReport}-report-${startDate}-to-${endDate}.pdf`;
+
+    // Header
+    doc.setFontSize(18);
+    doc.text(company, 14, 22);
+    doc.setFontSize(14);
+    doc.text(reportType, 14, 32);
+    doc.setFontSize(10);
+    doc.setTextColor(128);
+    doc.text(`Period: ${startDate} to ${endDate} | Generated: ${new Date().toLocaleString()}`, 14, 40);
+    doc.setTextColor(0);
+
+    let startY = 48;
+
+    if (activeReport === "sales") {
+      // Summary cards
+      doc.setFontSize(9);
+      const summaryData = [
+        ["Total Revenue", formatCurrency(salesSummary.totalRevenue)],
+        ["Total Orders", String(salesSummary.totalOrders)],
+        ["Avg Order", formatCurrency(salesSummary.avgOrder)],
+        ["COGS", formatCurrency(salesSummary.totalCOGS)],
+        ["Gross Profit", formatCurrency(salesSummary.grossProfit)],
+        ["Margin", salesSummary.totalRevenue > 0 ? `${((salesSummary.grossProfit / salesSummary.totalRevenue) * 100).toFixed(1)}%` : "0%"],
+      ];
+      const summaryResult = autoTable(doc, {
+        startY,
+        head: [["Metric", "Value"]],
+        body: summaryData,
+        theme: "grid",
+        headStyles: { fillColor: [201, 135, 58] },
+        styles: { fontSize: 9 },
+        margin: { left: 14 },
+      });
+      startY = (summaryResult as any).finalY + 10;
+
+      // Daily breakdown
+      autoTable(doc, {
+        startY,
+        head: [["Date", "Orders", "Revenue", "COGS", "Profit"]],
+        body: salesData.map(d => [d.date, String(d.orders), formatCurrency(d.revenue), formatCurrency(d.cogs), formatCurrency(d.profit)]),
+        theme: "grid",
+        headStyles: { fillColor: [201, 135, 58] },
+        styles: { fontSize: 8 },
+        margin: { left: 14 },
+      });
+    } else if (activeReport === "staff") {
+      autoTable(doc, {
+        startY,
+        head: [["Staff", "Orders", "Revenue", "Avg/Order", "Hours", "Revenue/Hr"]],
+        body: staffStats.map(s => [
+          s.name,
+          String(s.orders),
+          formatCurrency(s.revenue),
+          s.orders > 0 ? formatCurrency(s.revenue / s.orders) : "-",
+          s.hoursWorked > 0 ? `${s.hoursWorked.toFixed(1)}h` : "-",
+          s.hoursWorked > 0 ? formatCurrency(s.revenue / s.hoursWorked) : "-",
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [201, 135, 58] },
+        styles: { fontSize: 8 },
+        margin: { left: 14 },
+      });
+    } else {
+      // Inventory
+      const turnoverData = computeTurnoverByCategory();
+      const turnoverResult = autoTable(doc, {
+        startY,
+        head: [["Category", "Items", "Total Stock Value", "Turnover Rate", "Days of Supply"]],
+        body: turnoverData.map(t => [
+          t.category,
+          String(t.itemCount),
+          formatCurrency(t.totalValue),
+          t.turnoverRate > 0 ? `${t.turnoverRate.toFixed(1)}x` : "N/A",
+          t.daysOfSupply > 0 ? `${t.daysOfSupply.toFixed(0)} days` : "N/A",
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [201, 135, 58] },
+        styles: { fontSize: 8 },
+        margin: { left: 14 },
+      });
+      startY = (turnoverResult as any).finalY + 10;
+
+      autoTable(doc, {
+        startY,
+        head: [["Item", "Category", "Stock", "Unit", "Unit Cost", "Value"]],
+        body: inventoryItems.map((i: any) => [
+          i.name,
+          i.category,
+          String(i.stock),
+          i.unit,
+          i.unit_cost != null ? formatCurrency(i.unit_cost) : "-",
+          i.unit_cost != null ? formatCurrency(i.stock * i.unit_cost) : "-",
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [201, 135, 58] },
+        styles: { fontSize: 8 },
+        margin: { left: 14 },
+      });
+    }
+
+    doc.save(filename);
+  };
+
+  // Excel Export
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const filename = `${activeReport}-report-${startDate}-to-${endDate}.xlsx`;
+
+    if (activeReport === "sales") {
+      // Summary sheet
+      const summaryRows = [
+        ["Metric", "Value"],
+        ["Total Revenue", salesSummary.totalRevenue],
+        ["Total Orders", salesSummary.totalOrders],
+        ["Avg Order", salesSummary.avgOrder],
+        ["COGS", salesSummary.totalCOGS],
+        ["Gross Profit", salesSummary.grossProfit],
+        ["Margin %", salesSummary.totalRevenue > 0 ? (salesSummary.grossProfit / salesSummary.totalRevenue) * 100 : 0],
+      ];
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+      XLSX.utils.book_append_sheet(wb, summarySheet, "Summary");
+
+      // Daily breakdown sheet
+      const dailyRows = [
+        ["Date", "Orders", "Revenue", "COGS", "Profit"],
+        ...salesData.map(d => [d.date, d.orders, d.revenue, d.cogs, d.profit]),
+      ];
+      const dailySheet = XLSX.utils.aoa_to_sheet(dailyRows);
+      XLSX.utils.book_append_sheet(wb, dailySheet, "Daily Breakdown");
+    } else if (activeReport === "staff") {
+      const staffRows = [
+        ["Staff", "Orders", "Revenue", "Avg/Order", "Hours", "Revenue/Hr"],
+        ...staffStats.map(s => [
+          s.name,
+          s.orders,
+          s.revenue,
+          s.orders > 0 ? s.revenue / s.orders : 0,
+          s.hoursWorked,
+          s.hoursWorked > 0 ? s.revenue / s.hoursWorked : 0,
+        ]),
+      ];
+      const sheet = XLSX.utils.aoa_to_sheet(staffRows);
+      XLSX.utils.book_append_sheet(wb, sheet, "Staff Performance");
+    } else {
+      // Turnover sheet
+      const turnoverData = computeTurnoverByCategory();
+      const turnoverRows = [
+        ["Category", "Items", "Total Stock Value", "Turnover Rate", "Days of Supply"],
+        ...turnoverData.map(t => [t.category, t.itemCount, t.totalValue, t.turnoverRate, t.daysOfSupply]),
+      ];
+      const turnoverSheet = XLSX.utils.aoa_to_sheet(turnoverRows);
+      XLSX.utils.book_append_sheet(wb, turnoverSheet, "Turnover Analysis");
+
+      // Inventory sheet
+      const invRows = [
+        ["Item", "Category", "Stock", "Unit", "Purchase Cost", "Unit Cost", "Stock Value"],
+        ...inventoryItems.map((i: any) => [
+          i.name,
+          i.category,
+          i.stock,
+          i.unit,
+          i.purchase_cost ?? "",
+          i.unit_cost ?? "",
+          i.unit_cost ? i.stock * i.unit_cost : "",
+        ]),
+      ];
+      const invSheet = XLSX.utils.aoa_to_sheet(invRows);
+      XLSX.utils.book_append_sheet(wb, invSheet, "Inventory Items");
+    }
+
+    XLSX.writeFile(wb, filename);
+  };
+
+  // Inventory Turnover Computation
+  const computeTurnoverByCategory = useCallback(() => {
+    const categoryMap: Record<string, { totalValue: number; itemCount: number; totalStock: number }> = {};
+    inventoryItems.forEach((item: any) => {
+      const cat = item.category || "Uncategorized";
+      if (!categoryMap[cat]) categoryMap[cat] = { totalValue: 0, itemCount: 0, totalStock: 0 };
+      const value = (item.unit_cost || item.purchase_cost || 0) * item.stock;
+      categoryMap[cat].totalValue += value;
+      categoryMap[cat].totalStock += item.stock;
+      categoryMap[cat].itemCount += 1;
+    });
+
+    const avgInventory = Object.values(categoryMap).reduce((s, c) => s + c.totalValue, 0);
+    const totalCOGSForPeriod = salesSummary.totalCOGS || 0;
+    const overallTurnover = avgInventory > 0 ? totalCOGSForPeriod / avgInventory : 0;
+
+    return Object.entries(categoryMap).map(([category, data]) => ({
+      category,
+      itemCount: data.itemCount,
+      totalValue: data.totalValue,
+      turnoverRate: data.totalValue > 0 ? (totalCOGSForPeriod * (data.totalValue / (avgInventory || 1))) / data.totalValue : 0,
+      daysOfSupply: overallTurnover > 0 ? 365 / overallTurnover : 0,
+    }));
+  }, [inventoryItems, salesSummary.totalCOGS]);
+
+  const turnoverByCategory = computeTurnoverByCategory();
+  const totalInventoryValue = turnoverByCategory.reduce((s, t) => s + t.totalValue, 0);
+  const avgTurnoverRate = turnoverByCategory.length > 0
+    ? turnoverByCategory.reduce((s, t) => s + t.turnoverRate, 0) / turnoverByCategory.length
+    : 0;
+  const avgDaysOfSupply = avgTurnoverRate > 0 ? 365 / avgTurnoverRate : 0;
+
   const lowStockItems = inventoryItems.filter((i: any) => i.stock <= (i.low_stock_threshold || 10));
   const outOfStockItems = inventoryItems.filter((i: any) => i.stock <= 0);
 
@@ -246,7 +467,13 @@ export const AdminReports: React.FC = () => {
             else if (activeReport === "staff") exportStaffCSV();
             else exportInventoryCSV();
           }} className="flex-1 sm:flex-none px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-erl-success bg-erl-success/10 text-erl-success">
-            📥 Export CSV
+            📥 CSV
+          </button>
+          <button onClick={exportPDF} className="flex-1 sm:flex-none px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-erl-danger bg-erl-danger/10 text-erl-danger">
+            📥 PDF
+          </button>
+          <button onClick={exportExcel} className="flex-1 sm:flex-none px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-[#217346] bg-[#217346]/10 text-[#217346]">
+            📥 Excel
           </button>
           <button onClick={() => setShowPrintModal(true)} className="flex-1 sm:flex-none px-4 py-[7px] rounded-lg text-[9px] font-bold tracking-wide cursor-pointer uppercase border-[1.5px] border-erl-accent bg-erl-accent/10 text-erl-accent">
             🖨 Print
@@ -412,6 +639,44 @@ export const AdminReports: React.FC = () => {
                     <div className={labelStyle}>Out of Stock</div>
                   </div>
                 </div>
+
+                {/* Turnover KPI Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
+                  <div className="bg-erl-surface rounded-[10px] p-3 text-center">
+                    <div className="text-xl font-bold text-erl-success">{avgTurnoverRate > 0 ? `${avgTurnoverRate.toFixed(1)}x` : "N/A"}</div>
+                    <div className={labelStyle}>Avg Turnover Rate</div>
+                  </div>
+                  <div className="bg-erl-surface rounded-[10px] p-3 text-center">
+                    <div className="text-xl font-bold text-erl-accent">{avgDaysOfSupply > 0 ? `${avgDaysOfSupply.toFixed(0)} days` : "N/A"}</div>
+                    <div className={labelStyle}>Avg Days of Supply</div>
+                  </div>
+                  <div className="bg-erl-surface rounded-[10px] p-3 text-center">
+                    <div className="text-xl font-bold text-erl-secondary">{formatCurrency(totalInventoryValue)}</div>
+                    <div className={labelStyle}>Total Inventory Value</div>
+                  </div>
+                </div>
+
+                {/* Turnover by Category Chart */}
+                {turnoverByCategory.length > 0 && (
+                  <div className="bg-erl-surface rounded-xl p-4 mb-4">
+                    <div className="text-[10px] text-erl-muted tracking-widest uppercase mb-3">
+                      Turnover Rate by Category
+                    </div>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={turnoverByCategory}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                        <XAxis dataKey="category" tick={{ fontSize: 8, fill: "var(--text-muted)" }} />
+                        <YAxis tick={{ fontSize: 8, fill: "var(--text-muted)" }} />
+                        <Tooltip
+                          contentStyle={{ background: "var(--bg-elevated)", border: "1px solid var(--border-medium)", borderRadius: 8, fontSize: 10 }}
+                          formatter={(value: any, name: any) => [name === "turnoverRate" ? `${Number(value).toFixed(1)}x` : formatCurrency(value), name === "turnoverRate" ? "Turnover Rate" : "Stock Value"]}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 10 }} />
+                        <Bar dataKey="turnoverRate" fill="var(--gold)" radius={[4, 4, 0, 0]} name="Turnover Rate" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
 
                 {/* Inventory History Chart */}
                 {inventoryHistory.length > 0 && (

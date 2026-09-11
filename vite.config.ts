@@ -1,9 +1,8 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-oxc";
-import basicSsl from "@vitejs/plugin-basic-ssl";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
-  plugins: [react(), basicSsl()],
+  plugins: [react()],
   server: {
     host: true,
     port: 3000,

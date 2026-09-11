@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Staff } from "../types";
 import { apiGet, apiPost, apiAdminGet, apiAdminPut, apiAdminPost, apiAdminDelete } from "../utils/api";
 import { toLocalDateStr } from "../utils";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface ScheduleDay {
   shift_start: string | null;
@@ -318,6 +320,149 @@ const [printTo, setPrintTo] = useState(getTodayStr);
     }
   }, [printFrom, printTo]);
 
+  // ── PDF Export handler ──
+  const handleExportPDF = useCallback(async () => {
+    try {
+      const data = await apiGet<PrintResponse>(`/clock/print?from=${printFrom}&to=${printTo}`);
+      const dateObj = new Date(printFrom + "T00:00:00");
+      const fromLabel = dateObj.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+      const toLabel = new Date(printTo + "T00:00:00").toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
+
+      const doc = new jsPDF();
+      const company = (() => { try { const s = localStorage.getItem("erlbrew_company_settings"); return s ? JSON.parse(s).company_name || "Erlbrew Cafe" : "Erlbrew Cafe"; } catch { return "Erlbrew Cafe"; } })();
+
+      // Header
+      doc.setFontSize(18);
+      doc.text(company, 14, 22);
+      doc.setFontSize(12);
+      doc.text(`Timekeeping Report ${fromLabel} – ${toLabel}`, 14, 32);
+      doc.setFontSize(9);
+      doc.setTextColor(128);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 40);
+      doc.setTextColor(0);
+
+      let startY = 48;
+
+      // Staff totals
+      const staffTotals: Record<number, { name: string; role: string; total_hours: number; days_present: number }> = {};
+      for (const de of data.dates) {
+        for (const s of de.staff) {
+          const hrs = s.records.reduce((a, r) => a + Number(r.total_hours || 0), 0);
+          if (!staffTotals[s.staff_id]) staffTotals[s.staff_id] = { name: s.name, role: s.role, total_hours: 0, days_present: 0 };
+          staffTotals[s.staff_id].total_hours += hrs;
+          if (s.records.length > 0) staffTotals[s.staff_id].days_present++;
+        }
+      }
+
+      // Summary
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("Summary", 14, startY);
+      startY += 6;
+
+      autoTable(doc, {
+        startY,
+        head: [["Date Range", "Staff Active", "Total Hours"]],
+        body: [[`${data.total_days} days`, `${data.unique_staff_present}/${data.total_staff}`, data.grand_total_hours.toFixed(1)]],
+        theme: "grid",
+        headStyles: { fillColor: [201, 135, 58] },
+        styles: { fontSize: 9 },
+        margin: { left: 14 },
+      });
+      startY = (doc as any).lastAutoTable.finalY + 10;
+
+      // Staff Summary
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("Staff Summary", 14, startY);
+      startY += 6;
+
+      autoTable(doc, {
+        startY,
+        head: [["Name", "Role", "Days Present", "Total Hours"]],
+        body: data.all_staff.map((s) => {
+          const t = staffTotals[s.staff_id];
+          return [
+            s.name,
+            s.role,
+            `${t ? t.days_present : 0} / ${data.total_days}`,
+            t ? t.total_hours.toFixed(2) : "0",
+          ];
+        }),
+        theme: "grid",
+        headStyles: { fillColor: [201, 135, 58] },
+        styles: { fontSize: 9 },
+        margin: { left: 14 },
+      });
+      startY = (doc as any).lastAutoTable.finalY + 10;
+
+      // Daily Breakdown
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("Daily Breakdown", 14, startY);
+      startY += 6;
+
+      for (const de of data.dates) {
+        const hasRecords = de.staff.some((s) => s.records.length > 0);
+        if (!hasRecords) {
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "normal");
+          doc.text(`${de.date} (${de.day_of_week}) - No records`, 14, startY);
+          startY += 6;
+          continue;
+        }
+
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${de.date} (${de.day_of_week}) - ${de.staff_present} staff · ${de.total_hours.toFixed(1)}h`, 14, startY);
+        startY += 6;
+
+        autoTable(doc, {
+          startY,
+          head: [["Name", "Shift", "Clock In", "Clock Out", "Hours"]],
+          body: de.staff.flatMap((s) => {
+            const schedName = s.schedule_name || (s.shift_start ? `${fmtShort(s.shift_start)}–${fmtShort(s.shift_end || "")}` : null);
+            return s.records.map((r, ri) => [
+              ri === 0 ? s.name : "",
+              ri === 0 ? (schedName || "—") : "",
+              new Date(r.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" }),
+              r.clock_out ? new Date(r.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" }) : "Active",
+              r.total_hours ? Number(r.total_hours).toFixed(2) : "—",
+            ]);
+          }),
+          theme: "grid",
+          headStyles: { fillColor: [201, 135, 58] },
+          styles: { fontSize: 8 },
+          margin: { left: 14 },
+        });
+        startY = (doc as any).lastAutoTable.finalY + 8;
+
+        // Page break if needed
+        if (startY > 250) {
+          doc.addPage();
+          startY = 20;
+        }
+      }
+
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, { align: "center" });
+      }
+
+      // Save
+      doc.save(`timekeeping-report-${printFrom}-to-${printTo}.pdf`);
+    } catch (err) {
+      console.error("Failed to generate PDF:", err);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setShowPrintPicker(false);
+    }
+  }, [printFrom, printTo]);
+
   // Auto-poll every 30s
   useEffect(() => {
     const id = setInterval(loadToday, 30000);
@@ -490,17 +635,32 @@ const [printTo, setPrintTo] = useState(getTodayStr);
           </div>
         </div>
         <div className="text-xs text-erl-text-faint tracking-wide font-medium hidden sm:block">{todayDateStr}</div>
-        <button
-          onClick={() => setShowPrintPicker(true)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-erl-border-default text-erl-text-secondary text-xs font-semibold tracking-wide cursor-pointer hover:border-erl-accent/30 hover:text-erl-accent hover:bg-erl-accent/5 transition-all duration-200 min-h-[44px]"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="6 9 6 2 18 2 18 9" />
-            <path d="M6 12H4a2 2 0 00-2 2v4a2 2 0 002 2h16a2 2 0 002-2v-4a2 2 0 00-2-2h-2" />
-            <rect x="6" y="14" width="12" height="8" />
-          </svg>
-          Print Report
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowPrintPicker(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-erl-border-default text-erl-text-secondary text-xs font-semibold tracking-wide cursor-pointer hover:border-erl-accent/30 hover:text-erl-accent hover:bg-erl-accent/5 transition-all duration-200 min-h-[44px]"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9" />
+              <path d="M6 12H4a2 2 0 00-2 2v4a2 2 0 002 2h16a2 2 0 002-2v-4a2 2 0 00-2-2h-2" />
+              <rect x="6" y="14" width="12" height="8" />
+            </svg>
+            Print Report
+          </button>
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-erl-border-default text-erl-text-secondary text-xs font-semibold tracking-wide cursor-pointer hover:border-erl-accent/30 hover:text-erl-accent hover:bg-erl-accent/5 transition-all duration-200 min-h-[44px]"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+            </svg>
+            PDF
+          </button>
+        </div>
       </div>
 
       {/* Print Date Range Picker Modal */}
@@ -509,7 +669,7 @@ const [printTo, setPrintTo] = useState(getTodayStr);
           <div className="fixed inset-0 bg-black/65 z-[998]" onClick={() => setShowPrintPicker(false)} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
             <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[360px]">
-              <div className="font-display text-base font-bold text-erl-text-primary mb-4">Print Timekeeping Report</div>
+              <div className="font-display text-base font-bold text-erl-text-primary mb-4">Export Timekeeping Report</div>
               <div className="flex gap-3 mb-4">
                 <div className="flex-1">
                   <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">From</label>
@@ -533,6 +693,9 @@ const [printTo, setPrintTo] = useState(getTodayStr);
               <div className="flex gap-3 justify-end">
                 <button onClick={() => setShowPrintPicker(false)} className="btn btn-ghost text-xs px-4 py-2.5 min-h-[44px]">
                   Cancel
+                </button>
+                <button onClick={handleExportPDF} className="btn btn-accent text-xs px-5 py-2.5 font-semibold tracking-wide min-h-[44px]">
+                  PDF
                 </button>
                 <button onClick={handlePrint} className="btn btn-accent text-xs px-5 py-2.5 font-semibold tracking-wide min-h-[44px]">
                   Print

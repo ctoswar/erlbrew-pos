@@ -246,7 +246,6 @@ await pool.query(`
         reference_id VARCHAR(64) DEFAULT NULL,
         notes VARCHAR(256) DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (inventory_item_id) REFERENCES inventory(id) ON DELETE RESTRICT,
         INDEX idx_item (inventory_item_id),
         INDEX idx_type (movement_type),
         INDEX idx_created (created_at),
@@ -334,6 +333,30 @@ await pool.query(`
     await pool.query(`ALTER TABLE orders ADD INDEX idx_orders_location (location_id)`).catch(() => {});
     await pool.query(`ALTER TABLE inventory ADD COLUMN location_id INT DEFAULT 1 AFTER id`).catch(() => {});
     await pool.query(`ALTER TABLE inventory ADD INDEX idx_inventory_location (location_id)`).catch(() => {});
+    // Change inventory PK from single `id` to composite `(id, location_id)` for multi-location
+    // First drop any FKs that reference inventory(id), then alter the PK
+    const dropFkOnInventory = async (table) => {
+      try {
+        const [rows] = await pool.query(`
+          SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+        `, [table]);
+        for (const row of rows) {
+          const [refs] = await pool.query(`
+            SELECT REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? AND REFERENCED_TABLE_NAME = 'inventory'
+          `, [table, row.CONSTRAINT_NAME]);
+          if (refs.length > 0 && refs[0].REFERENCED_COLUMN_NAME === 'id') {
+            await pool.query(`ALTER TABLE \`${table}\` DROP FOREIGN KEY \`${row.CONSTRAINT_NAME}\``);
+            console.log(`Dropped FK ${row.CONSTRAINT_NAME} on ${table}`);
+          }
+        }
+      } catch (_) { /* table or constraint may not exist */ }
+    };
+    await dropFkOnInventory('recipes');
+    await dropFkOnInventory('inventory_movements');
+    await dropFkOnInventory('inventory_transfers');
+    await pool.query(`ALTER TABLE inventory DROP PRIMARY KEY, ADD PRIMARY KEY (id, location_id)`).catch(() => {});
     await pool.query(`ALTER TABLE inventory_movements ADD COLUMN location_id INT DEFAULT 1 AFTER inventory_item_id`).catch(() => {});
     await pool.query(`ALTER TABLE inventory_movements ADD INDEX idx_movements_location (location_id)`).catch(() => {});
     await pool.query(`ALTER TABLE cash_drawer ADD COLUMN location_id INT DEFAULT 1 AFTER id`).catch(() => {});
@@ -363,7 +386,6 @@ await pool.query(`
         received_at TIMESTAMP NULL,
         FOREIGN KEY (from_location_id) REFERENCES locations(id),
         FOREIGN KEY (to_location_id) REFERENCES locations(id),
-        FOREIGN KEY (inventory_item_id) REFERENCES inventory(id) ON DELETE RESTRICT,
         FOREIGN KEY (requested_by) REFERENCES staff(id) ON DELETE SET NULL,
         FOREIGN KEY (approved_by) REFERENCES staff(id) ON DELETE SET NULL,
         FOREIGN KEY (received_by) REFERENCES staff(id) ON DELETE SET NULL,

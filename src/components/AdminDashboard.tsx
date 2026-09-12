@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Order, Staff, InventoryItem, DiscountType } from "../types";
-import { formatCurrency } from "../utils";
+import { formatCurrency, parseServerDatetime } from "../utils";
 import { apiGet, apiAdminGet, clearAllOrders } from "../utils/api";
 import { useViewport } from "../hooks/useViewport";
 import { AdminStaff } from "./AdminStaff";
@@ -96,8 +96,8 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
           subtotal: Number(o.subtotal ?? 0),
           tax: Number(o.tax ?? 0),
           total: Number(o.total ?? 0),
-          createdAt: o.createdAt ? new Date(String(o.createdAt)) : new Date(),
-          completedAt: o.completedAt ? new Date(String(o.completedAt)) : undefined,
+          createdAt: parseServerDatetime(String(o.createdAt ?? o.created_at ?? '')),
+          completedAt: o.completedAt || o.completed_at ? parseServerDatetime(String(o.completedAt ?? o.completed_at)) : undefined,
           customerName: o.customerName ? String(o.customerName) : undefined,
           type: (o.type ?? 'dine-in') as Order['type'],
           payMethod: (o.payMethod || (o.pay_method as string) || 'cash') as Order['payMethod'],
@@ -140,8 +140,8 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
         } : { rfid: '', pin: '', name: 'Unknown', role: 'Barista' as const, initials: '??', color: '#666' },
         status: String(o.status ?? 'preparing') as Order['status'],
         subtotal: Number(o.subtotal ?? 0), tax: Number(o.tax ?? 0), total: Number(o.total ?? 0),
-        createdAt: o.createdAt ? new Date(String(o.createdAt)) : o.created_at ? new Date(String(o.created_at)) : new Date(),
-        completedAt: o.completedAt ? new Date(String(o.completedAt)) : o.completed_at ? new Date(String(o.completed_at)) : undefined,
+        createdAt: parseServerDatetime(String(o.createdAt ?? o.created_at ?? '')),
+        completedAt: o.completedAt || o.completed_at ? parseServerDatetime(String(o.completedAt ?? o.completed_at)) : undefined,
         customerName: o.customer_name ? String(o.customer_name) : undefined,
         type: (o.type ?? 'dine-in') as Order['type'],
         payMethod: (String(o.payMethod || o.pay_method || 'cash')) as Order['payMethod'],

@@ -23,7 +23,28 @@ export const formatCurrency = (n: number | string): string => {
 };
 
 export const formatTime = (d: Date): string =>
-  d.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
+  d.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: TZ, hour12: true });
+
+/**
+ * Safely parse a datetime value from the API.
+ * MySQL DATETIME strings without timezone info must be treated as UTC
+ * (the backend pool uses timezone: '+08:00' + dateStrings: false, which
+ * produces UTC ISO strings via Date→JSON serialization).
+ * Handles: ISO strings, bare datetime strings, Date objects, null/undefined.
+ */
+export const parseServerDatetime = (val: string | Date | null | undefined): Date => {
+  if (!val) return new Date();
+  if (val instanceof Date) return val;
+  const str = String(val).trim();
+  // Already has timezone info (Z suffix or +HH:MM offset) → parse as-is
+  if (str.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(str)) {
+    return new Date(str);
+  }
+  // Bare datetime like "2024-09-12 04:47:00" or "2024-09-12T04:47:00"
+  // Treat as UTC since the backend should be sending UTC
+  const iso = str.replace(' ', 'T') + 'Z';
+  return new Date(iso);
+};
 
 export const formatDate = (d: Date): string =>
   d.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric", timeZone: TZ });

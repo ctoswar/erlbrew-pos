@@ -7,7 +7,7 @@ import { AdminPrintSettings } from "./AdminPrintSettings";
 import { ZReportScreen } from "./ZReportScreen";
 import { CashDrawerScreen } from "./CashDrawerScreen";
 import { apiGet } from "../utils/api";
-import { formatTime, formatCurrency } from "../utils";
+import { formatTime, formatCurrency, parseServerDatetime } from "../utils";
 
 type AdminTab = "menu" | "inventory" | "staff" | "reports" | "cash" | "print" | "orders";
 
@@ -47,8 +47,8 @@ export const AdminScreen: React.FC<Props> = ({ onDismissOrder }) => {
           subtotal: Number(o.subtotal) || 0,
           tax: Number(o.tax) || 0,
           total: Number(o.total) || 0,
-          createdAt: o.created_at ? new Date(o.created_at) : new Date(),
-          completedAt: o.completed_at ? new Date(o.completed_at) : undefined,
+          createdAt: parseServerDatetime(o.created_at),
+          completedAt: o.completed_at ? parseServerDatetime(o.completed_at) : undefined,
           customerName: o.customer_name || undefined,
           type: o.type || 'dine-in',
           payMethod: o.pay_method || 'cash',

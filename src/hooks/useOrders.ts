@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Order, CartItem, Staff, OrderStatus, OrderType, PayMethod, MenuItem, Role, Discount } from "../types";
-import { calcSubtotal, calcTax, calcGrand, generateOrderId } from "../utils";
+import { calcSubtotal, calcTax, calcGrand, generateOrderId, parseServerDatetime } from "../utils";
 import { apiGet, apiPost, apiAdminPost, apiAdminPut, getAuthToken } from "../utils/api";
 import { addOfflineOrder, getOfflineOrders, removeOfflineOrder } from "../utils/offlineDb";
 
@@ -103,8 +103,8 @@ export function serverOrderToOrder(o: ServerOrder): Order {
     subtotal: Number(o.subtotal) || 0,
     tax: Number(o.tax) || 0,
     total: Number(o.total) || 0,
-    createdAt: o.created_at ? new Date(o.created_at) : new Date(),
-    completedAt: o.completed_at ? new Date(o.completed_at) : undefined,
+    createdAt: parseServerDatetime(o.created_at),
+    completedAt: o.completed_at ? parseServerDatetime(o.completed_at) : undefined,
     customerName: o.customer_name || (o.type === 'dine-in' ? o.table_name : undefined) || undefined,
     type: (o.type || 'dine-in') as OrderType,
     payMethod: (o.pay_method || 'cash') as PayMethod,

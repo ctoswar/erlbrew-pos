@@ -89,10 +89,13 @@ app.use('/api/staff/login', loginLimiter);
 app.use('/api/', apiLimiter);
 
 // DB pool (single pool for app) — force Asia/Taipei timezone for all queries
+// dateStrings: true → returns raw DATETIME strings from MySQL (e.g. '2024-09-12 11:06:00')
+// timezone: '+08:00' → sets MySQL session timezone so CURRENT_TIMESTAMP and date comparisons use Manila time
+// Frontend parseServerDatetime() handles the timezone conversion explicitly.
 const pool = mysql.createPool({
   uri: process.env.DATABASE_URL,
   timezone: '+08:00',
-  dateStrings: false,
+  dateStrings: true,
 });
 
 // Print server URL resolver: env var › DB company_settings

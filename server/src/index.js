@@ -19,6 +19,8 @@ import companySettingsRoutes from './routes/companySettings.js';
 import uploadRouter from './routes/upload.js';
 import auditRoutes from './routes/audit.js';
 import customersRoutes from './routes/customers.js';
+import locationsRoutes from './routes/locations.js';
+import transfersRoutes from './routes/transfers.js';
 import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
@@ -304,6 +306,74 @@ await pool.query(`
     await pool.query(`UPDATE staff SET rfid_alt = REVERSE(rfid) WHERE rfid IS NOT NULL AND rfid_alt IS NULL`).catch(() => {});
     console.log('staff rfid_alt column ready');
 
+    // ── Multi-location migration ──────────────────────────────────────────
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS locations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(128) NOT NULL,
+        address TEXT,
+        phone VARCHAR(32),
+        email VARCHAR(128),
+        timezone VARCHAR(64) DEFAULT 'Asia/Manila',
+        is_active BOOLEAN DEFAULT TRUE,
+        is_default BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `).catch(() => {});
+    console.log('locations table ready');
+
+    // Seed default location if none exist
+    const [[locCount]] = await pool.query('SELECT COUNT(*) AS cnt FROM locations').catch(() => [[{ cnt: 0 }]]);
+    if (locCount.cnt === 0) {
+      await pool.query("INSERT INTO locations (name, address, is_default) VALUES ('Main Store', '', TRUE)").catch(() => {});
+    }
+
+    // Add location_id columns to existing tables (non-destructive)
+    await pool.query(`ALTER TABLE orders ADD COLUMN location_id INT DEFAULT 1 AFTER id`).catch(() => {});
+    await pool.query(`ALTER TABLE orders ADD INDEX idx_orders_location (location_id)`).catch(() => {});
+    await pool.query(`ALTER TABLE inventory ADD COLUMN location_id INT DEFAULT 1 AFTER id`).catch(() => {});
+    await pool.query(`ALTER TABLE inventory ADD INDEX idx_inventory_location (location_id)`).catch(() => {});
+    await pool.query(`ALTER TABLE inventory_movements ADD COLUMN location_id INT DEFAULT 1 AFTER inventory_item_id`).catch(() => {});
+    await pool.query(`ALTER TABLE inventory_movements ADD INDEX idx_movements_location (location_id)`).catch(() => {});
+    await pool.query(`ALTER TABLE cash_drawer ADD COLUMN location_id INT DEFAULT 1 AFTER id`).catch(() => {});
+    await pool.query(`ALTER TABLE cash_drawer ADD INDEX idx_drawer_location (location_id)`).catch(() => {});
+    await pool.query(`ALTER TABLE z_reports ADD COLUMN location_id INT DEFAULT 1 AFTER id`).catch(() => {});
+    await pool.query(`ALTER TABLE z_reports ADD INDEX idx_zreport_location (location_id)`).catch(() => {});
+    await pool.query(`ALTER TABLE time_records ADD COLUMN location_id INT DEFAULT 1 AFTER staff_id`).catch(() => {});
+    await pool.query(`ALTER TABLE time_records ADD INDEX idx_clock_location (location_id)`).catch(() => {});
+    await pool.query(`ALTER TABLE staff ADD COLUMN location_id INT DEFAULT NULL AFTER schedule_id`).catch(() => {});
+    await pool.query(`ALTER TABLE staff ADD INDEX idx_staff_location (location_id)`).catch(() => {});
+
+    // Inventory transfers table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS inventory_transfers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        from_location_id INT NOT NULL,
+        to_location_id INT NOT NULL,
+        inventory_item_id VARCHAR(32) NOT NULL,
+        quantity DECIMAL(10,2) NOT NULL,
+        status ENUM('pending','approved','in_transit','received','cancelled') DEFAULT 'pending',
+        requested_by INT DEFAULT NULL,
+        approved_by INT DEFAULT NULL,
+        received_by INT DEFAULT NULL,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        approved_at TIMESTAMP NULL,
+        received_at TIMESTAMP NULL,
+        FOREIGN KEY (from_location_id) REFERENCES locations(id),
+        FOREIGN KEY (to_location_id) REFERENCES locations(id),
+        FOREIGN KEY (inventory_item_id) REFERENCES inventory(id) ON DELETE RESTRICT,
+        FOREIGN KEY (requested_by) REFERENCES staff(id) ON DELETE SET NULL,
+        FOREIGN KEY (approved_by) REFERENCES staff(id) ON DELETE SET NULL,
+        FOREIGN KEY (received_by) REFERENCES staff(id) ON DELETE SET NULL,
+        INDEX idx_transfers_from (from_location_id),
+        INDEX idx_transfers_to (to_location_id),
+        INDEX idx_transfers_status (status)
+      )
+    `).catch(() => {});
+    console.log('multi-location tables ready');
+
     // Seed menu_items from DB init if they ever existed
     // Auto-seed removed — use init.sql or Fresh Start is the only way to reset
   } catch (e) {
@@ -373,6 +443,8 @@ app.use('/api/company-settings', companySettingsRoutes(pool));
 app.use('/api', uploadRouter(pool));
 app.use('/api/audit-logs', auditRoutes(pool));
 app.use('/api/customers', customersRoutes(pool));
+app.use('/api/locations', locationsRoutes(pool));
+app.use('/api/transfers', transfersRoutes(pool));
 
 // Google Sheets sync: write Dashboard to Dashboard tab
 app.post('/api/sheets/sync-dashboard', async (req, res) => {

@@ -420,3 +420,81 @@ CREATE TABLE IF NOT EXISTS payroll_entries (
   FOREIGN KEY (staff_id) REFERENCES staff(id),
   UNIQUE KEY unique_entry (payroll_period_id, staff_id)
 );
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- MULTI-LOCATION SUPPORT
+-- ══════════════════════════════════════════════════════════════════════════════
+
+-- ── Locations table ──────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS locations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(128) NOT NULL,
+  address TEXT,
+  phone VARCHAR(32),
+  email VARCHAR(128),
+  timezone VARCHAR(64) DEFAULT 'Asia/Manila',
+  is_active BOOLEAN DEFAULT TRUE,
+  is_default BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Seed default location
+INSERT INTO locations (name, address, is_default) VALUES
+  ('Main Store', '', TRUE)
+  ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id);
+
+-- ── Add location_id to existing tables (DEFAULT 1 = backward compatible) ────
+ALTER TABLE orders
+  ADD COLUMN location_id INT DEFAULT 1 AFTER id,
+  ADD INDEX idx_orders_location (location_id);
+
+ALTER TABLE inventory
+  ADD COLUMN location_id INT DEFAULT 1 AFTER id,
+  ADD INDEX idx_inventory_location (location_id);
+
+ALTER TABLE inventory_movements
+  ADD COLUMN location_id INT DEFAULT 1 AFTER inventory_item_id,
+  ADD INDEX idx_movements_location (location_id);
+
+ALTER TABLE cash_drawer
+  ADD COLUMN location_id INT DEFAULT 1 AFTER id,
+  ADD INDEX idx_drawer_location (location_id);
+
+ALTER TABLE z_reports
+  ADD COLUMN location_id INT DEFAULT 1 AFTER id,
+  ADD INDEX idx_zreport_location (location_id);
+
+ALTER TABLE time_records
+  ADD COLUMN location_id INT DEFAULT 1 AFTER staff_id,
+  ADD INDEX idx_clock_location (location_id);
+
+ALTER TABLE staff
+  ADD COLUMN location_id INT DEFAULT NULL AFTER schedule_id,
+  ADD INDEX idx_staff_location (location_id);
+
+-- ── Inventory Transfers ──────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS inventory_transfers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  from_location_id INT NOT NULL,
+  to_location_id INT NOT NULL,
+  inventory_item_id VARCHAR(32) NOT NULL,
+  quantity DECIMAL(10,2) NOT NULL,
+  status ENUM('pending','approved','in_transit','received','cancelled') DEFAULT 'pending',
+  requested_by INT DEFAULT NULL,
+  approved_by INT DEFAULT NULL,
+  received_by INT DEFAULT NULL,
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  approved_at TIMESTAMP NULL,
+  received_at TIMESTAMP NULL,
+  FOREIGN KEY (from_location_id) REFERENCES locations(id),
+  FOREIGN KEY (to_location_id) REFERENCES locations(id),
+  FOREIGN KEY (inventory_item_id) REFERENCES inventory(id) ON DELETE RESTRICT,
+  FOREIGN KEY (requested_by) REFERENCES staff(id) ON DELETE SET NULL,
+  FOREIGN KEY (approved_by) REFERENCES staff(id) ON DELETE SET NULL,
+  FOREIGN KEY (received_by) REFERENCES staff(id) ON DELETE SET NULL,
+  INDEX idx_transfers_from (from_location_id),
+  INDEX idx_transfers_to (to_location_id),
+  INDEX idx_transfers_status (status)
+);

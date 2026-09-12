@@ -205,3 +205,44 @@ export interface StaffPayrollInfo {
   tax_status: TaxStatus | null;
   hire_date: string | null;
 }
+
+// ── Multi-location Types ─────────────────────────────────────────────────────
+
+export interface Location {
+  id: number;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  timezone: string;
+  is_active: boolean;
+  is_default: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export type TransferStatus = 'pending' | 'approved' | 'in_transit' | 'received' | 'cancelled';
+
+export interface InventoryTransfer {
+  id: number;
+  from_location_id: number;
+  to_location_id: number;
+  inventory_item_id: string;
+  quantity: number;
+  status: TransferStatus;
+  requested_by: number | null;
+  approved_by: number | null;
+  received_by: number | null;
+  notes: string | null;
+  created_at: string;
+  approved_at: string | null;
+  received_at: string | null;
+  // Joined fields
+  from_location_name?: string;
+  to_location_name?: string;
+  item_name?: string;
+  item_unit?: string;
+  requested_by_name?: string;
+  approved_by_name?: string;
+  received_by_name?: string;
+}

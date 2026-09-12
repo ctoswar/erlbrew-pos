@@ -17,6 +17,9 @@ import { AdminPayroll } from "./AdminPayroll";
 import { OrderHistory } from "./OrderHistory";
 import { AdminAuditLog } from "./AdminAuditLog";
 import { AdminCustomers } from "./AdminCustomers";
+import { AdminLocations } from "./AdminLocations";
+import { AdminTransfers } from "./AdminTransfers";
+import { LocationSelector } from "./LocationSelector";
 
 const STORAGE_KEY_ORDERS = 'erlbrew_admin_orders';
 const STORAGE_KEY_INVENTORY = 'erlbrew_admin_inventory';
@@ -27,7 +30,7 @@ interface Props {
   onLogout: () => void;
 }
 
-type AdminTab = 'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'payroll' | 'audit' | 'customers';
+type AdminTab = 'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'payroll' | 'audit' | 'customers' | 'locations' | 'transfers';
 
 const TABS: { label: string; value: AdminTab; icon: string }[] = [
   { label: 'Dashboard', value: 'dashboard', icon: '📊' },
@@ -39,10 +42,12 @@ const TABS: { label: string; value: AdminTab; icon: string }[] = [
   { label: 'Time Keeping', value: 'time', icon: '⏱️' },
   { label: 'Payroll', value: 'payroll', icon: '💵' },
   { label: 'Inventory', value: 'inventory', icon: '📦' },
+  { label: 'Transfers', value: 'transfers', icon: '🔄' },
   { label: 'Z-Report', value: 'zreport', icon: '📋' },
   { label: 'Cash Drawer', value: 'cashdrawer', icon: '💰' },
   { label: 'COGS', value: 'cogs', icon: '📊' },
   { label: 'Supplier Invoices', value: 'suppliers', icon: '📄' },
+  { label: 'Locations', value: 'locations', icon: '📍' },
   { label: 'Audit Log', value: 'audit', icon: '🔍' },
   { label: 'Settings', value: 'settings', icon: '⚙️' },
   { label: 'Backup', value: 'backup', icon: '💾' },
@@ -337,6 +342,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
               <div className="text-sm font-bold text-erl-text-primary">{TABS.find(t => t.value === activeTab)?.label}</div>
               <div className="text-[10px] text-erl-text-muted">{staff.name}</div>
             </div>
+            <LocationSelector className="ml-auto" />
           </div>
         )}
         {activeTab === 'dashboard' && <Dashboard orders={orders} staffName={staff.name} />}
@@ -421,6 +427,8 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
 {activeTab === 'time' && <TimeKeeping staff={staff} />}
 {activeTab === 'payroll' && <AdminPayroll />}
 {activeTab === 'suppliers' && <AdminSupplierInvoices />}
+{activeTab === 'locations' && <AdminLocations />}
+{activeTab === 'transfers' && <AdminTransfers />}
         {activeTab === 'audit' && <AdminAuditLog />}
         {activeTab === 'customers' && <AdminCustomers />}
         {activeTab === 'backup' && (

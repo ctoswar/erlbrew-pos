@@ -42,6 +42,9 @@ export default function inventoryRouter(pool, googleSheets) {
   // GET all inventory (requires authentication)
   router.get('/', authMiddleware, async (req, res) => {
     try {
+      const { location_id } = req.query;
+      const locCondition = location_id ? 'WHERE i.location_id = ?' : '';
+      const locParams = location_id ? [location_id] : [];
       // Check if cost columns exist before selecting them (graceful if migration not applied)
       let hasCost = false;
       try {
@@ -53,11 +56,11 @@ export default function inventoryRouter(pool, googleSheets) {
         hasCost = Array.isArray(cols) && cols.length >= 2;
       } catch (_) { hasCost = false; }
 
-      const baseCols = 'id, name, category, unit, stock, low_stock_threshold, created_at';
+      const baseCols = 'i.id, i.name, i.category, i.unit, i.stock, i.low_stock_threshold, i.created_at, i.location_id';
       const sql = hasCost
-        ? `SELECT ${baseCols}, purchase_cost, unit_cost FROM inventory ORDER BY category, name`
-        : `SELECT ${baseCols} FROM inventory ORDER BY category, name`;
-      const [rows] = await pool.query(sql);
+        ? `SELECT ${baseCols}, i.purchase_cost, i.unit_cost FROM inventory i ${locCondition} ORDER BY i.category, i.name`
+        : `SELECT ${baseCols} FROM inventory i ${locCondition} ORDER BY i.category, i.name`;
+      const [rows] = await pool.query(sql, locParams);
       res.json(rows);
     } catch (e) {
       console.error(e);
@@ -67,7 +70,7 @@ export default function inventoryRouter(pool, googleSheets) {
 
 // POST create inventory item (admin only)
 router.post('/', authMiddleware, async (req, res) => {
-    const { id, name, category, unit, stock, low_stock_threshold, purchase_cost, unit_cost } = req.body;
+    const { id, name, category, unit, stock, low_stock_threshold, purchase_cost, unit_cost, location_id } = req.body;
     const err = validate(req, res, {
       id: { required: true, type: 'string', maxLen: 32 },
       name: { required: true, type: 'string', maxLen: 128 },
@@ -81,8 +84,8 @@ router.post('/', authMiddleware, async (req, res) => {
     if (err) return err;
     try {
       // Only insert cost columns if they exist in the DB (migration may not be applied yet)
-      const baseCols = '(id, name, category, unit, stock, low_stock_threshold)';
-      const baseVals = [id, name, category, unit || 'pcs', stock ?? 0, low_stock_threshold ?? 10];
+      const baseCols = '(id, name, category, unit, stock, low_stock_threshold, location_id)';
+      const baseVals = [id, name, category, unit || 'pcs', stock ?? 0, low_stock_threshold ?? 10, location_id || 1];
       const ph = baseVals.map(() => '?').join(', ');
       let sql = `INSERT INTO inventory ${baseCols} VALUES (${ph})`;
       let vals = baseVals;

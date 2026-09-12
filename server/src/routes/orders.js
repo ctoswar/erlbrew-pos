@@ -93,11 +93,15 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   // GET all orders (public - for kitchen/dashboard)
   router.get('/', async (req, res) => {
     try {
-      const { start, end } = req.query;
+      const { start, end, location_id } = req.query;
       let where = '';
       const params = [];
+      if (location_id) {
+        where += 'WHERE o.location_id = ? ';
+        params.push(location_id);
+      }
       if (start) {
-        where += 'WHERE o.created_at >= ? ';
+        where += where ? 'AND o.created_at >= ? ' : 'WHERE o.created_at >= ? ';
         params.push(start);
       }
       if (end) {
@@ -127,16 +131,19 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   // GET today's orders (public)
   router.get('/today', async (req, res) => {
     try {
+      const { location_id } = req.query;
+      const locCondition = location_id ? 'AND o.location_id = ?' : '';
+      const locParams = location_id ? [location_id] : [];
       const [rows] = await pool.query(`
          SELECT o.id, o.status, o.subtotal, o.tax, o.total,
                 o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number, o.discount_json,
-                o.created_at, o.completed_at,
+                o.created_at, o.completed_at, o.location_id,
                 s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
          FROM orders o
          LEFT JOIN staff s ON o.staff_id = s.id
-         WHERE DATE(o.created_at) = CURDATE()
+         WHERE DATE(o.created_at) = CURDATE() ${locCondition}
          ORDER BY o.created_at DESC
-       `);
+       `, locParams);
       const ids = rows.map(r => r.id);
       const items = ids.length ? await fetchOrderItems(ids) : [];
       res.json(attachItems(rows, items));
@@ -149,13 +156,17 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   // GET /history — paginated order history with search, date range, status filter
   router.get('/history', async (req, res) => {
     try {
-      const { start, end, search, status, limit = 50, offset = 0 } = req.query;
+      const { start, end, search, status, location_id, limit = 50, offset = 0 } = req.query;
       const lim = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 500);
       const off = Math.max(parseInt(String(offset), 10) || 0, 0);
 
       const conditions = [];
       const params = [];
 
+      if (location_id) {
+        conditions.push('o.location_id = ?');
+        params.push(location_id);
+      }
       if (start) {
         conditions.push('o.created_at >= ?');
         params.push(start);
@@ -217,7 +228,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
   // Create order and append to Google Sheets (public) -> now protected by auth
   router.post('/', authMiddleware, async (req, res) => {
-    const { staff_id, staff_name, items, type, customer_name, customer_phone, table_name, pay_method, reference_number, subtotal, tax, total, discount_type, discount_label, discount_value, discount_amount } = req.body;
+    const { staff_id, staff_name, items, type, customer_name, customer_phone, table_name, pay_method, reference_number, subtotal, tax, total, discount_type, discount_label, discount_value, discount_amount, location_id } = req.body;
     // Validation per FIX 5
     const err = validate(req, res, {
       items: { required: true, type: 'object', array: true },
@@ -272,8 +283,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       }
 
       await pool.query(
-        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name, customer_id, table_name, type, pay_method, reference_number, discount_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, staffDbId, 'preparing', orderSubtotal, orderTax, orderTotal, customer_name || null, customerId, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null, discountJson]
+        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name, customer_id, table_name, type, pay_method, reference_number, discount_json, location_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, staffDbId, 'preparing', orderSubtotal, orderTax, orderTotal, customer_name || null, customerId, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null, discountJson, location_id || 1]
       );
       for (const it of itemsOut) {
         const [itemResult] = await pool.query(

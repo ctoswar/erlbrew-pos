@@ -85,18 +85,20 @@ CREATE TABLE IF NOT EXISTS recipes (
   quantity DECIMAL(10,4) NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,
-  FOREIGN KEY (inventory_item_id) REFERENCES inventory(id) ON DELETE RESTRICT,
   UNIQUE KEY unique_recipe (menu_item_id, inventory_item_id)
 );
 
 CREATE TABLE IF NOT EXISTS inventory (
-  id VARCHAR(32) PRIMARY KEY,
+  id VARCHAR(32) NOT NULL,
+  location_id INT DEFAULT 1,
   name VARCHAR(128) NOT NULL,
   category VARCHAR(64),
   unit VARCHAR(32) DEFAULT 'pcs',
   stock DECIMAL(10,2) DEFAULT 0,
   low_stock_threshold DECIMAL(10,2) DEFAULT 10,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id, location_id),
+  INDEX idx_inventory_location (location_id)
 );
 
 -- Costing fields added for COGS calculations (non-destructive migration)
@@ -449,10 +451,6 @@ ALTER TABLE orders
   ADD COLUMN location_id INT DEFAULT 1 AFTER id,
   ADD INDEX idx_orders_location (location_id);
 
-ALTER TABLE inventory
-  ADD COLUMN location_id INT DEFAULT 1 AFTER id,
-  ADD INDEX idx_inventory_location (location_id);
-
 ALTER TABLE inventory_movements
   ADD COLUMN location_id INT DEFAULT 1 AFTER inventory_item_id,
   ADD INDEX idx_movements_location (location_id);
@@ -490,7 +488,6 @@ CREATE TABLE IF NOT EXISTS inventory_transfers (
   received_at TIMESTAMP NULL,
   FOREIGN KEY (from_location_id) REFERENCES locations(id),
   FOREIGN KEY (to_location_id) REFERENCES locations(id),
-  FOREIGN KEY (inventory_item_id) REFERENCES inventory(id) ON DELETE RESTRICT,
   FOREIGN KEY (requested_by) REFERENCES staff(id) ON DELETE SET NULL,
   FOREIGN KEY (approved_by) REFERENCES staff(id) ON DELETE SET NULL,
   FOREIGN KEY (received_by) REFERENCES staff(id) ON DELETE SET NULL,

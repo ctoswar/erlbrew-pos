@@ -27,10 +27,10 @@ export const formatTime = (d: Date): string =>
 
 /**
  * Safely parse a datetime value from the API.
- * MySQL DATETIME strings without timezone info must be treated as UTC
- * (the backend pool uses timezone: '+08:00' + dateStrings: false, which
- * produces UTC ISO strings via Date→JSON serialization).
- * Handles: ISO strings, bare datetime strings, Date objects, null/undefined.
+ * The backend pool uses timezone: '+08:00' + dateStrings: true, which
+ * returns raw DATETIME strings like '2024-09-12 11:06:00' (Manila time).
+ * Bare datetime strings are treated as Asia/Manila (+08:00).
+ * Handles: ISO strings with timezone, bare datetime strings, Date objects, null/undefined.
  */
 export const parseServerDatetime = (val: string | Date | null | undefined): Date => {
   if (!val) return new Date();
@@ -41,8 +41,8 @@ export const parseServerDatetime = (val: string | Date | null | undefined): Date
     return new Date(str);
   }
   // Bare datetime like "2024-09-12 04:47:00" or "2024-09-12T04:47:00"
-  // Treat as UTC since the backend should be sending UTC
-  const iso = str.replace(' ', 'T') + 'Z';
+  // Treat as Asia/Manila (+08:00) since the backend stores datetimes in Manila time
+  const iso = str.replace(' ', 'T') + '+08:00';
   return new Date(iso);
 };
 

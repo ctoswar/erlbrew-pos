@@ -96,8 +96,16 @@ app.use('/api/', apiLimiter);
 // Frontend parseServerDatetime() handles the timezone conversion explicitly.
 const pool = mysql.createPool({
   uri: process.env.DATABASE_URL,
-  timezone: '+08:00',
   dateStrings: true,
+});
+
+// mysql2's timezone config only affects client-side Date parsing, NOT the MySQL
+// session timezone. With dateStrings:true, raw strings are returned as-is. For
+// TIMESTAMP columns (which store UTC internally), we need the MySQL session
+// timezone set to +08:00 so values are returned in Manila time.
+// Explicitly SET time_zone on every new connection.
+pool.on('connection', (connection) => {
+  connection.query("SET time_zone = '+08:00'");
 });
 
 // Print server URL resolver: env var › DB company_settings

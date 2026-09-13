@@ -70,7 +70,7 @@ export const AdminTransfers: React.FC = () => {
   };
 
   const sourceItems = form.from_location_id
-    ? items.filter((i) => (i as any).location_id === form.from_location_id || !(i as any).location_id)
+    ? items.filter((i) => i.location_id === form.from_location_id || !i.location_id)
     : items;
 
   if (loading) return <div className="p-4 text-erl-text-faint text-[11px]">Loading transfers...</div>;
@@ -103,7 +103,7 @@ export const AdminTransfers: React.FC = () => {
       {showForm && (
         <div className="px-4 py-3 border-b border-erl-border-default bg-erl-base/50">
           <div className="grid grid-cols-2 gap-2">
-            <select value={form.from_location_id || ""} onChange={(e) => setForm({ ...form, from_location_id: Number(e.target.value) })}
+            <select value={form.from_location_id || ""} onChange={(e) => setForm({ ...form, from_location_id: Number(e.target.value), to_location_id: form.to_location_id === Number(e.target.value) ? 0 : form.to_location_id })}
               className="bg-erl-base border border-erl-border-default rounded-md text-erl-text-primary px-2.5 py-1.5 text-[11px]">
               <option value="">From Location *</option>
               {locations.filter((l) => l.is_active).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
@@ -111,7 +111,7 @@ export const AdminTransfers: React.FC = () => {
             <select value={form.to_location_id || ""} onChange={(e) => setForm({ ...form, to_location_id: Number(e.target.value) })}
               className="bg-erl-base border border-erl-border-default rounded-md text-erl-text-primary px-2.5 py-1.5 text-[11px]">
               <option value="">To Location *</option>
-              {locations.filter((l) => l.is_active).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              {locations.filter((l) => l.is_active && l.id !== form.from_location_id).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
             <select value={form.inventory_item_id} onChange={(e) => setForm({ ...form, inventory_item_id: e.target.value })}
               className="bg-erl-base border border-erl-border-default rounded-md text-erl-text-primary px-2.5 py-1.5 text-[11px]">

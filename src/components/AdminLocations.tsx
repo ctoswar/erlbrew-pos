@@ -72,6 +72,16 @@ export const AdminLocations: React.FC = () => {
     }
   };
 
+  const handleReactivate = async (id: number) => {
+    try {
+      await apiAdminPut(`/locations/${id}`, { is_active: true });
+      fetchLocations();
+      refreshLocations();
+    } catch (e: any) {
+      setError(e.message || "Failed to reactivate");
+    }
+  };
+
   if (loading) return <div className="p-4 text-erl-text-faint text-[11px]">Loading locations...</div>;
 
   return (
@@ -142,8 +152,10 @@ export const AdminLocations: React.FC = () => {
                   {!loc.is_default && (
                     <>
                       <button onClick={() => handleSetDefault(loc.id)} className="text-[9px] text-erl-text-faint hover:text-erl-text-secondary">Set Default</button>
-                      {loc.is_active && (
+                      {loc.is_active ? (
                         <button onClick={() => handleDeactivate(loc.id)} className="text-[9px] text-red-400/60 hover:text-red-400">Deactivate</button>
+                      ) : (
+                        <button onClick={() => handleReactivate(loc.id)} className="text-[9px] text-green-400/60 hover:text-green-400">Reactivate</button>
                       )}
                     </>
                   )}

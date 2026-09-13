@@ -324,7 +324,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
           // Fetch all recipes for ordered menu items in one query
           const [recipes] = await conn.query(
             `SELECT r.menu_item_id, r.inventory_item_id, r.quantity,
-                    i.stock, i.low_stock_threshold
+                    i.stock, i.low_stock_threshold, i.location_id
              FROM recipes r
              JOIN inventory i ON i.id = r.inventory_item_id
              WHERE r.menu_item_id IN (?)`,
@@ -347,6 +347,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
                 const stockAfter = Math.max(0, newStock);
                 await logInventoryMovement(conn, {
                   inventory_item_id: recipe.inventory_item_id,
+                  location_id: recipe.location_id,
                   movement_type: 'sale',
                   quantity: deduction,
                   stock_before: stockBefore,
@@ -834,7 +835,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
           const menuItemIds = Object.keys(itemQtyMap);
 
           const [recipes] = await pool.query(
-            `SELECT r.menu_item_id, r.inventory_item_id, r.quantity, i.stock
+            `SELECT r.menu_item_id, r.inventory_item_id, r.quantity, i.stock, i.location_id
              FROM recipes r JOIN inventory i ON i.id = r.inventory_item_id
              WHERE r.menu_item_id IN (?)`, [menuItemIds]
           );
@@ -848,6 +849,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
               await pool.query('UPDATE inventory SET stock = ? WHERE id = ?', [stockAfter, recipe.inventory_item_id]);
               await logInventoryMovement(pool, {
                 inventory_item_id: recipe.inventory_item_id,
+                location_id: recipe.location_id,
                 movement_type: 'void',
                 quantity: restoreQty,
                 stock_before: stockBefore,

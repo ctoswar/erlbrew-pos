@@ -3,13 +3,13 @@ import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logAudit } from '../services/audit.js';
 
 // Helper: log a stock movement to the audit trail
-export async function logInventoryMovement(pool, { inventory_item_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, notes }) {
+export async function logInventoryMovement(pool, { inventory_item_id, location_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, notes }) {
   try {
     await pool.query(
       `INSERT INTO inventory_movements
-        (inventory_item_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [inventory_item_id, movement_type, quantity, stock_before, stock_after, reference_type || null, reference_id || null, notes || null]
+        (inventory_item_id, location_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [inventory_item_id, location_id || 1, movement_type, quantity, stock_before, stock_after, reference_type || null, reference_id || null, notes || null]
     );
   } catch (e) {
     console.error('Failed to log inventory movement:', e);
@@ -126,7 +126,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Invalid id' });
     }
     try {
-      const [existing] = await pool.query('SELECT id, stock FROM inventory WHERE id = ?', [id]);
+      const [existing] = await pool.query('SELECT id, stock, location_id FROM inventory WHERE id = ?', [id]);
       if (!existing.length) return res.status(404).json({ error: 'Item not found' });
 
       const oldStock = Number(existing[0].stock);
@@ -168,6 +168,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
         if (movementType) {
           await logInventoryMovement(pool, {
             inventory_item_id: id,
+            location_id: existing[0].location_id,
             movement_type: movementType,
             quantity: Math.abs(newStock - oldStock),
             stock_before: oldStock,
@@ -310,7 +311,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       await conn.beginTransaction();
 
       // Get current stock
-      const [inv] = await conn.query('SELECT id, stock FROM inventory WHERE id = ?', [inventory_item_id]);
+      const [inv] = await conn.query('SELECT id, stock, location_id FROM inventory WHERE id = ?', [inventory_item_id]);
       if (!inv.length) {
         await conn.rollback();
         return res.status(404).json({ error: 'Inventory item not found' });
@@ -328,6 +329,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       // Log movement
       await logInventoryMovement(conn, {
         inventory_item_id,
+        location_id: inv[0].location_id,
         movement_type,
         quantity: actualQty,
         stock_before: stockBefore,

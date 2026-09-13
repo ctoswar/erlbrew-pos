@@ -263,21 +263,55 @@ export default function transfersRouter(pool) {
 
   // PUT cancel transfer
   router.put('/:id/cancel', authMiddleware, adminMiddleware, async (req, res) => {
+    const conn = await pool.getConnection();
     try {
-      const [rows] = await pool.query(
-        'SELECT status FROM inventory_transfers WHERE id = ?',
+      await conn.beginTransaction();
+      const [rows] = await conn.query(
+        'SELECT * FROM inventory_transfers WHERE id = ? FOR UPDATE',
         [req.params.id]
       );
-      if (!rows.length) return res.status(404).json({ error: 'Transfer not found' });
+      if (!rows.length) {
+        await conn.rollback();
+        return res.status(404).json({ error: 'Transfer not found' });
+      }
       if (['received', 'cancelled'].includes(rows[0].status)) {
+        await conn.rollback();
         return res.status(400).json({ error: 'Cannot cancel a completed or already cancelled transfer' });
       }
-      await pool.query("UPDATE inventory_transfers SET status = 'cancelled' WHERE id = ?", [req.params.id]);
+
+      const transfer = rows[0];
+
+      // If transfer was shipped (in_transit), reverse the stock deduction at source
+      if (transfer.status === 'in_transit') {
+        const [stockRows] = await conn.query(
+          'SELECT stock FROM inventory WHERE id = ? AND location_id = ? FOR UPDATE',
+          [transfer.inventory_item_id, transfer.from_location_id]
+        );
+        if (stockRows.length) {
+          const restoredStock = Number(stockRows[0].stock) + Number(transfer.quantity);
+          await conn.query(
+            'UPDATE inventory SET stock = ? WHERE id = ? AND location_id = ?',
+            [restoredStock, transfer.inventory_item_id, transfer.from_location_id]
+          );
+          // Log the stock reversal movement
+          await conn.query(
+            `INSERT INTO inventory_movements (inventory_item_id, location_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, notes)
+             VALUES (?, ?, 'adjustment', ?, ?, ?, 'transfer', ?, ?)` ,
+            [transfer.inventory_item_id, transfer.from_location_id, Number(transfer.quantity), Number(stockRows[0].stock), restoredStock, String(req.params.id), `Transfer #${req.params.id} cancelled — stock restored`]
+          );
+        }
+      }
+
+      await conn.query("UPDATE inventory_transfers SET status = 'cancelled' WHERE id = ?", [req.params.id]);
+      await conn.commit();
       await logAudit(pool, req, { action: 'transfer_cancel', entityType: 'inventory_transfer', entityId: req.params.id });
       res.json({ ok: true });
     } catch (e) {
+      await conn.rollback();
       console.error(e);
       res.status(500).json({ error: 'DB error' });
+    } finally {
+      conn.release();
     }
   });
 

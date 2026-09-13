@@ -278,6 +278,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
         <div className="p-5 border-b border-erl-border-default">
           <div className="font-display text-base text-erl-accent mb-1">Admin Panel</div>
           <div className="text-[10px] text-erl-text-muted">{staff.name} ({staff.role})</div>
+          {!isMobile && <LocationSelector className="mt-2" />}
         </div>
 
         <nav className="flex-1 p-3 overflow-y-auto">

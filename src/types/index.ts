@@ -87,6 +87,7 @@ export interface InventoryItem {
   purchase_cost?: number;
   unit_cost?: number;
   created_at?: string;
+  location_id?: number;
 }
 
 export type MovementType = 'sale' | 'restock' | 'adjustment' | 'void';

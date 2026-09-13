@@ -99,14 +99,37 @@ const pool = mysql.createPool({
   dateStrings: true,
 });
 
-// mysql2's timezone config only affects client-side Date parsing, NOT the MySQL
-// session timezone. With dateStrings:true, raw strings are returned as-is. For
-// TIMESTAMP columns (which store UTC internally), we need the MySQL session
-// timezone set to +08:00 so values are returned in Manila time.
-// Explicitly SET time_zone on every new connection.
-pool.on('connection', (connection) => {
-  connection.query("SET time_zone = '+08:00'");
-});
+// Force MySQL session timezone to Asia/Manila (UTC+8) for every query.
+// TIMESTAMP columns store UTC internally and convert to session timezone on read.
+// With dateStrings:true, raw strings are returned as-is — so we need the session
+// timezone set to +08:00 so values come back in Manila time.
+//
+// The pool.on('connection') approach was unreliable with mysql2/promise because the
+// event handler's unhandled Promise caused silent failures. Instead, we wrap
+// pool.query to acquire a connection, SET the timezone, execute the query, and
+// release — guaranteeing every query runs in the +08:00 session.
+async function _withTimezone(sql, params) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.query("SET time_zone = '+08:00'");
+    return await conn.query(sql, params);
+  } finally {
+    conn.release();
+  }
+}
+
+async function _withTimezoneExecute(sql, params) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.query("SET time_zone = '+08:00'");
+    return await conn.execute(sql, params);
+  } finally {
+    conn.release();
+  }
+}
+
+pool.query = _withTimezone;
+pool.execute = _withTimezoneExecute;
 
 // Print server URL resolver: env var › DB company_settings
 function normalizePrintServerUrl(url) {
@@ -676,6 +699,41 @@ app.post('/api/open-drawer', async (req, res) => {
     res.status(502).json({ error: `Print server unreachable: ${e.message}` });
   }
 });
+
+// ── One-time data migration: fix completed_at 8h offset ──────────────────────
+// Previously, completed_at was set via `new Date()` which mysql2 serialized using
+// the local machine timezone (Asia/Manila), but the MySQL session was UTC. This
+// stored Manila time as if it were UTC — an 8-hour offset. created_at was set by
+// MySQL's CURRENT_TIMESTAMP (UTC session), so it's correctly stored as UTC.
+// Fix: subtract 8h from completed_at WHERE the gap is >12h (idempotent guard).
+(async () => {
+  try {
+    const conn = await pool.getConnection();
+    try {
+      await conn.query("SET time_zone = '+08:00'");
+      // Guard: only fix values where gap between created_at and completed_at is
+      // between 4 and 12 hours — the characteristic pattern of the 8h offset bug.
+      // This prevents double-fixing on server restarts and avoids touching
+      // legitimately long orders (>12h) or already-correct values (<4h).
+      const [[{ cnt }]] = await conn.query(
+        "SELECT COUNT(*) AS cnt FROM orders WHERE completed_at IS NOT NULL AND TIMESTAMPDIFF(MINUTE, created_at, completed_at) BETWEEN 240 AND 720"
+      );
+      if (cnt > 0) {
+        console.log(`[migration] Fixing ${cnt} completed_at values (subtracting 8h offset)...`);
+        await conn.query(
+          "UPDATE orders SET completed_at = DATE_SUB(completed_at, INTERVAL 8 HOUR) WHERE completed_at IS NOT NULL AND TIMESTAMPDIFF(MINUTE, created_at, completed_at) BETWEEN 240 AND 720"
+        );
+        console.log('[migration] completed_at fix applied successfully.');
+      } else {
+        console.log('[migration] No completed_at values to fix (already correct or none exist).');
+      }
+    } finally {
+      conn.release();
+    }
+  } catch (e) {
+    console.error('[migration] completed_at fix failed (non-fatal):', e.message);
+  }
+})();
 
 const server = app.listen(PORT, () => {
   console.log(`API server listening on port ${PORT}`);

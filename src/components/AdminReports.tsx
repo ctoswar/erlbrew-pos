@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { formatCurrency, toLocalDateStr } from "../utils";
 import { apiAdminGet, getSalesReport, getStaffReport, DailySalesReport, SalesReportSummary, StaffReport } from "../utils/api";
 import {
@@ -44,15 +44,10 @@ export const AdminReports: React.FC = () => {
   // Staff report data
   const [staffStats, setStaffStats] = useState<StaffReport[]>([]);
 
+  // Manual refetch trigger for custom date range
+  const [customApplyTick, setCustomApplyTick] = useState(0);
+
   const fmt = (d: Date) => toLocalDateStr(d);
-
-  const customStartRef = useRef(startDate);
-  const customEndRef = useRef(endDate);
-
-  useEffect(() => {
-    customStartRef.current = startDate;
-    customEndRef.current = endDate;
-  }, [startDate, endDate]);
 
   const getDateRange = useCallback((): { start: string; end: string } => {
     const today = new Date();
@@ -107,11 +102,11 @@ export const AdminReports: React.FC = () => {
       case "nov": return getMonthDates(10);
       case "dec": return getMonthDates(11);
       case "custom":
-        return { start: customStartRef.current, end: customEndRef.current };
+        return { start: startDate, end: endDate };
       default:
         return { start: fmt(today), end: fmt(today) };
     }
-  }, [dateRange]);
+  }, [dateRange, startDate, endDate]);
 
   useEffect(() => {
     if (dateRange !== "custom") {
@@ -133,7 +128,7 @@ export const AdminReports: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [getDateRange]);
+  }, [getDateRange, customApplyTick]);
 
   const fetchInventoryData = useCallback(async () => {
     setLoading(true);
@@ -160,7 +155,7 @@ export const AdminReports: React.FC = () => {
     } catch (e) {
       console.error("Failed to fetch inventory history", e);
     }
-  }, [getDateRange]);
+  }, [getDateRange, customApplyTick]);
 
   const fetchStaffData = useCallback(async () => {
     const { start, end } = getDateRange();
@@ -173,7 +168,7 @@ export const AdminReports: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [getDateRange]);
+  }, [getDateRange, customApplyTick]);
 
   useEffect(() => {
     if (activeReport === "sales") fetchSalesData();
@@ -556,6 +551,10 @@ export const AdminReports: React.FC = () => {
               <span className="text-erl-muted text-[10px]">to</span>
               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
                 className="px-2 py-1 text-[10px] rounded-md border border-erl-border-subtle bg-erl-base text-erl-text-primary" />
+              <button onClick={() => setCustomApplyTick(t => t + 1)}
+                className="px-2.5 py-1 text-[8px] rounded-md cursor-pointer border border-erl-accent bg-erl-accent text-erl-base font-bold">
+                Apply
+              </button>
             </div>
           )}
         </div>

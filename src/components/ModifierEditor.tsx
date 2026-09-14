@@ -2,13 +2,15 @@ import React, { useState, useEffect } from "react";
 import { MenuItem } from "../types";
 import { formatCurrency } from "../utils";
 import { getModifiers, createModifier, updateModifier, deleteModifier, Modifier } from "../utils/api";
+import { ApplyModifierModal } from "./ApplyModifierModal";
 
 interface Props {
   item: MenuItem;
+  allMenuItems?: MenuItem[];
   onClose: () => void;
 }
 
-export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
+export const ModifierEditor: React.FC<Props> = ({ item, allMenuItems = [], onClose }) => {
   const [modifiers, setModifiers] = useState<Modifier[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -19,6 +21,8 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
   const [batchPrice, setBatchPrice] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [applyModifier, setApplyModifier] = useState<{ name: string; price: number; isDefault: boolean } | null>(null);
 
   const loadModifiers = () => {
     setLoading(true);
@@ -314,9 +318,28 @@ export const ModifierEditor: React.FC<Props> = ({ item, onClose }) => {
             >
               + Single
             </button>
+            {allMenuItems.length > 0 && (
+              <button
+                onClick={() => { setApplyModifier(null); setShowApplyModal(true); }}
+                className="flex-1 py-2.5 rounded-lg bg-erl-elevated text-erl-accent text-[11px] font-bold cursor-pointer border-[1.5px] border-erl-accent/30 hover:bg-erl-accent/10 min-h-[44px]"
+              >
+                📋 Apply to Items
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Apply to Other Items Modal */}
+      {showApplyModal && (
+        <ApplyModifierModal
+          modifier={applyModifier || undefined}
+          menuItems={allMenuItems}
+          excludeItemId={item.id}
+          onApplied={() => { loadModifiers(); }}
+          onClose={() => { setShowApplyModal(false); setApplyModifier(null); }}
+        />
+      )}
     </>
   );
 };

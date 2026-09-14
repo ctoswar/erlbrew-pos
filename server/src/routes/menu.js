@@ -110,6 +110,47 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     }
   });
 
+  // POST batch apply modifier to multiple menu items (admin only) — MUST be before /:id/modifiers
+  router.post('/modifiers/batch-apply', authMiddleware, async (req, res) => {
+    const { modifier, menuItemIds } = req.body;
+    if (!modifier || !modifier.name || typeof modifier.name !== 'string') {
+      return res.status(400).json({ error: 'modifier.name is required' });
+    }
+    if (!Array.isArray(menuItemIds) || menuItemIds.length === 0) {
+      return res.status(400).json({ error: 'menuItemIds must be a non-empty array' });
+    }
+    try {
+      let created = 0;
+      let skipped = 0;
+      for (const itemId of menuItemIds) {
+        // Check if modifier already exists for this item
+        const [existing] = await pool.query(
+          'SELECT id FROM menu_modifiers WHERE menu_item_id = ? AND name = ?',
+          [itemId, modifier.name]
+        );
+        if (existing.length > 0) {
+          skipped++;
+          continue;
+        }
+        await pool.query(
+          'INSERT INTO menu_modifiers (menu_item_id, name, price, is_default) VALUES (?, ?, ?, ?)',
+          [itemId, modifier.name, Number(modifier.price) || 0, Boolean(modifier.isDefault)]
+        );
+        created++;
+      }
+      await logAudit(pool, req, {
+        action: 'modifier_batch_apply',
+        entityType: 'menu_modifier',
+        entityId: 'batch',
+        details: { modifierName: modifier.name, price: Number(modifier.price) || 0, menuItemIds, created, skipped }
+      });
+      res.json({ ok: true, created, skipped });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   // GET modifiers for a menu item (public)
   router.get('/:id/modifiers', async (req, res) => {
     const { id } = req.params;

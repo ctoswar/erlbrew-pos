@@ -4,6 +4,7 @@ import { formatCurrency } from "../utils";
 import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete, uploadMenuItemImage } from "../utils/api";
 import { IngredientEditor } from "./IngredientEditor";
 import { ModifierEditor } from "./ModifierEditor";
+import { ApplyModifierModal } from "./ApplyModifierModal";
 
 const EMPTY_FORM = {
   id: "",
@@ -27,6 +28,7 @@ export const AdminMenu: React.FC = () => {
   const [error, setError] = useState("");
   const [ingredientItem, setIngredientItem] = useState<MenuItem | null>(null);
   const [modifierItem, setModifierItem] = useState<MenuItem | null>(null);
+  const [showGlobalBatchApply, setShowGlobalBatchApply] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -168,7 +170,16 @@ export const AdminMenu: React.FC = () => {
         <IngredientEditor menuItem={ingredientItem} onClose={() => setIngredientItem(null)} />
       )}
       {modifierItem && (
-        <ModifierEditor item={modifierItem} onClose={() => setModifierItem(null)} />
+        <ModifierEditor item={modifierItem} allMenuItems={items} onClose={() => { setModifierItem(null); loadItems(); }} />
+      )}
+
+      {/* Global Batch Apply Modal */}
+      {showGlobalBatchApply && (
+        <ApplyModifierModal
+          menuItems={items}
+          onApplied={() => { loadItems(); }}
+          onClose={() => setShowGlobalBatchApply(false)}
+        />
       )}
 
       {/* ── Header ─────────────────────────────────────────── */}
@@ -179,6 +190,9 @@ export const AdminMenu: React.FC = () => {
           </h2>
           <span className="text-[11px] text-erl-text-faint tracking-wide tabular-nums">{items.length} items</span>
         </div>
+        <button onClick={() => setShowGlobalBatchApply(true)} className="btn btn-outline text-[11px] px-4 py-2 tracking-wide">
+          📋 Batch Apply
+        </button>
         <button onClick={openAddForm} className="btn btn-accent text-[11px] px-4 py-2 tracking-wide">
           + Add Item
         </button>

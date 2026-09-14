@@ -445,6 +445,24 @@ export async function deleteModifier(id: number): Promise<{ ok: boolean }> {
   return res.json();
 }
 
+export async function batchApplyModifier(modifier: { name: string; price: number; isDefault: boolean }, menuItemIds: string[]): Promise<{ ok: boolean; created: number; skipped: number }> {
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl('/menu/modifiers/batch-apply'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify({ modifier, menuItemIds }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `API failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 // Z-Report API
 export interface ZReport {
   id?: number;

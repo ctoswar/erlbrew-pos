@@ -55,6 +55,42 @@ export default function menuRouter(pool){
     }
   });
 
+  // GET /menu/sync — Optimized menu for Flutter app consumption
+  router.get('/sync', async (req, res) => {
+    try {
+      const [rows] = await pool.query(
+        'SELECT id, name, category, price, badge, description, emoji, popular, image FROM menu_items ORDER BY category, name'
+      );
+      const [modRows] = await pool.query(
+        'SELECT id, menu_item_id, name, price, is_default AS isDefault FROM menu_modifiers'
+      );
+      const modMap = {};
+      for (const mod of modRows) {
+        if (!modMap[mod.menu_item_id]) modMap[mod.menu_item_id] = [];
+        modMap[mod.menu_item_id].push({
+          id: mod.id,
+          name: mod.name,
+          price: mod.price,
+          isDefault: !!mod.isDefault,
+        });
+      }
+      // Group by category for Flutter consumption
+      const categories = {};
+      for (const row of rows) {
+        const cat = row.category || 'Other';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push({
+          ...row,
+          modifiers: modMap[row.id] || [],
+        });
+      }
+      res.json({ items: rows, categories, modifiers: modMap });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   // Create item (admin only)
   router.post('/', authMiddleware, async (req, res) => {
     const { id, name, category, price, badge, description, emoji, popular } = req.body;

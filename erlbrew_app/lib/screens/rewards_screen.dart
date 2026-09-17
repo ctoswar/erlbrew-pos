@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/app_models.dart';
 import '../services/firebase_auth_service.dart';
+import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_counter.dart';
 import '../widgets/fade_slide_in.dart';
@@ -18,6 +19,31 @@ class RewardsScreen extends StatefulWidget {
 
 class _RewardsScreenState extends State<RewardsScreen> {
   bool _notificationShown = false;
+  List<RewardItem> _rewards = [];
+  bool _loadingRewards = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRewards();
+  }
+
+  Future<void> _loadRewards() async {
+    try {
+      final points = await PosApiService.instance.getPoints();
+      // For now, use MockData.catalog as the rewards catalog
+      // This will be replaced with a real API in Phase 3
+      if (mounted) setState(() {
+        _rewards = MockData.catalog;
+        _loadingRewards = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() {
+        _rewards = MockData.catalog;
+        _loadingRewards = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -227,7 +253,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
           ),
           const SizedBox(height: 12),
 
-          ...MockData.catalog.asMap().entries.map((entry) {
+          ..._rewards.asMap().entries.map((entry) {
             final index = entry.key;
             final item = entry.value;
             final affordable = user.points >= item.pointsCost;

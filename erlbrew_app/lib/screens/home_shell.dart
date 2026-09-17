@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_models.dart';
 import '../services/firebase_auth_service.dart';
+import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'pickup_screen.dart';
@@ -63,6 +64,26 @@ class _ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<_ProfileScreen> {
   final FirebaseAuthService _authService = FirebaseAuthService.instance;
+  AppUser? _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshProfile();
+  }
+
+  Future<void> _refreshProfile() async {
+    try {
+      final user = await PosApiService.instance.getProfile();
+      if (mounted) setState(() {
+        _user = user;
+        MockData.currentUser = user;
+      });
+    } catch (_) {
+      // Use cached data
+      if (mounted) setState(() => _user = MockData.currentUser);
+    }
+  }
 
   Future<void> _showEditName(BuildContext context, AppUser user) async {
     final controller = TextEditingController(text: user.name);
@@ -215,7 +236,7 @@ class _ProfileScreenState extends State<_ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = MockData.currentUser!;
+    final user = _user ?? MockData.currentUser!;
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
       body: ListView(
@@ -260,7 +281,8 @@ class _ProfileScreenState extends State<_ProfileScreen> {
           ),
           const SizedBox(height: 20),
           OutlinedButton.icon(
-            onPressed: () {
+            onPressed: () async {
+              await PosApiService.instance.logout();
               MockData.currentUser = null;
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),

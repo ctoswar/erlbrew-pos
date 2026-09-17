@@ -159,104 +159,34 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = MockData.menu.map((m) => m.category).toSet().toList();
-
     return Scaffold(
       appBar: AppBar(title: const Text('Café Menu')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openEditor(),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Item'),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.store_outlined,
+                size: 64,
+                color: AppColors.gold.withOpacity(0.5),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Menu managed in POS',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Menu items are managed through the POS Admin Panel. Any changes made there will appear here automatically.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.slateGrey, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
       ),
-      body: MockData.menu.isEmpty
-          ? Center(
-              child: Text('No menu items yet — add one',
-                  style: TextStyle(color: AppColors.slateGrey)),
-            )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-              children: [
-                for (final category in categories) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10, top: 6),
-                    child: Text(
-                      category.toUpperCase(),
-                      style: TextStyle(
-                        color: AppColors.gold,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                        letterSpacing: 1.6,
-                      ),
-                    ),
-                  ),
-                  ...MockData.menu
-                      .where((m) => m.category == category)
-                      .toList()
-                      .asMap()
-                      .entries
-                      .map((entry) {
-                    final item = entry.value;
-                    return FadeSlideIn(
-                      delay: Duration(milliseconds: entry.key * 50),
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 46,
-                                  height: 46,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.latte,
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(item.emoji,
-                                      style: const TextStyle(fontSize: 20)),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(item.name,
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.w700)),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                          '₱${item.price.toStringAsFixed(0)}',
-                                          style: TextStyle(
-                                              color: AppColors.matchaDark,
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 12.5)),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined,
-                                      size: 20),
-                                  color: AppColors.coffeeBrown,
-                                  onPressed: () => _openEditor(existing: item),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline,
-                                      size: 20),
-                                  color: AppColors.error,
-                                  onPressed: () => _delete(item),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ],
-              ],
-            ),
     );
   }
 }

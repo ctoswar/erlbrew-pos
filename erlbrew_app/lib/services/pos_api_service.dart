@@ -183,6 +183,68 @@ class PosApiService {
     return categories;
   }
 
+  // ── Admin Menu Endpoints ──────────────────────────────────────────
+
+  /// Create a new menu item (admin only)
+  Future<void> createMenuItem({
+    required String id,
+    required String name,
+    required String category,
+    required double price,
+    String? emoji,
+    String? badge,
+    String? description,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/menu'),
+      headers: _headers,
+      body: jsonEncode({
+        'id': id,
+        'name': name,
+        'category': category,
+        'price': price,
+        if (emoji != null) 'emoji': emoji,
+        if (badge != null) 'badge': badge,
+        if (description != null) 'description': description,
+      }),
+    );
+    _handleResponse(response);
+  }
+
+  /// Update an existing menu item (admin only)
+  Future<void> updateMenuItem({
+    required String id,
+    required String name,
+    required String category,
+    required double price,
+    String? emoji,
+    String? badge,
+    String? description,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/menu/$id'),
+      headers: _headers,
+      body: jsonEncode({
+        'name': name,
+        'category': category,
+        'price': price,
+        if (emoji != null) 'emoji': emoji,
+        if (badge != null) 'badge': badge,
+        if (description != null) 'description': description,
+      }),
+    );
+    _handleResponse(response);
+  }
+
+  /// Delete a menu item (admin only)
+  Future<void> deleteMenuItem(String id) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/menu/$id'),
+      headers: _headers,
+    );
+    _handleResponse(response);
+  }
+
   // ── Loyalty Endpoints ─────────────────────────────────────────────
 
   /// Get points balance and recent history

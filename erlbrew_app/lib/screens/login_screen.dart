@@ -296,17 +296,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 28),
                         TextFormField(
                           controller: _emailController,
-                          keyboardType: _isAdmin ? TextInputType.emailAddress : TextInputType.phone,
+                          keyboardType: _isAdmin ? TextInputType.emailAddress : TextInputType.emailAddress,
                           decoration: InputDecoration(
-                            labelText: _isAdmin ? 'Staff Email' : 'Phone Number',
+                            labelText: _isAdmin ? 'Staff Email' : 'Phone or Email',
                             prefixIcon: const Icon(Icons.mail_outline, size: 20),
                           ),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
-                              return _isAdmin ? 'Enter your email' : 'Enter your phone number';
+                              return _isAdmin ? 'Enter your email' : 'Enter your phone number or email';
                             }
                             if (_isAdmin && !v.contains('@')) return 'Enter a valid email';
-                            if (!_isAdmin && v.trim().length < 7) return 'Enter a valid phone number';
+                            if (!_isAdmin && v.trim().length < 3) return 'Enter a valid phone number or email';
                             return null;
                           },
                         ),

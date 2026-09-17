@@ -91,7 +91,7 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   lines.push(ln("-"));
   items.forEach((ci) => {
     const ciMods = (ci as CartItem).modifiers || [];
-    const modifierPrice = ciMods.reduce((s, m) => s + m.price, 0);
+    const modifierPrice = ciMods.reduce((s, m) => s + m.price * (m.qty || 1), 0);
     const lineTotal = (ci.item.price + modifierPrice) * ci.qty;
     const qtyStr = String(ci.qty).padStart(3);
     const amtStr = formatCurrency(lineTotal).replace("₱", "").trim();
@@ -109,8 +109,8 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
     if (ciMods.length > 0) {
       ciMods.forEach((m) => {
         const modLabel = m.price > 0
-          ? `     + ${m.name} (${formatCurrency(m.price).replace("₱","").trim()})`
-          : `     + ${m.name}`;
+          ? `     + ${(m.qty || 1) > 1 ? m.qty + '× ' : ''}${m.name} (${formatCurrency(m.price * (m.qty || 1)).replace("₱","").trim()})`
+          : `     + ${(m.qty || 1) > 1 ? m.qty + '× ' : ''}${m.name}`;
         lines.push(padRight(modLabel, W));
       });
     }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_models.dart';
-import '../services/firebase_auth_service.dart';
+import '../services/pos_api_service.dart';
 import '../services/paymongo_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/fade_slide_in.dart';
@@ -16,6 +15,22 @@ class PickupScreen extends StatefulWidget {
 }
 
 class _PickupScreenState extends State<PickupScreen> {
+  PickupStatus _statusFromServer(String status) {
+    switch (status) {
+      case 'completed':
+        return PickupStatus.completed;
+      case 'ready':
+        return PickupStatus.ready;
+      case 'preparing':
+        return PickupStatus.preparing;
+      case 'refunded':
+      case 'voided':
+        return PickupStatus.cancelled;
+      default:
+        return PickupStatus.pending;
+    }
+  }
+
   String _statusLabel(PickupStatus s) {
     switch (s) {
       case PickupStatus.pending:
@@ -53,7 +68,7 @@ class _PickupScreenState extends State<PickupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final customerId = FirebaseAuth.instance.currentUser?.uid;
+    final customer = PosApiService.instance.currentCustomer;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Pickup')),
@@ -63,10 +78,10 @@ class _PickupScreenState extends State<PickupScreen> {
         icon: const Icon(Icons.add),
         label: const Text('New Order'),
       ),
-      body: customerId == null
+      body: customer == null
           ? const Center(child: Text('Sign in to view your pickup orders.'))
-          : StreamBuilder<List<PickupOrder>>(
-        stream: FirebaseAuthService.instance.customerOrdersStream(customerId),
+          : FutureBuilder<List<Map<String, dynamic>>>(
+        future: PosApiService.instance.getOrderHistory(limit: 20),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(child: Text(
@@ -96,7 +111,17 @@ class _PickupScreenState extends State<PickupScreen> {
               padding: const EdgeInsets.all(20),
               itemCount: orders.length,
               itemBuilder: (context, index) {
-                final order = orders[index];
+                final o = orders[index];
+                // Convert API response to PickupOrder
+                final order = PickupOrder(
+                  id: o['id']?.toString().substring(0, 8) ?? '',
+                  customerName: o['customer_name'] ?? '',
+                  itemSummary: o['status'] ?? '',
+                  placedAt: o['created_at'] != null ? DateTime.tryParse(o['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+                  paymentMethod: PickupPaymentMethod.gcash,
+                  total: (o['total'] as num?)?.toDouble() ?? 0,
+                  status: _statusFromServer(o['status'] ?? ''),
+                );
                 return FadeSlideIn(
                   delay: Duration(milliseconds: index * 70),
                   child: Card(

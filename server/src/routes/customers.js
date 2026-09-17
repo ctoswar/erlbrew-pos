@@ -281,6 +281,76 @@ export default function customersRouter(pool) {
     }
   });
 
+  // GET /api/customers/me/points/history — Paginated points history
+  router.get('/me/points/history', customerAuthMiddleware, async (req, res) => {
+    try {
+      const { limit = 20, offset = 0 } = req.query;
+      const [history] = await pool.query(
+        `SELECT id, points, type, reference_type, reference_id, notes, created_at
+         FROM loyalty_points_log
+         WHERE customer_id = ?
+         ORDER BY created_at DESC
+         LIMIT ? OFFSET ?`,
+        [req.customer.sub, Number(limit), Number(offset)]
+      );
+      const [[{ total }]] = await pool.query(
+        'SELECT COUNT(*) AS total FROM loyalty_points_log WHERE customer_id = ?',
+        [req.customer.sub]
+      );
+      res.json({ history, total: Number(total) });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // POST /api/customers/me/points/adjust — Admin manual points adjustment
+  router.post('/me/points/adjust', authMiddleware, async (req, res) => {
+    const { customer_id, points, reason } = req.body;
+    if (!customer_id || typeof customer_id !== 'number') {
+      return res.status(400).json({ error: 'customer_id is required' });
+    }
+    if (!points || typeof points !== 'number' || points === 0) {
+      return res.status(400).json({ error: 'points must be a non-zero number' });
+    }
+    if (!reason || typeof reason !== 'string' || !reason.trim()) {
+      return res.status(400).json({ error: 'reason is required' });
+    }
+    try {
+      // Update points
+      await pool.query(
+        'UPDATE customers SET loyalty_points = GREATEST(0, loyalty_points + ?), last_points_update = NOW() WHERE id = ?',
+        [points, customer_id]
+      );
+      // Log adjustment
+      const type = points > 0 ? 'adjusted' : 'adjusted';
+      await pool.query(
+        `INSERT INTO loyalty_points_log (customer_id, points, type, reference_type, reference_id, notes, created_at)
+         VALUES (?, ?, 'adjusted', 'admin', NULL, ?, NOW())`,
+        [customer_id, points, reason.trim()]
+      );
+      // Auto-update tier
+      const [custRows] = await pool.query('SELECT loyalty_points FROM customers WHERE id = ?', [customer_id]);
+      if (custRows.length > 0) {
+        const totalPoints = Number(custRows[0].loyalty_points) || 0;
+        let newTier = 'bronze';
+        if (totalPoints >= 5000) newTier = 'platinum';
+        else if (totalPoints >= 2000) newTier = 'gold';
+        else if (totalPoints >= 500) newTier = 'silver';
+        await pool.query('UPDATE customers SET loyalty_tier = ? WHERE id = ?', [newTier, customer_id]);
+      }
+      const [updated] = await pool.query(
+        'SELECT id, loyalty_points, loyalty_tier FROM customers WHERE id = ?',
+        [customer_id]
+      );
+      await logAudit(pool, req, { action: 'points_adjust', entityType: 'customer', entityId: String(customer_id), details: { points, reason: reason.trim() } });
+      res.json({ ok: true, customer: updated[0] });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   // GET /api/customers/me/orders — Order history for current customer
   router.get('/me/orders', customerAuthMiddleware, async (req, res) => {
     try {

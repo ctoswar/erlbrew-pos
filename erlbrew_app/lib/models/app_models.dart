@@ -50,6 +50,9 @@ class MenuItem {
   String category;
   double price;
   String emoji;
+  String description;
+  String badge;
+  bool popular;
 
   MenuItem({
     required this.id,
@@ -57,6 +60,9 @@ class MenuItem {
     required this.category,
     required this.price,
     required this.emoji,
+    this.description = '',
+    this.badge = '',
+    this.popular = false,
   });
 
   factory MenuItem.fromMap(Map<String, dynamic> data) {
@@ -76,6 +82,9 @@ class MenuItem {
       category: (data['category'] ?? 'Menu').toString(),
       price: price,
       emoji: (data['emoji'] ?? '☕').toString(),
+      description: (data['description'] ?? '').toString(),
+      badge: (data['badge'] ?? '').toString(),
+      popular: data['popular'] == true || data['popular'] == 1,
     );
   }
 }

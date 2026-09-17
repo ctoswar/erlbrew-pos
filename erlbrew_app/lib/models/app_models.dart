@@ -5,6 +5,8 @@ class AppUser {
   int points;
   String tier;
   final bool isAdmin;
+  final int? totalOrders;
+  final double? totalSpent;
 
   AppUser({
     required this.id,
@@ -13,6 +15,8 @@ class AppUser {
     this.points = 0,
     this.tier = 'bronze',
     this.isAdmin = false,
+    this.totalOrders,
+    this.totalSpent,
   });
 
   factory AppUser.fromMap(String uid, Map<String, dynamic> data) {
@@ -22,6 +26,8 @@ class AppUser {
     // Support both legacy 'points' and new 'loyalty_points' field
     final rawPoints = data['loyalty_points'] ?? data['points'] ?? 0;
     final rawTier = data['loyalty_tier'] ?? data['tier'] ?? 'bronze';
+    final rawTotalOrders = data['total_orders'];
+    final rawTotalSpent = data['total_spent'];
     return AppUser(
       id: uid,
       name: rawName.isNotEmpty ? rawName : 'Erlbrew User',
@@ -29,6 +35,8 @@ class AppUser {
       points: (rawPoints is int) ? rawPoints : (rawPoints is num ? rawPoints.toInt() : 0),
       tier: rawTier.toString(),
       isAdmin: roleFlag,
+      totalOrders: rawTotalOrders is int ? rawTotalOrders : (rawTotalOrders is num ? rawTotalOrders.toInt() : null),
+      totalSpent: rawTotalSpent is double ? rawTotalSpent : (rawTotalSpent is num ? rawTotalSpent.toDouble() : null),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/app_models.dart';
 import '../services/firebase_auth_service.dart';
+import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/fade_slide_in.dart';
@@ -192,13 +193,23 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
 
     try {
-      final user = await _authService.signInWithEmailPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
-        isAdmin: _isAdmin,
-      );
-
-      MockData.currentUser = user;
+      if (_isAdmin) {
+        // Admin/staff login via Firebase (keep existing)
+        final user = await _authService.signInWithEmailPassword(
+          email: _emailController.text,
+          password: _passwordController.text,
+          isAdmin: _isAdmin,
+        );
+        MockData.currentUser = user;
+      } else {
+        // Customer login via POS backend
+        final posService = PosApiService.instance;
+        final customer = await posService.login(
+          phone: _emailController.text,
+          password: _passwordController.text,
+        );
+        MockData.currentUser = customer;
+      }
 
       if (!mounted) return;
 
@@ -207,21 +218,17 @@ class _LoginScreenState extends State<LoginScreen> {
           builder: (_) => _isAdmin ? const AdminHomeShell() : const HomeShell(),
         ),
       );
+    } on PosApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            error.message ?? 'Unable to sign in with Firebase. Please try again.',
-          ),
-        ),
-      );
-    } on FirebaseException catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error.message ?? 'Unable to load your account profile.',
+            error.message ?? 'Unable to sign in. Please try again.',
           ),
         ),
       );
@@ -289,16 +296,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 28),
                         TextFormField(
                           controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
+                          keyboardType: _isAdmin ? TextInputType.emailAddress : TextInputType.phone,
                           decoration: InputDecoration(
-                            labelText: _isAdmin ? 'Staff Email' : 'Email',
+                            labelText: _isAdmin ? 'Staff Email' : 'Phone Number',
                             prefixIcon: const Icon(Icons.mail_outline, size: 20),
                           ),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
-                              return 'Enter your email';
+                              return _isAdmin ? 'Enter your email' : 'Enter your phone number';
                             }
-                            if (!v.contains('@')) return 'Enter a valid email';
+                            if (_isAdmin && !v.contains('@')) return 'Enter a valid email';
+                            if (!_isAdmin && v.trim().length < 7) return 'Enter a valid phone number';
                             return null;
                           },
                         ),

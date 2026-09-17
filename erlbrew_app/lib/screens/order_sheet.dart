@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/app_models.dart';
 import '../services/paymongo_service.dart';
+import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/luxury_button.dart';
 
@@ -28,11 +29,31 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
   final Map<MenuItem, int> _cart = {};
   PickupPaymentMethod _paymentMethod = PickupPaymentMethod.gcash;
   bool _placingOrder = false;
+  List<MenuItem> _menuItems = [];
+  bool _loadingMenu = true;
 
   int get _totalItems => _cart.values.fold(0, (a, b) => a + b);
 
   double get _totalPrice =>
       _cart.entries.fold(0.0, (sum, e) => sum + e.key.price * e.value);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMenu();
+  }
+
+  Future<void> _loadMenu() async {
+    try {
+      final items = await PosApiService.instance.getMenu();
+      if (mounted) setState(() {
+        _menuItems = items;
+        _loadingMenu = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingMenu = false);
+    }
+  }
 
   void _addOne(MenuItem item) {
     setState(() => _cart[item] = (_cart[item] ?? 0) + 1);
@@ -117,7 +138,7 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = MockData.menu.map((m) => m.category).toSet().toList();
+    final categories = _menuItems.map((m) => m.category).toSet().toList();
 
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
@@ -158,34 +179,41 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
               ),
               const SizedBox(height: 8),
               Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
-                  children: [
-                    for (final category in categories) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16, bottom: 10),
-                        child: Text(
-                          category.toUpperCase(),
-                          style: TextStyle(
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                            letterSpacing: 1.6,
+                child: _loadingMenu
+                    ? const Center(child: CircularProgressIndicator())
+                    : _menuItems.isEmpty
+                        ? Center(
+                            child: Text('No menu items available',
+                                style: TextStyle(color: AppColors.slateGrey)),
+                          )
+                        : ListView(
+                            controller: scrollController,
+                            padding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
+                            children: [
+                              for (final category in categories) ...[
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 16, bottom: 10),
+                                  child: Text(
+                                    category.toUpperCase(),
+                                    style: TextStyle(
+                                      color: AppColors.gold,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                      letterSpacing: 1.6,
+                                    ),
+                                  ),
+                                ),
+                                ..._menuItems
+                                    .where((m) => m.category == category)
+                                    .map((item) => _MenuRow(
+                                          item: item,
+                                          quantity: _cart[item] ?? 0,
+                                          onAdd: () => _addOne(item),
+                                          onRemove: () => _removeOne(item),
+                                        )),
+                              ],
+                            ],
                           ),
-                        ),
-                      ),
-                      ...MockData.menu
-                          .where((m) => m.category == category)
-                          .map((item) => _MenuRow(
-                                item: item,
-                                quantity: _cart[item] ?? 0,
-                                onAdd: () => _addOne(item),
-                                onRemove: () => _removeOne(item),
-                              )),
-                    ],
-                  ],
-                ),
               ),
               if (_cart.isNotEmpty)
                 Container(

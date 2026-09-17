@@ -87,6 +87,8 @@ app.use(express.json({ limit: '10mb' }));
 
 // Apply login-specific limiter early (before login route handling)
 app.use('/api/staff/login', loginLimiter);
+app.use('/api/customers/login', loginLimiter);
+app.use('/api/customers/register', loginLimiter);
 // Apply a general API rate limiter for all /api/ routes
 app.use('/api/', apiLimiter);
 
@@ -322,6 +324,59 @@ await pool.query(`
       )
     `);
     console.log('customers table ready');
+
+    // ── Loyalty program columns ──────────────────────────────────────────
+    await pool.query(`ALTER TABLE customers ADD COLUMN loyalty_points INT DEFAULT 0`).catch(() => {});
+    await pool.query(`ALTER TABLE customers ADD COLUMN loyalty_tier ENUM('bronze','silver','gold','platinum') DEFAULT 'bronze'`).catch(() => {});
+    await pool.query(`ALTER TABLE customers ADD COLUMN last_points_update TIMESTAMP NULL`).catch(() => {});
+    await pool.query(`ALTER TABLE customers ADD COLUMN password_hash VARCHAR(256) DEFAULT NULL`).catch(() => {});
+    console.log('customers loyalty columns ready');
+
+    // ── Loyalty rewards catalog ──────────────────────────────────────────
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS loyalty_rewards (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(128) NOT NULL,
+        description TEXT,
+        points_cost INT NOT NULL,
+        emoji VARCHAR(8) DEFAULT '🎁',
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('loyalty_rewards table ready');
+
+    // ── Loyalty points log ──────────────────────────────────────────────
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS loyalty_points_log (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        customer_id INT NOT NULL,
+        points INT NOT NULL,
+        type ENUM('earned','redeemed','adjusted','expired') NOT NULL,
+        reference_type VARCHAR(32) DEFAULT NULL,
+        reference_id VARCHAR(64) DEFAULT NULL,
+        notes VARCHAR(256) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_customer (customer_id),
+        INDEX idx_type (type),
+        INDEX idx_created (created_at)
+      )
+    `);
+    console.log('loyalty_points_log table ready');
+
+    // ── Loyalty redemptions ─────────────────────────────────────────────
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS loyalty_redemptions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        customer_id INT NOT NULL,
+        reward_id INT NOT NULL,
+        points_spent INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_customer (customer_id),
+        INDEX idx_reward (reward_id)
+      )
+    `);
+    console.log('loyalty_redemptions table ready');
 
     // Link orders to customers
     await pool.query(`ALTER TABLE orders ADD COLUMN customer_id INT DEFAULT NULL AFTER customer_name`).catch(() => {});

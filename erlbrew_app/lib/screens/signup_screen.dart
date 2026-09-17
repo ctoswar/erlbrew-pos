@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/app_models.dart';
 import '../services/firebase_auth_service.dart';
+import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/fade_slide_in.dart';
@@ -39,28 +40,24 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _loading = true);
 
     try {
-      final newUser = await _authService.signUp(
+      final posService = PosApiService.instance;
+      final newUser = await posService.register(
+        phone: _phoneController.text,
         name: _nameController.text,
         email: _emailController.text,
-        phone: _phoneController.text,
         password: _passwordController.text,
       );
 
       MockData.currentUser = newUser;
-      MockData.customers.add(newUser);
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeShell()),
       );
-    } on FirebaseAuthException catch (error) {
+    } on PosApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error.message ?? 'Unable to create your account right now.',
-          ),
-        ),
+        SnackBar(content: Text(error.message)),
       );
     } catch (error) {
       if (!mounted) return;

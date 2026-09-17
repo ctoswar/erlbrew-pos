@@ -237,8 +237,20 @@ class GraphifyWatcher {
       { id: 'table-supplierinvoices', label: 'supplier_invoices', type: 'table', community: 'data' },
       { id: 'table-auditlog', label: 'audit_log', type: 'table', community: 'data' },
       
+      // Loyalty program tables
+      { id: 'table-customers', label: 'customers', type: 'table', community: 'data' },
+      { id: 'table-loyaltyrewards', label: 'loyalty_rewards', type: 'table', community: 'data' },
+      { id: 'table-loyaltypointslog', label: 'loyalty_points_log', type: 'table', community: 'data' },
+      { id: 'table-loyaltyredemptions', label: 'loyalty_redemptions', type: 'table', community: 'data' },
+      
+      // Loyalty middleware
+      { id: 'middleware-customerauth', label: 'middleware/customerAuth.js', type: 'middleware', community: 'backend' },
+      
       // Flutter entry
       { id: 'flutter-app', label: 'erlbrew_app (Flutter)', type: 'entry', community: 'mobile' },
+      
+      // Flutter POS API service
+      { id: 'flutter-posapiservice', label: 'PosApiService.dart', type: 'service', community: 'mobile' },
     ];
 
     // Merge: fixed + auto-detected (deduplicate by id)
@@ -250,15 +262,31 @@ class GraphifyWatcher {
 
     const mergedNodes = Array.from(allNodes.values());
 
-    // Keep existing edges
-    const edges = currentGraph.edges || [];
+    // Keep existing edges + auto-generate missing ones
+    const existingEdges = currentGraph.edges || [];
+    const edgeSet = new Set(existingEdges.map(e => `${e.from}->${e.to}`));
+    
+    // Auto-generate edges for new nodes that don't have any connections
+    const autoEdges = [];
+    for (const node of mergedNodes) {
+      const hasEdge = existingEdges.some(e => e.from === node.id || e.to === node.id);
+      if (!hasEdge) {
+        // Connect orphan nodes to their logical parent
+        if (node.type === 'route') autoEdges.push({ from: 'server', to: node.id, label: 'mounts' });
+        else if (node.type === 'table') autoEdges.push({ from: node.id, to: 'db', label: 'queries' });
+        else if (node.type === 'middleware') autoEdges.push({ from: 'server', to: node.id, label: 'uses' });
+        else if (node.type === 'screen' && node.community === 'mobile') autoEdges.push({ from: 'flutter-app', to: node.id, label: 'renders' });
+      }
+    }
+
+    const edges = [...existingEdges, ...autoEdges];
 
     const updatedGraph = {
       nodes: mergedNodes,
       edges: edges,
       metadata: {
         projectName: 'erlbrew-pos',
-        description: 'Restaurant POS System with Timekeeping & Print Integration',
+        description: 'Restaurant POS System with Loyalty Program, Timekeeping & Print Integration',
         version: '2.0.0',
         components: components.length,
         hooks: hooks.length,

@@ -60,11 +60,21 @@ class MenuItem {
   });
 
   factory MenuItem.fromMap(Map<String, dynamic> data) {
+    // MySQL DECIMAL columns come back as strings (e.g. "10.00"), so parse explicitly
+    final rawPrice = data['price'];
+    final double price;
+    if (rawPrice is num) {
+      price = rawPrice.toDouble();
+    } else if (rawPrice is String) {
+      price = double.tryParse(rawPrice) ?? 0;
+    } else {
+      price = 0;
+    }
     return MenuItem(
       id: (data['id'] ?? '').toString(),
       name: (data['name'] ?? 'Menu item').toString(),
       category: (data['category'] ?? 'Menu').toString(),
-      price: (data['price'] as num?)?.toDouble() ?? 0,
+      price: price,
       emoji: (data['emoji'] ?? '☕').toString(),
     );
   }

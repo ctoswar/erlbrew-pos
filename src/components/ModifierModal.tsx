@@ -13,19 +13,31 @@ export const ModifierModal: React.FC<Props> = ({ item, onAdd, onClose }) => {
 
   const modifiers = item.modifiers || [];
 
-  const toggleModifier = (mod: Modifier) => {
+  const updateModifierQty = (mod: Modifier, delta: number) => {
     const existing = selected.find(m => m.name === mod.name);
     if (existing) {
-      setSelected(prev => prev.filter(m => m.name !== mod.name));
-    } else {
-      setSelected(prev => [...prev, { name: mod.name, price: mod.price }]);
+      const newQty = (existing.qty || 1) + delta;
+      if (newQty <= 0) {
+        // Remove modifier if qty reaches 0
+        setSelected(prev => prev.filter(m => m.name !== mod.name));
+      } else {
+        // Update quantity
+        setSelected(prev =>
+          prev.map(m => m.name === mod.name ? { ...m, qty: newQty } : m)
+        );
+      }
+    } else if (delta > 0) {
+      // Add new modifier with qty 1
+      setSelected(prev => [...prev, { name: mod.name, price: mod.price, qty: 1 }]);
     }
   };
 
-  const isSelected = (mod: Modifier) =>
-    selected.some(m => m.name === mod.name);
+  const getModifierQty = (mod: Modifier): number => {
+    const existing = selected.find(m => m.name === mod.name);
+    return existing?.qty || 0;
+  };
 
-  const totalPrice = item.price + selected.reduce((s, m) => s + m.price, 0);
+  const totalPrice = item.price + selected.reduce((s, m) => s + (m.price * (m.qty || 1)), 0);
 
   const handleAdd = () => {
     onAdd(item, selected);
@@ -60,31 +72,52 @@ export const ModifierModal: React.FC<Props> = ({ item, onAdd, onClose }) => {
             </div>
           ) : (
             <div className="flex flex-col gap-2 mb-4">
-              {modifiers.map((mod) => (
-                <button key={mod.id} onClick={() => toggleModifier(mod)}
-                  className={`
-                    flex items-center gap-2.5 px-3 py-2.5 rounded-lg cursor-pointer text-left transition-all duration-150
-                    ${isSelected(mod) ? "bg-erl-accent/10 border-[1.5px] border-erl-accent" : "bg-erl-surface border-[1.5px] border-erl-border-default"}
-                  `}>
-                  <div className={`
-                    w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-[10px] text-erl-sidebar
-                    ${isSelected(mod) ? "bg-erl-accent border-[1.5px] border-erl-accent" : "bg-transparent border-[1.5px] border-erl-border-medium"}
-                  `}>
-                    {isSelected(mod) ? "✓" : ""}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs font-semibold text-erl-text-primary">
-                      {mod.name}
-                      {mod.isDefault && (
-                        <span className="pill pill-gold ml-1.5 text-[7px] px-1 py-px tracking-wide">DEFAULT</span>
+              {modifiers.map((mod) => {
+                const qty = getModifierQty(mod);
+                return (
+                  <div key={mod.id}
+                    className={`
+                      flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all duration-150
+                      ${qty > 0 ? "bg-erl-accent/10 border-[1.5px] border-erl-accent" : "bg-erl-surface border-[1.5px] border-erl-border-default"}
+                    `}>
+                    {/* Modifier info */}
+                    <div className="flex-1">
+                      <div className="text-xs font-semibold text-erl-text-primary">
+                        {mod.name}
+                        {mod.isDefault && (
+                          <span className="pill pill-gold ml-1.5 text-[7px] px-1 py-px tracking-wide">DEFAULT</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] font-semibold text-erl-accent">
+                        {mod.price > 0 ? `+${formatCurrency(mod.price)}` : "Free"}
+                      </div>
+                    </div>
+
+                    {/* Quantity stepper */}
+                    <div className="flex items-center gap-1">
+                      {qty > 0 && (
+                        <>
+                          <button
+                            onClick={() => updateModifierQty(mod, -1)}
+                            className="w-7 h-7 rounded-lg bg-erl-surface border border-erl-border-default flex items-center justify-center text-erl-text-secondary hover:bg-erl-border-subtle transition-colors"
+                          >
+                            −
+                          </button>
+                          <span className="w-8 text-center text-sm font-semibold text-erl-text-primary">
+                            {qty}
+                          </span>
+                        </>
                       )}
+                      <button
+                        onClick={() => updateModifierQty(mod, 1)}
+                        className="w-7 h-7 rounded-lg bg-erl-accent text-erl-base flex items-center justify-center font-bold hover:bg-erl-accent/90 transition-colors"
+                      >
+                        +
+                      </button>
                     </div>
                   </div>
-                  <div className="text-[11px] font-semibold text-erl-accent">
-                    {mod.price > 0 ? `+${formatCurrency(mod.price)}` : "Free"}
-                  </div>
-                </button>
-              ))}
+                );
+              })}
             </div>
           )}
 

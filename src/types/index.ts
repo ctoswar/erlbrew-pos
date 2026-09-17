@@ -34,6 +34,7 @@ export interface Modifier {
 export interface CartItemModifier {
   name: string;
   price: number;
+  qty?: number; // For modifiers like Extra Shot that can have quantity
 }
 
 export interface MenuItem {

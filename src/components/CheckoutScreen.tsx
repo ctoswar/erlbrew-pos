@@ -56,7 +56,7 @@ export const CheckoutScreen: React.FC<Props> = ({
         {/* Items List */}
         <div className="mb-6 max-h-[180px] sm:max-h-[220px] md:max-h-[240px] overflow-y-auto hide-scrollbar">
           {cart.map((ci, idx) => {
-            const lineTotal = (ci.item.price + (ci.modifiers || []).reduce((s, m) => s + m.price, 0)) * ci.qty;
+            const lineTotal = (ci.item.price + (ci.modifiers || []).reduce((s, m) => s + m.price * (m.qty || 1), 0)) * ci.qty;
             return (
               <div
                 key={ci.item.id + "-" + idx}
@@ -73,7 +73,7 @@ export const CheckoutScreen: React.FC<Props> = ({
                     <div className="mt-1.5 flex flex-wrap gap-1.5 pl-7">
                       {ci.modifiers.map((m, mi) => (
                         <span key={mi} className="text-[9px] font-medium text-erl-accent-dim bg-erl-accent/[0.05] rounded-lg px-2 py-0.5 border border-erl-accent/10">
-                          +{m.name}{m.price > 0 ? ` (${formatCurrency(m.price)})` : ""}
+                          +{(m.qty || 1) > 1 ? `${m.qty}× ` : ''}{m.name}{m.price > 0 ? ` (${formatCurrency(m.price * (m.qty || 1))})` : ""}
                         </span>
                       ))}
                     </div>

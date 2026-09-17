@@ -132,7 +132,7 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
   lines.push(`QTY  ${"ITEM".padEnd(NAME_WIDTH)} ${"AMOUNT".padStart(AMOUNT_WIDTH)}`);
   lines.push(ln("-"));
   order.items.forEach((ci) => {
-    const modifierTotal = (ci.modifiers || []).reduce((s, m) => s + m.price, 0);
+    const modifierTotal = (ci.modifiers || []).reduce((s, m) => s + m.price * (m.qty || 1), 0);
     const lineTotal = (ci.item.price + modifierTotal) * ci.qty;
     const qtyStr = String(ci.qty).padStart(3);
     const amtStr = formatCurrency(lineTotal).replace("₱", "").trim();
@@ -142,7 +142,7 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
     if (ci.qty > 1) lines.push(`     @ ${formatCurrency(ci.item.price + modifierTotal).replace("₱", "").trim()} ea`);
     if (ci.modifiers && ci.modifiers.length > 0) {
       ci.modifiers.forEach(m => {
-        const modLine = `     + ${m.name}${m.price > 0 ? ' (' + formatCurrency(m.price).replace("₱", "").trim() + ')' : ''}`;
+        const modLine = `     + ${(m.qty || 1) > 1 ? m.qty + '× ' : ''}${m.name}${m.price > 0 ? ' (' + formatCurrency(m.price * (m.qty || 1)).replace("₱", "").trim() + ')' : ''}`;
         lines.push(modLine);
       });
     }

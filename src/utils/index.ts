@@ -57,7 +57,7 @@ export const generateOrderId = (): string =>
 
 export const calcSubtotal = (cart: CartItem[]): number =>
   cart.reduce((sum, ci) => {
-    const modifierTotal = (ci.modifiers || []).reduce((s, m) => s + m.price, 0);
+    const modifierTotal = (ci.modifiers || []).reduce((s, m) => s + m.price * (m.qty || 1), 0);
     return sum + (ci.item.price + modifierTotal) * ci.qty;
   }, 0);
 

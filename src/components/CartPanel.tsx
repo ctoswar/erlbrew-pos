@@ -191,7 +191,7 @@ export const CartPanel: React.FC<Props> = ({
                     </div>
                   </div>
                   <div className="text-sm font-bold text-erl-accent tabular-nums">
-                    {formatCurrency((ci.item.price + (ci.modifiers || []).reduce((s, m) => s + m.price, 0)) * ci.qty)}
+                    {formatCurrency((ci.item.price + (ci.modifiers || []).reduce((s, m) => s + m.price * (m.qty || 1), 0)) * ci.qty)}
                   </div>
                 </div>
               ) : (
@@ -319,7 +319,7 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
     setShowNote(false);
   };
 
-  const modPrice = (modifiers || []).reduce((s, m) => s + m.price, 0);
+  const modPrice = (modifiers || []).reduce((s, m) => s + m.price * (m.qty || 1), 0);
   const linePrice = (item.price + modPrice) * qty;
 
   return (
@@ -350,7 +350,7 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
                 key={i}
                 className="text-[10px] md:text-[9px] font-medium text-erl-accent-dim bg-erl-accent/[0.05] border border-erl-accent/10 rounded-lg px-1.5 py-1 md:px-2 md:py-0.5"
               >
-                {m.name}{m.price > 0 ? ` +${formatCurrency(m.price)}` : ""}
+                {(m.qty || 1) > 1 ? `${m.qty}× ` : ""}{m.name}{m.price > 0 ? ` +${formatCurrency(m.price * (m.qty || 1))}` : ""}
               </span>
             ))}
           </div>

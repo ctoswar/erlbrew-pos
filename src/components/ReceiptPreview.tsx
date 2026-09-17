@@ -136,7 +136,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
 
             <div className="mb-1.5">
               {order.items.map((ci, idx) => {
-                const modifierTotal = (ci.modifiers || []).reduce((s, m) => s + m.price, 0);
+                const modifierTotal = (ci.modifiers || []).reduce((s, m) => s + m.price * (m.qty || 1), 0);
                 const lineTotal = (ci.item.price + modifierTotal) * ci.qty;
                 return (
                   <div key={ci.item.id + '-' + idx} className="mb-[5px]">
@@ -155,7 +155,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
                     )}
                     {ci.modifiers && ci.modifiers.length > 0 && ci.modifiers.map((m, mi) => (
                       <div key={mi} className="text-[9px] text-[#666] pl-5">
-                        + {m.name}{m.price > 0 ? ` (${formatCurrency(m.price)})` : ''}
+                        + {(m.qty || 1) > 1 ? `${m.qty}× ` : ''}{m.name}{m.price > 0 ? ` (${formatCurrency(m.price * (m.qty || 1))})` : ''}
                       </div>
                     ))}
                     {ci.notes && (

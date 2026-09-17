@@ -21,6 +21,7 @@ import auditRoutes from './routes/audit.js';
 import customersRoutes from './routes/customers.js';
 import locationsRoutes from './routes/locations.js';
 import transfersRoutes from './routes/transfers.js';
+import loyaltyRouter from './routes/loyalty.js';
 import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
@@ -551,6 +552,7 @@ app.use('/api/company-settings', companySettingsRoutes(pool));
 app.use('/api', uploadRouter(pool));
 app.use('/api/audit-logs', auditRoutes(pool));
 app.use('/api/customers', customersRoutes(pool));
+app.use('/api/loyalty', loyaltyRouter(pool));
 app.use('/api/locations', locationsRoutes(pool));
 app.use('/api/transfers', transfersRoutes(pool));
 

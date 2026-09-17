@@ -75,7 +75,7 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
     final summary =
         _cart.entries.map((e) => '${e.value}x ${e.key.name}').join(', ');
 
-    final customer = MockData.currentUser;
+    final customer = PosApiService.instance.currentCustomer;
     if (customer == null) return;
 
     setState(() => _placingOrder = true);

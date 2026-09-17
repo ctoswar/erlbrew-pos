@@ -3,6 +3,7 @@ class AppUser {
   final String name;
   final String email;
   int points;
+  String tier;
   final bool isAdmin;
 
   AppUser({
@@ -10,6 +11,7 @@ class AppUser {
     required this.name,
     required this.email,
     this.points = 0,
+    this.tier = 'bronze',
     this.isAdmin = false,
   });
 
@@ -17,11 +19,15 @@ class AppUser {
     final rawName = (data['name'] ?? '').toString();
     final rawEmail = (data['email'] ?? '').toString();
     final roleFlag = data['isAdmin'] == true || data['role'] == 'admin';
+    // Support both legacy 'points' and new 'loyalty_points' field
+    final rawPoints = data['loyalty_points'] ?? data['points'] ?? 0;
+    final rawTier = data['loyalty_tier'] ?? data['tier'] ?? 'bronze';
     return AppUser(
       id: uid,
       name: rawName.isNotEmpty ? rawName : 'Erlbrew User',
       email: rawEmail.isNotEmpty ? rawEmail : 'user@erlbrew.cafe',
-      points: (data['points'] is int) ? data['points'] as int : 0,
+      points: (rawPoints is int) ? rawPoints : (rawPoints is num ? rawPoints.toInt() : 0),
+      tier: rawTier.toString(),
       isAdmin: roleFlag,
     );
   }

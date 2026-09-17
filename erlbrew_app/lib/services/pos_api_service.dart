@@ -274,6 +274,100 @@ class PosApiService {
     final data = _handleResponse(response);
     return (data as List).cast<Map<String, dynamic>>();
   }
+
+  // ── Rewards Catalog Endpoints ────────────────────────────────────
+
+  /// Fetch active rewards catalog (public)
+  Future<List<Map<String, dynamic>>> getRewards() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/loyalty/rewards'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    final data = _handleResponse(response);
+    return (data as List).cast<Map<String, dynamic>>();
+  }
+
+  /// Fetch ALL rewards including inactive (admin)
+  Future<List<Map<String, dynamic>>> getAllRewards() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/loyalty/rewards/all'),
+      headers: _headers,
+    );
+    final data = _handleResponse(response);
+    return (data as List).cast<Map<String, dynamic>>();
+  }
+
+  /// Create a reward (admin only)
+  Future<Map<String, dynamic>> createReward({
+    required String title,
+    required String description,
+    required int pointsCost,
+    String emoji = '🎁',
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/loyalty/rewards'),
+      headers: _headers,
+      body: jsonEncode({
+        'title': title,
+        'description': description,
+        'points_cost': pointsCost,
+        'emoji': emoji,
+      }),
+    );
+    return _handleResponse(response);
+  }
+
+  /// Update a reward (admin only)
+  Future<void> updateReward({
+    required int id,
+    String? title,
+    String? description,
+    int? pointsCost,
+    String? emoji,
+    bool? isActive,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/loyalty/rewards/$id'),
+      headers: _headers,
+      body: jsonEncode({
+        if (title != null) 'title': title,
+        if (description != null) 'description': description,
+        if (pointsCost != null) 'points_cost': pointsCost,
+        if (emoji != null) 'emoji': emoji,
+        if (isActive != null) 'is_active': isActive,
+      }),
+    );
+    _handleResponse(response);
+  }
+
+  /// Delete (deactivate) a reward (admin only)
+  Future<void> deleteReward(int id) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/loyalty/rewards/$id'),
+      headers: _headers,
+    );
+    _handleResponse(response);
+  }
+
+  /// Redeem a reward with points
+  Future<Map<String, dynamic>> redeemReward(int rewardId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/loyalty/redeem'),
+      headers: _headers,
+      body: jsonEncode({'reward_id': rewardId}),
+    );
+    return _handleResponse(response);
+  }
+
+  /// Get customer's redemption history
+  Future<List<Map<String, dynamic>>> getRedemptions() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/loyalty/my-redemptions'),
+      headers: _headers,
+    );
+    final data = _handleResponse(response);
+    return (data as List).cast<Map<String, dynamic>>();
+  }
 }
 
 /// Exception thrown by POS API calls

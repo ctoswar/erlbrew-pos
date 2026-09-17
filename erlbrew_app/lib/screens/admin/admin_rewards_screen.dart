@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
+import '../../services/pos_api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/fade_slide_in.dart';
 
@@ -11,13 +12,33 @@ class AdminRewardsScreen extends StatefulWidget {
 }
 
 class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
-  void _openEditor({RewardItem? existing}) {
-    final titleController = TextEditingController(text: existing?.title);
-    final descController = TextEditingController(text: existing?.description);
-    final costController =
-        TextEditingController(text: existing?.pointsCost.toString());
-    final emojiController =
-        TextEditingController(text: existing?.emoji ?? '☕');
+  List<Map<String, dynamic>> _rewards = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRewards();
+  }
+
+  Future<void> _loadRewards() async {
+    setState(() => _loading = true);
+    try {
+      final rewards = await PosApiService.instance.getAllRewards();
+      if (mounted) setState(() {
+        _rewards = rewards;
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _openEditor({Map<String, dynamic>? existing}) {
+    final titleController = TextEditingController(text: existing?['title']?.toString());
+    final descController = TextEditingController(text: existing?['description']?.toString());
+    final costController = TextEditingController(text: existing?['points_cost']?.toString());
+    final emojiController = TextEditingController(text: existing?['emoji']?.toString() ?? '☕');
     final formKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
@@ -99,29 +120,38 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
                 ),
                 const SizedBox(height: 22),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (!formKey.currentState!.validate()) return;
-                    setState(() {
+                    try {
                       if (existing != null) {
-                        existing.title = titleController.text.trim();
-                        existing.description = descController.text.trim();
-                        existing.pointsCost =
-                            int.parse(costController.text.trim());
-                        existing.emoji = emojiController.text.trim().isEmpty
-                            ? '☕'
-                            : emojiController.text.trim();
-                      } else {
-                        MockData.catalog.add(RewardItem(
+                        await PosApiService.instance.updateReward(
+                          id: existing['id'] as int,
                           title: titleController.text.trim(),
                           description: descController.text.trim(),
                           pointsCost: int.parse(costController.text.trim()),
                           emoji: emojiController.text.trim().isEmpty
                               ? '☕'
                               : emojiController.text.trim(),
-                        ));
+                        );
+                      } else {
+                        await PosApiService.instance.createReward(
+                          title: titleController.text.trim(),
+                          description: descController.text.trim(),
+                          pointsCost: int.parse(costController.text.trim()),
+                          emoji: emojiController.text.trim().isEmpty
+                              ? '☕'
+                              : emojiController.text.trim(),
+                        );
                       }
-                    });
-                    Navigator.of(context).pop();
+                      await _loadRewards();
+                      if (mounted) Navigator.of(context).pop();
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: $e')),
+                        );
+                      }
+                    }
                   },
                   child: Text(existing == null ? 'Add Reward' : 'Save Changes'),
                 ),
@@ -133,21 +163,30 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
     );
   }
 
-  void _delete(RewardItem item) {
+  void _delete(Map<String, dynamic> item) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Remove reward?'),
-        content: Text('"${item.title}" will be removed from the catalog.'),
+        content: Text('"${item['title']}" will be removed from the catalog.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              setState(() => MockData.catalog.remove(item));
-              Navigator.of(context).pop();
+            onPressed: () async {
+              try {
+                await PosApiService.instance.deleteReward(item['id'] as int);
+                await _loadRewards();
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              }
+              if (mounted) Navigator.of(context).pop();
             },
             child: Text('Remove', style: TextStyle(color: AppColors.error)),
           ),
@@ -165,76 +204,78 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Add Reward'),
       ),
-      body: MockData.catalog.isEmpty
-          ? Center(
-              child: Text('No rewards yet — add one',
-                  style: TextStyle(color: AppColors.slateGrey)),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-              itemCount: MockData.catalog.length,
-              itemBuilder: (context, i) {
-                final item = MockData.catalog[i];
-                return FadeSlideIn(
-                  delay: Duration(milliseconds: i * 60),
-                  child: Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 46,
-                            height: 46,
-                            decoration: BoxDecoration(
-                              color: AppColors.latte,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(item.emoji,
-                                style: const TextStyle(fontSize: 20)),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _rewards.isEmpty
+              ? Center(
+                  child: Text('No rewards yet — add one',
+                      style: TextStyle(color: AppColors.slateGrey)),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                  itemCount: _rewards.length,
+                  itemBuilder: (context, i) {
+                    final item = _rewards[i];
+                    return FadeSlideIn(
+                      delay: Duration(milliseconds: i * 60),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Row(
                               children: [
-                                Text(item.title,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w700)),
-                                const SizedBox(height: 2),
-                                Text(item.description,
-                                    style: TextStyle(
-                                        color: AppColors.slateGrey,
-                                        fontSize: 12.5)),
-                                const SizedBox(height: 4),
-                                Text('${item.pointsCost} pts',
-                                    style: TextStyle(
-                                        color: AppColors.matchaDark,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 12.5)),
+                                Container(
+                                  width: 46,
+                                  height: 46,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.latte,
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(item['emoji']?.toString() ?? '🎁',
+                                      style: const TextStyle(fontSize: 20)),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(item['title']?.toString() ?? '',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w700)),
+                                      const SizedBox(height: 2),
+                                      Text(item['description']?.toString() ?? '',
+                                          style: TextStyle(
+                                              color: AppColors.slateGrey,
+                                              fontSize: 12.5)),
+                                      const SizedBox(height: 4),
+                                      Text('${item['points_cost']} pts',
+                                          style: TextStyle(
+                                              color: AppColors.matchaDark,
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 12.5)),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined, size: 20),
+                                  color: AppColors.coffeeBrown,
+                                  onPressed: () => _openEditor(existing: item),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 20),
+                                  color: AppColors.error,
+                                  onPressed: () => _delete(item),
+                                ),
                               ],
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined, size: 20),
-                            color: AppColors.coffeeBrown,
-                            onPressed: () => _openEditor(existing: item),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, size: 20),
-                            color: AppColors.error,
-                            onPressed: () => _delete(item),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-                  ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
     );
   }
 }

@@ -76,7 +76,7 @@ class PosApiService {
       return jsonDecode(response.body);
     }
     final body = jsonDecode(response.body);
-    throw PosApiException(body['error'] ?? 'Request failed (${response.statusCode})');
+    throw PosApiServiceException(body['error'] ?? 'Request failed (${response.statusCode})');
   }
 
   // ── Auth Endpoints ────────────────────────────────────────────────
@@ -185,10 +185,19 @@ class PosApiService {
 
   // ── Loyalty Endpoints ─────────────────────────────────────────────
 
-  /// Get points balance and history
+  /// Get points balance and recent history
   Future<Map<String, dynamic>> getPoints() async {
     final response = await http.get(
       Uri.parse('$baseUrl/api/customers/me/points'),
+      headers: _headers,
+    );
+    return _handleResponse(response);
+  }
+
+  /// Get paginated points history
+  Future<Map<String, dynamic>> getPointsHistory({int limit = 20, int offset = 0}) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/customers/me/points/history?limit=$limit&offset=$offset'),
       headers: _headers,
     );
     return _handleResponse(response);
@@ -206,9 +215,9 @@ class PosApiService {
 }
 
 /// Exception thrown by POS API calls
-class PosApiException implements Exception {
+class PosApiServiceException implements Exception {
   final String message;
-  PosApiException(this.message);
+  PosApiServiceException(this.message);
   @override
   String toString() => message;
 }

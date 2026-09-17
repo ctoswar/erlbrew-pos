@@ -218,7 +218,7 @@ class _LoginScreenState extends State<LoginScreen> {
           builder: (_) => _isAdmin ? const AdminHomeShell() : const HomeShell(),
         ),
       );
-    } on PosApiException catch (error) {
+    } on PosApiServiceException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.message)),

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/app_models.dart';
-import '../services/firebase_auth_service.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_counter.dart';
@@ -18,25 +16,30 @@ class RewardsScreen extends StatefulWidget {
 }
 
 class _RewardsScreenState extends State<RewardsScreen> {
-  bool _notificationShown = false;
   List<RewardItem> _rewards = [];
   bool _loadingRewards = true;
+  int _points = 0;
+  String _tier = 'bronze';
+  List<Map<String, dynamic>> _pointsHistory = [];
+  bool _loadingHistory = false;
 
   @override
   void initState() {
     super.initState();
-    _loadRewards();
+    _loadData();
   }
 
-  Future<void> _loadRewards() async {
+  Future<void> _loadData() async {
     try {
-      final points = await PosApiService.instance.getPoints();
-      // For now, use MockData.catalog as the rewards catalog
-      // This will be replaced with a real API in Phase 3
+      final pointsData = await PosApiService.instance.getPoints();
       if (mounted) setState(() {
-        _rewards = MockData.catalog;
+        _points = pointsData['points'] ?? 0;
+        _tier = pointsData['tier'] ?? 'bronze';
+        _rewards = MockData.catalog; // Phase 3 will replace with real API
         _loadingRewards = false;
       });
+      // Load points history
+      _loadPointsHistory();
     } catch (_) {
       if (mounted) setState(() {
         _rewards = MockData.catalog;
@@ -45,87 +48,41 @@ class _RewardsScreenState extends State<RewardsScreen> {
     }
   }
 
+  Future<void> _loadPointsHistory() async {
+    setState(() => _loadingHistory = true);
+    try {
+      final data = await PosApiService.instance.getPointsHistory(limit: 10);
+      if (mounted) setState(() {
+        _pointsHistory = List<Map<String, dynamic>>.from(data['history'] ?? []);
+        _loadingHistory = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingHistory = false);
+    }
+  }
+
+  String _tierLabel(String tier) {
+    switch (tier) {
+      case 'platinum': return '⭐ Platinum';
+      case 'gold': return '🥇 Gold';
+      case 'silver': return '🥈 Silver';
+      default: return '🥉 Bronze';
+    }
+  }
+
+  Color _tierColor(String tier) {
+    switch (tier) {
+      case 'platinum': return const Color(0xFFE5E4E2);
+      case 'gold': return const Color(0xFFD4AF37);
+      case 'silver': return const Color(0xFFC0C0C0);
+      default: return const Color(0xFFCD7F32);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final user = MockData.currentUser!;
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseAuthService.instance.customerProfileStream(user.id),
-      builder: (context, snapshot) {
-        final profile = snapshot.data?.data();
-        final points = (profile?['points'] as num?)?.toInt();
-        if (points != null && points != user.points) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() => user.points = points);
-          });
-        }
-        return _buildRewards(context, user);
-      },
-    );
-  }
-
-  Widget _buildRewards(BuildContext context, AppUser user) {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseAuthService.instance.customerNotificationsStream(user.id),
-      builder: (context, snapshot) {
-        final notification = snapshot.data == null || snapshot.data!.docs.isEmpty
-            ? null
-            : snapshot.data!.docs.first.data();
-        if (notification != null && !_notificationShown) {
-          _notificationShown = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(notification['message']?.toString() ?? 'Points received.')),
-            );
-          });
-        }
-        return _buildRewardsContent(context, user);
-      },
-    );
-  }
-
-  Widget _buildRewardsContent(BuildContext context, AppUser user) {
-  void _showMyQr() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const MyQrScreen()),
-    );
-    // Points may have been updated by an admin scan while this
-    // screen was hidden — refresh to reflect the shared mock data.
-    if (mounted) setState(() {});
-  }
-
-  void _redeem(RewardItem item) {
-    final user = MockData.currentUser!;
-    if (user.points < item.pointsCost) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Not enough points for ${item.title}')),
-      );
-      return;
-    }
-    setState(() => user.points -= item.pointsCost);
-    showDialog(
-      context: context,
-      builder: (_) => TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: 1),
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOutBack,
-        builder: (context, t, child) =>
-            Transform.scale(scale: t, child: child),
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Reward Redeemed! 🎉'),
-          content: Text(
-              'Show this screen to the barista to claim: ${item.title}.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Done'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    final user = MockData.currentUser;
+    final displayName = user?.name.split(' ').first ?? 'Guest';
 
     return Scaffold(
       appBar: AppBar(
@@ -169,20 +126,26 @@ class _RewardsScreenState extends State<RewardsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Hi, ${user.name.split(' ').first} 👋',
+                        'Hi, $displayName 👋',
                         style: const TextStyle(
                             color: Colors.white70, fontSize: 14),
                       ),
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: AppColors.gold.withOpacity(0.14),
-                          shape: BoxShape.circle,
+                          color: _tierColor(_tier).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                              color: AppColors.gold.withOpacity(0.4)),
+                              color: _tierColor(_tier).withOpacity(0.5)),
                         ),
-                        child: const Icon(Icons.local_cafe,
-                            color: AppColors.goldLight, size: 18),
+                        child: Text(
+                          _tierLabel(_tier),
+                          style: TextStyle(
+                            color: _tierColor(_tier),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -192,7 +155,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
                     textBaseline: TextBaseline.alphabetic,
                     children: [
                       AnimatedCounter(
-                        value: user.points,
+                        value: _points,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 42,
@@ -243,11 +206,90 @@ class _RewardsScreenState extends State<RewardsScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 18),
-
           const SizedBox(height: 24),
+
+          // Points History
           FadeSlideIn(
             delay: const Duration(milliseconds: 160),
+            child: Text('Points History',
+                style: Theme.of(context).textTheme.titleLarge),
+          ),
+          const SizedBox(height: 12),
+          if (_loadingHistory)
+            const Center(child: CircularProgressIndicator())
+          else if (_pointsHistory.isEmpty)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: Text(
+                    'No points history yet. Place an order to start earning!',
+                    style: TextStyle(color: AppColors.slateGrey),
+                  ),
+                ),
+              ),
+            )
+          else
+            ...(_pointsHistory.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              final points = item['points'] ?? 0;
+              final type = item['type'] ?? 'earned';
+              final notes = item['notes'] ?? '';
+              final createdAt = item['created_at'];
+              String dateStr = '';
+              if (createdAt != null) {
+                try {
+                  final dt = DateTime.parse(createdAt.toString());
+                  dateStr = '${dt.month}/${dt.day} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+                } catch (_) {
+                  dateStr = createdAt.toString().substring(0, 16);
+                }
+              }
+              return FadeSlideIn(
+                delay: Duration(milliseconds: 200 + index * 50),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Card(
+                    child: ListTile(
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: type == 'earned'
+                              ? AppColors.matchaDark.withOpacity(0.15)
+                              : AppColors.error.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          type == 'earned' ? Icons.add_circle_outline : Icons.remove_circle_outline,
+                          color: type == 'earned' ? AppColors.matchaDark : AppColors.error,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(
+                        notes.isNotEmpty ? notes : (type == 'earned' ? 'Points earned' : 'Points redeemed'),
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(dateStr, style: TextStyle(fontSize: 11, color: AppColors.slateGrey)),
+                      trailing: Text(
+                        '${points > 0 ? '+' : ''}$points pts',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: type == 'earned' ? AppColors.matchaDark : AppColors.error,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            })),
+          const SizedBox(height: 24),
+
+          // Redeem Points
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 250),
             child: Text('Redeem Points',
                 style: Theme.of(context).textTheme.titleLarge),
           ),
@@ -256,9 +298,9 @@ class _RewardsScreenState extends State<RewardsScreen> {
           ..._rewards.asMap().entries.map((entry) {
             final index = entry.key;
             final item = entry.value;
-            final affordable = user.points >= item.pointsCost;
+            final affordable = _points >= item.pointsCost;
             return FadeSlideIn(
-              delay: Duration(milliseconds: 200 + index * 70),
+              delay: Duration(milliseconds: 300 + index * 70),
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Card(
@@ -326,6 +368,46 @@ class _RewardsScreenState extends State<RewardsScreen> {
             );
           }),
         ],
+      ),
+    );
+  }
+
+  void _showMyQr() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const MyQrScreen()),
+    );
+    // Refresh points after returning from QR screen
+    _loadData();
+  }
+
+  void _redeem(RewardItem item) {
+    if (_points < item.pointsCost) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Not enough points for ${item.title}')),
+      );
+      return;
+    }
+    setState(() => _points -= item.pointsCost);
+    showDialog(
+      context: context,
+      builder: (_) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutBack,
+        builder: (context, t, child) =>
+            Transform.scale(scale: t, child: child),
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Reward Redeemed!'),
+          content: Text(
+              'Show this screen to the barista to claim: ${item.title}.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
       ),
     );
   }

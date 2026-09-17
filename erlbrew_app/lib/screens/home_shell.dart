@@ -65,6 +65,8 @@ class _ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<_ProfileScreen> {
   final FirebaseAuthService _authService = FirebaseAuthService.instance;
   AppUser? _user;
+  String _tier = 'bronze';
+  int _points = 0;
 
   @override
   void initState() {
@@ -75,13 +77,37 @@ class _ProfileScreenState extends State<_ProfileScreen> {
   Future<void> _refreshProfile() async {
     try {
       final user = await PosApiService.instance.getProfile();
+      final pointsData = await PosApiService.instance.getPoints();
       if (mounted) setState(() {
         _user = user;
+        _tier = pointsData['tier'] ?? 'bronze';
+        _points = pointsData['points'] ?? 0;
         MockData.currentUser = user;
       });
     } catch (_) {
       // Use cached data
-      if (mounted) setState(() => _user = MockData.currentUser);
+      if (mounted) setState(() {
+        _user = MockData.currentUser;
+        _points = MockData.currentUser?.points ?? 0;
+      });
+    }
+  }
+
+  String _tierLabel(String tier) {
+    switch (tier) {
+      case 'platinum': return 'Platinum';
+      case 'gold': return 'Gold';
+      case 'silver': return 'Silver';
+      default: return 'Bronze';
+    }
+  }
+
+  Color _tierColor(String tier) {
+    switch (tier) {
+      case 'platinum': return const Color(0xFFE5E4E2);
+      case 'gold': return const Color(0xFFD4AF37);
+      case 'silver': return const Color(0xFFC0C0C0);
+      default: return const Color(0xFFCD7F32);
     }
   }
 
@@ -265,8 +291,28 @@ class _ProfileScreenState extends State<_ProfileScreen> {
             child: ListTile(
               leading: const Icon(Icons.card_giftcard_outlined),
               title: const Text('Points balance'),
-              trailing: Text('${user.points}',
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _tierColor(_tier).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _tierColor(_tier).withOpacity(0.4)),
+                    ),
+                    child: Text(
+                      _tierLabel(_tier),
+                      style: TextStyle(
+                        color: _tierColor(_tier),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              trailing: Text('$_points',
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             ),
           ),
           const SizedBox(height: 20),

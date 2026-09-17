@@ -437,15 +437,44 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     return res.status(400).json({ error: `status must be one of: ${allowed.join(', ')}` });
   }
   try {
-    // If completing, update customer stats first
+    // If completing, update customer stats + award loyalty points
     if (status === 'completed') {
       try {
         const [orderRows] = await pool.query('SELECT customer_id, total FROM orders WHERE id = ?', [id]);
         if (orderRows.length > 0 && orderRows[0].customer_id) {
+          const customerId = orderRows[0].customer_id;
+          const orderTotal = Number(orderRows[0].total) || 0;
+
+          // Update customer stats
           await pool.query(
             'UPDATE customers SET total_orders = total_orders + 1, total_spent = total_spent + ? WHERE id = ?',
-            [orderRows[0].total || 0, orderRows[0].customer_id]
+            [orderTotal, customerId]
           );
+
+          // Award loyalty points: ₱1 = 1 point (floor)
+          const pointsEarned = Math.floor(orderTotal);
+          if (pointsEarned > 0) {
+            await pool.query(
+              'UPDATE customers SET loyalty_points = loyalty_points + ?, last_points_update = NOW() WHERE id = ?',
+              [pointsEarned, customerId]
+            );
+            // Log points earned
+            await pool.query(
+              `INSERT INTO loyalty_points_log (customer_id, points, type, reference_type, reference_id, notes, created_at)
+               VALUES (?, ?, 'earned', 'order', ?, ?, NOW())`,
+              [customerId, pointsEarned, id, `Order #${id.slice(0, 8).toUpperCase()} — ₱${orderTotal.toFixed(0)} spent`]
+            );
+            // Auto-update tier based on new total
+            const [custRows] = await pool.query('SELECT loyalty_points FROM customers WHERE id = ?', [customerId]);
+            if (custRows.length > 0) {
+              const totalPoints = Number(custRows[0].loyalty_points) || 0;
+              let newTier = 'bronze';
+              if (totalPoints >= 5000) newTier = 'platinum';
+              else if (totalPoints >= 2000) newTier = 'gold';
+              else if (totalPoints >= 500) newTier = 'silver';
+              await pool.query('UPDATE customers SET loyalty_tier = ? WHERE id = ?', [newTier, customerId]);
+            }
+          }
         }
       } catch (e) { /* non-fatal — don't block completion */ }
     }

@@ -256,18 +256,63 @@ export default function customersRouter(pool) {
   // GET /api/customers/me/orders — Order history for current customer
   router.get('/me/orders', customerAuthMiddleware, async (req, res) => {
     try {
-      const { limit = 20, offset = 0 } = req.query;
-      const [rows] = await pool.query(
-        `SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.pay_method, o.created_at, o.completed_at,
-                s.name AS staff_name
-         FROM orders o
-         LEFT JOIN staff s ON o.staff_id = s.id
-         WHERE o.customer_id = ?
-         ORDER BY o.created_at DESC
-         LIMIT ? OFFSET ?`,
-        [req.customer.sub, Number(limit), Number(offset)]
-      );
-      res.json(rows);
+      const { limit = 20, offset = 0, status, from_date, to_date } = req.query;
+      let sql = `SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.pay_method,
+                        o.created_at, o.completed_at, s.name AS staff_name
+                 FROM orders o
+                 LEFT JOIN staff s ON o.staff_id = s.id
+                 WHERE o.customer_id = ?`;
+      const values = [req.customer.sub];
+
+      if (status) {
+        sql += ' AND o.status = ?';
+        values.push(status);
+      }
+      if (from_date) {
+        sql += ' AND o.created_at >= ?';
+        values.push(from_date);
+      }
+      if (to_date) {
+        sql += ' AND o.created_at <= ?';
+        values.push(to_date);
+      }
+
+      sql += ' ORDER BY o.created_at DESC LIMIT ? OFFSET ?';
+      values.push(Number(limit), Number(offset));
+
+      const [orders] = await pool.query(sql, values);
+
+      // Fetch order items for each order
+      if (orders.length > 0) {
+        const orderIds = orders.map(o => o.id);
+        const [items] = await pool.query(
+          `SELECT oi.order_id, oi.qty, oi.notes, oi.price,
+                  mi.name AS item_name, mi.emoji
+           FROM order_items oi
+           LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+           WHERE oi.order_id IN (?)`,
+          [orderIds]
+        );
+        // Group items by order_id
+        const itemsByOrder = {};
+        for (const item of items) {
+          if (!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = [];
+          itemsByOrder[item.order_id].push({
+            name: item.item_name,
+            emoji: item.emoji,
+            qty: item.qty,
+            price: Number(item.price),
+            notes: item.notes,
+          });
+        }
+        // Attach items to orders
+        for (const order of orders) {
+          order.items = itemsByOrder[order.id] || [];
+          order.points_earned = Math.floor(Number(order.total));
+        }
+      }
+
+      res.json(orders);
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });

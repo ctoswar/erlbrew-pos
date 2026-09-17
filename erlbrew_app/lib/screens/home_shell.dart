@@ -67,6 +67,8 @@ class _ProfileScreenState extends State<_ProfileScreen> {
   AppUser? _user;
   String _tier = 'bronze';
   int _points = 0;
+  List<Map<String, dynamic>> _recentOrders = [];
+  bool _loadingOrders = true;
 
   @override
   void initState() {
@@ -78,17 +80,20 @@ class _ProfileScreenState extends State<_ProfileScreen> {
     try {
       final user = await PosApiService.instance.getProfile();
       final pointsData = await PosApiService.instance.getPoints();
+      final orders = await PosApiService.instance.getOrderHistory(limit: 5);
       if (mounted) setState(() {
         _user = user;
         _tier = pointsData['tier'] ?? 'bronze';
         _points = pointsData['points'] ?? 0;
+        _recentOrders = orders;
+        _loadingOrders = false;
         MockData.currentUser = user;
       });
     } catch (_) {
-      // Use cached data
       if (mounted) setState(() {
         _user = MockData.currentUser;
         _points = MockData.currentUser?.points ?? 0;
+        _loadingOrders = false;
       });
     }
   }
@@ -265,81 +270,174 @@ class _ProfileScreenState extends State<_ProfileScreen> {
     final user = _user ?? MockData.currentUser!;
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          CircleAvatar(
-            radius: 36,
-            backgroundColor: AppColors.coffeeBrown,
-            child: Text(
-              user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+      body: RefreshIndicator(
+        onRefresh: _refreshProfile,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            CircleAvatar(
+              radius: 36,
+              backgroundColor: AppColors.coffeeBrown,
+              child: Text(
+                user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: Text(user.name,
-                style: Theme.of(context).textTheme.titleLarge),
-          ),
-          Center(
-            child: Text(user.email,
-                style: TextStyle(color: AppColors.slateGrey)),
-          ),
-          const SizedBox(height: 28),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.card_giftcard_outlined),
-              title: const Text('Points balance'),
-              subtitle: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: _tierColor(_tier).withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _tierColor(_tier).withOpacity(0.4)),
-                    ),
-                    child: Text(
-                      _tierLabel(_tier),
-                      style: TextStyle(
-                        color: _tierColor(_tier),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+            const SizedBox(height: 16),
+            Center(
+              child: Text(user.name,
+                  style: Theme.of(context).textTheme.titleLarge),
+            ),
+            Center(
+              child: Text(user.email,
+                  style: TextStyle(color: AppColors.slateGrey)),
+            ),
+            const SizedBox(height: 28),
+
+            // Points & Tier
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.card_giftcard_outlined),
+                title: const Text('Points balance'),
+                subtitle: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _tierColor(_tier).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: _tierColor(_tier).withOpacity(0.4)),
+                      ),
+                      child: Text(
+                        _tierLabel(_tier),
+                        style: TextStyle(
+                          color: _tierColor(_tier),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                trailing: Text('$_points',
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               ),
-              trailing: Text('$_points',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             ),
-          ),
-          const SizedBox(height: 20),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.settings_outlined),
-              title: const Text('Settings'),
-              subtitle: const Text('Account and security preferences'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _showSettings(context, user),
+            const SizedBox(height: 12),
+
+            // Order Stats
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _statColumn('Orders', '${user.totalOrders ?? 0}', Icons.receipt_long),
+                    _statColumn('Total Spent', '₱${_formatAmount(user.totalSpent ?? 0)}', Icons.payments),
+                  ],
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          OutlinedButton.icon(
-            onPressed: () async {
-              await PosApiService.instance.logout();
-              MockData.currentUser = null;
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
-            icon: const Icon(Icons.logout),
-            label: const Text('Log Out'),
-          ),
-        ],
+            const SizedBox(height: 20),
+
+            // Recent Orders
+            if (_recentOrders.isNotEmpty) ...[
+              Text('Recent Orders',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 10),
+              ..._recentOrders.map((o) => Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.latte,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.receipt_long, size: 18, color: AppColors.coffeeBrown),
+                  ),
+                  title: Text('#${o['id']}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(
+                    _formatOrderDate(o['created_at']),
+                    style: TextStyle(color: AppColors.slateGrey, fontSize: 12),
+                  ),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('₱${_formatAmount((o['total'] as num?)?.toDouble() ?? 0)}',
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                      Text('+${o['points_earned'] ?? 0} pts',
+                          style: TextStyle(color: AppColors.matcha, fontSize: 11)),
+                    ],
+                  ),
+                ),
+              )),
+              const SizedBox(height: 12),
+            ] else if (!_loadingOrders) ...[
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text('No orders yet', style: TextStyle(color: AppColors.slateGrey)),
+                ),
+              ),
+            ],
+
+            // Settings
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text('Settings'),
+                subtitle: const Text('Account and security preferences'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showSettings(context, user),
+              ),
+            ),
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
+              onPressed: () async {
+                await PosApiService.instance.logout();
+                MockData.currentUser = null;
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text('Log Out'),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _statColumn(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, size: 20, color: AppColors.coffeeBrown),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        Text(label, style: TextStyle(color: AppColors.slateGrey, fontSize: 11)),
+      ],
+    );
+  }
+
+  String _formatAmount(double amount) {
+    if (amount == amount.roundToDouble()) return amount.toInt().toString();
+    return amount.toStringAsFixed(2);
+  }
+
+  String _formatOrderDate(dynamic dateStr) {
+    final date = DateTime.tryParse(dateStr?.toString() ?? '') ?? DateTime.now();
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inDays == 0) return 'Today ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    if (diff.inDays == 1) return 'Yesterday';
+    if (diff.inDays < 7) return '${diff.inDays} days ago';
+    return '${date.month}/${date.day}/${date.year}';
   }
 }

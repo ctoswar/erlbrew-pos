@@ -171,9 +171,14 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
       }).catch(() => {});
   }, []);
 
-  const summary = buildDailySummary(orders, cogsData ?? undefined);
+  const filteredOrders = orders.filter((o) => {
+    const d = toLocalDateStr(o.createdAt);
+    return d >= startDate && d <= endDate;
+  });
+
+  const summary = buildDailySummary(filteredOrders, cogsData ?? undefined);
   const yesterdaySummary = yesterdayOrders.length > 0 ? buildDailySummary(yesterdayOrders) : null;
-  const recentOrders = [...orders].slice(0, 8);
+  const recentOrders = [...filteredOrders].slice(0, 8);
 
   const revenueDelta = yesterdaySummary ? summary.totalRevenue - yesterdaySummary.totalRevenue : 0;
   const ordersDelta = yesterdaySummary ? summary.totalOrders - yesterdaySummary.totalOrders : 0;
@@ -187,7 +192,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
       <div className="flex items-baseline justify-between flex-wrap gap-1.5">
         <div>
           <div className="font-display text-lg font-bold text-erl-text-primary">Daily Dashboard</div>
-          <div className="text-[9px] text-erl-text-muted mt-px">{summary.date}</div>
+           <div className="text-[9px] text-erl-text-muted mt-px">{startDate} → {endDate}</div>
         </div>
         <div className="text-[9px] text-erl-text-muted">Viewing as <strong className="text-erl-accent">{staffName}</strong></div>
       </div>
@@ -246,10 +251,10 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
         {[
-          { label: "Total Revenue", value: formatCurrency(summary.totalRevenue), sub: "Today", delta: revenueDelta, fmt: (d: number) => formatCurrency(Math.abs(d)) },
-          { label: "Orders", value: String(summary.totalOrders), sub: "Completed", delta: ordersDelta, fmt: (d: number) => String(Math.abs(Math.round(d))) },
+          { label: "Total Revenue", value: formatCurrency(summary.totalRevenue), sub: dateRange === 'today' ? "Today" : "Period", delta: revenueDelta, fmt: (d: number) => formatCurrency(Math.abs(d)) },
+          { label: "Orders", value: String(summary.totalOrders), sub: dateRange === 'today' ? "Today" : "In period", delta: ordersDelta, fmt: (d: number) => String(Math.abs(Math.round(d))) },
           { label: "Avg. Order", value: formatCurrency(summary.avgOrderValue), sub: "Per ticket", delta: avgDelta, fmt: (d: number) => `${Math.abs(d).toFixed(1)}%` },
-          { label: "Active", value: String(orders.filter(o => o.status === "preparing" || o.status === "ready").length), sub: "In kitchen", delta: 0, fmt: () => '' },
+          { label: "Active", value: String(filteredOrders.filter(o => o.status === "preparing" || o.status === "ready").length), sub: "In kitchen", delta: 0, fmt: () => '' },
         ].map(({ label, value, sub, delta, fmt }) => {
           const isPositive = delta >= 0;
           const showDelta = label !== "Active" && yesterdaySummary;

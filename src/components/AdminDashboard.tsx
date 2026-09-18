@@ -103,7 +103,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
           total: Number(o.total ?? 0),
           createdAt: parseServerDatetime(String(o.createdAt ?? o.created_at ?? '')),
           completedAt: o.completedAt || o.completed_at ? parseServerDatetime(String(o.completedAt ?? o.completed_at)) : undefined,
-          customerName: o.customerName ? String(o.customerName) : undefined,
+          customerName: (o.customerName || o.table || (o.customer_name as string) || (o.table_name as string) || undefined) as string | undefined,
           type: (o.type ?? 'dine-in') as Order['type'],
           payMethod: (o.payMethod || (o.pay_method as string) || 'cash') as Order['payMethod'],
           referenceNumber: o.referenceNumber ? String(o.referenceNumber) : (o.reference_number ? String(o.reference_number) : undefined),
@@ -136,7 +136,11 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
       const ordersData = await apiGet<Record<string, unknown>[]>('/orders');
       const transformedOrders = ordersData.map((o) => ({
         id: String(o.id ?? ''),
-        items: Array.isArray(o.items) ? o.items : [],
+        items: Array.isArray(o.items) ? o.items.map((it: any) => ({
+          item: { id: String(it.menu_item_id || ''), name: it.menu_item_name || it.name || 'Unknown', category: it.category || '', price: Number(it.price) || 0, badge: it.badge || '', description: '', emoji: it.emoji || '☕' },
+          qty: it.qty || 1, notes: it.notes || '',
+          modifiers: (it.modifiers || []).map((m: any) => ({ name: m.name || '', price: Number(m.price) || 0 })),
+        })) : [],
         staff: o.staff_name ? {
           id: Number(o.staff_id ?? 0), name: String(o.staff_name),
           initials: String(o.staff_initials || ''), rfid: String(o.staff_rfid || ''),
@@ -147,11 +151,11 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
         subtotal: Number(o.subtotal ?? 0), tax: Number(o.tax ?? 0), total: Number(o.total ?? 0),
         createdAt: parseServerDatetime(String(o.createdAt ?? o.created_at ?? '')),
         completedAt: o.completedAt || o.completed_at ? parseServerDatetime(String(o.completedAt ?? o.completed_at)) : undefined,
-        customerName: o.customer_name ? String(o.customer_name) : undefined,
+        customerName: (o.customerName || o.table || o.customer_name || o.table_name || undefined) as string | undefined,
         type: (o.type ?? 'dine-in') as Order['type'],
         payMethod: (String(o.payMethod || o.pay_method || 'cash')) as Order['payMethod'],
         referenceNumber: o.referenceNumber ? String(o.referenceNumber) : (o.reference_number ? String(o.reference_number) : undefined),
-        cashTendered: o.cash_tendered ? Number(o.cash_tendered) : undefined,
+        cashTendered: o.cashTendered ? Number(o.cashTendered) : (o.cash_tendered as number | undefined) ? Number(o.cash_tendered) : undefined,
         discount: (() => {
           if (!o.discount_json) return undefined;
           try {

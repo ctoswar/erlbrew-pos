@@ -75,7 +75,7 @@ export function serverOrderToOrder(o: ServerOrder): Order {
   // Build CartItem[] from server order_items
   const items: CartItem[] = (o.items || []).map((it) => ({
     item: {
-      id: it.menu_item_id || it.menu_item_id,
+      id: String(it.menu_item_id || ''),
       name: it.menu_item_name || it.name || 'Unknown',
       category: it.category || 'Signature Brews',
       price: Number(it.price) || 0,

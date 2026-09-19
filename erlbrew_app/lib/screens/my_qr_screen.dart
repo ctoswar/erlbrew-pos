@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import '../models/app_models.dart';
+import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/fade_slide_in.dart';
 
@@ -14,7 +14,14 @@ class MyQrScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = MockData.currentUser!;
+    final user = PosApiService.instance.currentCustomer;
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('My QR Code')),
+        body: const Center(child: Text('Please log in to view your QR code.')),
+      );
+    }
+
     final payload = jsonEncode({
       'type': 'erlbrew_customer',
       'id': user.id,

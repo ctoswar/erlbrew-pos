@@ -1,7 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../models/app_models.dart';
-import '../services/firebase_auth_service.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
@@ -22,7 +19,6 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  final FirebaseAuthService _authService = FirebaseAuthService.instance;
   bool _obscure = true;
   bool _loading = false;
 
@@ -41,14 +37,12 @@ class _SignupScreenState extends State<SignupScreen> {
 
     try {
       final posService = PosApiService.instance;
-      final newUser = await posService.register(
+      await posService.register(
         phone: _phoneController.text,
         name: _nameController.text,
         email: _emailController.text,
         password: _passwordController.text,
       );
-
-      MockData.currentUser = newUser;
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(

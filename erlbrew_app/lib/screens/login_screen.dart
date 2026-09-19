@@ -1,7 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/app_models.dart';
-import '../services/firebase_auth_service.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
@@ -22,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final FirebaseAuthService _authService = FirebaseAuthService.instance;
   bool _obscure = true;
   bool _loading = false;
   bool _isAdmin = false;
@@ -44,27 +41,14 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: trimmedEmail);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password reset email sent. Check your inbox.'),
-        ),
-      );
-    } on FirebaseAuthException catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.message ?? 'Unable to send reset email.'),
-        ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Something went wrong while sending the reset email.')),
-      );
-    }
+    // POS backend does not support email password reset for customer accounts.
+    // Customers log in with phone + password. For now, instruct them to contact staff.
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please visit the café and ask a staff member to reset your password.'),
+      ),
+    );
   }
 
   Future<void> _handleForgotPassword() async {
@@ -194,13 +178,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       if (_isAdmin) {
-        // Admin/staff login via Firebase (keep existing)
-        final user = await _authService.signInWithEmailPassword(
-          email: _emailController.text,
+        // Admin/staff login via POS backend
+        await PosApiService.instance.staffLogin(
+          username: _emailController.text.trim(),
           password: _passwordController.text,
-          isAdmin: _isAdmin,
         );
-        MockData.currentUser = user;
       } else {
         // Customer login via POS backend
         final posService = PosApiService.instance;
@@ -222,15 +204,6 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.message)),
-      );
-    } on FirebaseAuthException catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error.message ?? 'Unable to sign in. Please try again.',
-          ),
-        ),
       );
     } catch (error) {
       if (!mounted) return;

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { customerAuthMiddleware } from '../middleware/customerAuth.js';
 import { logAudit } from '../services/audit.js';
 
@@ -211,7 +211,7 @@ export default function customersRouter(pool) {
   });
 
   // POST /api/customers/me/points/adjust — Admin manual points adjustment
-  router.post('/me/points/adjust', authMiddleware, async (req, res) => {
+  router.post('/me/points/adjust', authMiddleware, adminMiddleware, async (req, res) => {
     const { customer_id, points, reason } = req.body;
     if (!customer_id || typeof customer_id !== 'number') {
       return res.status(400).json({ error: 'customer_id is required' });
@@ -222,34 +222,55 @@ export default function customersRouter(pool) {
     if (!reason || typeof reason !== 'string' || !reason.trim()) {
       return res.status(400).json({ error: 'reason is required' });
     }
+    const conn = await pool.getConnection();
     try {
-      await pool.query(
-        'UPDATE customers SET loyalty_points = GREATEST(0, loyalty_points + ?), last_points_update = NOW() WHERE id = ?',
-        [points, customer_id]
+      await conn.beginTransaction();
+
+      // Verify customer exists and lock row
+      const [[customer]] = await conn.query(
+        'SELECT id, loyalty_points FROM customers WHERE id = ? FOR UPDATE',
+        [customer_id]
       );
-      await pool.query(
+      if (!customer) {
+        await conn.rollback();
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+
+      const oldBalance = Number(customer.loyalty_points) || 0;
+      const newBalance = Math.max(0, oldBalance + points);
+      const actualChange = newBalance - oldBalance;
+
+      await conn.query(
+        'UPDATE customers SET loyalty_points = ?, last_points_update = NOW() WHERE id = ?',
+        [newBalance, customer_id]
+      );
+      await conn.query(
         `INSERT INTO loyalty_points_log (customer_id, points, type, reference_type, reference_id, notes, created_at)
          VALUES (?, ?, 'adjusted', 'admin', NULL, ?, NOW())`,
-        [customer_id, points, reason.trim()]
+        [customer_id, actualChange, reason.trim()]
       );
-      const [custRows] = await pool.query('SELECT loyalty_points FROM customers WHERE id = ?', [customer_id]);
-      if (custRows.length > 0) {
-        const totalPoints = Number(custRows[0].loyalty_points) || 0;
-        let newTier = 'bronze';
-        if (totalPoints >= 5000) newTier = 'platinum';
-        else if (totalPoints >= 2000) newTier = 'gold';
-        else if (totalPoints >= 500) newTier = 'silver';
-        await pool.query('UPDATE customers SET loyalty_tier = ? WHERE id = ?', [newTier, customer_id]);
-      }
+
+      // Recalculate tier based on new balance
+      let newTier = 'bronze';
+      if (newBalance >= 5000) newTier = 'platinum';
+      else if (newBalance >= 2000) newTier = 'gold';
+      else if (newBalance >= 500) newTier = 'silver';
+      await conn.query('UPDATE customers SET loyalty_tier = ? WHERE id = ?', [newTier, customer_id]);
+
+      await conn.commit();
+
       const [updated] = await pool.query(
         'SELECT id, loyalty_points, loyalty_tier FROM customers WHERE id = ?',
         [customer_id]
       );
-      await logAudit(pool, req, { action: 'points_adjust', entityType: 'customer', entityId: String(customer_id), details: { points, reason: reason.trim() } });
+      await logAudit(pool, req, { action: 'points_adjust', entityType: 'customer', entityId: String(customer_id), details: { requested: points, actual: actualChange, newBalance, reason: reason.trim() } });
       res.json({ ok: true, customer: updated[0] });
     } catch (e) {
+      await conn.rollback();
       console.error(e);
       res.status(500).json({ error: 'DB error' });
+    } finally {
+      conn.release();
     }
   });
 
@@ -282,7 +303,7 @@ export default function customersRouter(pool) {
 
       const [orders] = await pool.query(sql, values);
 
-      // Fetch order items for each order
+      // Fetch order items and earned points for each order
       if (orders.length > 0) {
         const orderIds = orders.map(o => o.id);
         const [items] = await pool.query(
@@ -293,6 +314,16 @@ export default function customersRouter(pool) {
            WHERE oi.order_id IN (?)`,
           [orderIds]
         );
+        const [pointsRows] = await pool.query(
+          `SELECT reference_id, points
+           FROM loyalty_points_log
+           WHERE reference_type = 'order' AND reference_id IN (?)`,
+          [orderIds]
+        );
+        const pointsByOrder = {};
+        for (const row of pointsRows) {
+          pointsByOrder[row.reference_id] = Number(row.points) || 0;
+        }
         // Group items by order_id
         const itemsByOrder = {};
         for (const item of items) {
@@ -305,10 +336,10 @@ export default function customersRouter(pool) {
             notes: item.notes,
           });
         }
-        // Attach items to orders
+        // Attach items and actual earned points to orders
         for (const order of orders) {
           order.items = itemsByOrder[order.id] || [];
-          order.points_earned = Math.floor(Number(order.total) / 100);
+          order.points_earned = pointsByOrder[order.id] ?? 0;
         }
       }
 

@@ -26,8 +26,8 @@ class AppUser {
     // Support both legacy 'points' and new 'loyalty_points' field
     final rawPoints = data['loyalty_points'] ?? data['points'] ?? 0;
     final rawTier = data['loyalty_tier'] ?? data['tier'] ?? 'bronze';
-    final rawTotalOrders = data['total_orders'];
-    final rawTotalSpent = data['total_spent'];
+    final rawTotalOrders = data['total_orders'] ?? data['totalOrders'];
+    final rawTotalSpent = data['total_spent'] ?? data['totalSpent'];
     return AppUser(
       id: uid,
       name: rawName.isNotEmpty ? rawName : 'Erlbrew User',

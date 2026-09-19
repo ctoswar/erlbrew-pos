@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { customerAuthMiddleware } from '../middleware/customerAuth.js';
 import { logAudit } from '../services/audit.js';
 
@@ -22,7 +22,7 @@ export default function loyaltyRouter(pool) {
   });
 
   // GET /api/loyalty/rewards/all — list ALL rewards including inactive (admin)
-  router.get('/rewards/all', authMiddleware, async (req, res) => {
+  router.get('/rewards/all', authMiddleware, adminMiddleware, async (req, res) => {
     try {
       const [rows] = await pool.query(
         'SELECT id, title, description, points_cost, emoji, is_active, created_at FROM loyalty_rewards ORDER BY points_cost ASC'
@@ -35,7 +35,7 @@ export default function loyaltyRouter(pool) {
   });
 
   // POST /api/loyalty/rewards — create reward (admin only)
-  router.post('/rewards', authMiddleware, async (req, res) => {
+  router.post('/rewards', authMiddleware, adminMiddleware, async (req, res) => {
     const { title, description, points_cost, emoji } = req.body;
     if (!title || typeof title !== 'string') {
       return res.status(400).json({ error: 'title is required' });
@@ -57,7 +57,7 @@ export default function loyaltyRouter(pool) {
   });
 
   // PUT /api/loyalty/rewards/:id — update reward (admin only)
-  router.put('/rewards/:id', authMiddleware, async (req, res) => {
+  router.put('/rewards/:id', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
     const { title, description, points_cost, emoji, is_active } = req.body;
     try {
@@ -65,7 +65,12 @@ export default function loyaltyRouter(pool) {
       const vals = [];
       if (title !== undefined) { fields.push('title = ?'); vals.push(title); }
       if (description !== undefined) { fields.push('description = ?'); vals.push(description); }
-      if (points_cost !== undefined) { fields.push('points_cost = ?'); vals.push(points_cost); }
+      if (points_cost !== undefined) {
+        if (typeof points_cost !== 'number' || points_cost <= 0) {
+          return res.status(400).json({ error: 'points_cost must be a positive number' });
+        }
+        fields.push('points_cost = ?'); vals.push(points_cost);
+      }
       if (emoji !== undefined) { fields.push('emoji = ?'); vals.push(emoji); }
       if (is_active !== undefined) { fields.push('is_active = ?'); vals.push(is_active ? 1 : 0); }
       if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
@@ -80,7 +85,7 @@ export default function loyaltyRouter(pool) {
   });
 
   // DELETE /api/loyalty/rewards/:id — deactivate reward (admin only)
-  router.delete('/rewards/:id', authMiddleware, async (req, res) => {
+  router.delete('/rewards/:id', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
     try {
       await pool.query('UPDATE loyalty_rewards SET is_active = 0 WHERE id = ?', [id]);
@@ -97,7 +102,7 @@ export default function loyaltyRouter(pool) {
   // POST /api/loyalty/redeem — redeem a reward
   router.post('/redeem', customerAuthMiddleware, async (req, res) => {
     const { reward_id } = req.body;
-    const customerId = req.customer.id;
+    const customerId = req.customer.sub;
 
     if (!reward_id) {
       return res.status(400).json({ error: 'reward_id is required' });
@@ -122,9 +127,9 @@ export default function loyaltyRouter(pool) {
         return res.status(400).json({ error: 'Reward is no longer available' });
       }
 
-      // 2. Check customer has enough points
+      // 2. Check customer has enough points (lock row to prevent race conditions)
       const [customers] = await conn.query(
-        'SELECT id, loyalty_points FROM customers WHERE id = ?',
+        'SELECT id, loyalty_points FROM customers WHERE id = ? FOR UPDATE',
         [customerId]
       );
       if (!customers.length) {
@@ -186,7 +191,7 @@ export default function loyaltyRouter(pool) {
 
   // GET /api/loyalty/my-redemptions — customer's redemption history
   router.get('/my-redemptions', customerAuthMiddleware, async (req, res) => {
-    const customerId = req.customer.id;
+    const customerId = req.customer.sub;
     try {
       const [rows] = await pool.query(
         `SELECT lr.id, lr.points_spent, lr.created_at,

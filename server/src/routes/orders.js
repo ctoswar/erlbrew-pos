@@ -451,8 +451,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
             [orderTotal, customerId]
           );
 
-          // Award loyalty points: ₱1 = 1 point (floor)
-          const pointsEarned = Math.floor(orderTotal);
+          // Award loyalty points: ₱100 = 1 point (floor)
+          const pointsEarned = Math.floor(orderTotal / 100);
           if (pointsEarned > 0) {
             await pool.query(
               'UPDATE customers SET loyalty_points = loyalty_points + ?, last_points_update = NOW() WHERE id = ?',

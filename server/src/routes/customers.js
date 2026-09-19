@@ -308,7 +308,7 @@ export default function customersRouter(pool) {
         // Attach items to orders
         for (const order of orders) {
           order.items = itemsByOrder[order.id] || [];
-          order.points_earned = Math.floor(Number(order.total));
+          order.points_earned = Math.floor(Number(order.total) / 100);
         }
       }
 

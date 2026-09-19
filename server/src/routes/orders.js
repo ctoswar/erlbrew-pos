@@ -90,6 +90,41 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     return orders.map(o => ({ ...o, items: itemMap[o.id] || [] }));
   }
 
+  // Helper: determine tier from points balance
+  function tierFromPoints(points) {
+    if (points >= 5000) return 'platinum';
+    if (points >= 2000) return 'gold';
+    if (points >= 500) return 'silver';
+    return 'bronze';
+  }
+
+  // Helper: reverse loyalty points for a voided/refunded order (uses provided connection)
+  async function reverseLoyaltyPoints(conn, customerId, orderTotal, orderId, reason) {
+    const pointsToReverse = Math.floor(orderTotal / 100);
+    if (pointsToReverse <= 0) return;
+
+    const [[customer]] = await conn.query(
+      'SELECT id, loyalty_points FROM customers WHERE id = ? FOR UPDATE',
+      [customerId]
+    );
+    if (!customer) return;
+
+    const oldBalance = Number(customer.loyalty_points) || 0;
+    const newBalance = Math.max(0, oldBalance - pointsToReverse);
+    const actualReversed = oldBalance - newBalance;
+
+    await conn.query(
+      'UPDATE customers SET loyalty_points = ?, last_points_update = NOW(), loyalty_tier = ? WHERE id = ?',
+      [newBalance, tierFromPoints(newBalance), customerId]
+    );
+
+    await conn.query(
+      `INSERT INTO loyalty_points_log (customer_id, points, type, reference_type, reference_id, notes, created_at)
+       VALUES (?, ?, 'adjusted', 'order', ?, ?, NOW())`,
+      [customerId, -actualReversed, orderId, reason]
+    );
+  }
+
   // GET all orders (public - for kitchen/dashboard)
   router.get('/', async (req, res) => {
     try {
@@ -436,17 +471,22 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   if (!allowed.includes(status)) {
     return res.status(400).json({ error: `status must be one of: ${allowed.join(', ')}` });
   }
+  const conn = await pool.getConnection();
   try {
-    // If completing, update customer stats + award loyalty points
-    if (status === 'completed') {
-      try {
-        const [orderRows] = await pool.query('SELECT customer_id, total FROM orders WHERE id = ?', [id]);
-        if (orderRows.length > 0 && orderRows[0].customer_id) {
-          const customerId = orderRows[0].customer_id;
-          const orderTotal = Number(orderRows[0].total) || 0;
+    await conn.beginTransaction();
 
+    // If completing, update customer stats + award loyalty points atomically
+    if (status === 'completed') {
+      const [orderRows] = await conn.query('SELECT customer_id, total, status AS current_status FROM orders WHERE id = ? FOR UPDATE', [id]);
+      if (orderRows.length > 0 && orderRows[0].customer_id) {
+        const customerId = orderRows[0].customer_id;
+        const orderTotal = Number(orderRows[0].total) || 0;
+        const currentStatus = orderRows[0].current_status;
+
+        // Only award points once: if order is already completed, skip loyalty update
+        if (currentStatus !== 'completed' && orderTotal > 0) {
           // Update customer stats
-          await pool.query(
+          await conn.query(
             'UPDATE customers SET total_orders = total_orders + 1, total_spent = total_spent + ? WHERE id = ?',
             [orderTotal, customerId]
           );
@@ -454,31 +494,28 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
           // Award loyalty points: ₱100 = 1 point (floor)
           const pointsEarned = Math.floor(orderTotal / 100);
           if (pointsEarned > 0) {
-            await pool.query(
+            await conn.query(
               'UPDATE customers SET loyalty_points = loyalty_points + ?, last_points_update = NOW() WHERE id = ?',
               [pointsEarned, customerId]
             );
             // Log points earned
-            await pool.query(
+            await conn.query(
               `INSERT INTO loyalty_points_log (customer_id, points, type, reference_type, reference_id, notes, created_at)
                VALUES (?, ?, 'earned', 'order', ?, ?, NOW())`,
               [customerId, pointsEarned, id, `Order #${id.slice(0, 8).toUpperCase()} — ₱${orderTotal.toFixed(0)} spent`]
             );
             // Auto-update tier based on new total
-            const [custRows] = await pool.query('SELECT loyalty_points FROM customers WHERE id = ?', [customerId]);
+            const [custRows] = await conn.query('SELECT loyalty_points FROM customers WHERE id = ?', [customerId]);
             if (custRows.length > 0) {
               const totalPoints = Number(custRows[0].loyalty_points) || 0;
-              let newTier = 'bronze';
-              if (totalPoints >= 5000) newTier = 'platinum';
-              else if (totalPoints >= 2000) newTier = 'gold';
-              else if (totalPoints >= 500) newTier = 'silver';
-              await pool.query('UPDATE customers SET loyalty_tier = ? WHERE id = ?', [newTier, customerId]);
+              await conn.query('UPDATE customers SET loyalty_tier = ? WHERE id = ?', [tierFromPoints(totalPoints), customerId]);
             }
           }
         }
-      } catch (e) { /* non-fatal — don't block completion */ }
+      }
     }
-    await pool.query('UPDATE orders SET status = ?, completed_at = ? WHERE id = ?', [status, status === 'completed' ? new Date() : null, id]);
+    await conn.query('UPDATE orders SET status = ?, completed_at = ? WHERE id = ?', [status, status === 'completed' ? new Date() : null, id]);
+    await conn.commit();
     // Audit: status change
     await logAudit(pool, req, { action: 'order_status_change', entityType: 'order', entityId: id, details: { newStatus: status } });
     res.json({ ok: true });
@@ -497,7 +534,11 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       } catch (e) { /* non-fatal */ }
     }
   } catch (e) {
+    try { await conn.rollback(); } catch (_) {}
+    console.error('[order status change]', e);
     res.status(500).json({ error: 'DB error' });
+  } finally {
+    conn.release();
   }
 });
 
@@ -850,12 +891,33 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     if (!reason || typeof reason !== 'string' || !reason.trim()) {
       return res.status(400).json({ error: 'void reason is required' });
     }
+    const conn = await pool.getConnection();
     try {
-      await pool.query('UPDATE orders SET status = ?, void_reason = ? WHERE id = ?', ['voided', reason.trim(), id]);
+      await conn.beginTransaction();
+
+      // Fetch order before voiding to reverse loyalty points
+      const [orderRows] = await conn.query(
+        'SELECT customer_id, total, status FROM orders WHERE id = ? FOR UPDATE',
+        [id]
+      );
+      const order = orderRows[0];
+
+      await conn.query('UPDATE orders SET status = ?, void_reason = ? WHERE id = ?', ['voided', reason.trim(), id]);
+
+      // Reverse loyalty points if order was completed
+      if (order && order.status === 'completed' && order.customer_id && order.total > 0) {
+        await reverseLoyaltyPoints(
+          conn,
+          order.customer_id,
+          Number(order.total),
+          id,
+          `Order #${id.slice(0, 8).toUpperCase()} voided: ${reason.trim()}`
+        );
+      }
 
       // Restore inventory — reverse the order's recipe deductions
       try {
-        const [orderItems] = await pool.query(
+        const [orderItems] = await conn.query(
           'SELECT menu_item_id, qty FROM order_items WHERE order_id = ?', [id]
         );
         if (orderItems.length > 0) {
@@ -863,7 +925,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
           for (const oi of orderItems) { itemQtyMap[oi.menu_item_id] = (itemQtyMap[oi.menu_item_id] || 0) + Number(oi.qty); }
           const menuItemIds = Object.keys(itemQtyMap);
 
-          const [recipes] = await pool.query(
+          const [recipes] = await conn.query(
             `SELECT r.menu_item_id, r.inventory_item_id, r.quantity, i.stock, i.location_id
              FROM recipes r JOIN inventory i ON i.id = r.inventory_item_id
              WHERE r.menu_item_id IN (?)`, [menuItemIds]
@@ -875,8 +937,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
             if (restoreQty > 0) {
               const stockBefore = Number(recipe.stock);
               const stockAfter = stockBefore + restoreQty;
-              await pool.query('UPDATE inventory SET stock = ? WHERE id = ?', [stockAfter, recipe.inventory_item_id]);
-              await logInventoryMovement(pool, {
+              await conn.query('UPDATE inventory SET stock = ? WHERE id = ?', [stockAfter, recipe.inventory_item_id]);
+              await logInventoryMovement(conn, {
                 inventory_item_id: recipe.inventory_item_id,
                 location_id: recipe.location_id,
                 movement_type: 'void',
@@ -893,6 +955,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       } catch (e) {
         console.error('Inventory restore on void failed (order still voided):', e);
       }
+
+      await conn.commit();
 
       if (broadcastEvent) {
         broadcastEvent('order:voided', { id, reason: reason.trim() });
@@ -913,7 +977,11 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       await logAudit(pool, req, { action: 'order_void', entityType: 'order', entityId: id, details: { reason: reason.trim() } });
       res.json({ ok: true });
     } catch (e) {
+      try { await conn.rollback(); } catch (_) {}
+      console.error('[order void]', e);
       res.status(500).json({ error: 'DB error' });
+    } finally {
+      conn.release();
     }
   });
 
@@ -924,8 +992,31 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     if (!reason || typeof reason !== 'string' || !reason.trim()) {
       return res.status(400).json({ error: 'refund reason is required' });
     }
+    const conn = await pool.getConnection();
     try {
-      await pool.query('UPDATE orders SET status = ?, refund_reason = ? WHERE id = ?', ['refunded', reason.trim(), id]);
+      await conn.beginTransaction();
+
+      // Fetch order before refunding to reverse loyalty points
+      const [orderRows] = await conn.query(
+        'SELECT customer_id, total, status FROM orders WHERE id = ? FOR UPDATE',
+        [id]
+      );
+      const order = orderRows[0];
+
+      await conn.query('UPDATE orders SET status = ?, refund_reason = ? WHERE id = ?', ['refunded', reason.trim(), id]);
+
+      // Reverse loyalty points if order was completed
+      if (order && order.status === 'completed' && order.customer_id && order.total > 0) {
+        await reverseLoyaltyPoints(
+          conn,
+          order.customer_id,
+          Number(order.total),
+          id,
+          `Order #${id.slice(0, 8).toUpperCase()} refunded: ${reason.trim()}`
+        );
+      }
+
+      await conn.commit();
       if (broadcastEvent) {
         broadcastEvent('order:updated', { id, status: 'refunded' });
       }
@@ -945,7 +1036,11 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       await logAudit(pool, req, { action: 'order_refund', entityType: 'order', entityId: id, details: { reason: reason.trim() } });
       res.json({ ok: true });
     } catch (e) {
+      try { await conn.rollback(); } catch (_) {}
+      console.error('[order refund]', e);
       res.status(500).json({ error: 'DB error' });
+    } finally {
+      conn.release();
     }
   });
 

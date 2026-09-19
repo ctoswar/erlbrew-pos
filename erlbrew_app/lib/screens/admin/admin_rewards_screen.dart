@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../models/app_models.dart';
 import '../../services/pos_api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/fade_slide_in.dart';
@@ -14,6 +13,7 @@ class AdminRewardsScreen extends StatefulWidget {
 class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
   List<Map<String, dynamic>> _rewards = [];
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -22,15 +22,26 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
   }
 
   Future<void> _loadRewards() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final rewards = await PosApiService.instance.getAllRewards();
       if (mounted) setState(() {
         _rewards = rewards;
         _loading = false;
       });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } on PosApiServiceException catch (e) {
+      if (mounted) setState(() {
+        _error = e.message;
+        _loading = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() {
+        _error = 'Unable to load rewards';
+        _loading = false;
+      });
     }
   }
 
@@ -206,12 +217,28 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _rewards.isEmpty
+          : _error != null
               ? Center(
-                  child: Text('No rewards yet — add one',
-                      style: TextStyle(color: AppColors.slateGrey)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Error: $_error',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppColors.error)),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: _loadRewards,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
                 )
-              : ListView.builder(
+              : _rewards.isEmpty
+                  ? Center(
+                      child: Text('No rewards yet — add one',
+                          style: TextStyle(color: AppColors.slateGrey)),
+                    )
+                  : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
                   itemCount: _rewards.length,
                   itemBuilder: (context, i) {

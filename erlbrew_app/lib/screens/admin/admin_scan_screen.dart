@@ -2,9 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:firebase_core/firebase_core.dart';
 import '../../models/app_models.dart';
-import '../../services/firebase_auth_service.dart';
+import '../../services/pos_api_service.dart';
 import '../../theme/app_theme.dart';
 
 class AdminScanScreen extends StatefulWidget {
@@ -21,10 +20,9 @@ class AdminScanScreen extends StatefulWidget {
 
 class _AdminScanScreenState extends State<AdminScanScreen>
     with SingleTickerProviderStateMixin {
-  final MobileScannerController _controller =
-      MobileScannerController(
-        autoStart: false,
-      );
+  final MobileScannerController _controller = MobileScannerController(
+    autoStart: false,
+  );
   bool _handling = false;
   bool _cameraErrorNotified = false;
   bool _cameraReadyNotified = false;
@@ -87,7 +85,10 @@ class _AdminScanScreenState extends State<AdminScanScreen>
         : null;
     if (raw == null) return;
 
-    AppUser? customer;
+    _handleScannedCode(raw);
+  }
+
+  Future<void> _handleScannedCode(String raw) async {
     try {
       final data = jsonDecode(raw) as Map<String, dynamic>;
       if (data['type'] != 'erlbrew_customer') {
@@ -100,29 +101,30 @@ class _AdminScanScreenState extends State<AdminScanScreen>
         return;
       }
 
-      final name = data['name']?.toString().trim();
-      final existingCustomer = MockData.customers.where((c) => c.id == id);
-      customer = existingCustomer.isNotEmpty
-          ? existingCustomer.first
-          : AppUser(
-              id: id,
-              name: name == null || name.isEmpty ? 'Erlbrew Customer' : name,
-              email: 'customer@erlbrew.cafe',
-            );
-      if (existingCustomer.isEmpty) {
-        MockData.customers.add(customer);
+      setState(() => _handling = true);
+      _controller.stop();
+
+      // Look up customer from POS backend
+      final customer = await PosApiService.instance.getCustomerById(id);
+      if (!mounted) return;
+
+      if (customer == null) {
+        setState(() => _handling = false);
+        _showError('Customer not found. Ask them to register in the app first.');
+        _startCamera();
+        return;
       }
+
+      _openAwardSheet(customer);
     } on FormatException {
       _showError('Couldn\'t read that QR code. Please show the Erlbrew QR code.');
-      return;
     } on TypeError {
       _showError('This QR code has an invalid Erlbrew format');
-      return;
+    } catch (e) {
+      _showError('Error looking up customer: ${e.toString()}');
+      setState(() => _handling = false);
+      _startCamera();
     }
-
-    setState(() => _handling = true);
-    _controller.stop();
-    _openAwardSheet(customer);
   }
 
   void _showError(String message) {
@@ -353,8 +355,6 @@ class _CameraErrorView extends StatelessWidget {
   }
 }
 
-/// One gold corner bracket of the scanner viewfinder — four of these
-/// combine to frame the square instead of a plain box border.
 class _ScannerCorner extends StatelessWidget {
   final Alignment alignment;
   const _ScannerCorner({required this.alignment});
@@ -398,8 +398,6 @@ class _ScannerCorner extends StatelessWidget {
   }
 }
 
-/// Bottom sheet shown once a valid customer QR has been scanned, letting
-/// the barista award points with one tap.
 class _AwardSheet extends StatefulWidget {
   final AppUser customer;
   const _AwardSheet({required this.customer});
@@ -418,13 +416,14 @@ class _AwardSheetState extends State<_AwardSheet> {
   Future<void> _apply() async {
     setState(() => _saving = true);
     try {
-      final newBalance = await FirebaseAuthService.instance.awardPoints(
-        customerId: widget.customer.id,
-        points: _pointsToAdd,
+      final updated = await PosApiService.instance.adjustCustomerPoints(
+        customerId: int.parse(widget.customer.id),
+        delta: _pointsToAdd,
+        reason: 'Awarded via admin QR scan',
       );
       if (!mounted) return;
       setState(() {
-        widget.customer.points = newBalance;
+        widget.customer.points = updated.points;
         _applied = true;
         _saving = false;
       });
@@ -435,15 +434,13 @@ class _AwardSheetState extends State<_AwardSheet> {
           ),
         ),
       );
-    } on FirebaseException catch (error) {
+    } on PosApiServiceException catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.message ?? 'Unable to save points.'),
-        ),
+        SnackBar(content: Text(error.message)),
       );
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(

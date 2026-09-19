@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_models.dart';
-import '../services/firebase_auth_service.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
@@ -63,12 +61,12 @@ class _ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<_ProfileScreen> {
-  final FirebaseAuthService _authService = FirebaseAuthService.instance;
   AppUser? _user;
   String _tier = 'bronze';
   int _points = 0;
   List<Map<String, dynamic>> _recentOrders = [];
   bool _loadingOrders = true;
+  String? _error;
 
   @override
   void initState() {
@@ -77,6 +75,10 @@ class _ProfileScreenState extends State<_ProfileScreen> {
   }
 
   Future<void> _refreshProfile() async {
+    setState(() {
+      _error = null;
+      _loadingOrders = true;
+    });
     try {
       final user = await PosApiService.instance.getProfile();
       final pointsData = await PosApiService.instance.getPoints();
@@ -87,12 +89,15 @@ class _ProfileScreenState extends State<_ProfileScreen> {
         _points = pointsData['points'] ?? 0;
         _recentOrders = orders;
         _loadingOrders = false;
-        MockData.currentUser = user;
       });
-    } catch (_) {
+    } on PosApiServiceException catch (e) {
       if (mounted) setState(() {
-        _user = MockData.currentUser;
-        _points = MockData.currentUser?.points ?? 0;
+        _error = e.message;
+        _loadingOrders = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() {
+        _error = 'Unable to load profile';
         _loadingOrders = false;
       });
     }
@@ -152,24 +157,21 @@ class _ProfileScreenState extends State<_ProfileScreen> {
     if (!mounted || updatedName == null || updatedName.isEmpty) return;
 
     try {
-      await _authService.updateDisplayName(updatedName);
+      final updated = await PosApiService.instance.updateProfile(name: updatedName);
       if (!mounted) return;
-      setState(() {
-        MockData.currentUser = AppUser(
-          id: user.id,
-          name: updatedName,
-          email: user.email,
-          points: user.points,
-          isAdmin: user.isAdmin,
-        );
-      });
+      setState(() => _user = updated);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Name updated successfully.')),
       );
-    } on FirebaseAuthException catch (error) {
+    } on PosApiServiceException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message ?? 'Unable to update your name.')),
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to update your name.')),
       );
     }
   }
@@ -227,30 +229,12 @@ class _ProfileScreenState extends State<_ProfileScreen> {
                     title: const Text('Reset password'),
                     subtitle: const Text('Send a secure reset link to your email'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () async {
-                      final email = user.email.trim();
-                      if (email.isEmpty) return;
-                      try {
-                        await FirebaseAuth.instance
-                            .sendPasswordResetEmail(email: email);
-                      } on FirebaseAuthException catch (error) {
-                        if (!sheetContext.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              error.message ??
-                                  'Unable to send the reset email.',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-                      if (!sheetContext.mounted) return;
+                    onTap: () {
                       Navigator.of(sheetContext).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
-                            'Password reset email sent. Check your inbox.',
+                            'Please visit the café and ask a staff member to reset your password.',
                           ),
                         ),
                       );
@@ -267,7 +251,28 @@ class _ProfileScreenState extends State<_ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = _user ?? MockData.currentUser!;
+    final user = _user;
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Profile')),
+        body: Center(
+          child: _error != null
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _refreshProfile,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                )
+              : const CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
       body: RefreshIndicator(
@@ -400,7 +405,7 @@ class _ProfileScreenState extends State<_ProfileScreen> {
             OutlinedButton.icon(
               onPressed: () async {
                 await PosApiService.instance.logout();
-                MockData.currentUser = null;
+                if (!mounted) return;
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (route) => false,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../models/app_models.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_counter.dart';
@@ -17,13 +18,14 @@ class RewardsScreen extends StatefulWidget {
 class _RewardsScreenState extends State<RewardsScreen> {
   List<Map<String, dynamic>> _rewards = [];
   bool _loadingRewards = true;
+  String? _error;
   int _points = 0;
   String _tier = 'bronze';
   String _customerName = 'Guest';
   List<Map<String, dynamic>> _pointsHistory = [];
   bool _loadingHistory = false;
   List<Map<String, dynamic>> _redemptions = [];
-  bool _loadingRedemptions = false;
+  bool _redeeming = false;
 
   @override
   void initState() {
@@ -32,6 +34,10 @@ class _RewardsScreenState extends State<RewardsScreen> {
   }
 
   Future<void> _loadData() async {
+    setState(() {
+      _loadingRewards = true;
+      _error = null;
+    });
     try {
       final futures = await Future.wait([
         PosApiService.instance.getPoints(),
@@ -40,7 +46,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
       ]);
       final pointsData = futures[0] as Map<String, dynamic>;
       final rewardsData = futures[1] as List<Map<String, dynamic>>;
-      final profile = futures[2];
+      final profile = futures[2] as AppUser;
 
       if (mounted) setState(() {
         _points = pointsData['points'] ?? 0;
@@ -51,8 +57,14 @@ class _RewardsScreenState extends State<RewardsScreen> {
       });
       _loadPointsHistory();
       _loadRedemptions();
+    } on PosApiServiceException catch (e) {
+      if (mounted) setState(() {
+        _error = e.message;
+        _loadingRewards = false;
+      });
     } catch (_) {
       if (mounted) setState(() {
+        _error = 'Unable to load rewards';
         _loadingRewards = false;
       });
     }
@@ -66,21 +78,22 @@ class _RewardsScreenState extends State<RewardsScreen> {
         _pointsHistory = List<Map<String, dynamic>>.from(data['history'] ?? []);
         _loadingHistory = false;
       });
+    } on PosApiServiceException catch (e) {
+      if (mounted) setState(() {
+        _error = e.message;
+        _loadingHistory = false;
+      });
     } catch (_) {
       if (mounted) setState(() => _loadingHistory = false);
     }
   }
 
   Future<void> _loadRedemptions() async {
-    setState(() => _loadingRedemptions = true);
     try {
       final data = await PosApiService.instance.getRedemptions();
-      if (mounted) setState(() {
-        _redemptions = data;
-        _loadingRedemptions = false;
-      });
+      if (mounted) setState(() => _redemptions = data);
     } catch (_) {
-      if (mounted) setState(() => _loadingRedemptions = false);
+      // Redemption history is non-critical; leave empty on error.
     }
   }
 
@@ -122,7 +135,6 @@ class _RewardsScreenState extends State<RewardsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            // Points balance card
             FadeSlideIn(
               child: Container(
                 width: double.infinity,
@@ -192,6 +204,38 @@ class _RewardsScreenState extends State<RewardsScreen> {
             ),
             const SizedBox(height: 14),
 
+            if (_error != null && !_loadingRewards) ...[
+              FadeSlideIn(
+                delay: const Duration(milliseconds: 70),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.error.withOpacity(0.25)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: TextStyle(color: AppColors.error, fontSize: 13),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _loadData,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+
             FadeSlideIn(
               delay: const Duration(milliseconds: 90),
               child: SizedBox(
@@ -201,7 +245,6 @@ class _RewardsScreenState extends State<RewardsScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Points History
             FadeSlideIn(
               delay: const Duration(milliseconds: 160),
               child: Text('Points History', style: Theme.of(context).textTheme.titleLarge),
@@ -260,127 +303,128 @@ class _RewardsScreenState extends State<RewardsScreen> {
                     ),
                   ),
                 );
-              })),
-          const SizedBox(height: 24),
-
-          // Redeem Points
-          FadeSlideIn(
-            delay: const Duration(milliseconds: 250),
-            child: Text('Redeem Points', style: Theme.of(context).textTheme.titleLarge),
-          ),
-          const SizedBox(height: 12),
-          if (_loadingRewards)
-            const Center(child: CircularProgressIndicator())
-          else if (_rewards.isEmpty)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Center(child: Text('No rewards available yet', style: TextStyle(color: AppColors.slateGrey))),
-              ),
-            )
-          else
-            ..._rewards.asMap().entries.map((entry) {
-              final index = entry.key;
-              final item = entry.value;
-              final pointsCost = item['points_cost'] ?? 0;
-              final affordable = _points >= pointsCost;
-              return FadeSlideIn(
-                delay: Duration(milliseconds: 300 + index * 70),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 46, height: 46,
-                            decoration: BoxDecoration(color: AppColors.latte, borderRadius: BorderRadius.circular(14)),
-                            alignment: Alignment.center,
-                            child: Text(item['emoji'] ?? '🎁', style: const TextStyle(fontSize: 20)),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(item['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700)),
-                                const SizedBox(height: 2),
-                                Text(item['description'] ?? '', style: TextStyle(color: AppColors.slateGrey, fontSize: 12.5)),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          AnimatedOpacity(
-                            opacity: affordable ? 1 : 0.45,
-                            duration: const Duration(milliseconds: 200),
-                            child: FilledButton(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: affordable ? AppColors.espresso : AppColors.slateGrey,
-                                foregroundColor: AppColors.goldLight,
-                                minimumSize: const Size(0, 36),
-                                padding: const EdgeInsets.symmetric(horizontal: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                              onPressed: () => _redeem(item),
-                              child: Text('$pointsCost pts', style: GoogleFonts.quicksand(fontWeight: FontWeight.w700, fontSize: 12.5)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-
-          // Redemption History
-          if (_redemptions.isNotEmpty) ...[
+              }).toList()),
             const SizedBox(height: 24),
+
             FadeSlideIn(
-              delay: const Duration(milliseconds: 350),
-              child: Text('Redemption History', style: Theme.of(context).textTheme.titleLarge),
+              delay: const Duration(milliseconds: 250),
+              child: Text('Redeem Points', style: Theme.of(context).textTheme.titleLarge),
             ),
             const SizedBox(height: 12),
-            ..._redemptions.asMap().entries.map((entry) {
-              final index = entry.key;
-              final item = entry.value;
-              final createdAt = item['created_at'];
-              String dateStr = '';
-              if (createdAt != null) {
-                try {
-                  final dt = DateTime.parse(createdAt.toString());
-                  dateStr = '${dt.month}/${dt.day} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
-                } catch (_) {
-                  dateStr = createdAt.toString().substring(0, 16);
-                }
-              }
-              return FadeSlideIn(
-                delay: Duration(milliseconds: 400 + index * 50),
+            if (_loadingRewards)
+              const Center(child: CircularProgressIndicator())
+            else if (_rewards.isEmpty)
+              Card(
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Card(
-                    child: ListTile(
-                      leading: Container(
-                        width: 40, height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.gold.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(10),
+                  padding: const EdgeInsets.all(16),
+                  child: Center(child: Text('No rewards available yet', style: TextStyle(color: AppColors.slateGrey))),
+                ),
+              )
+            else
+              ...(_rewards.asMap().entries.map((entry) {
+                final index = entry.key;
+                final item = entry.value;
+                final pointsCost = item['points_cost'] ?? 0;
+                final affordable = _points >= pointsCost;
+                return FadeSlideIn(
+                  delay: Duration(milliseconds: 300 + index * 70),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 46, height: 46,
+                              decoration: BoxDecoration(color: AppColors.latte, borderRadius: BorderRadius.circular(14)),
+                              alignment: Alignment.center,
+                              child: Text(item['emoji'] ?? '🎁', style: const TextStyle(fontSize: 20)),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(item['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 2),
+                                  Text(item['description'] ?? '', style: TextStyle(color: AppColors.slateGrey, fontSize: 12.5)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            AnimatedOpacity(
+                              opacity: affordable && !_redeeming ? 1 : 0.45,
+                              duration: const Duration(milliseconds: 200),
+                              child: FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: affordable ? AppColors.espresso : AppColors.slateGrey,
+                                  foregroundColor: AppColors.goldLight,
+                                  minimumSize: const Size(0, 36),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                onPressed: affordable && !_redeeming ? () => _redeem(item) : null,
+                                child: _redeeming
+                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : Text('$pointsCost pts', style: GoogleFonts.quicksand(fontWeight: FontWeight.w700, fontSize: 12.5)),
+                              ),
+                            ),
+                          ],
                         ),
-                        alignment: Alignment.center,
-                        child: Text(item['emoji'] ?? '🎁', style: const TextStyle(fontSize: 18)),
                       ),
-                      title: Text(item['title'] ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                      subtitle: Text(dateStr, style: TextStyle(fontSize: 11, color: AppColors.slateGrey)),
-                      trailing: Text('-${item['points_spent'] ?? 0} pts', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.error)),
                     ),
                   ),
-                ),
-              );
-            }),
+                );
+              }).toList()),
+
+            if (_redemptions.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              FadeSlideIn(
+                delay: const Duration(milliseconds: 350),
+                child: Text('Redemption History', style: Theme.of(context).textTheme.titleLarge),
+              ),
+              const SizedBox(height: 12),
+              ...(_redemptions.asMap().entries.map((entry) {
+                final index = entry.key;
+                final item = entry.value;
+                final createdAt = item['created_at'];
+                String dateStr = '';
+                if (createdAt != null) {
+                  try {
+                    final dt = DateTime.parse(createdAt.toString());
+                    dateStr = '${dt.month}/${dt.day} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+                  } catch (_) {
+                    dateStr = createdAt.toString().substring(0, 16);
+                  }
+                }
+                return FadeSlideIn(
+                  delay: Duration(milliseconds: 400 + index * 50),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Card(
+                      child: ListTile(
+                        leading: Container(
+                          width: 40, height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(item['emoji'] ?? '🎁', style: const TextStyle(fontSize: 18)),
+                        ),
+                        title: Text(item['title'] ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        subtitle: Text(dateStr, style: TextStyle(fontSize: 11, color: AppColors.slateGrey)),
+                        trailing: Text('-${item['points_spent'] ?? 0} pts', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.error)),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList()),
+            ],
+            const SizedBox(height: 40),
           ],
-          const SizedBox(height: 40),
-        ],
+        ),
       ),
     );
   }
@@ -391,6 +435,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
   }
 
   void _redeem(Map<String, dynamic> reward) async {
+    if (_redeeming) return;
     final rewardId = reward['id'];
     final rewardTitle = reward['title'] ?? '';
     final pointsCost = reward['points_cost'] ?? 0;
@@ -402,7 +447,6 @@ class _RewardsScreenState extends State<RewardsScreen> {
       return;
     }
 
-    // Confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -421,6 +465,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
 
     if (confirmed != true) return;
 
+    setState(() => _redeeming = true);
     try {
       final result = await PosApiService.instance.redeemReward(rewardId);
       if (mounted) {
@@ -431,7 +476,6 @@ class _RewardsScreenState extends State<RewardsScreen> {
         _loadPointsHistory();
         _loadRedemptions();
 
-        // Success dialog
         if (mounted) {
           showDialog(
             context: context,
@@ -452,12 +496,20 @@ class _RewardsScreenState extends State<RewardsScreen> {
           );
         }
       }
+    } on PosApiServiceException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Redemption failed: ${e.message}')),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Redemption failed: $e')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _redeeming = false);
     }
   }
 }

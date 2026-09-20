@@ -15,7 +15,7 @@ Erlbrew POS is a point-of-sale system that handles payment processing, staff aut
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Instead, email **ctoswar@gmail.com** with:
+Instead, email **delacruz.duncan@gmail.com** with:
 
 - A description of the vulnerability
 - Steps to reproduce (proof of concept)

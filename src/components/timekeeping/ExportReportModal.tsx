@@ -59,7 +59,7 @@ const ExportReportModal: React.FC<Props> = ({
     <>
       <div className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay" onClick={onClose} />
       <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-        <div className="animate-scale-in bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl w-full max-w-[420px] overflow-hidden">
+        <div className="animate-scale-in bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl w-full max-w-[420px]">
           {/* Header */}
           <div className="px-6 pt-5 pb-4 border-b border-erl-border-subtle flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-erl-accent/10 flex items-center justify-center flex-shrink-0">

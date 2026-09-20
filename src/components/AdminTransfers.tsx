@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { InventoryTransfer, Location, InventoryItem, TransferStatus } from "../types";
 import { apiGet, apiPost, apiAdminPut } from "../utils/api";
+import { AnimatedSelect } from "./AnimatedSelect";
 
 const STATUS_COLORS: Record<TransferStatus, string> = {
   pending: "bg-yellow-900/30 text-yellow-400",
@@ -81,15 +82,19 @@ export const AdminTransfers: React.FC = () => {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="text-[9px] text-erl-accent tracking-widest uppercase font-bold">Inventory Transfers</div>
           <div className="flex gap-2 items-center">
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-              className="bg-erl-base border border-erl-border-default rounded-md text-erl-text-primary px-2 py-1 text-[10px]">
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="in_transit">In Transit</option>
-              <option value="received">Received</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+            <AnimatedSelect
+              options={[
+                { value: "", label: "All Status" },
+                { value: "pending", label: "Pending" },
+                { value: "approved", label: "Approved" },
+                { value: "in_transit", label: "In Transit" },
+                { value: "received", label: "Received" },
+                { value: "cancelled", label: "Cancelled" },
+              ]}
+              value={filterStatus}
+              onChange={setFilterStatus}
+              className="min-w-[120px]"
+            />
             <button onClick={() => { setShowForm(!showForm); setError(null); }}
               className="px-3 py-1 bg-erl-accent text-erl-base text-[9px] font-bold rounded-md">
               {showForm ? "Cancel" : "+ New Transfer"}
@@ -103,21 +108,30 @@ export const AdminTransfers: React.FC = () => {
       {showForm && (
         <div className="px-4 py-3 border-b border-erl-border-default bg-erl-base/50">
           <div className="grid grid-cols-2 gap-2">
-            <select value={form.from_location_id || ""} onChange={(e) => setForm({ ...form, from_location_id: Number(e.target.value), to_location_id: form.to_location_id === Number(e.target.value) ? 0 : form.to_location_id })}
-              className="bg-erl-base border border-erl-border-default rounded-md text-erl-text-primary px-2.5 py-1.5 text-[11px]">
-              <option value="">From Location *</option>
-              {locations.filter((l) => l.is_active).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
-            <select value={form.to_location_id || ""} onChange={(e) => setForm({ ...form, to_location_id: Number(e.target.value) })}
-              className="bg-erl-base border border-erl-border-default rounded-md text-erl-text-primary px-2.5 py-1.5 text-[11px]">
-              <option value="">To Location *</option>
-              {locations.filter((l) => l.is_active && l.id !== form.from_location_id).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
-            <select value={form.inventory_item_id} onChange={(e) => setForm({ ...form, inventory_item_id: e.target.value })}
-              className="bg-erl-base border border-erl-border-default rounded-md text-erl-text-primary px-2.5 py-1.5 text-[11px]">
-              <option value="">Item *</option>
-              {sourceItems.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.stock} {i.unit})</option>)}
-            </select>
+            <AnimatedSelect
+              options={[
+                { value: "", label: "From Location *" },
+                ...locations.filter((l) => l.is_active).map((l) => ({ value: String(l.id), label: l.name })),
+              ]}
+              value={form.from_location_id ? String(form.from_location_id) : ""}
+              onChange={(val) => setForm({ ...form, from_location_id: Number(val), to_location_id: form.to_location_id === Number(val) ? 0 : form.to_location_id })}
+            />
+            <AnimatedSelect
+              options={[
+                { value: "", label: "To Location *" },
+                ...locations.filter((l) => l.is_active && l.id !== form.from_location_id).map((l) => ({ value: String(l.id), label: l.name })),
+              ]}
+              value={form.to_location_id ? String(form.to_location_id) : ""}
+              onChange={(val) => setForm({ ...form, to_location_id: Number(val) })}
+            />
+            <AnimatedSelect
+              options={[
+                { value: "", label: "Item *" },
+                ...sourceItems.map((i) => ({ value: i.id, label: `${i.name} (${i.stock} ${i.unit})` })),
+              ]}
+              value={form.inventory_item_id}
+              onChange={(val) => setForm({ ...form, inventory_item_id: val })}
+            />
             <input type="number" placeholder="Quantity *" min="0.01" step="0.01" value={form.quantity || ""}
               onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
               className="bg-erl-base border border-erl-border-default rounded-md text-erl-text-primary px-2.5 py-1.5 text-[11px]" />

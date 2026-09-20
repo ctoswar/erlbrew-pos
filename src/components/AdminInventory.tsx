@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { InventoryItem, InventoryMovement, MovementType } from "../types";
 import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete } from "../utils/api";
 import { cacheInventoryItems, getCachedInventoryItems } from "../utils/offlineDb";
+import { AnimatedSelect } from "./AnimatedSelect";
 
 const CATEGORIES = ["Cups", "Lids", "Supplies", "Milk", "Coffee", "Syrups", "Powders", "Tea", "Other"];
 const UNITS = ["pcs", "kg", "g", "L", "ml", "boxes", "packs"];
@@ -615,14 +616,18 @@ export const AdminInventory: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormSection label="Category">
-                      <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="w-full text-erl-text-primary">
-                        {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                      </select>
+                      <AnimatedSelect
+                        options={CATEGORIES.map((c) => ({ value: c, label: c }))}
+                        value={form.category}
+                        onChange={(val) => setForm((f) => ({ ...f, category: val }))}
+                      />
                     </FormSection>
                     <FormSection label="Unit">
-                      <select value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} className="w-full text-erl-text-primary">
-                        {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-                      </select>
+                      <AnimatedSelect
+                        options={UNITS.map((u) => ({ value: u, label: u }))}
+                        value={form.unit}
+                        onChange={(val) => setForm((f) => ({ ...f, unit: val }))}
+                      />
                     </FormSection>
                   </div>
 

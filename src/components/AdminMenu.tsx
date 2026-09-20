@@ -5,6 +5,7 @@ import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete, uploadMenuItemI
 import { IngredientEditor } from "./IngredientEditor";
 import { ModifierEditor } from "./ModifierEditor";
 import { ApplyModifierModal } from "./ApplyModifierModal";
+import { AnimatedSelect } from "./AnimatedSelect";
 
 const EMPTY_FORM = {
   id: "",
@@ -352,22 +353,23 @@ export const AdminMenu: React.FC = () => {
                           </button>
                         </div>
                       ) : (
-                        <select
+                        <AnimatedSelect
+                          options={[
+                            { value: "", label: "Select category…" },
+                            ...dbCategories.map((c) => ({ value: c, label: c })),
+                            { value: "__new__", label: "＋ New category…" },
+                          ]}
                           value={dbCategories.includes(form.category) ? form.category : ""}
-                          onChange={(e) => {
-                            if (e.target.value === "__new__") {
+                          onChange={(val) => {
+                            if (val === "__new__") {
                               setCustomCategory(true);
                               setField("category", "");
                             } else {
-                              setField("category", e.target.value);
+                              setField("category", val);
                             }
                           }}
-                          className="w-full text-erl-text-primary cursor-pointer"
-                        >
-                          <option value="" disabled>Select category…</option>
-                          {dbCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-                          <option value="__new__">＋ New category…</option>
-                        </select>
+                          placeholder="Select category…"
+                        />
                       )}
                     </FormSection>
                     <FormSection label="Price (₱)">

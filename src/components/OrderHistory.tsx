@@ -4,6 +4,7 @@ import { formatCurrency, formatTime, toLocalDateStr } from "../utils";
 import { apiGet } from "../utils/api";
 import { serverOrderToOrder } from "../hooks/useOrders";
 import { ReceiptPreview } from "./ReceiptPreview";
+import { AnimatedSelect } from "./AnimatedSelect";
 import { useViewport } from "../hooks/useViewport";
 
 interface HistoryResponse {
@@ -78,15 +79,18 @@ export const OrderHistory: React.FC = () => {
           </div>
           <div className="flex flex-col gap-[3px]">
             <label className="text-[8px] text-erl-text-faint tracking-wide uppercase">Status</label>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-erl-base border border-erl-border-default rounded-md text-erl-text-primary px-2.5 py-1.5 text-[11px]">
-              <option value="">All</option>
-              <option value="preparing">Preparing</option>
-              <option value="ready">Ready</option>
-              <option value="completed">Completed</option>
-              <option value="voided">Voided</option>
-              <option value="refunded">Refunded</option>
-            </select>
+            <AnimatedSelect
+              options={[
+                { value: "", label: "All" },
+                { value: "preparing", label: "Preparing" },
+                { value: "ready", label: "Ready" },
+                { value: "completed", label: "Completed" },
+                { value: "voided", label: "Voided" },
+                { value: "refunded", label: "Refunded" },
+              ]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+            />
           </div>
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Search order ID or staff…"

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { apiAdminGet, apiAdminPut, apiAdminDelete, createStaff, CreateStaffData } from "../utils/api";
 import { formatCurrency } from "../utils";
+import { AnimatedSelect } from "./AnimatedSelect";
 
 interface StaffMember {
   id: number;
@@ -311,16 +312,16 @@ export const AdminStaff: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <label className="text-xs text-erl-text-muted mb-1.5 block tracking-wide font-medium">Role</label>
-                    <select
+                    <AnimatedSelect
+                      options={[
+                        { value: "Barista", label: "Barista" },
+                        { value: "Senior Barista", label: "Senior Barista" },
+                        { value: "Shift Supervisor", label: "Shift Supervisor" },
+                        { value: "Manager", label: "Manager" },
+                      ]}
                       value={addForm.role}
-                      onChange={(e) => setAddForm(f => ({ ...f, role: e.target.value }))}
-                      className="w-full bg-erl-base border border-erl-border-medium rounded-xl text-erl-text-primary px-4 py-3 text-sm outline-none transition-all duration-200 focus:border-erl-accent"
-                    >
-                      <option>Barista</option>
-                      <option>Senior Barista</option>
-                      <option>Shift Supervisor</option>
-                      <option>Manager</option>
-                    </select>
+                      onChange={(val) => setAddForm(f => ({ ...f, role: val }))}
+                    />
                   </div>
                 </div>
 

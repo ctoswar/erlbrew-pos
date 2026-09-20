@@ -1,6 +1,7 @@
 import React from "react";
 import { CartItem, OrderType, Discount } from "../types";
 import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
+import { getIconByEmoji } from "./FoodIcons";
 
 interface Props {
   cart: CartItem[];
@@ -64,7 +65,7 @@ export const CheckoutScreen: React.FC<Props> = ({
               >
                 <div className="flex-1 pr-3">
                   <div className="flex items-center gap-2.5">
-                    <span className="text-lg">{ci.item.emoji}</span>
+                    <span className="w-5 h-5 flex items-center justify-center text-erl-text-secondary">{getIconByEmoji(ci.item.emoji)}</span>
                     <div className="text-sm text-erl-text-primary font-semibold">
                       {ci.qty}× {ci.item.name}
                     </div>

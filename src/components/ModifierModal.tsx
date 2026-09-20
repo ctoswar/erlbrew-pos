@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { MenuItem, Modifier, CartItemModifier } from "../types";
 import { formatCurrency } from "../utils";
+import { getIconByEmoji } from "./FoodIcons";
 
 interface Props {
   item: MenuItem;
@@ -56,7 +57,7 @@ export const ModifierModal: React.FC<Props> = ({ item, onAdd, onClose }) => {
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="font-display text-base font-bold text-erl-text-primary">
-                {item.emoji} {item.name}
+                <span className="w-4 h-4 flex items-center justify-center">{getIconByEmoji(item.emoji)}</span> {item.name}
               </div>
               <div className="text-[11px] text-erl-accent mt-0.5 font-semibold">
                 {formatCurrency(item.price)} base

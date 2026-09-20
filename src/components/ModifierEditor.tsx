@@ -3,6 +3,7 @@ import { MenuItem } from "../types";
 import { formatCurrency } from "../utils";
 import { getModifiers, createModifier, updateModifier, deleteModifier, Modifier } from "../utils/api";
 import { ApplyModifierModal } from "./ApplyModifierModal";
+import { getIconByEmoji } from "./FoodIcons";
 
 interface Props {
   item: MenuItem;
@@ -129,7 +130,7 @@ export const ModifierEditor: React.FC<Props> = ({ item, allMenuItems = [], onClo
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="font-display text-[15px] font-bold text-erl-text-primary">
-                {item.emoji} {item.name} — Modifiers
+                <span className="w-4 h-4 flex items-center justify-center">{getIconByEmoji(item.emoji)}</span> {item.name} — Modifiers
               </div>
               <div className="text-[10px] text-erl-muted mt-0.5">
                 Add-ons & customizations for this item

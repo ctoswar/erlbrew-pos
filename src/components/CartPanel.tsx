@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { CartItem, OrderType, Discount, CartItemModifier } from "../types";
 import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
+import { getIconByEmoji } from "./FoodIcons";
 
 function cartItemKey(ci: CartItem): string {
   const modKey = (ci.modifiers || []).map((m) => m.name).sort().join("|");
@@ -328,7 +329,7 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
       <div className="flex-1 min-w-0 flex flex-col gap-1">
         {/* Name row */}
         <div className="flex items-baseline gap-2.5">
-          <span className="text-base md:text-lg flex-shrink-0">{item.emoji}</span>
+          <span className="w-5 h-5 flex items-center justify-center flex-shrink-0 text-erl-text-secondary">{getIconByEmoji(item.emoji)}</span>
           <div className="min-w-0 flex-1">
             <div className="text-sm md:text-[13px] font-semibold text-erl-text-primary truncate">
               {item.name}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { formatCurrency, toLocalDateStr } from "../utils";
 import { SupplierInvoice, SupplierInvoiceItem, getSupplierInvoices, getSupplierInvoice, createSupplierInvoice, updateSupplierInvoice, deleteSupplierInvoice } from "../utils/api";
 import { AnimatedSelect } from "./AnimatedSelect";
+import { AnimatedDatePicker } from "./AnimatedDatePicker";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "var(--gold)",
@@ -418,11 +419,11 @@ Erlbrew Café`;
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <div className={labelClass}>Invoice Date *</div>
-                    <input type="date" value={form.invoice_date} onChange={e => setForm(f => ({ ...f, invoice_date: e.target.value }))} className={inputClass} />
+                    <AnimatedDatePicker value={form.invoice_date} onChange={(v) => setForm(f => ({ ...f, invoice_date: v }))} />
                   </div>
                   <div>
                     <div className={labelClass}>Due Date</div>
-                    <input type="date" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} className={inputClass} />
+                    <AnimatedDatePicker value={form.due_date} onChange={(v) => setForm(f => ({ ...f, due_date: v }))} />
                   </div>
                 </div>
 

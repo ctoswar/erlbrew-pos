@@ -7,6 +7,7 @@ import {
   apiAdminDelete,
 } from "../utils/api";
 import { AnimatedSelect } from "./AnimatedSelect";
+import { AnimatedDatePicker } from "./AnimatedDatePicker";
 import type {
   PayrollPeriod,
   PayrollPeriodStatus,
@@ -847,34 +848,30 @@ export const AdminPayroll: React.FC = () => {
                   <div className="text-[9px] text-erl-accent-muted tracking-widest mb-[5px] font-bold uppercase">
                     Date From
                   </div>
-                  <input
-                    type="date"
+                  <AnimatedDatePicker
                     value={periodForm.dateFrom}
-                    onChange={(e) =>
+                    onChange={(v) =>
                       setPeriodForm((p) => ({
                         ...p,
-                        dateFrom: e.target.value,
-                        label: periodLabel(e.target.value, p.dateTo || e.target.value),
+                        dateFrom: v,
+                        label: periodLabel(v, p.dateTo || v),
                       }))
                     }
-                    className="w-full text-erl-text-primary text-[11px]"
                   />
                 </div>
                 <div>
                   <div className="text-[9px] text-erl-accent-muted tracking-widest mb-[5px] font-bold uppercase">
                     Date To
                   </div>
-                  <input
-                    type="date"
+                  <AnimatedDatePicker
                     value={periodForm.dateTo}
-                    onChange={(e) =>
+                    onChange={(v) =>
                       setPeriodForm((p) => ({
                         ...p,
-                        dateTo: e.target.value,
-                        label: periodLabel(p.dateFrom || e.target.value, e.target.value),
+                        dateTo: v,
+                        label: periodLabel(p.dateFrom || v, v),
                       }))
                     }
-                    className="w-full text-erl-text-primary text-[11px]"
                   />
                 </div>
               </div>
@@ -883,11 +880,9 @@ export const AdminPayroll: React.FC = () => {
                 <div className="text-[9px] text-erl-accent-muted tracking-widest mb-[5px] font-bold uppercase">
                   Pay Date
                 </div>
-                <input
-                  type="date"
+                <AnimatedDatePicker
                   value={periodForm.payDate}
-                  onChange={(e) => setPeriodForm((p) => ({ ...p, payDate: e.target.value }))}
-                  className="w-full text-erl-text-primary text-[11px]"
+                  onChange={(v) => setPeriodForm((p) => ({ ...p, payDate: v }))}
                 />
               </div>
 

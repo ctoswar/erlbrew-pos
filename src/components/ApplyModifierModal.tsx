@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { MenuItem } from "../types";
 import { formatCurrency } from "../utils";
 import { batchApplyModifier } from "../utils/api";
+import { getIconByEmoji } from "./FoodIcons";
 
 interface Props {
   /** If provided, pre-fill modifier name/price (used from ModifierEditor) */
@@ -267,7 +268,7 @@ export const ApplyModifierModal: React.FC<Props> = ({
                     `}>
                       {isSelected ? "✓" : ""}
                     </div>
-                    <span className="text-[14px]">{item.emoji}</span>
+                    <span className="w-4 h-4 flex items-center justify-center text-erl-text-secondary">{getIconByEmoji(item.emoji)}</span>
                     <div className="flex-1 min-w-0">
                       <div className="text-[11px] font-semibold text-erl-text-primary truncate">{item.name}</div>
                       <div className="text-[9px] text-erl-text-faint">{item.category}</div>

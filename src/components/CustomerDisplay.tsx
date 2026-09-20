@@ -3,6 +3,7 @@ import { CartItem, OrderType } from "../types";
 import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
 import { useCart } from "../hooks/useCart";
 import { apiGet } from "../utils/api";
+import { getIconByEmoji } from "./FoodIcons";
 
 const CART_KEY = "erlbrew_cart";
 const POLL_INTERVAL = 3000;
@@ -132,8 +133,8 @@ export const CustomerDisplay: React.FC = () => {
               <div className="flex flex-col gap-2 md:gap-3">
                 {items.map((ci) => (
                   <div key={ci.item.id} className="flex items-center gap-3 md:gap-4 bg-white/[0.04] border border-erl-accent/12 rounded-[14px] px-4 md:px-5 py-3 md:py-4">
-                    <div className="w-9 h-9 md:w-11 md:h-11 rounded-[10px] bg-erl-accent/15 flex items-center justify-center text-lg md:text-[22px] flex-shrink-0">
-                      {ci.item.emoji}
+                    <div className="w-9 h-9 md:w-11 md:h-11 rounded-[10px] bg-erl-accent/15 flex items-center justify-center flex-shrink-0">
+                      {getIconByEmoji(ci.item.emoji)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm md:text-base font-semibold text-[#f5e6d0] mb-0.5 truncate">

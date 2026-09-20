@@ -4,6 +4,7 @@ import { formatCurrency } from "../utils";
 import { apiGet } from "../utils/api";
 import { cacheMenuItems, getCachedMenuItems } from "../utils/offlineDb";
 import { ModifierModal } from "./ModifierModal";
+import { getIconByEmoji } from "./FoodIcons";
 
 interface Props {
   cart: CartItem[];
@@ -234,7 +235,7 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd, onOpenModal 
         {/* Top row: emoji + name */}
         {!hasImage && (
           <div className="flex items-start justify-between">
-            <span className="text-[22px] md:text-[26px] leading-none filter drop-shadow-sm">{item.emoji}</span>
+            <span className="w-[22px] h-[22px] md:w-[26px] md:h-[26px] flex items-center justify-center text-erl-text-secondary filter drop-shadow-sm">{getIconByEmoji(item.emoji)}</span>
             {item.popular && (
               <span className="pill pill-accent text-[8px] md:text-[7px]">
                 <span className="w-1.5 h-1.5 rounded-full bg-erl-accent animate-pulse mr-1" />

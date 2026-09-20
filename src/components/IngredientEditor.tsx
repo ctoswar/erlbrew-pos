@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { MenuItem } from "../types";
 import { apiAdminGet, apiAdminPut } from "../utils/api";
+import { getIconByEmoji } from "./FoodIcons";
 
 interface RecipeIngredient {
   id: number;
@@ -124,7 +125,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
         <div className="flex justify-between items-start px-6 py-5 border-b border-erl-border-subtle flex-shrink-0">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5">
-              <span className="text-[24px] leading-none">{menuItem.emoji}</span>
+              <span className="w-6 h-6 flex items-center justify-center text-erl-text-secondary">{getIconByEmoji(menuItem.emoji)}</span>
               <div className="min-w-0">
                 <div className="font-display text-base font-bold text-erl-text-primary truncate">
                   {menuItem.name}

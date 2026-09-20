@@ -70,11 +70,10 @@ const TimeKeepingToday: React.FC<Props> = ({ records, loading, lastTap, tapError
       )}
 
       {/* RFID Scan Box */}
-      <div className="card-glass p-5 text-center relative">
+      <div className="card-glass w-full max-w-[440px] mx-auto px-5 py-6 text-center relative">
         <div className="relative z-10 flex flex-col items-center">
-          <div className="text-2xl mb-2">📲</div>
-          <div className="font-display text-sm text-erl-text-primary font-bold tracking-wide mb-0.5">Scan Your Card</div>
-          <div className="text-[10px] text-erl-text-faint mb-3 tracking-wide">Tap to clock in or out</div>
+          <div className="font-display text-sm text-erl-text-primary font-bold tracking-wide">Scan Your Card</div>
+          <div className="text-[10px] text-erl-text-faint mt-0.5 tracking-wide">Tap to clock in or out</div>
           <RfidInput onScan={onScan} />
         </div>
       </div>

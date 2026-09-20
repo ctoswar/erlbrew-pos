@@ -286,7 +286,7 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
               </div>
 
               {/* Scan line */}
-              <div className="absolute -left-2 -right-2 h-[2px] bg-gradient-to-r from-transparent via-erl-accent to-transparent shadow-[0_0_20px_rgba(196,149,106,0.6),0_0_40px_rgba(196,149,106,0.2)] animate-scan-line rounded-full" />
+              <div className="absolute -left-2 -right-2 top-[10%] h-[2px] bg-gradient-to-r from-transparent via-erl-accent to-transparent shadow-[0_0_20px_rgba(196,149,106,0.6),0_0_40px_rgba(196,149,106,0.2)] animate-scan-line rounded-full" />
 
               {/* Subtle bottom reflection */}
               <div className="absolute -bottom-3 left-[20%] right-[20%] h-6 bg-gradient-to-t from-erl-accent/[0.03] to-transparent rounded-full blur-lg" />

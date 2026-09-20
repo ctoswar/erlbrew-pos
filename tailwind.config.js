@@ -105,10 +105,10 @@ export default {
           '100%': { transform: 'translateY(0)' },
         },
         scanLine: {
-          '0%, 100%': { transform: 'translateY(0)', opacity: '0' },
+          '0%, 100%': { top: '10%', opacity: '0' },
           '10%': { opacity: '1' },
           '90%': { opacity: '1' },
-          '50%': { transform: 'translateY(130px)', opacity: '1' },
+          '50%': { top: '88%', opacity: '1' },
         },
         pulseGlow: {
           '0%, 100%': { opacity: '0.3', boxShadow: '0 0 24px rgba(196,149,106,0.08)' },

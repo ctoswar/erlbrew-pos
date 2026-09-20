@@ -6,6 +6,8 @@
 
 /* ── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
+  color-scheme: dark;
+
   /* Easings */
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
@@ -354,6 +356,8 @@
 /* ── White Theme ─────────────────────────────────────────────────────────── */
 :root[data-theme="white"],
 html[data-theme="white"] {
+  color-scheme: light;
+
   --bg-base:     #faf8f5;
   --bg-surface:  #f5f0ea;
   --bg-elevated: #ede8e0;

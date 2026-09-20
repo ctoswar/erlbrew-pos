@@ -31,6 +31,7 @@ export const AdminMenu: React.FC = () => {
   const [showGlobalBatchApply, setShowGlobalBatchApply] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [customCategory, setCustomCategory] = useState(false);
 
   const loadItems = () => {
     setLoading(true);
@@ -83,6 +84,7 @@ export const AdminMenu: React.FC = () => {
     setEditingId(null);
     setShowForm(true);
     setError("");
+    setCustomCategory(false);
   };
 
   const openEditForm = (item: MenuItem) => {
@@ -99,6 +101,7 @@ export const AdminMenu: React.FC = () => {
     setEditingId(item.id);
     setShowForm(true);
     setError("");
+    setCustomCategory(false);
   };
 
   const closeForm = () => {
@@ -106,6 +109,7 @@ export const AdminMenu: React.FC = () => {
     setEditingId(null);
     setForm({ ...EMPTY_FORM });
     setError("");
+    setCustomCategory(false);
   };
 
   const setField = (field: string, value: any) => {
@@ -329,16 +333,42 @@ export const AdminMenu: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormSection label="Category">
-                      <input
-                        list="category-options"
-                        value={form.category}
-                        onChange={(e) => setField("category", e.target.value)}
-                        placeholder="Select or type new category"
-                        className="w-full text-erl-text-primary"
-                      />
-                      <datalist id="category-options">
-                        {dbCategories.map((c) => <option key={c} value={c} />)}
-                      </datalist>
+                      {customCategory ? (
+                        <div className="flex gap-2">
+                          <input
+                            value={form.category}
+                            onChange={(e) => setField("category", e.target.value)}
+                            placeholder="New category name"
+                            autoFocus
+                            className="flex-1 min-w-0 text-erl-text-primary"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => { setCustomCategory(false); setField("category", ""); }}
+                            title="Back to category list"
+                            className="w-[44px] flex-shrink-0 rounded-xl border border-erl-border-default text-erl-text-muted hover:text-erl-accent hover:border-erl-accent/40 transition-colors flex items-center justify-center"
+                          >
+                            ↩
+                          </button>
+                        </div>
+                      ) : (
+                        <select
+                          value={dbCategories.includes(form.category) ? form.category : ""}
+                          onChange={(e) => {
+                            if (e.target.value === "__new__") {
+                              setCustomCategory(true);
+                              setField("category", "");
+                            } else {
+                              setField("category", e.target.value);
+                            }
+                          }}
+                          className="w-full text-erl-text-primary cursor-pointer"
+                        >
+                          <option value="" disabled>Select category…</option>
+                          {dbCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                          <option value="__new__">＋ New category…</option>
+                        </select>
+                      )}
                     </FormSection>
                     <FormSection label="Price (₱)">
                       <input type="number" value={form.price} onChange={(e) => setField("price", e.target.value)}

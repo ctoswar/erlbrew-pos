@@ -6,6 +6,7 @@ import { IngredientEditor } from "./IngredientEditor";
 import { ModifierEditor } from "./ModifierEditor";
 import { ApplyModifierModal } from "./ApplyModifierModal";
 import { AnimatedSelect } from "./AnimatedSelect";
+import { FOOD_ICONS, getIconByEmoji } from "./FoodIcons";
 
 const EMPTY_FORM = {
   id: "",
@@ -165,8 +166,6 @@ export const AdminMenu: React.FC = () => {
       setError("Failed to delete item");
     }
   };
-
-  const EMOJIS = ["☕", "🍵", "🌼", "🧊", "🫖", "🥐", "🍞", "🧁", "🥧", "🌺", "🍋", "🥤", "💧"];
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden min-h-0">
@@ -392,17 +391,17 @@ export const AdminMenu: React.FC = () => {
 
                   <FormSection label="Emoji">
                     <div className="flex flex-wrap gap-2">
-                      {EMOJIS.map((e) => (
-                        <button key={e} onClick={() => setField("emoji", e)} className={`
-                          w-[40px] h-[40px] rounded-xl text-xl cursor-pointer transition-all duration-150 flex items-center justify-center
-                          ${form.emoji === e
-                            ? "bg-erl-accent/20 border-2 border-erl-accent scale-110"
-                            : "bg-erl-base border border-erl-border-default hover:border-erl-border-medium hover:scale-105"
+                      {FOOD_ICONS.map((f) => (
+                        <button key={f.emoji} onClick={() => setField("emoji", f.emoji)} title={f.label} className={`
+                          w-[44px] h-[44px] rounded-xl cursor-pointer transition-all duration-150 flex items-center justify-center
+                          ${form.emoji === f.emoji
+                            ? "bg-erl-accent/20 border-2 border-erl-accent scale-110 text-erl-accent"
+                            : "bg-erl-base border border-erl-border-default text-erl-text-secondary hover:border-erl-border-medium hover:scale-105 hover:text-erl-text-primary"
                           }
-                        `}>{e}</button>
+                        `}>{f.icon}</button>
                       ))}
                       <input value={form.emoji} onChange={(e) => setField("emoji", e.target.value)} placeholder="🙂"
-                        className="w-[40px] h-[40px] rounded-xl bg-erl-base border border-erl-border-default text-erl-text-primary text-lg text-center box-border" />
+                        className="w-[44px] h-[44px] rounded-xl bg-erl-base border border-erl-border-default text-erl-text-primary text-lg text-center box-border" />
                     </div>
                   </FormSection>
 
@@ -487,7 +486,7 @@ const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, o
       <div className="px-4 pt-3.5 pb-3 flex flex-col gap-2">
         {/* Emoji + badges row */}
         <div className="flex justify-between items-start">
-          <span className="text-[28px] leading-none">{item.emoji}</span>
+          <span className="text-erl-text-secondary leading-none flex items-center justify-center w-[28px] h-[28px]">{getIconByEmoji(item.emoji)}</span>
           <div className="flex gap-1.5">
             {item.popular && (
               <span className="pill text-[10px] px-2 py-0.5 bg-erl-accent/10 text-erl-accent border border-erl-accent/25">POPULAR</span>

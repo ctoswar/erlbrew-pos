@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { formatCurrency, toLocalDateStr } from "../utils";
 import { apiAdminGet, getSalesReport, getStaffReport, DailySalesReport, SalesReportSummary, StaffReport } from "../utils/api";
+import { AnimatedSelect } from "./AnimatedSelect";
 import {
   LineChart,
   Line,
@@ -709,16 +710,14 @@ export const AdminReports: React.FC = () => {
                   <div className="bg-erl-surface rounded-xl p-4 mb-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-[10px] text-erl-muted tracking-widest uppercase">Stock Movements</div>
-                      <select
+                      <AnimatedSelect
+                        options={[
+                          { value: "", label: "All items" },
+                          ...inventoryItems.map((i) => ({ value: i.id, label: i.name })),
+                        ]}
                         value={selectedInventoryItem || ""}
-                        onChange={(e) => setSelectedInventoryItem(e.target.value || null)}
-                        className="text-[9px] bg-erl-base border border-erl-border-default rounded-md px-2 py-1 text-erl-text-primary outline-none cursor-pointer"
-                      >
-                        <option value="">All items</option>
-                        {inventoryItems.map(i => (
-                          <option key={i.id} value={i.id}>{i.name}</option>
-                        ))}
-                      </select>
+                        onChange={(val) => setSelectedInventoryItem(val || null)}
+                      />
                     </div>
                     <ResponsiveContainer width="100%" height={200}>
                       <BarChart data={inventoryHistory.slice().reverse()}>

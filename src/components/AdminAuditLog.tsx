@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { formatDate, formatTime, toLocalDateStr } from "../utils";
 import { getAuditLogs, AuditLog } from "../utils/api";
+import { AnimatedSelect } from "./AnimatedSelect";
 
 const ACTION_LABELS: Record<string, string> = {
   order_void: "Order Void",
@@ -74,13 +75,14 @@ export const AdminAuditLog: React.FC = () => {
         </div>
         <div className="w-full md:w-auto">
           <div className="text-[8px] text-erl-text-muted tracking-widest uppercase mb-1 font-bold">Action</div>
-          <select value={actionFilter} onChange={(e) => { setActionFilter(e.target.value); setOffset(0); }}
-            className="w-full md:w-auto bg-erl-surface border border-erl-border-default rounded-lg px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent cursor-pointer">
-            <option value="">All actions</option>
-            {actions.map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
+          <AnimatedSelect
+            options={[
+              { value: "", label: "All actions" },
+              ...actions.map(([key, label]) => ({ value: key, label })),
+            ]}
+            value={actionFilter}
+            onChange={(val) => { setActionFilter(val); setOffset(0); }}
+          />
         </div>
         <div className="flex items-end">
           <button onClick={fetchLogs} disabled={loading}

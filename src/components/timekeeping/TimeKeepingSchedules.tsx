@@ -12,6 +12,7 @@ import {
   apiAdminDelete,
 } from "../../utils/api";
 import { fmtTime } from "../../utils";
+import { AnimatedSelect } from "../AnimatedSelect";
 
 interface Props {
   onSchedulesChanged: () => void;
@@ -362,16 +363,15 @@ const TimeKeepingSchedules: React.FC<Props> = ({ onSchedulesChanged }) => {
                         </div>
                       )}
                     </div>
-                    <select
-                      value={s.schedule_id || ""}
-                      onChange={(e) => assignScheduleToStaff(s.staff_id, e.target.value ? Number(e.target.value) : null)}
-                      className="text-xs bg-erl-base border border-erl-border-medium rounded-xl px-3 py-2 text-erl-text-primary outline-none focus:border-erl-accent min-w-[160px]"
-                    >
-                      <option value="">— No Schedule —</option>
-                      {templates.map((t) => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
-                    </select>
+                    <AnimatedSelect
+                      options={[
+                        { value: "", label: "— No Schedule —" },
+                        ...templates.map((t) => ({ value: String(t.id), label: t.name })),
+                      ]}
+                      value={s.schedule_id ? String(s.schedule_id) : ""}
+                      onChange={(val) => assignScheduleToStaff(s.staff_id, val ? Number(val) : null)}
+                      className="min-w-[160px]"
+                    />
                   </div>
                 </div>
               ))}

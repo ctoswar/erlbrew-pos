@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { formatCurrency, toLocalDateStr } from "../utils";
 import { SupplierInvoice, SupplierInvoiceItem, getSupplierInvoices, getSupplierInvoice, createSupplierInvoice, updateSupplierInvoice, deleteSupplierInvoice } from "../utils/api";
+import { AnimatedSelect } from "./AnimatedSelect";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "var(--gold)",
@@ -380,13 +381,17 @@ Erlbrew Café`;
                   </div>
                   <div>
                     <div className={labelClass}>Status</div>
-                    <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as SupplierInvoice['status'] }))} className={inputClass}>
-                      <option value="pending">Pending</option>
-                      <option value="partial">Partial</option>
-                      <option value="paid">Paid</option>
-                      <option value="overdue">Overdue</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
+                    <AnimatedSelect
+                      options={[
+                        { value: "pending", label: "Pending" },
+                        { value: "partial", label: "Partial" },
+                        { value: "paid", label: "Paid" },
+                        { value: "overdue", label: "Overdue" },
+                        { value: "cancelled", label: "Cancelled" },
+                      ]}
+                      value={form.status}
+                      onChange={(val) => setForm(f => ({ ...f, status: val as SupplierInvoice['status'] }))}
+                    />
                   </div>
                 </div>
 

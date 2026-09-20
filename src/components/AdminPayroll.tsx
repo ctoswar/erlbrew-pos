@@ -6,6 +6,7 @@ import {
   apiAdminPut,
   apiAdminDelete,
 } from "../utils/api";
+import { AnimatedSelect } from "./AnimatedSelect";
 import type {
   PayrollPeriod,
   PayrollPeriodStatus,
@@ -407,18 +408,19 @@ export const AdminPayroll: React.FC = () => {
           <div className="px-5 py-3 border-b border-erl-border-subtle flex flex-col sm:flex-row sm:items-center gap-3 flex-shrink-0">
             <div className="flex items-center gap-3 flex-1">
               <div className="text-[9px] text-erl-muted tracking-wide uppercase font-bold flex-shrink-0">Period:</div>
-              <select
-                value={selectedPeriodId ?? ""}
-                onChange={(e) => setSelectedPeriodId(Number(e.target.value) || null)}
-                className="flex-1 sm:flex-none text-[10px] bg-erl-base border border-erl-border-default rounded-md px-2 py-1 text-erl-text-primary outline-none cursor-pointer min-w-[180px]"
-              >
-                {periods.length === 0 && <option value="">No periods</option>}
-                {periods.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label || periodLabel(p.date_from, p.date_to)} ({STATUS_LABELS[p.status]})
-                  </option>
-                ))}
-              </select>
+              <AnimatedSelect
+                options={
+                  periods.length === 0
+                    ? [{ value: "", label: "No periods" }]
+                    : periods.map((p) => ({
+                        value: String(p.id),
+                        label: `${p.label || periodLabel(p.date_from, p.date_to)} (${STATUS_LABELS[p.status]})`,
+                      }))
+                }
+                value={selectedPeriodId ? String(selectedPeriodId) : ""}
+                onChange={(val) => setSelectedPeriodId(Number(val) || null)}
+                className="flex-1 sm:flex-none min-w-[180px]"
+              />
             </div>
 
             <div className="flex items-center gap-2">
@@ -675,23 +677,19 @@ export const AdminPayroll: React.FC = () => {
                         {editingStaffId === s.id ? (
                           <>
                             <td className="px-3 py-2">
-                              <select
+                              <AnimatedSelect
+                                options={[
+                                  { value: "", label: "—" },
+                                  ...PAY_BASIS_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
+                                ]}
                                 value={editStaffForm.pay_basis || ""}
-                                onChange={(ev) =>
+                                onChange={(val) =>
                                   setEditStaffForm((prev) => ({
                                     ...prev,
-                                    pay_basis: (ev.target.value as PayBasis) || null,
+                                    pay_basis: (val as PayBasis) || null,
                                   }))
                                 }
-                                className="w-full bg-erl-base border border-erl-border-default rounded-md px-2 py-1 text-erl-text-primary text-[10px] outline-none"
-                              >
-                                <option value="">—</option>
-                                {PAY_BASIS_OPTIONS.map((o) => (
-                                  <option key={o.value} value={o.value}>
-                                    {o.label}
-                                  </option>
-                                ))}
-                              </select>
+                              />
                             </td>
                             <td className="px-3 py-2">
                               <input
@@ -768,23 +766,19 @@ export const AdminPayroll: React.FC = () => {
                               />
                             </td>
                             <td className="px-3 py-2">
-                              <select
+                              <AnimatedSelect
+                                options={[
+                                  { value: "", label: "—" },
+                                  ...TAX_STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
+                                ]}
                                 value={editStaffForm.tax_status || ""}
-                                onChange={(ev) =>
+                                onChange={(val) =>
                                   setEditStaffForm((prev) => ({
                                     ...prev,
-                                    tax_status: (ev.target.value as TaxStatus) || null,
+                                    tax_status: (val as TaxStatus) || null,
                                   }))
                                 }
-                                className="w-full bg-erl-base border border-erl-border-default rounded-md px-2 py-1 text-erl-text-primary text-[10px] outline-none"
-                              >
-                                <option value="">—</option>
-                                {TAX_STATUS_OPTIONS.map((o) => (
-                                  <option key={o.value} value={o.value}>
-                                    {o.label}
-                                  </option>
-                                ))}
-                              </select>
+                              />
                             </td>
                             <td className="px-3 py-2">
                               <div className="flex items-center justify-center gap-1.5">

@@ -122,6 +122,14 @@ export default {
           '0%': { transform: 'scale(0.8)', opacity: '0.6' },
           '100%': { transform: 'scale(2.4)', opacity: '0' },
         },
+        modalBackdropIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        modalContentIn: {
+          '0%': { opacity: '0', transform: 'translateY(24px) scale(0.92)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
       },
       animation: {
         'fade-in': 'fadeIn 0.35s ease-out forwards',

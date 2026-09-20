@@ -1,3 +1,4 @@
+import type jsPDF from "jspdf";
 import { CartItem, Order, DailySummary, PayMethod, Category, Discount } from "../types";
 
 // ── Timezone constants ──────────────────────────────────────
@@ -144,3 +145,47 @@ export const buildDailySummary = (orders: Order[], cogsData?: { cogs: number; de
     cogsDetails: cogsData?.details ?? [],
   };
 };
+
+// ── Timekeeping Helpers ──────────────────────────────────────────────────────
+
+export const escapeHtml = (str: string): string =>
+  str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+export const fmtTime = (t: string | null): string => {
+  if (!t) return "—";
+  const [h, m] = t.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h, m);
+  return d.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Manila" });
+};
+
+export const fmtShort = (t: string | null): string => {
+  if (!t) return "";
+  const [h, m] = t.split(":").map(Number);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+export const isWithinBreak = (now: Date, start: string | null, end: string | null): boolean => {
+  if (!start || !end) return false;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const s = sh * 60 + sm;
+  const e = eh * 60 + em;
+  const n = now.getHours() * 60 + now.getMinutes();
+  return n >= s && n < e;
+};
+
+export const getLateMinutes = (clockIn: string, shiftStart: string | null): number => {
+  if (!shiftStart) return 0;
+  const ci = new Date(clockIn);
+  const [sh, sm] = shiftStart.split(":").map(Number);
+  const ciMin = ci.getHours() * 60 + ci.getMinutes();
+  const ssMin = sh * 60 + sm;
+  const diff = ciMin - ssMin;
+  const GRACE = 15;
+  return diff > GRACE ? diff : 0;
+};
+
+export const getFinalY = (doc: jsPDF): number =>
+  (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+

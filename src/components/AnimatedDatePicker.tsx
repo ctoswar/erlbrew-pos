@@ -83,19 +83,30 @@ export const AnimatedDatePicker: React.FC<Props> = ({
     setDropdownPos(null);
   }, []);
 
+  const DROPDOWN_WIDTH = 340;
+  const DROPDOWN_HEIGHT = 420;
+
   // Calculate dropdown position when opening
   const calcPosition = useCallback(() => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
-    const DROPDOWN_HEIGHT = 340;
-    const openUp = spaceBelow < DROPDOWN_HEIGHT + 8;
-    setDropdownPos({
-      top: openUp ? rect.top - DROPDOWN_HEIGHT - 8 : rect.bottom + 8,
-      left: rect.left,
-      width: rect.width,
-      openUp,
-    });
+    const openUp = spaceBelow < DROPDOWN_HEIGHT + 16;
+
+    let top = openUp ? rect.top - DROPDOWN_HEIGHT - 16 : rect.bottom + 16;
+    let left = rect.left;
+
+    // Keep calendar within viewport horizontally
+    if (left + DROPDOWN_WIDTH > window.innerWidth - 16) {
+      left = Math.max(16, window.innerWidth - DROPDOWN_WIDTH - 16);
+    }
+    // Keep calendar within viewport vertically
+    if (top < 16) top = 16;
+    if (top + DROPDOWN_HEIGHT > window.innerHeight - 16) {
+      top = Math.max(16, window.innerHeight - DROPDOWN_HEIGHT - 16);
+    }
+
+    setDropdownPos({ top, left, width: DROPDOWN_WIDTH, openUp });
   }, []);
 
   // Open/close
@@ -179,13 +190,13 @@ export const AnimatedDatePicker: React.FC<Props> = ({
     return (
       <>
         {/* Month/Year header — click month to open month picker */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-5">
           <button
             type="button"
             onClick={() => navigateMonth(-1)}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
@@ -193,16 +204,16 @@ export const AnimatedDatePicker: React.FC<Props> = ({
           <button
             type="button"
             onClick={() => setView({ mode: "months", year })}
-            className="text-sm font-bold text-erl-text-primary tracking-wide hover:text-erl-accent transition-colors px-3 py-1.5 rounded-lg hover:bg-erl-accent/10"
+            className="text-base font-bold text-erl-text-primary tracking-wide hover:text-erl-accent transition-colors px-4 py-2 rounded-xl hover:bg-erl-accent/10"
           >
             {MONTHS_FULL[month]} {year}
           </button>
           <button
             type="button"
             onClick={() => navigateMonth(1)}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
@@ -210,9 +221,9 @@ export const AnimatedDatePicker: React.FC<Props> = ({
         </div>
 
         {/* Day headers */}
-        <div className="grid grid-cols-7 mb-2">
+        <div className="grid grid-cols-7 mb-3">
           {DAYS.map((d) => (
-            <div key={d} className="text-center text-[10px] font-bold text-erl-text-faint tracking-wider py-1.5">
+            <div key={d} className="text-center text-[11px] font-bold text-erl-text-faint tracking-wider py-2">
               {d}
             </div>
           ))}
@@ -220,7 +231,7 @@ export const AnimatedDatePicker: React.FC<Props> = ({
 
         {/* Calendar grid */}
         <div
-          className={`grid grid-cols-7 gap-1 transition-all duration-200 ${
+          className={`grid grid-cols-7 gap-1.5 transition-all duration-200 ${
             slideDir === "left" ? "animate-slide-left" : slideDir === "right" ? "animate-slide-right" : ""
           }`}
         >
@@ -238,7 +249,7 @@ export const AnimatedDatePicker: React.FC<Props> = ({
                 disabled={dis}
                 className={`
                   relative w-full aspect-square flex items-center justify-center
-                  rounded-xl text-xs font-medium
+                  rounded-xl text-sm font-medium
                   transition-all duration-150
                   ${!isCurrent ? "text-erl-text-disabled/30" : ""}
                   ${isCurrent && !dis ? "text-erl-text-secondary hover:text-erl-text-primary hover:bg-erl-accent/10 cursor-pointer" : ""}
@@ -250,7 +261,7 @@ export const AnimatedDatePicker: React.FC<Props> = ({
               >
                 {cell.day}
                 {isToday && !isSelected && (
-                  <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-erl-accent" />
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-erl-accent" />
                 )}
               </button>
             );
@@ -269,24 +280,24 @@ export const AnimatedDatePicker: React.FC<Props> = ({
     return (
       <>
         {/* Year header with nav */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-5">
           <button
             type="button"
             onClick={() => setView({ mode: "months", year: view.year - 1 })}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
-          <div className="text-sm font-bold text-erl-text-primary tracking-wide">{view.year}</div>
+          <div className="text-base font-bold text-erl-text-primary tracking-wide">{view.year}</div>
           <button
             type="button"
             onClick={() => setView({ mode: "months", year: view.year + 1 })}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
@@ -294,7 +305,7 @@ export const AnimatedDatePicker: React.FC<Props> = ({
         </div>
 
         {/* Month grid */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-3">
           {MONTHS_SHORT.map((m, i) => {
             const isThisMonth = view.year === currentYear && i === currentMonth;
             const isSelectedMonth = selected && selected.getFullYear() === view.year && selected.getMonth() === i;
@@ -307,7 +318,7 @@ export const AnimatedDatePicker: React.FC<Props> = ({
                   setView({ mode: "days", year: view.year, month: i });
                 }}
                 className={`
-                  py-3 rounded-xl text-xs font-semibold
+                  py-4 rounded-xl text-sm font-semibold
                   transition-all duration-200 active:scale-95
                   ${isSelectedMonth
                     ? "!bg-erl-accent !text-white shadow-[0_2px_12px_rgba(196,149,106,0.45)]"
@@ -347,26 +358,27 @@ export const AnimatedDatePicker: React.FC<Props> = ({
         position: "fixed",
         top: dropdownPos ? dropdownPos.top : 0,
         left: dropdownPos ? dropdownPos.left : 0,
-        width: dropdownPos ? dropdownPos.width : 300,
+        width: DROPDOWN_WIDTH,
+        minWidth: DROPDOWN_WIDTH,
         zIndex: 99999,
       }}
     >
-      <div className="p-4">
+      <div className="p-5">
         {view.mode === "days" ? renderDays() : renderMonths()}
 
         {/* Footer actions */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-erl-border-subtle">
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-erl-border-subtle">
           <button
             type="button"
             onClick={() => { onChange(""); close(); }}
-            className="text-[11px] text-erl-text-muted hover:text-[#e5484d] font-semibold tracking-wide px-3 py-2 rounded-xl hover:bg-[#e5484d]/10 transition-all duration-200"
+            className="text-xs text-erl-text-muted hover:text-[#e5484d] font-semibold tracking-wide px-4 py-2.5 rounded-xl hover:bg-[#e5484d]/10 transition-all duration-200"
           >
             Clear
           </button>
           <button
             type="button"
             onClick={() => { onChange(toStr(today)); close(); }}
-            className="text-[11px] text-erl-accent hover:text-erl-accent-light font-semibold tracking-wide px-3 py-2 rounded-xl hover:bg-erl-accent/10 transition-all duration-200"
+            className="text-xs text-erl-accent hover:text-erl-accent-light font-semibold tracking-wide px-4 py-2.5 rounded-xl hover:bg-erl-accent/10 transition-all duration-200"
           >
             Today
           </button>

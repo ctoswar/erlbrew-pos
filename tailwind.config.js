@@ -130,6 +130,14 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(24px) scale(0.92)' },
           '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
+        slideLeft: {
+          '0%': { opacity: '1', transform: 'translateX(0)' },
+          '100%': { opacity: '0', transform: 'translateX(-20px)' },
+        },
+        slideRight: {
+          '0%': { opacity: '1', transform: 'translateX(0)' },
+          '100%': { opacity: '0', transform: 'translateX(20px)' },
+        },
       },
       animation: {
         'fade-in': 'fadeIn 0.35s ease-out forwards',

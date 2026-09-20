@@ -3,6 +3,7 @@ import { Order, CartItem, DiscountType } from "../types";
 import { buildDailySummary, formatCurrency, formatTime, toLocalDateStr } from "../utils";
 import { apiAdminGet, apiGet, resetCogs, resetInventoryCosts } from "../utils/api";
 import { ReceiptPreview } from "./ReceiptPreview";
+import { AnimatedDatePicker } from "./AnimatedDatePicker";
 
 interface CogsData {
   cogs: number;
@@ -212,9 +213,9 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
           </div>
           {dateRange === 'custom' && (
             <div className="flex items-center gap-1.5">
-              <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setDateRange('custom'); }} className="py-[3px] px-1.5 text-[9px] rounded border border-erl-border-subtle bg-erl-base text-erl-text-primary" />
+              <AnimatedDatePicker value={startDate} onChange={(v) => { setStartDate(v); setDateRange('custom'); }} className="min-w-[130px]" />
               <span className="text-erl-text-muted text-[9px]">to</span>
-              <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setDateRange('custom'); }} className="py-[3px] px-1.5 text-[9px] rounded border border-erl-border-subtle bg-erl-base text-erl-text-primary" />
+              <AnimatedDatePicker value={endDate} onChange={(v) => { setEndDate(v); setDateRange('custom'); }} className="min-w-[130px]" />
               <button onClick={fetchCogs} className="py-[3px] px-2 text-[8px] rounded border border-erl-accent bg-erl-accent text-erl-base cursor-pointer font-bold">Apply</button>
             </div>
           )}

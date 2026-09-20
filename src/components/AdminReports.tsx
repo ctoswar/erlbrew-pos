@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { formatCurrency, toLocalDateStr } from "../utils";
 import { apiAdminGet, getSalesReport, getStaffReport, DailySalesReport, SalesReportSummary, StaffReport } from "../utils/api";
 import { AnimatedSelect } from "./AnimatedSelect";
+import { AnimatedDatePicker } from "./AnimatedDatePicker";
 import {
   LineChart,
   Line,
@@ -547,11 +548,9 @@ export const AdminReports: React.FC = () => {
           </div>
           {dateRange === "custom" && (
             <div className="flex items-center gap-2">
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                className="px-2 py-1 text-[10px] rounded-md border border-erl-border-subtle bg-erl-base text-erl-text-primary" />
+              <AnimatedDatePicker value={startDate} onChange={setStartDate} className="min-w-[130px]" />
               <span className="text-erl-muted text-[10px]">to</span>
-              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                className="px-2 py-1 text-[10px] rounded-md border border-erl-border-subtle bg-erl-base text-erl-text-primary" />
+              <AnimatedDatePicker value={endDate} onChange={setEndDate} className="min-w-[130px]" />
               <button onClick={() => setCustomApplyTick(t => t + 1)}
                 className="px-2.5 py-1 text-[8px] rounded-md cursor-pointer border border-erl-accent bg-erl-accent text-erl-base font-bold">
                 Apply

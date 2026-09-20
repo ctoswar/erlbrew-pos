@@ -1,4 +1,5 @@
 import React from "react";
+import { AnimatedDatePicker } from "../AnimatedDatePicker";
 
 interface Props {
   show: boolean;
@@ -99,22 +100,18 @@ const ExportReportModal: React.FC<Props> = ({
             <div className="grid grid-cols-2 gap-3">
               <div className="min-w-0">
                 <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">From</label>
-                <input
-                  type="date"
+                <AnimatedDatePicker
                   value={printFrom}
+                  onChange={onFromChange}
                   max={printTo || undefined}
-                  onChange={(e) => onFromChange(e.target.value)}
-                  className="w-full min-w-0 text-sm bg-erl-base border border-erl-border-medium rounded-xl px-3 py-2.5 text-erl-text-primary outline-none focus:border-erl-accent"
                 />
               </div>
               <div className="min-w-0">
                 <label className="text-[10px] text-erl-text-muted tracking-wider uppercase font-semibold mb-1.5 block">To</label>
-                <input
-                  type="date"
+                <AnimatedDatePicker
                   value={printTo}
+                  onChange={onToChange}
                   min={printFrom || undefined}
-                  onChange={(e) => onToChange(e.target.value)}
-                  className="w-full min-w-0 text-sm bg-erl-base border border-erl-border-medium rounded-xl px-3 py-2.5 text-erl-text-primary outline-none focus:border-erl-accent"
                 />
               </div>
             </div>

@@ -5,6 +5,7 @@ import { apiGet } from "../utils/api";
 import { serverOrderToOrder } from "../hooks/useOrders";
 import { ReceiptPreview } from "./ReceiptPreview";
 import { AnimatedSelect } from "./AnimatedSelect";
+import { AnimatedDatePicker } from "./AnimatedDatePicker";
 import { useViewport } from "../hooks/useViewport";
 
 interface HistoryResponse {
@@ -69,13 +70,11 @@ export const OrderHistory: React.FC = () => {
         <div className="flex gap-2 flex-wrap items-end">
           <div className="flex flex-col gap-[3px]">
             <label className="text-[8px] text-erl-text-faint tracking-wide uppercase">From</label>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-              className="bg-erl-base border border-erl-border-default rounded-md text-erl-text-primary px-2.5 py-1.5 text-[11px]" />
+            <AnimatedDatePicker value={startDate} onChange={setStartDate} />
           </div>
           <div className="flex flex-col gap-[3px]">
             <label className="text-[8px] text-erl-text-faint tracking-wide uppercase">To</label>
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
-              className="bg-erl-base border border-erl-border-default rounded-md text-erl-text-primary px-2.5 py-1.5 text-[11px]" />
+            <AnimatedDatePicker value={endDate} onChange={setEndDate} />
           </div>
           <div className="flex flex-col gap-[3px]">
             <label className="text-[8px] text-erl-text-faint tracking-wide uppercase">Status</label>

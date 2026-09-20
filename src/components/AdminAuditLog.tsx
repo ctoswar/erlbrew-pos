@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { formatDate, formatTime, toLocalDateStr } from "../utils";
 import { getAuditLogs, AuditLog } from "../utils/api";
 import { AnimatedSelect } from "./AnimatedSelect";
+import { AnimatedDatePicker } from "./AnimatedDatePicker";
 
 const ACTION_LABELS: Record<string, string> = {
   order_void: "Order Void",
@@ -65,13 +66,11 @@ export const AdminAuditLog: React.FC = () => {
       <div className="flex flex-col md:flex-row flex-wrap gap-3 mb-6">
         <div className="w-full md:w-auto">
           <div className="text-[8px] text-erl-text-muted tracking-widest uppercase mb-1 font-bold">From</div>
-          <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setOffset(0); }}
-            className="w-full md:w-auto bg-erl-surface border border-erl-border-default rounded-lg px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent" />
+          <AnimatedDatePicker value={startDate} onChange={(v) => { setStartDate(v); setOffset(0); }} />
         </div>
         <div className="w-full md:w-auto">
           <div className="text-[8px] text-erl-text-muted tracking-widest uppercase mb-1 font-bold">To</div>
-          <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setOffset(0); }}
-            className="w-full md:w-auto bg-erl-surface border border-erl-border-default rounded-lg px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent" />
+          <AnimatedDatePicker value={endDate} onChange={(v) => { setEndDate(v); setOffset(0); }} />
         </div>
         <div className="w-full md:w-auto">
           <div className="text-[8px] text-erl-text-muted tracking-widest uppercase mb-1 font-bold">Action</div>

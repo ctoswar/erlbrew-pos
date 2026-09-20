@@ -20,7 +20,8 @@ export const toLocalDateStr = (d: Date = new Date()): string => {
 
 export const formatCurrency = (n: number | string): string => {
   const num = Number(n);
-  return `₱${(isNaN(num) ? 0 : num).toFixed(2)}`;
+  if (isNaN(num)) return '₱0.00';
+  return `₱${num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export const formatTime = (d: Date): string =>

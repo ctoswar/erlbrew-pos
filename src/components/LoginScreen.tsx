@@ -1,28 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Staff } from "../types";
+import React, { useState, useEffect, useRef } from "react";
+import { Staff, Role } from "../types";
 import { useClock } from "../hooks/useClock";
+import { useFullscreen } from "../hooks/useFullscreen";
 import { formatTime, formatDate } from "../utils";
-import { apiPost, setAuthToken } from "../utils/api";
-
-function useFullscreen() {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  useEffect(() => {
-    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
-  }, []);
-
-  const toggle = useCallback(() => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  }, []);
-
-  return { isFullscreen, toggle };
-}
+import { apiPost, apiGet, setAuthToken } from "../utils/api";
 
 interface CompanyInfo {
   company_name: string;
@@ -30,6 +11,15 @@ interface CompanyInfo {
   company_phone: string;
   company_email: string;
   company_logo: string;
+}
+
+interface RfidStaffResponse {
+  id: number;
+  rfid: string;
+  name: string;
+  role: Role;
+  initials: string;
+  color: string;
 }
 
 interface Props {
@@ -67,12 +57,6 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
   useEffect(() => {
     if (step === "rfid") {
       rfidInputRef.current?.focus();
-      const interval = setInterval(() => {
-        if (document.activeElement !== rfidInputRef.current) {
-          rfidInputRef.current?.focus();
-        }
-      }, 500);
-      return () => clearInterval(interval);
     }
   }, [step]);
 
@@ -86,18 +70,17 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
     const trimmed = rfidValue.replace(/[\x00-\x1f]/g, "").trim().toUpperCase();
     if (!trimmed) return;
     try {
-      const res = await fetch(`/api/staff/rfid/${encodeURIComponent(trimmed)}`);
-      if (!res.ok) throw new Error();
-      const staff = await res.json();
-      if (!staff || !staff.id) {
+      const found = await apiGet<RfidStaffResponse>(`/staff/rfid/${encodeURIComponent(trimmed)}`);
+      if (!found || !found.id) {
         setMsg({ text: "Card not registered. See admin.", type: "error" });
         setRfid("");
         return;
       }
+      const staff: Staff = { ...found, pin: "" };
       setSelectedStaff(staff);
       setRfid(trimmed);
       setStep("pin");
-      setMsg({ text: `${staff.name} \u2014 enter your PIN`, type: "info" });
+      setMsg({ text: `${found.name} \u2014 enter your PIN`, type: "info" });
       pinInputRef.current?.focus();
     } catch {
       setMsg({ text: "Card not recognized. Try again.", type: "error" });

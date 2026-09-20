@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { apiAdminGet, apiAdminPut, createStaff, CreateStaffData } from "../utils/api";
+import React, { useState, useEffect, useCallback } from "react";
+import { apiAdminGet, apiAdminPut, apiAdminDelete, createStaff, CreateStaffData } from "../utils/api";
 import { formatCurrency } from "../utils";
 
 interface StaffMember {
@@ -49,19 +49,40 @@ export const AdminStaff: React.FC = () => {
     pin: '',
   });
 
-  const loadStaff = () => {
+  const loadStaff = useCallback(() => {
     setLoading(true);
     apiAdminGet<StaffMember[]>("/staff")
       .then(setStaff)
       .catch(() => setMsg({ text: "Failed to load staff", ok: false }))
       .finally(() => setLoading(false));
-  };
+  }, []);
 
-  useEffect(() => { loadStaff(); }, []);
+  useEffect(() => { loadStaff(); }, [loadStaff]);
 
   const showMsg = (text: string, ok: boolean) => {
     setMsg({ text, ok });
     setTimeout(() => setMsg(null), 2500);
+  };
+
+  // Find an existing staff member with the same RFID (primary or alt), excluding a given id when editing
+  const findDuplicateRfid = (rfid: string, excludeId?: number): StaffMember | null => {
+    const needle = rfid.trim().toUpperCase();
+    if (!needle) return null;
+    return staff.find((s) => s.id !== excludeId && ((s.rfid || '').toUpperCase() === needle || (s.rfid_alt || '').toUpperCase() === needle)) || null;
+  };
+
+  // Delete staff
+  const deleteStaff = async (s: StaffMember) => {
+    if (!confirm(`Delete ${s.name}? This cannot be undone.`)) return;
+    setSaving(true);
+    try {
+      await apiAdminDelete<{ ok: boolean }>(`/staff/${s.id}`);
+      showMsg("Staff deleted", true);
+      loadStaff();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to delete staff";
+      showMsg(message, false);
+    } finally { setSaving(false); }
   };
 
   // Save name
@@ -73,34 +94,43 @@ export const AdminStaff: React.FC = () => {
       setEditingNameId(null);
       showMsg("Name updated", true);
       loadStaff();
-    } catch (e: any) {
-      showMsg(e.message || "Failed to save", false);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to save";
+      showMsg(message, false);
     } finally { setSaving(false); }
   };
 
   // Save RFID
   const saveRfid = async (id: number) => {
+    const value = editRfid.trim();
+    const duplicate = findDuplicateRfid(value, id);
+    if (duplicate) { showMsg(`This RFID is already assigned to ${duplicate.name}`, false); return; }
     setSaving(true);
     try {
-      await apiAdminPut(`/staff/${id}`, { rfid: editRfid.trim() || null });
+      await apiAdminPut(`/staff/${id}`, { rfid: value || null });
       setEditingRfidId(null);
       showMsg("RFID saved", true);
       loadStaff();
-    } catch (e: any) {
-      showMsg(e.message || "Failed to save", false);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to save";
+      showMsg(message, false);
     } finally { setSaving(false); }
   };
 
   // Save RFID Alt (tablet reader)
   const saveRfidAlt = async (id: number) => {
+    const value = editRfidAlt.trim();
+    const duplicate = findDuplicateRfid(value, id);
+    if (duplicate) { showMsg(`This RFID is already assigned to ${duplicate.name}`, false); return; }
     setSaving(true);
     try {
-      await apiAdminPut(`/staff/${id}`, { rfid_alt: editRfidAlt.trim() || null });
+      await apiAdminPut(`/staff/${id}`, { rfid_alt: value || null });
       setEditingRfidAltId(null);
       showMsg("Tablet RFID saved", true);
       loadStaff();
-    } catch (e: any) {
-      showMsg(e.message || "Failed to save", false);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to save";
+      showMsg(message, false);
     } finally { setSaving(false); }
   };
 
@@ -113,8 +143,9 @@ export const AdminStaff: React.FC = () => {
       setChangingPwId(null);
       setEditPw("");
       showMsg("PIN updated", true);
-    } catch (e: any) {
-      showMsg(e.message || "Failed to save", false);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to save";
+      showMsg(message, false);
     } finally { setSaving(false); }
   };
 
@@ -122,6 +153,9 @@ export const AdminStaff: React.FC = () => {
   const saveNewStaff = async () => {
     if (!addForm.rfid.trim()) { showMsg("RFID is required", false); return; }
     if (!addForm.name.trim()) { showMsg("Name is required", false); return; }
+    if (addForm.pin.length !== 4) { showMsg("PIN must be exactly 4 digits", false); return; }
+    const duplicate = findDuplicateRfid(addForm.rfid);
+    if (duplicate) { showMsg(`This RFID is already assigned to ${duplicate.name}`, false); return; }
     setSaving(true);
     try {
       const data: CreateStaffData = {
@@ -130,15 +164,16 @@ export const AdminStaff: React.FC = () => {
         role: addForm.role,
         initials: addForm.initials.trim() || addForm.name.trim().split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 2),
         color: addForm.color,
+        pin: addForm.pin,
       };
-      if (addForm.pin.length === 4) data.pin = addForm.pin;
       await createStaff(data);
       setShowAddForm(false);
       setAddForm({ rfid: '', name: '', role: 'Barista', initials: '', color: '#c4956a', pin: '' });
       showMsg("Staff added", true);
       loadStaff();
-    } catch (e: any) {
-      showMsg(e.message || "Failed to add staff", false);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to add staff";
+      showMsg(message, false);
     } finally { setSaving(false); }
   };
 
@@ -392,6 +427,19 @@ export const AdminStaff: React.FC = () => {
                           </div>
                         </div>
                         <span className="text-erl-accent/40 hover:text-erl-accent transition-colors text-xs ml-auto flex-shrink-0 cursor-pointer" onClick={() => startEditName(s)} title="Edit name">✎</span>
+                        <button
+                          onClick={() => deleteStaff(s)}
+                          disabled={saving}
+                          className="ml-2 text-erl-text-faint/60 hover:text-erl-danger transition-colors p-1.5 rounded-lg hover:bg-erl-danger/10"
+                          title="Delete staff"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <line x1="10" y1="11" x2="10" y2="17" />
+                            <line x1="14" y1="11" x2="14" y2="17" />
+                          </svg>
+                        </button>
                       </div>
                     )}
                   </div>

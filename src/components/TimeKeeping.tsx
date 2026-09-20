@@ -5,6 +5,9 @@ import { toLocalDateStr } from "../utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+const escapeHtml = (str: string): string =>
+  str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
 interface ScheduleDay {
   shift_start: string | null;
   shift_end: string | null;
@@ -34,6 +37,22 @@ interface StaffSchedule {
   lunch_end: string | null;
   snack_start: string | null;
   snack_end: string | null;
+}
+
+interface StaffScheduleRaw {
+  id: number;
+  name: string;
+  role: string;
+  initials: string;
+  color: string;
+  schedule_id?: number | null;
+  schedule_name?: string | null;
+  shift_start?: string | null;
+  shift_end?: string | null;
+  lunch_start?: string | null;
+  lunch_end?: string | null;
+  snack_start?: string | null;
+  snack_end?: string | null;
 }
 
 interface TimeRecord {
@@ -135,6 +154,7 @@ export const TimeKeeping: React.FC<TimeKeepingProps> = ({ staff }) => {
   const [records, setRecords] = useState<TimeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastTap, setLastTap] = useState<ClockResponse | null>(null);
+  const [tapError, setTapError] = useState<string | null>(null);
 
   // ── Tab: Calendar ──
   const [calDate, setCalDate] = useState(() => new Date());
@@ -192,12 +212,23 @@ const [printTo, setPrintTo] = useState(getTodayStr);
     return () => clearTimeout(t);
   }, [lastTap]);
 
+  // Auto-clear tap error after 4s
+  useEffect(() => {
+    if (!tapError) return;
+    const t = setTimeout(() => setTapError(null), 4000);
+    return () => clearTimeout(t);
+  }, [tapError]);
+
   const handleTap = useCallback(async (rfid: string) => {
+    setTapError(null);
     try {
       const data = await apiPost<ClockResponse>("/clock", { rfid });
       setLastTap(data);
       loadToday();
-    } catch (err) { console.error("RFID tap handler error:", err); }
+    } catch (err) {
+      console.error("RFID tap handler error:", err);
+      setTapError(err instanceof Error ? err.message : "RFID tap failed. Please try again.");
+    }
   }, [loadToday]);
 
   // ── Print handler ──
@@ -253,8 +284,8 @@ const [printTo, setPrintTo] = useState(getTodayStr);
           @media print { body { padding: 10px; font-size:9px; } }
           </style></head><body>
           <div class="header">
-            <h1>${companyName}</h1>
-            <div class="subtitle">Timekeeping Report \u2022 ${fromLabel} \u2013 ${toLabel}</div>
+            <h1>${escapeHtml(companyName)}</h1>
+            <div class="subtitle">Timekeeping Report \u2022 ${escapeHtml(fromLabel)} \u2013 ${escapeHtml(toLabel)}</div>
           </div>
           <div class="summary">
             <div class="summary-box"><div class="label">Date Range</div><div class="value">${data.total_days}d</div></div>
@@ -270,7 +301,7 @@ const [printTo, setPrintTo] = useState(getTodayStr);
                 const t = staffTotals[s.staff_id];
                 const dp = t ? t.days_present : 0;
                 const th = t ? t.total_hours : 0;
-                return '<tr><td>' + s.name + '</td><td>' + s.role + '</td><td>' + dp + ' / ' + data.total_days + '</td><td>' + th.toFixed(2) + '</td></tr>';
+                return '<tr><td>' + escapeHtml(s.name) + '</td><td>' + escapeHtml(s.role) + '</td><td>' + dp + ' / ' + data.total_days + '</td><td>' + th.toFixed(2) + '</td></tr>';
               }).join("")}
               <tr class="grand-total"><td colspan="3" style="text-align:right;padding-right:12px;">Grand Total:</td><td>${data.grand_total_hours.toFixed(2)}</td></tr>
             </tbody>
@@ -278,30 +309,30 @@ const [printTo, setPrintTo] = useState(getTodayStr);
 
           <div class="section-title">Daily Breakdown</div>
           ${data.dates.map((de, di) => {
-            const dl = new Date(de.date + "T00:00:00").toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" });
+            const dl = escapeHtml(new Date(de.date + "T00:00:00").toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" }));
             const hasRecords = de.staff.some((s) => s.records.length > 0);
             if (!hasRecords) return '<div class="date-header"><span>' + dl + ' (' + DAY_LABELS_FULL[de.day_of_week] + ')</span><span class="dh-right">No records</span></div>';
             const pb = di > 0 ? '<div class="page-break"></div>' : '';
             let rows = '';
             for (const s of de.staff) {
               const dayTotal = s.records.reduce((a, r) => a + Number(r.total_hours || 0), 0);
-              const schedName = s.schedule_name || (s.shift_start ? fmtShort(s.shift_start) + '\u2013' + fmtShort(s.shift_end || '') : null);
+              const schedName = s.schedule_name ? escapeHtml(s.schedule_name) : (s.shift_start ? escapeHtml(fmtShort(s.shift_start) + '\u2013' + fmtShort(s.shift_end || '')) : null);
               if (s.records.length === 0) {
-                rows += '<tr><td>' + s.name + '</td><td class="no-record">' + (schedName || '\u2014') + '</td><td class="no-record" colspan="3">Off / No records</td></tr>';
+                rows += '<tr><td>' + escapeHtml(s.name) + '</td><td class="no-record">' + (schedName || '\u2014') + '</td><td class="no-record" colspan="3">Off / No records</td></tr>';
               } else {
                 for (let ri = 0; ri < s.records.length; ri++) {
                   const r = s.records[ri];
-                  const cin = new Date(r.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" });
-                  const cout = r.clock_out ? new Date(r.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" }) : '<span style="color:#7abf7a">Active</span>';
+                  const cin = escapeHtml(new Date(r.clock_in).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" }));
+                  const cout = r.clock_out ? escapeHtml(new Date(r.clock_out).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila" })) : '<span style="color:#7abf7a">Active</span>';
                   const hrs = r.total_hours ? Number(r.total_hours).toFixed(2) : '\u2014';
                   if (ri === 0) {
-                    rows += '<tr><td>' + s.name + '</td><td>' + (schedName ? '<span class="shift-badge">' + schedName + '</span>' : '\u2014') + '</td><td>' + cin + '</td><td>' + cout + '</td><td>' + hrs + '</td></tr>';
+                    rows += '<tr><td>' + escapeHtml(s.name) + '</td><td>' + (schedName ? '<span class="shift-badge">' + schedName + '</span>' : '\u2014') + '</td><td>' + cin + '</td><td>' + cout + '</td><td>' + hrs + '</td></tr>';
                   } else {
                     rows += '<tr><td></td><td></td><td>' + cin + '</td><td>' + cout + '</td><td>' + hrs + '</td></tr>';
                   }
                 }
                 if (s.records.length > 1) {
-                  rows += '<tr class="total-row"><td colspan="4" style="text-align:right;padding-right:12px;">' + s.name + ' Day Total:</td><td>' + dayTotal.toFixed(2) + '</td></tr>';
+                  rows += '<tr class="total-row"><td colspan="4" style="text-align:right;padding-right:12px;">' + escapeHtml(s.name) + ' Day Total:</td><td>' + dayTotal.toFixed(2) + '</td></tr>';
                 }
               }
             }
@@ -309,7 +340,7 @@ const [printTo, setPrintTo] = useState(getTodayStr);
           }).join("")}
 
           <div class="footer">
-            <div>Generated on ${new Date().toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+            <div>Generated on ${escapeHtml(new Date().toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }))}</div>
           </div>
           <script>window.onload = function() { window.print(); }</scr` + `ipt></body></html>`);
       printWindow.document.close();
@@ -329,6 +360,8 @@ const [printTo, setPrintTo] = useState(getTodayStr);
       const toLabel = new Date(printTo + "T00:00:00").toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
 
       const doc = new jsPDF();
+      const getFinalY = (d: jsPDF): number =>
+        (d as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
       const company = (() => { try { const s = localStorage.getItem("erlbrew_company_settings"); return s ? JSON.parse(s).company_name || "Erlbrew Cafe" : "Erlbrew Cafe"; } catch { return "Erlbrew Cafe"; } })();
 
       // Header
@@ -369,7 +402,7 @@ const [printTo, setPrintTo] = useState(getTodayStr);
         styles: { fontSize: 9 },
         margin: { left: 14 },
       });
-      startY = (doc as any).lastAutoTable.finalY + 10;
+      startY = getFinalY(doc) + 10;
 
       // Staff Summary
       doc.setFontSize(10);
@@ -394,7 +427,7 @@ const [printTo, setPrintTo] = useState(getTodayStr);
         styles: { fontSize: 9 },
         margin: { left: 14 },
       });
-      startY = (doc as any).lastAutoTable.finalY + 10;
+      startY = getFinalY(doc) + 10;
 
       // Daily Breakdown
       doc.setFontSize(10);
@@ -435,7 +468,7 @@ const [printTo, setPrintTo] = useState(getTodayStr);
           styles: { fontSize: 8 },
           margin: { left: 14 },
         });
-        startY = (doc as any).lastAutoTable.finalY + 8;
+        startY = getFinalY(doc) + 8;
 
         // Page break if needed
         if (startY > 250) {
@@ -463,11 +496,12 @@ const [printTo, setPrintTo] = useState(getTodayStr);
     }
   }, [printFrom, printTo]);
 
-  // Auto-poll every 30s
+  // Auto-poll every 30s while on Today tab
   useEffect(() => {
+    if (tab !== "today") return;
     const id = setInterval(loadToday, 30000);
     return () => clearInterval(id);
-  }, [loadToday]);
+  }, [tab, loadToday]);
 
   // ── Schedules logic ──
   const loadTemplates = useCallback(() => {
@@ -480,9 +514,9 @@ const [printTo, setPrintTo] = useState(getTodayStr);
 
   const loadStaffWithSchedules = useCallback(() => {
     setStaffListLoading(true);
-    apiAdminGet<StaffSchedule[]>("/staff")
+    apiAdminGet<StaffScheduleRaw[]>("/staff")
       .then((data) => {
-        const normalized = data.map((s: any) => ({
+        const normalized = data.map((s) => ({
           staff_id: s.id,
           name: s.name,
           role: s.role,
@@ -805,6 +839,13 @@ const [printTo, setPrintTo] = useState(getTodayStr);
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Tap error feedback */}
+            {tapError && (
+              <div className="animate-scale-in rounded-2xl border border-erl-danger/30 bg-erl-danger-bg px-5 py-3.5 text-sm font-bold text-erl-danger">
+                {tapError}
               </div>
             )}
 

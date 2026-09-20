@@ -190,6 +190,20 @@ router.get('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// DELETE staff (admin only)
+router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await pool.query('SELECT id, name FROM staff WHERE id = ?', [id]);
+    if (!rows.length) return res.status(404).json({ error: 'Staff not found' });
+    await pool.query('DELETE FROM staff WHERE id = ?', [id]);
+    await logAudit(pool, req, { action: 'staff_delete', entityType: 'staff', entityId: id, details: { name: rows[0].name } });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
 // LOGIN (PIN-only for POS staff - bcrypt hashed PINs)
 router.post('/login', async (req, res) => {
   let { username, password, rfid, pin } = req.body;

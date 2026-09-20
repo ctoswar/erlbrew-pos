@@ -4,28 +4,9 @@ import { useClock } from "../hooks/useClock";
 import { useTheme } from "../hooks/useTheme";
 import { useFontSize, FONT_SIZE_LABELS, type FontSize } from "../hooks/useFontSize";
 import { useViewport } from "../hooks/useViewport";
+import { useFullscreen } from "../hooks/useFullscreen";
 import { formatTime } from "../utils";
 import { apiPost } from "../utils/api";
-
-function useFullscreen() {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  useEffect(() => {
-    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
-  }, []);
-
-  const toggle = useCallback(() => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  }, []);
-
-  return { isFullscreen, toggle };
-}
 
 interface Props {
   staff: Staff;
@@ -196,7 +177,9 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
             </div>
             {!isMobile && (
               <div className="leading-tight">
-                <div className="text-xs text-erl-text-primary font-bold">{staff.name.split(" ")[0]}</div>
+                <div className="text-xs text-erl-text-primary font-bold truncate max-w-[80px]" title={staff.name}>
+                  {staff.name}
+                </div>
                 <div className="text-[9px] text-erl-text-faint tracking-wide uppercase font-semibold">{staff.role}</div>
               </div>
             )}

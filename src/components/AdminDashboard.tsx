@@ -20,6 +20,7 @@ import { AdminCustomers } from "./AdminCustomers";
 import { AdminLocations } from "./AdminLocations";
 import { AdminTransfers } from "./AdminTransfers";
 import { LocationSelector } from "./LocationSelector";
+import { getNavIcon } from "./NavIcons";
 
 const STORAGE_KEY_ORDERS = 'erlbrew_admin_orders';
 const STORAGE_KEY_INVENTORY = 'erlbrew_admin_inventory';
@@ -33,23 +34,23 @@ interface Props {
 type AdminTab = 'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'payroll' | 'audit' | 'customers' | 'locations' | 'transfers';
 
 const TABS: { label: string; value: AdminTab; icon: string }[] = [
-  { label: 'Dashboard', value: 'dashboard', icon: '📊' },
-  { label: 'Reports', value: 'reports', icon: '📈' },
-  { label: 'Order History', value: 'history', icon: '📋' },
-  { label: 'Customers', value: 'customers', icon: '👤' },
-  { label: 'Menu Items', value: 'menu', icon: '☕' },
-  { label: 'Staff', value: 'staff', icon: '👥' },
-  { label: 'Time Keeping', value: 'time', icon: '⏱️' },
-  { label: 'Payroll', value: 'payroll', icon: '💵' },
-  { label: 'Inventory', value: 'inventory', icon: '📦' },
-  { label: 'Transfers', value: 'transfers', icon: '🔄' },
-  { label: 'Z-Report', value: 'zreport', icon: '📋' },
-  { label: 'Cash Drawer', value: 'cashdrawer', icon: '💰' },
-  { label: 'COGS', value: 'cogs', icon: '📊' },
-  { label: 'Supplier Invoices', value: 'suppliers', icon: '📄' },
-  { label: 'Locations', value: 'locations', icon: '📍' },
-  { label: 'Audit Log', value: 'audit', icon: '🔍' },
-  { label: 'Settings', value: 'settings', icon: '⚙️' },
+  { label: 'Dashboard', value: 'dashboard', icon: 'dashboard' },
+  { label: 'Reports', value: 'reports', icon: 'reports' },
+  { label: 'Order History', value: 'history', icon: 'history' },
+  { label: 'Customers', value: 'customers', icon: 'customers' },
+  { label: 'Menu Items', value: 'menu', icon: 'menu' },
+  { label: 'Staff', value: 'staff', icon: 'staff' },
+  { label: 'Time Keeping', value: 'time', icon: 'time' },
+  { label: 'Payroll', value: 'payroll', icon: 'payroll' },
+  { label: 'Inventory', value: 'inventory', icon: 'inventory' },
+  { label: 'Transfers', value: 'transfers', icon: 'transfers' },
+  { label: 'Z-Report', value: 'zreport', icon: 'zreport' },
+  { label: 'Cash Drawer', value: 'cashdrawer', icon: 'cashdrawer' },
+  { label: 'COGS', value: 'cogs', icon: 'cogs' },
+  { label: 'Supplier Invoices', value: 'suppliers', icon: 'suppliers' },
+  { label: 'Locations', value: 'locations', icon: 'locations' },
+  { label: 'Audit Log', value: 'audit', icon: 'audit' },
+  { label: 'Settings', value: 'settings', icon: 'settings' },
   { label: 'Backup', value: 'backup', icon: '💾' },
 ];
 
@@ -296,7 +297,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
                   : 'bg-transparent text-erl-text-muted hover:bg-white/[0.03] hover:text-erl-text-secondary'
               }`}
             >
-              <span>{icon}</span> {label}
+              <span className="flex items-center justify-center w-[18px] h-[18px] shrink-0">{getNavIcon(icon)}</span> {label}
             </button>
           ))}
         </nav>

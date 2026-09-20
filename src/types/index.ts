@@ -248,3 +248,133 @@ export interface InventoryTransfer {
   approved_by_name?: string;
   received_by_name?: string;
 }
+
+// ── Timekeeping Types ────────────────────────────────────────────────────────
+
+export interface ScheduleDay {
+  shift_start: string | null;
+  shift_end: string | null;
+  lunch_start: string | null;
+  lunch_end: string | null;
+  snack_start: string | null;
+  snack_end: string | null;
+}
+
+export interface ScheduleTemplate {
+  id: number;
+  name: string;
+  days: Record<string, ScheduleDay>;
+}
+
+export interface StaffSchedule {
+  staff_id: number;
+  name: string;
+  role: string;
+  initials: string;
+  color: string;
+  schedule_id: number | null;
+  schedule_name: string | null;
+  shift_start: string | null;
+  shift_end: string | null;
+  lunch_start: string | null;
+  lunch_end: string | null;
+  snack_start: string | null;
+  snack_end: string | null;
+}
+
+export interface StaffScheduleRaw {
+  id: number;
+  name: string;
+  role: string;
+  initials: string;
+  color: string;
+  schedule_id?: number | null;
+  schedule_name?: string | null;
+  shift_start?: string | null;
+  shift_end?: string | null;
+  lunch_start?: string | null;
+  lunch_end?: string | null;
+  snack_start?: string | null;
+  snack_end?: string | null;
+}
+
+export interface TimeRecord {
+  id: number;
+  staff_id: number;
+  name: string;
+  role: string;
+  initials: string;
+  color: string;
+  status: "clocked_in" | "clocked_out" | "not_in";
+  record: {
+    id: number;
+    clock_in: string;
+    clock_out: string | null;
+    total_hours: number;
+  } | null;
+  shift_start: string | null;
+  shift_end: string | null;
+  lunch_start: string | null;
+  lunch_end: string | null;
+  snack_start: string | null;
+  snack_end: string | null;
+}
+
+export interface ClockResponse {
+  action: "clock_in" | "clock_out";
+  staff: { staff_id: number; name: string; role: string; initials: string; color: string };
+  record: TimeRecord["record"];
+}
+
+export interface DayRecord {
+  id: number;
+  staff_id: number;
+  clock_in: string;
+  clock_out: string | null;
+  total_hours: number;
+  name: string;
+  role: string;
+  initials: string;
+  color: string;
+}
+
+export interface PrintStaffRecord {
+  staff_id: number;
+  name: string;
+  role: string;
+  initials: string;
+  color: string;
+  shift_start: string | null;
+  shift_end: string | null;
+  schedule_name: string | null;
+  records: {
+    id: number;
+    staff_id: number;
+    clock_in: string;
+    clock_out: string | null;
+    total_hours: number;
+    record_date: string;
+  }[];
+}
+
+export interface PrintDateEntry {
+  date: string;
+  day_of_week: string;
+  staff: PrintStaffRecord[];
+  total_hours: number;
+  staff_present: number;
+}
+
+export interface PrintResponse {
+  from: string;
+  to: string;
+  total_days: number;
+  total_staff: number;
+  unique_staff_present: number;
+  grand_total_hours: number;
+  dates: PrintDateEntry[];
+  all_staff: { staff_id: number; name: string; role: string; initials: string; color: string }[];
+}
+
+export type TimekeepingTab = "today" | "calendar" | "schedules";
+

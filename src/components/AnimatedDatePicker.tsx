@@ -166,8 +166,8 @@ export const AnimatedDatePicker: React.FC<Props> = ({
       {/* Calendar dropdown */}
       <div
         className={`
-          absolute z-50 mt-2 left-0 right-0
-          rounded-2xl overflow-hidden
+          absolute z-[60] mt-2 left-0 right-0
+          rounded-2xl
           border border-erl-border-default
           bg-erl-surface
           shadow-[0_12px_48px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.3)]

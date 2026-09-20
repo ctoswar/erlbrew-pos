@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 interface Props {
   value: string; // "YYYY-MM-DD" format
@@ -11,7 +12,11 @@ interface Props {
 }
 
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const MONTHS = [
+const MONTHS_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+const MONTHS_FULL = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
@@ -37,6 +42,8 @@ const isSameDay = (a: Date, b: Date) =>
 const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
 const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
 
+type View = { mode: "days"; year: number; month: number } | { mode: "months"; year: number };
+
 export const AnimatedDatePicker: React.FC<Props> = ({
   value,
   onChange,
@@ -51,31 +58,15 @@ export const AnimatedDatePicker: React.FC<Props> = ({
   today.setHours(0, 0, 0, 0);
 
   const [open, setOpen] = useState(false);
-  const [viewDate, setViewDate] = useState(selected || today);
+  const [view, setView] = useState<View>({
+    mode: "days",
+    year: selected?.getFullYear() ?? today.getFullYear(),
+    month: selected?.getMonth() ?? today.getMonth(),
+  });
   const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const viewYear = viewDate.getFullYear();
-  const viewMonth = viewDate.getMonth();
-  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
-  const firstDay = getFirstDayOfMonth(viewYear, viewMonth);
-  const prevMonthDays = getDaysInMonth(viewYear, viewMonth - 1);
-
-  // Build calendar grid
-  const cells: { day: number; month: "prev" | "current" | "next"; date: Date }[] = [];
-  for (let i = firstDay - 1; i >= 0; i--) {
-    const d = new Date(viewYear, viewMonth - 1, prevMonthDays - i);
-    cells.push({ day: prevMonthDays - i, month: "prev", date: d });
-  }
-  for (let d = 1; d <= daysInMonth; d++) {
-    const date = new Date(viewYear, viewMonth, d);
-    cells.push({ day: d, month: "current", date });
-  }
-  const remaining = 42 - cells.length;
-  for (let d = 1; d <= remaining; d++) {
-    const date = new Date(viewYear, viewMonth + 1, d);
-    cells.push({ day: d, month: "next", date });
-  }
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number; openUp: boolean } | null>(null);
 
   const minDate = min ? parseDate(min) : null;
   const maxDate = max ? parseDate(max) : null;
@@ -89,13 +80,45 @@ export const AnimatedDatePicker: React.FC<Props> = ({
   const close = useCallback(() => {
     setOpen(false);
     setSlideDir(null);
+    setDropdownPos(null);
   }, []);
+
+  // Calculate dropdown position when opening
+  const calcPosition = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const DROPDOWN_HEIGHT = 340;
+    const openUp = spaceBelow < DROPDOWN_HEIGHT + 8;
+    setDropdownPos({
+      top: openUp ? rect.top - DROPDOWN_HEIGHT - 8 : rect.bottom + 8,
+      left: rect.left,
+      width: rect.width,
+      openUp,
+    });
+  }, []);
+
+  // Open/close
+  useEffect(() => {
+    if (!open) return;
+    calcPosition();
+    const handleResize = () => calcPosition();
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("scroll", handleResize, true);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("scroll", handleResize, true);
+    };
+  }, [open, calcPosition]);
 
   // Outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) close();
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      close();
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -110,9 +133,14 @@ export const AnimatedDatePicker: React.FC<Props> = ({
   }, [open, close]);
 
   const navigateMonth = (dir: number) => {
+    if (view.mode !== "days") return;
     setSlideDir(dir > 0 ? "right" : "left");
     setTimeout(() => {
-      setViewDate(new Date(viewYear, viewMonth + dir, 1));
+      let newMonth = view.month + dir;
+      let newYear = view.year;
+      if (newMonth > 11) { newMonth = 0; newYear++; }
+      if (newMonth < 0) { newMonth = 11; newYear--; }
+      setView({ mode: "days", year: newYear, month: newMonth });
       setTimeout(() => setSlideDir(null), 200);
     }, 100);
   };
@@ -128,6 +156,225 @@ export const AnimatedDatePicker: React.FC<Props> = ({
     return d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
   };
 
+  // Calendar grid (days mode)
+  const renderDays = () => {
+    if (view.mode !== "days") return null;
+    const { year, month } = view;
+    const daysInMonth = getDaysInMonth(year, month);
+    const firstDay = getFirstDayOfMonth(year, month);
+    const prevMonthDays = getDaysInMonth(year, month - 1);
+
+    const cells: { day: number; month: "prev" | "current" | "next"; date: Date }[] = [];
+    for (let i = firstDay - 1; i >= 0; i--) {
+      cells.push({ day: prevMonthDays - i, month: "prev", date: new Date(year, month - 1, prevMonthDays - i) });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push({ day: d, month: "current", date: new Date(year, month, d) });
+    }
+    const remaining = 42 - cells.length;
+    for (let d = 1; d <= remaining; d++) {
+      cells.push({ day: d, month: "next", date: new Date(year, month + 1, d) });
+    }
+
+    return (
+      <>
+        {/* Month/Year header — click month to open month picker */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            type="button"
+            onClick={() => navigateMonth(-1)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setView({ mode: "months", year })}
+            className="text-sm font-bold text-erl-text-primary tracking-wide hover:text-erl-accent transition-colors px-3 py-1.5 rounded-lg hover:bg-erl-accent/10"
+          >
+            {MONTHS_FULL[month]} {year}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigateMonth(1)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Day headers */}
+        <div className="grid grid-cols-7 mb-2">
+          {DAYS.map((d) => (
+            <div key={d} className="text-center text-[10px] font-bold text-erl-text-faint tracking-wider py-1.5">
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div
+          className={`grid grid-cols-7 gap-1 transition-all duration-200 ${
+            slideDir === "left" ? "animate-slide-left" : slideDir === "right" ? "animate-slide-right" : ""
+          }`}
+        >
+          {cells.map((cell, i) => {
+            const isCurrent = cell.month === "current";
+            const isSelected = selected && isSameDay(cell.date, selected);
+            const isToday = isSameDay(cell.date, today);
+            const dis = isDisabled(cell.date);
+
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => selectDate(cell.date)}
+                disabled={dis}
+                className={`
+                  relative w-full aspect-square flex items-center justify-center
+                  rounded-xl text-xs font-medium
+                  transition-all duration-150
+                  ${!isCurrent ? "text-erl-text-disabled/30" : ""}
+                  ${isCurrent && !dis ? "text-erl-text-secondary hover:text-erl-text-primary hover:bg-erl-accent/10 cursor-pointer" : ""}
+                  ${isCurrent && dis ? "text-erl-text-disabled cursor-not-allowed" : ""}
+                  ${isSelected ? "!bg-erl-accent !text-white hover:!bg-erl-accent/90 shadow-[0_2px_12px_rgba(196,149,106,0.45)]" : ""}
+                  ${isToday && !isSelected ? "font-bold" : ""}
+                  active:scale-90
+                `}
+              >
+                {cell.day}
+                {isToday && !isSelected && (
+                  <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-erl-accent" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </>
+    );
+  };
+
+  // Month picker (months mode)
+  const renderMonths = () => {
+    if (view.mode !== "months") return null;
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    return (
+      <>
+        {/* Year header with nav */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            type="button"
+            onClick={() => setView({ mode: "months", year: view.year - 1 })}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <div className="text-sm font-bold text-erl-text-primary tracking-wide">{view.year}</div>
+          <button
+            type="button"
+            onClick={() => setView({ mode: "months", year: view.year + 1 })}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Month grid */}
+        <div className="grid grid-cols-3 gap-2">
+          {MONTHS_SHORT.map((m, i) => {
+            const isThisMonth = view.year === currentYear && i === currentMonth;
+            const isSelectedMonth = selected && selected.getFullYear() === view.year && selected.getMonth() === i;
+
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  setView({ mode: "days", year: view.year, month: i });
+                }}
+                className={`
+                  py-3 rounded-xl text-xs font-semibold
+                  transition-all duration-200 active:scale-95
+                  ${isSelectedMonth
+                    ? "!bg-erl-accent !text-white shadow-[0_2px_12px_rgba(196,149,106,0.45)]"
+                    : isThisMonth
+                      ? "bg-erl-accent/10 text-erl-accent hover:bg-erl-accent/20"
+                      : "text-erl-text-secondary hover:bg-erl-accent/10 hover:text-erl-accent"
+                  }
+                `}
+              >
+                {m}
+              </button>
+            );
+          })}
+        </div>
+      </>
+    );
+  };
+
+  const calendarContent = (
+    <div
+      ref={dropdownRef}
+      className={`
+        rounded-2xl
+        border border-erl-border-default
+        bg-erl-surface
+        shadow-[0_16px_64px_rgba(0,0,0,0.55),0_4px_20px_rgba(0,0,0,0.35)]
+        backdrop-blur-xl
+        transition-all duration-300
+        ease-[cubic-bezier(0.16,1,0.3,1)]
+        ${open
+          ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
+          : "opacity-0 scale-95 -translate-y-2 pointer-events-none"
+        }
+      `}
+      style={{
+        willChange: "transform, opacity",
+        position: "fixed",
+        top: dropdownPos ? dropdownPos.top : 0,
+        left: dropdownPos ? dropdownPos.left : 0,
+        width: dropdownPos ? dropdownPos.width : 300,
+        zIndex: 99999,
+      }}
+    >
+      <div className="p-4">
+        {view.mode === "days" ? renderDays() : renderMonths()}
+
+        {/* Footer actions */}
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-erl-border-subtle">
+          <button
+            type="button"
+            onClick={() => { onChange(""); close(); }}
+            className="text-[11px] text-erl-text-muted hover:text-[#e5484d] font-semibold tracking-wide px-3 py-2 rounded-xl hover:bg-[#e5484d]/10 transition-all duration-200"
+          >
+            Clear
+          </button>
+          <button
+            type="button"
+            onClick={() => { onChange(toStr(today)); close(); }}
+            className="text-[11px] text-erl-accent hover:text-erl-accent-light font-semibold tracking-wide px-3 py-2 rounded-xl hover:bg-erl-accent/10 transition-all duration-200"
+          >
+            Today
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {/* Input trigger */}
@@ -136,7 +383,13 @@ export const AnimatedDatePicker: React.FC<Props> = ({
         disabled={disabled}
         onClick={() => {
           if (disabled) return;
-          if (!open) setViewDate(selected || today);
+          if (!open) {
+            setView({
+              mode: "days",
+              year: selected?.getFullYear() ?? today.getFullYear(),
+              month: selected?.getMonth() ?? today.getMonth(),
+            });
+          }
           setOpen((o) => !o);
         }}
         className={`
@@ -163,120 +416,8 @@ export const AnimatedDatePicker: React.FC<Props> = ({
         </svg>
       </button>
 
-      {/* Calendar dropdown */}
-      <div
-        className={`
-          absolute z-[60] mt-2 left-0 right-0
-          rounded-2xl
-          border border-erl-border-default
-          bg-erl-surface
-          shadow-[0_12px_48px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.3)]
-          backdrop-blur-xl
-          origin-top
-          transition-all duration-300
-          ease-[cubic-bezier(0.16,1,0.3,1)]
-          ${open
-            ? "opacity-100 scale-y-100 translate-y-0 pointer-events-auto"
-            : "opacity-0 scale-y-85 -translate-y-2 pointer-events-none"
-          }
-        `}
-        style={{ willChange: "transform, opacity" }}
-      >
-        <div className="p-3">
-          {/* Month/Year header */}
-          <div className="flex items-center justify-between mb-3">
-            <button
-              type="button"
-              onClick={() => navigateMonth(-1)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-            </button>
-            <div className="text-xs font-bold text-erl-text-primary tracking-wide">
-              {MONTHS[viewMonth]} {viewYear}
-            </div>
-            <button
-              type="button"
-              onClick={() => navigateMonth(1)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-erl-text-muted hover:text-erl-accent hover:bg-erl-accent/10 transition-all duration-200 active:scale-90"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Day headers */}
-          <div className="grid grid-cols-7 mb-1">
-            {DAYS.map((d) => (
-              <div key={d} className="text-center text-[9px] font-bold text-erl-text-faint tracking-wider py-1">
-                {d}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar grid */}
-          <div
-            className={`grid grid-cols-7 gap-0.5 transition-all duration-200 ${
-              slideDir === "left" ? "animate-slide-left" : slideDir === "right" ? "animate-slide-right" : ""
-            }`}
-          >
-            {cells.map((cell, i) => {
-              const isCurrent = cell.month === "current";
-              const isSelected = selected && isSameDay(cell.date, selected);
-              const isToday = isSameDay(cell.date, today);
-              const disabled = isDisabled(cell.date);
-
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => selectDate(cell.date)}
-                  disabled={disabled}
-                  className={`
-                    relative w-full aspect-square flex items-center justify-center
-                    rounded-lg text-[11px] font-medium
-                    transition-all duration-150
-                    ${!isCurrent ? "text-erl-text-disabled/40" : ""}
-                    ${isCurrent && !disabled ? "text-erl-text-secondary hover:text-erl-text-primary hover:bg-erl-accent/10" : ""}
-                    ${isCurrent && disabled ? "text-erl-text-disabled cursor-not-allowed" : ""}
-                    ${isSelected ? "!bg-erl-accent !text-white hover:!bg-erl-accent/90 shadow-[0_2px_8px_rgba(196,149,106,0.4)]" : ""}
-                    ${isToday && !isSelected ? "font-bold" : ""}
-                    active:scale-90
-                  `}
-                >
-                  {cell.day}
-                  {isToday && !isSelected && (
-                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-erl-accent" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Footer actions */}
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-erl-border-subtle">
-            <button
-              type="button"
-              onClick={() => { onChange(""); close(); }}
-              className="text-[10px] text-erl-text-muted hover:text-erl-danger font-semibold tracking-wide px-2 py-1.5 rounded-lg hover:bg-erl-danger/10 transition-all duration-200"
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              onClick={() => { onChange(toStr(today)); close(); }}
-              className="text-[10px] text-erl-accent hover:text-erl-accent-light font-semibold tracking-wide px-2 py-1.5 rounded-lg hover:bg-erl-accent/10 transition-all duration-200"
-            >
-              Today
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Portal the calendar to document body — prevents clipping by any parent overflow */}
+      {createPortal(calendarContent, document.body)}
     </div>
   );
 };

@@ -506,7 +506,7 @@ await pool.query(`
     console.error('DB connection failed', e);
   }
 }
-initDb();
+const dbReady = initDb();
 
 // Initialize Google Sheets client (on demand)
 const gs = googleSheetsClientInit(pool);
@@ -809,9 +809,10 @@ app.post('/api/open-drawer', async (req, res) => {
   }
 })();
 
-const server = app.listen(PORT, () => {
-  console.log(`API server listening on port ${PORT}`);
-});
+dbReady.then(() => {
+  const server = app.listen(PORT, () => {
+    console.log(`API server listening on port ${PORT}`);
+  });
 
 // Midnight Z-Report cron job — runs at 00:00:00 every day
 cron.schedule('0 0 0 * * *', async () => {
@@ -844,3 +845,4 @@ server.on('error', (e) => {
     throw e;
   }
 });
+}); // end dbReady.then

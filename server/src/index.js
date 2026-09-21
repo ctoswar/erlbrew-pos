@@ -28,7 +28,8 @@ import rateLimit from 'express-rate-limit';
 
 const DEFAULT_PRINT_SERVER = null; // must be configured via env or settings
 
-dotenv.config();
+dotenv.config({ path: resolve(process.cwd(), 'server', '.env') });
+if (!process.env.JWT_SECRET) dotenv.config(); // fallback to cwd
 
 // Security hardening: ensure JWT secret is set
 if (!process.env.JWT_SECRET) {
@@ -482,6 +483,22 @@ await pool.query(`
       )
     `).catch(() => {});
     console.log('multi-location tables ready');
+
+    // ── Menu item sizes migration ──────────────────────────────────────────
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS menu_item_sizes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        menu_item_id VARCHAR(64) NOT NULL,
+        label VARCHAR(64) NOT NULL,
+        price DECIMAL(10,2) NOT NULL,
+        sort_order INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,
+        INDEX idx_sizes_menu_item (menu_item_id)
+      )
+    `).catch(() => {});
+    console.log('menu_item_sizes table ready');
+    await pool.query(`ALTER TABLE order_items ADD COLUMN size VARCHAR(64) DEFAULT NULL AFTER price`).catch(() => {});
 
     // Seed menu_items from DB init if they ever existed
     // Auto-seed removed — use init.sql or Fresh Start is the only way to reset

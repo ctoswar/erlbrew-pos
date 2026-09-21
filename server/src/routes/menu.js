@@ -44,18 +44,20 @@ export default function menuRouter(pool){
           isDefault: !!mod.isDefault,
         });
       }
-      // Fetch sizes
-      const [sizeRows] = await pool.query('SELECT id, menu_item_id, label, price, sort_order AS sortOrder FROM menu_item_sizes ORDER BY sort_order');
-      const sizeMap = {};
-      for (const sz of sizeRows) {
-        if (!sizeMap[sz.menu_item_id]) sizeMap[sz.menu_item_id] = [];
-        sizeMap[sz.menu_item_id].push({
-          id: sz.id,
-          label: sz.label,
-          price: sz.price,
-          sortOrder: sz.sortOrder,
-        });
-      }
+      // Fetch sizes (table may not exist yet on first deploy)
+      let sizeMap = {};
+      try {
+        const [sizeRows] = await pool.query('SELECT id, menu_item_id, label, price, sort_order AS sortOrder FROM menu_item_sizes ORDER BY sort_order');
+        for (const sz of sizeRows) {
+          if (!sizeMap[sz.menu_item_id]) sizeMap[sz.menu_item_id] = [];
+          sizeMap[sz.menu_item_id].push({
+            id: sz.id,
+            label: sz.label,
+            price: sz.price,
+            sortOrder: sz.sortOrder,
+          });
+        }
+      } catch (_) { /* menu_item_sizes table doesn't exist yet */ }
       const result = rows.map(row => ({
         ...row,
         modifiers: modMap[row.id] || [],
@@ -87,20 +89,22 @@ export default function menuRouter(pool){
           isDefault: !!mod.isDefault,
         });
       }
-      // Fetch sizes
-      const [sizeRows] = await pool.query(
-        'SELECT id, menu_item_id, label, price, sort_order AS sortOrder FROM menu_item_sizes ORDER BY sort_order'
-      );
-      const sizeMap = {};
-      for (const sz of sizeRows) {
-        if (!sizeMap[sz.menu_item_id]) sizeMap[sz.menu_item_id] = [];
-        sizeMap[sz.menu_item_id].push({
-          id: sz.id,
-          label: sz.label,
-          price: sz.price,
-          sortOrder: sz.sortOrder,
-        });
-      }
+      // Fetch sizes (table may not exist yet on first deploy)
+      let sizeMap = {};
+      try {
+        const [sizeRows] = await pool.query(
+          'SELECT id, menu_item_id, label, price, sort_order AS sortOrder FROM menu_item_sizes ORDER BY sort_order'
+        );
+        for (const sz of sizeRows) {
+          if (!sizeMap[sz.menu_item_id]) sizeMap[sz.menu_item_id] = [];
+          sizeMap[sz.menu_item_id].push({
+            id: sz.id,
+            label: sz.label,
+            price: sz.price,
+            sortOrder: sz.sortOrder,
+          });
+        }
+      } catch (_) { /* menu_item_sizes table doesn't exist yet */ }
       // Group by category for Flutter consumption
       const categories = {};
       for (const row of rows) {

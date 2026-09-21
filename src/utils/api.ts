@@ -463,6 +463,24 @@ export async function batchApplyModifier(modifier: { name: string; price: number
   return res.json();
 }
 
+export async function batchApplyIngredients(items: { inventory_item_id: string; quantity: number }[], menuItemIds: string[]): Promise<{ ok: boolean; applied: number }> {
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl('/recipes/batch'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify({ items, menuItemIds }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `API failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 // Z-Report API
 export interface ZReport {
   id?: number;

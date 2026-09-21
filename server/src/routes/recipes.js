@@ -65,5 +65,48 @@ export default function recipesRouter(pool) {
     }
   });
 
+  // POST /api/recipes/batch — apply same ingredients to multiple menu items
+  router.post('/batch', authMiddleware, async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+      const { items, menuItemIds } = req.body;
+      if (!Array.isArray(items) || !Array.isArray(menuItemIds)) {
+        return res.status(400).json({ error: 'items and menuItemIds must be arrays' });
+      }
+
+      const validItems = items
+        .filter((it) => it.inventory_item_id && it.quantity > 0)
+        .map((it) => [it.inventory_item_id, Number(it.quantity)]);
+
+      if (validItems.length === 0) {
+        return res.status(400).json({ error: 'No valid ingredients provided' });
+      }
+
+      await conn.beginTransaction();
+
+      let applied = 0;
+      for (const menuItemId of menuItemIds) {
+        await conn.query('DELETE FROM recipes WHERE menu_item_id = ?', [menuItemId]);
+        if (validItems.length > 0) {
+          const vals = validItems.map(([inventory_item_id, quantity]) => [menuItemId, inventory_item_id, quantity]);
+          await conn.query('INSERT INTO recipes (menu_item_id, inventory_item_id, quantity) VALUES ?', [vals]);
+        }
+        applied++;
+      }
+
+      await conn.commit();
+
+      await logAudit(pool, req, { action: 'recipes_batch_apply', entityType: 'recipes', entityId: menuItemIds.join(','), details: { applied, ingredientCount: validItems.length } });
+
+      res.json({ ok: true, applied });
+    } catch (err) {
+      await conn.rollback();
+      console.error(err);
+      res.status(500).json({ error: 'Failed to batch apply ingredients' });
+    } finally {
+      conn.release();
+    }
+  });
+
   return router;
 }

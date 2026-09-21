@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { generateZReport, getZReports, ZReport } from "../utils/api";
 import { formatCurrency } from "../utils";
-import { getStoreInfo } from "../utils/receiptUtils";
-import { loadPrintSettings } from "./AdminPrintSettings";
+import { ZReportPreview } from "./ZReportPreview";
 
 export const ZReportScreen: React.FC = () => {
   const [reports, setReports] = useState<ZReport[]>([]);
@@ -10,6 +9,7 @@ export const ZReportScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
+  const [printReport, setPrintReport] = useState<ZReport | null>(null);
 
   const loadReports = () => {
     setLoading(true);
@@ -39,107 +39,6 @@ export const ZReportScreen: React.FC = () => {
     } finally {
       setGenerating(false);
     }
-  };
-
-  const handlePrint = (report: ZReport) => {
-    const settings = loadPrintSettings();
-    const STORE = getStoreInfo();
-    const PAPER_MM = settings.paperSize === '57mm' ? 57 : settings.paperSize === '58mm' ? 58 : 80;
-    const W = settings.paperSize === '57mm' ? 32 : settings.paperSize === '58mm' ? 34 : 44;
-    const FONT = "'Courier New', 'Lucida Console', monospace";
-    const FONT_SIZE = 11;
-
-    function padCenter(text: string, width = W): string {
-      const s = text.length <= width ? text : text.substring(0, width - 2) + '..';
-      return ' '.repeat(Math.max(0, Math.floor((width - s.length) / 2))) + s;
-    }
-    function padRight(text: string, width = W): string {
-      const s = text.length <= width ? text : text.substring(0, width - 1) + '…';
-      return s.padEnd(width);
-    }
-    function padLeft(text: string, width = W): string {
-      return text.padStart(width);
-    }
-    function ln(char = '-'): string { return char.repeat(W); }
-
-    const lines: string[] = [];
-
-    // Store header
-    if (settings.showStoreHeader) {
-      lines.push(padCenter(STORE.name));
-      lines.push(ln("="));
-    }
-
-    // Report title
-    lines.push(padCenter("Z-REPORT"));
-    lines.push(padCenter("END OF DAY SUMMARY"));
-    lines.push(ln("="));
-
-    // Report period
-    const periodStart = new Date(report.period_start).toLocaleString("en-PH", { timeZone: "Asia/Manila" });
-    const periodEnd = new Date(report.period_end).toLocaleString("en-PH", { timeZone: "Asia/Manila" });
-    lines.push(`Date   : ${report.report_date}`);
-    lines.push(`From   : ${periodStart}`);
-    lines.push(`To     : ${periodEnd}`);
-    lines.push(ln("-"));
-
-    // Sales summary
-    lines.push(padRight("SALES SUMMARY", W));
-    lines.push(ln("-"));
-    lines.push(`${padRight("Total Sales:", 22)}${padLeft(formatCurrency(report.total_sales).replace("₱","").trim(), 9)}`);
-    lines.push(`${padRight("Total Orders:", 22)}${padLeft(String(report.total_orders), 9)}`);
-    lines.push(ln("-"));
-
-    // Payment breakdown
-    lines.push(padRight("PAYMENT BREAKDOWN", W));
-    lines.push(ln("-"));
-    lines.push(`${padRight("Cash:", 22)}${padLeft(formatCurrency(report.total_cash).replace("₱","").trim(), 9)}`);
-    lines.push(`${padRight("Card:", 22)}${padLeft(formatCurrency(report.total_card).replace("₱","").trim(), 9)}`);
-    lines.push(`${padRight("E-Wallet:", 22)}${padLeft(formatCurrency(report.total_ewallet).replace("₱","").trim(), 9)}`);
-    lines.push(ln("-"));
-
-    // Deductions
-    lines.push(padRight("DEDUCTIONS", W));
-    lines.push(ln("-"));
-    lines.push(`${padRight("Refunds:", 22)}${padLeft(formatCurrency(report.total_refunds).replace("₱","").trim(), 9)}`);
-    lines.push(`${padRight("Voids:", 22)}${padLeft(String(report.total_voids), 9)}`);
-    lines.push(ln("-"));
-
-    // Profit
-    lines.push(`${padRight("COGS:", 22)}${padLeft(formatCurrency(report.total_cogs).replace("₱","").trim(), 9)}`);
-    lines.push(ln("="));
-    lines.push(`${padRight("GROSS PROFIT:", 22)}${padLeft(formatCurrency(report.gross_profit).replace("₱","").trim(), 9)}`);
-    lines.push(ln("="));
-
-    // Footer
-    lines.push(" ");
-    lines.push(padCenter("Report generated successfully"));
-    lines.push(padCenter("Keep this copy for your records"));
-    lines.push(" ");
-    lines.push(" ");
-
-    const win = window.open("", "_blank", "width=400,height=700");
-    if (!win) return;
-    const doc = win.document;
-    doc.write("<!DOCTYPE html><html><head>");
-    doc.write("<title>Z-Report</title>");
-    doc.write(`<style>
-      @page { margin: 0; size: ${PAPER_MM}mm auto; }
-      body {
-        font-family: ${FONT}; font-size: ${FONT_SIZE}px; line-height: 1.4;
-        width: ${PAPER_MM}mm; margin: 0; padding: 8px 6px;
-        box-sizing: border-box; color: #000; background: #fff;
-      }
-      pre {
-        font-family: ${FONT}; font-size: ${FONT_SIZE}px; line-height: 1.45;
-        margin: 0; white-space: pre-wrap; word-break: keep-all;
-      }
-    </style>`);
-    doc.write("</head><body>");
-    doc.write(`<pre>${lines.join("\n")}</pre>`);
-    doc.write(`<script>window.print(); window.close();<\/script>`);
-    doc.write("</body></html>");
-    doc.close();
   };
 
   interface StatItem {
@@ -184,7 +83,7 @@ export const ZReportScreen: React.FC = () => {
             {generating ? "Generating…" : "Generate Report"}
           </button>
           {lastReport && (
-            <button onClick={() => handlePrint(lastReport)} className="btn btn-outline text-[11px] px-4 py-2 tracking-wide">
+            <button onClick={() => setPrintReport(lastReport)} className="btn btn-outline text-[11px] px-4 py-2 tracking-wide">
               🖨️ Print
             </button>
           )}
@@ -282,7 +181,7 @@ export const ZReportScreen: React.FC = () => {
                         {formatCurrency(r.gross_profit)}
                       </div>
                     </div>
-                    <button onClick={() => handlePrint(r)} className="ml-1 px-2 py-1.5 rounded-lg text-[11px] text-erl-text-faint hover:text-erl-text-primary hover:bg-erl-surface transition-colors" title="Print report">
+                    <button onClick={() => setPrintReport(r)} className="ml-1 px-2 py-1.5 rounded-lg text-[11px] text-erl-text-faint hover:text-erl-text-primary hover:bg-erl-surface transition-colors" title="Print report">
                       🖨️
                     </button>
                   </div>
@@ -292,6 +191,11 @@ export const ZReportScreen: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* ── Print Preview Modal ─────────────────────────────── */}
+      {printReport && (
+        <ZReportPreview report={printReport} onClose={() => setPrintReport(null)} />
+      )}
     </div>
   );
 };

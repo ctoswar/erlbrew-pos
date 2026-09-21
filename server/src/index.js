@@ -493,7 +493,6 @@ await pool.query(`
         price DECIMAL(10,2) NOT NULL,
         sort_order INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,
         INDEX idx_sizes_menu_item (menu_item_id)
       )
     `).catch(e => console.error('[migration] menu_item_sizes create failed:', e.message));

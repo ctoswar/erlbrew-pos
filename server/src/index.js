@@ -496,7 +496,7 @@ await pool.query(`
         FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,
         INDEX idx_sizes_menu_item (menu_item_id)
       )
-    `).catch(() => {});
+    `).catch(e => console.error('[migration] menu_item_sizes create failed:', e.message));
     console.log('menu_item_sizes table ready');
     await pool.query(`ALTER TABLE order_items ADD COLUMN size VARCHAR(64) DEFAULT NULL AFTER price`).catch(() => {});
 

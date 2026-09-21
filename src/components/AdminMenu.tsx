@@ -5,6 +5,7 @@ import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete, uploadMenuItemI
 import { IngredientEditor } from "./IngredientEditor";
 import { ModifierEditor } from "./ModifierEditor";
 import { ApplyModifierModal } from "./ApplyModifierModal";
+import { ApplyIngredientModal } from "./ApplyIngredientModal";
 import { AnimatedSelect } from "./AnimatedSelect";
 import { FOOD_ICONS, getIconByEmoji } from "./FoodIcons";
 
@@ -31,6 +32,8 @@ export const AdminMenu: React.FC = () => {
   const [ingredientItem, setIngredientItem] = useState<MenuItem | null>(null);
   const [modifierItem, setModifierItem] = useState<MenuItem | null>(null);
   const [showGlobalBatchApply, setShowGlobalBatchApply] = useState(false);
+  const [showIngredientBatchApply, setShowIngredientBatchApply] = useState(false);
+  const [copyIngredientItem, setCopyIngredientItem] = useState<MenuItem | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [customCategory, setCustomCategory] = useState(false);
@@ -186,6 +189,27 @@ export const AdminMenu: React.FC = () => {
         />
       )}
 
+      {/* Batch Apply Ingredients Modal */}
+      {showIngredientBatchApply && (
+        <ApplyIngredientModal
+          menuItems={items}
+          onApplied={() => { loadItems(); }}
+          onClose={() => setShowIngredientBatchApply(false)}
+        />
+      )}
+
+      {/* Copy Ingredients from specific item */}
+      {copyIngredientItem && (
+        <ApplyIngredientModal
+          sourceItemId={copyIngredientItem.id}
+          sourceItemName={copyIngredientItem.name}
+          menuItems={items}
+          excludeItemId={copyIngredientItem.id}
+          onApplied={() => { loadItems(); }}
+          onClose={() => setCopyIngredientItem(null)}
+        />
+      )}
+
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="glass-panel flex items-center justify-between px-5 py-3.5 border-b border-erl-accent/10 flex-shrink-0 rounded-none">
         <div className="flex items-center gap-3">
@@ -196,6 +220,9 @@ export const AdminMenu: React.FC = () => {
         </div>
         <button onClick={() => setShowGlobalBatchApply(true)} className="btn btn-outline text-[11px] px-4 py-2 tracking-wide">
           📋 Batch Apply
+        </button>
+        <button onClick={() => setShowIngredientBatchApply(true)} className="btn btn-outline text-[11px] px-4 py-2 tracking-wide">
+          🧪 Batch Ingredients
         </button>
         <button onClick={openAddForm} className="btn btn-accent text-[11px] px-4 py-2 tracking-wide">
           + Add Item
@@ -295,6 +322,7 @@ export const AdminMenu: React.FC = () => {
                 onEdit={() => openEditForm(item)}
                 onDelete={() => setDeleteConfirm(item.id)}
                 onManageIngredients={() => setIngredientItem(item)}
+                onCopyIngredients={() => setCopyIngredientItem(item)}
                 onManageModifiers={() => setModifierItem(item)}
                 deleteConfirm={deleteConfirm === item.id}
                 onConfirmDelete={() => handleDelete(item.id)}
@@ -447,13 +475,14 @@ interface AdminItemCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onManageIngredients: () => void;
+  onCopyIngredients: () => void;
   onManageModifiers: () => void;
   deleteConfirm: boolean;
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
 }
 
-const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, onManageIngredients, onManageModifiers, deleteConfirm, onConfirmDelete, onCancelDelete }) => {
+const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, onManageIngredients, onCopyIngredients, onManageModifiers, deleteConfirm, onConfirmDelete, onCancelDelete }) => {
   const [uploading, setUploading] = useState(false);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -551,6 +580,9 @@ const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, o
           <div className="flex gap-1.5">
             <button onClick={onManageModifiers} className="flex-1 py-[7px] rounded-lg text-[11px] font-semibold cursor-pointer transition-all border border-erl-border-default text-erl-accent bg-transparent hover:bg-erl-accent/10 hover:border-erl-accent/40">
               ⚡ Modifiers
+            </button>
+            <button onClick={onCopyIngredients} className="flex-1 py-[7px] rounded-lg text-[11px] font-semibold cursor-pointer transition-all border border-dashed border-erl-border-default text-erl-accent bg-transparent hover:bg-erl-accent/10 hover:border-erl-accent/40">
+              📋 Copy Ingredients
             </button>
             <label className="flex-1 py-[7px] rounded-lg text-[11px] font-semibold cursor-pointer transition-all border border-dashed border-erl-border-default text-erl-text-faint bg-transparent hover:border-erl-border-medium hover:text-erl-text-secondary text-center" style={{ cursor: uploading ? "wait" : "pointer" }}>
               {uploading ? "⟳ Uploading…" : item.image ? "🖼 Change Image" : "🖼 Add Image"}

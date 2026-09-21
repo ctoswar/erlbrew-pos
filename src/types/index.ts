@@ -37,6 +37,13 @@ export interface CartItemModifier {
   qty?: number; // For modifiers like Extra Shot that can have quantity
 }
 
+export interface MenuItemSize {
+  id?: number;
+  label: string;
+  price: number;
+  sortOrder?: number;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -48,6 +55,7 @@ export interface MenuItem {
   popular?: boolean;
   image?: string;
   modifiers?: Modifier[];
+  sizes?: MenuItemSize[];
 }
 
 export interface CartItem {
@@ -55,6 +63,7 @@ export interface CartItem {
   qty: number;
   notes?: string;
   modifiers?: CartItemModifier[];
+  selectedSize?: MenuItemSize;
 }
 
 export interface Order {

@@ -481,6 +481,24 @@ export async function batchApplyIngredients(items: { inventory_item_id: string; 
   return res.json();
 }
 
+export async function saveMenuSizes(menuItemId: string, sizes: { label: string; price: number; sortOrder?: number }[]): Promise<{ id: number; label: string; price: number; sortOrder: number }[]> {
+  const token = getAuthToken();
+  const res = await fetch(getApiUrl(`/menu/${menuItemId}/sizes`), {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify({ sizes }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `API failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 // Z-Report API
 export interface ZReport {
   id?: number;

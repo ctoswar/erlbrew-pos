@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { CartItem, MenuItem, Discount, DiscountType, CartItemModifier } from "../types";
+import { CartItem, MenuItem, Discount, DiscountType, CartItemModifier, MenuItemSize } from "../types";
 import { cacheMenuItems, getCachedMenuItems, OfflineMenuItem } from "../utils/offlineDb";
 
 export function useCart() {
@@ -59,39 +59,39 @@ export function useCart() {
     } catch (err) { console.error("Failed to persist discount:", err); }
   }, [discount]);
 
-  const addItem = useCallback((item: MenuItem, modifiers?: CartItemModifier[]) => {
+  const addItem = useCallback((item: MenuItem, modifiers?: CartItemModifier[], selectedSize?: MenuItemSize) => {
     setCart((prev) => {
-      const key = JSON.stringify({ id: item.id, modifiers: modifiers || [] });
+      const key = JSON.stringify({ id: item.id, modifiers: modifiers || [], size: selectedSize?.label || "" });
       const existing = prev.find((ci) => {
-        const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [] });
+        const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [], size: ci.selectedSize?.label || "" });
         return ciKey === key;
       });
       if (existing) {
         return prev.map((ci) => {
-          const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [] });
+          const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [], size: ci.selectedSize?.label || "" });
           return ciKey === key ? { ...ci, qty: ci.qty + 1 } : ci;
         });
       }
-      return [...prev, { item, qty: 1, modifiers: modifiers || [] }];
+      return [...prev, { item, qty: 1, modifiers: modifiers || [], selectedSize }];
     });
   }, []);
 
-  const updateQty = useCallback((id: string, delta: number, modifiers?: CartItemModifier[]) => {
+  const updateQty = useCallback((id: string, delta: number, modifiers?: CartItemModifier[], selectedSize?: MenuItemSize) => {
     setCart((prev) => {
-      const key = JSON.stringify({ id, modifiers: modifiers || [] });
+      const key = JSON.stringify({ id, modifiers: modifiers || [], size: selectedSize?.label || "" });
       return prev
         .map((ci) => {
-          const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [] });
+          const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [], size: ci.selectedSize?.label || "" });
           return ciKey === key ? { ...ci, qty: ci.qty + delta } : ci;
         })
         .filter((ci) => ci.qty > 0);
     });
   }, []);
 
-  const removeItem = useCallback((id: string, modifiers?: CartItemModifier[]) => {
-    const key = JSON.stringify({ id, modifiers: modifiers || [] });
+  const removeItem = useCallback((id: string, modifiers?: CartItemModifier[], selectedSize?: MenuItemSize) => {
+    const key = JSON.stringify({ id, modifiers: modifiers || [], size: selectedSize?.label || "" });
     setCart((prev) => prev.filter((ci) => {
-      const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [] });
+      const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [], size: ci.selectedSize?.label || "" });
       return ciKey !== key;
     }));
   }, []);
@@ -101,11 +101,11 @@ export function useCart() {
     setDiscount(null);
   }, []);
 
-  const addNote = useCallback((id: string, notes: string, modifiers?: CartItemModifier[]) => {
-    const key = JSON.stringify({ id, modifiers: modifiers || [] });
+  const addNote = useCallback((id: string, notes: string, modifiers?: CartItemModifier[], selectedSize?: MenuItemSize) => {
+    const key = JSON.stringify({ id, modifiers: modifiers || [], size: selectedSize?.label || "" });
     setCart((prev) =>
       prev.map((ci) => {
-        const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [] });
+        const ciKey = JSON.stringify({ id: ci.item.id, modifiers: ci.modifiers || [], size: ci.selectedSize?.label || "" });
         return ciKey === key ? { ...ci, notes } : ci;
       })
     );

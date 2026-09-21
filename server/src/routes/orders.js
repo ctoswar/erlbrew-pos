@@ -54,7 +54,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   async function fetchOrderItems(orderIds) {
     if (!orderIds.length) return [];
     const [items] = await pool.query(`
-      SELECT oi.order_id, oi.menu_item_id, oi.qty, oi.notes, oi.price,
+      SELECT oi.order_id, oi.menu_item_id, oi.qty, oi.notes, oi.price, oi.size,
              mi.name AS menu_item_name, mi.category, mi.emoji, mi.badge,
              JSON_ARRAYAGG(
                CASE WHEN oim.id IS NOT NULL
@@ -323,8 +323,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       );
       for (const it of itemsOut) {
         const [itemResult] = await pool.query(
-          'INSERT INTO order_items (order_id, menu_item_id, qty, notes, price) VALUES (?, ?, ?, ?, ?)',
-          [id, it.id, it.qty, it.notes || '', it.price]
+          'INSERT INTO order_items (order_id, menu_item_id, qty, notes, price, size) VALUES (?, ?, ?, ?, ?, ?)',
+          [id, it.id, it.qty, it.notes || '', it.price, it.size || null]
         );
         const orderItemId = itemResult.insertId;
         // Insert modifiers for this order item

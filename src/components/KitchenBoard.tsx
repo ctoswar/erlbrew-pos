@@ -188,7 +188,7 @@ const KitchenCard: React.FC<KitchenCardProps> = ({ order, colColor, onUpdateStat
         {order.items.map((ci) => (
           <div key={ci.item.id} className="text-xs sm:text-[10px] text-erl-text-muted mb-1 sm:mb-0.5 flex gap-2 sm:gap-[5px]">
             <span className="text-erl-accent font-semibold">{ci.qty}×</span>
-            {ci.item.name}
+            {ci.item.name}{ci.selectedSize ? <span className="text-erl-text-faint font-normal ml-0.5">({ci.selectedSize.label})</span> : ""}
             {ci.modifiers && ci.modifiers.length > 0 && (
               <span className="text-erl-accent-dim text-[10px] sm:text-[8.5px]">({ci.modifiers.map((m) => m.name).join(", ")})</span>
             )}

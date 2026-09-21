@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
-import { CartItem, OrderType, Discount, CartItemModifier } from "../types";
+import { CartItem, OrderType, Discount, CartItemModifier, MenuItemSize } from "../types";
 import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
 import { getIconByEmoji } from "./FoodIcons";
 
 function cartItemKey(ci: CartItem): string {
   const modKey = (ci.modifiers || []).map((m) => m.name).sort().join("|");
-  return modKey ? `${ci.item.id}::${modKey}` : ci.item.id;
+  const sizeKey = ci.selectedSize?.label || "";
+  return modKey ? `${ci.item.id}::${sizeKey}::${modKey}` : `${ci.item.id}::${sizeKey}`;
 }
 
 interface Props {
@@ -13,14 +14,14 @@ interface Props {
   discount: Discount | null;
   orderType: OrderType;
   customerName: string;
-  onUpdateQty: (id: string, delta: number, modifiers?: CartItemModifier[]) => void;
+  onUpdateQty: (id: string, delta: number, modifiers?: CartItemModifier[], selectedSize?: MenuItemSize) => void;
   onClearCart: () => void;
   onOrderTypeChange: (t: OrderType) => void;
   onCustomerNameChange: (name: string) => void;
   onCheckout: () => void;
   onOpenDiscount: () => void;
   onRemoveDiscount: () => void;
-  onAddNote: (id: string, notes: string, modifiers?: CartItemModifier[]) => void;
+  onAddNote: (id: string, notes: string, modifiers?: CartItemModifier[], selectedSize?: MenuItemSize) => void;
   splitMode?: boolean;
   splitSelections?: Set<string>;
   onToggleSplitItem?: (key: string) => void;
@@ -185,7 +186,7 @@ export const CartPanel: React.FC<Props> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold text-erl-text-primary truncate">
-                      {ci.qty}× {ci.item.name}
+                      {ci.qty}× {ci.item.name}{ci.selectedSize ? <span className="text-erl-text-faint font-normal ml-1">({ci.selectedSize.label})</span> : ""}
                     </div>
                     <div className="text-xs md:text-[10px] text-erl-text-muted mt-0.5">
                       {formatCurrency(ci.item.price)} each
@@ -202,8 +203,9 @@ export const CartPanel: React.FC<Props> = ({
                   qty={ci.qty}
                   notes={ci.notes}
                   modifiers={ci.modifiers}
-                  onUpdateQty={(delta) => onUpdateQty(ci.item.id, delta, ci.modifiers)}
-                  onAddNote={(notes) => onAddNote(ci.item.id, notes, ci.modifiers)}
+                  selectedSize={ci.selectedSize}
+                  onUpdateQty={(delta) => onUpdateQty(ci.item.id, delta, ci.modifiers, ci.selectedSize)}
+                  onAddNote={(notes) => onAddNote(ci.item.id, notes, ci.modifiers, ci.selectedSize)}
                 />
               );
             })}
@@ -295,6 +297,7 @@ interface CartItemRowProps {
   qty: number;
   notes?: string;
   modifiers?: CartItemModifier[];
+  selectedSize?: import("../types").MenuItemSize;
   onUpdateQty: (delta: number) => void;
   onAddNote: (notes: string) => void;
 }
@@ -304,6 +307,7 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
   qty,
   notes,
   modifiers,
+  selectedSize,
   onUpdateQty,
   onAddNote,
 }) => {
@@ -332,7 +336,7 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
           <span className="w-5 h-5 flex items-center justify-center flex-shrink-0 text-erl-text-secondary">{getIconByEmoji(item.emoji)}</span>
           <div className="min-w-0 flex-1">
             <div className="text-sm md:text-[13px] font-semibold text-erl-text-primary truncate">
-              {item.name}
+              {item.name}{selectedSize ? <span className="text-erl-text-faint font-normal ml-1">({selectedSize.label})</span> : ""}
             </div>
             <div className="text-xs md:text-[10px] text-erl-text-muted mt-0.5">
               {formatCurrency(item.price)} each

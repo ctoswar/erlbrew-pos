@@ -138,7 +138,7 @@ export const CustomerDisplay: React.FC = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm md:text-base font-semibold text-[#f5e6d0] mb-0.5 truncate">
-                        {ci.item.name}
+                        {ci.item.name}{ci.selectedSize ? <span className="text-[#f5e6d0]/50 font-normal ml-1 text-xs">({ci.selectedSize.label})</span> : ""}
                       </div>
                       {ci.notes && (
                         <div className="text-[10px] md:text-[11px] text-[#f5e6d0]/40 italic">

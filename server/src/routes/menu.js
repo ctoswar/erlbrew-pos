@@ -28,7 +28,7 @@ function validate(req, res, rules){
 export default function menuRouter(pool){
   const router = express.Router();
 
-  // GET all menu items (public) — with modifiers
+  // GET all menu items (public) — with modifiers and sizes
   router.get('/', async (req, res) => {
     try {
       const [rows] = await pool.query('SELECT * FROM menu_items');
@@ -44,9 +44,22 @@ export default function menuRouter(pool){
           isDefault: !!mod.isDefault,
         });
       }
+      // Fetch sizes
+      const [sizeRows] = await pool.query('SELECT id, menu_item_id, label, price, sort_order AS sortOrder FROM menu_item_sizes ORDER BY sort_order');
+      const sizeMap = {};
+      for (const sz of sizeRows) {
+        if (!sizeMap[sz.menu_item_id]) sizeMap[sz.menu_item_id] = [];
+        sizeMap[sz.menu_item_id].push({
+          id: sz.id,
+          label: sz.label,
+          price: sz.price,
+          sortOrder: sz.sortOrder,
+        });
+      }
       const result = rows.map(row => ({
         ...row,
         modifiers: modMap[row.id] || [],
+        sizes: sizeMap[row.id] || [],
       }));
       res.json(result);
     } catch (e) {
@@ -74,6 +87,20 @@ export default function menuRouter(pool){
           isDefault: !!mod.isDefault,
         });
       }
+      // Fetch sizes
+      const [sizeRows] = await pool.query(
+        'SELECT id, menu_item_id, label, price, sort_order AS sortOrder FROM menu_item_sizes ORDER BY sort_order'
+      );
+      const sizeMap = {};
+      for (const sz of sizeRows) {
+        if (!sizeMap[sz.menu_item_id]) sizeMap[sz.menu_item_id] = [];
+        sizeMap[sz.menu_item_id].push({
+          id: sz.id,
+          label: sz.label,
+          price: sz.price,
+          sortOrder: sz.sortOrder,
+        });
+      }
       // Group by category for Flutter consumption
       const categories = {};
       for (const row of rows) {
@@ -82,9 +109,10 @@ export default function menuRouter(pool){
         categories[cat].push({
           ...row,
           modifiers: modMap[row.id] || [],
+          sizes: sizeMap[row.id] || [],
         });
       }
-      res.json({ items: rows, categories, modifiers: modMap });
+      res.json({ items: rows.map(r => ({ ...r, modifiers: modMap[r.id] || [], sizes: sizeMap[r.id] || [] })), categories, modifiers: modMap, sizes: sizeMap });
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });
@@ -143,6 +171,39 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // PUT /api/menu/:id/sizes — replace all sizes for a menu item (admin only)
+  router.put('/:id/sizes', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const { sizes } = req.body;
+    if (!Array.isArray(sizes)) return res.status(400).json({ error: 'sizes must be an array' });
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query('DELETE FROM menu_item_sizes WHERE menu_item_id = ?', [id]);
+      if (sizes.length > 0) {
+        const vals = sizes
+          .filter((s) => s.label && s.price !== undefined)
+          .map((s, i) => [id, s.label, Number(s.price), s.sortOrder ?? i]);
+        if (vals.length > 0) {
+          await conn.query('INSERT INTO menu_item_sizes (menu_item_id, label, price, sort_order) VALUES ?', [vals]);
+        }
+      }
+      await conn.commit();
+      await logAudit(pool, req, { action: 'menu_sizes_update', entityType: 'menu_item', entityId: id, details: { sizeCount: sizes.length } });
+      const [rows] = await pool.query(
+        'SELECT id, label, price, sort_order AS sortOrder FROM menu_item_sizes WHERE menu_item_id = ? ORDER BY sort_order',
+        [id]
+      );
+      res.json(rows);
+    } catch (e) {
+      await conn.rollback();
+      console.error(e);
+      res.status(500).json({ error: 'Failed to save sizes' });
+    } finally {
+      conn.release();
     }
   });
 

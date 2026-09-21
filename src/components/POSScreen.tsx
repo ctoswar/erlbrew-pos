@@ -93,8 +93,8 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const handleOrderDone = () => {
     if (splitItems.length > 0) {
       splitItems.forEach((ci) => {
-        addItem(ci.item, ci.modifiers);
-        for (let i = 1; i < ci.qty; i++) addItem(ci.item, ci.modifiers);
+        addItem(ci.item, ci.modifiers, ci.selectedSize);
+        for (let i = 1; i < ci.qty; i++) addItem(ci.item, ci.modifiers, ci.selectedSize);
       });
       setSplitItems([]);
       setSplitMode(false);
@@ -129,8 +129,8 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     if (moved.length === 0 || remaining.length === 0) return;
     clearCart();
     remaining.forEach((ci) => {
-      addItem(ci.item, ci.modifiers);
-      for (let i = 1; i < ci.qty; i++) addItem(ci.item, ci.modifiers);
+      addItem(ci.item, ci.modifiers, ci.selectedSize);
+      for (let i = 1; i < ci.qty; i++) addItem(ci.item, ci.modifiers, ci.selectedSize);
     });
     setSplitItems(moved);
     setSplitMode(false);
@@ -140,8 +140,8 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const handleRepeatOrder = () => {
     if (!lastOrder) return;
     lastOrder.items.forEach((ci) => {
-      addItem(ci.item, ci.modifiers);
-      for (let i = 1; i < ci.qty; i++) addItem(ci.item, ci.modifiers);
+      addItem(ci.item, ci.modifiers, ci.selectedSize);
+      for (let i = 1; i < ci.qty; i++) addItem(ci.item, ci.modifiers, ci.selectedSize);
     });
     setCustomerName(lastOrder.customerName || "");
     setOrderType(lastOrder.type);
@@ -279,8 +279,8 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
       case "dashboard":
         return <Dashboard orders={orders} staffName={staff.name} onRepeatOrder={(items) => {
           items.forEach((ci) => {
-            addItem(ci.item, ci.modifiers);
-            for (let i = 1; i < ci.qty; i++) addItem(ci.item, ci.modifiers);
+            addItem(ci.item, ci.modifiers, ci.selectedSize);
+            for (let i = 1; i < ci.qty; i++) addItem(ci.item, ci.modifiers, ci.selectedSize);
           });
           handleNavigate("pos");
         }} />;

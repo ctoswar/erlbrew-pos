@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MenuItem, CartItem, CartItemModifier } from "../types";
+import { MenuItem, CartItem, CartItemModifier, MenuItemSize } from "../types";
 import { formatCurrency } from "../utils";
 import { apiGet } from "../utils/api";
 import { cacheMenuItems, getCachedMenuItems } from "../utils/offlineDb";
 import { ModifierModal } from "./ModifierModal";
+import { SizePickerModal } from "./SizePickerModal";
 import { getIconByEmoji } from "./FoodIcons";
 
 interface Props {
   cart: CartItem[];
-  onAddItem: (item: MenuItem, modifiers?: CartItemModifier[]) => void;
+  onAddItem: (item: MenuItem, modifiers?: CartItemModifier[], selectedSize?: MenuItemSize) => void;
 }
 
 export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
@@ -21,10 +22,21 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
   };
 
   const openModifierModal = (item: MenuItem) => {
-    setModifierItem(item);
+    if (item.sizes && item.sizes.length > 0) {
+      // Has sizes → open size picker first
+      setSizeItem(item);
+    } else if (item.modifiers && item.modifiers.length > 0) {
+      // Has modifiers → open modifier modal
+      setModifierItem(item);
+    } else {
+      // Simple item → add directly
+      handleItemTap(item);
+    }
   };
 
   const [modifierItem, setModifierItem] = useState<MenuItem | null>(null);
+  const [sizeItem, setSizeItem] = useState<MenuItem | null>(null);
+  const [pendingSize, setPendingSize] = useState<MenuItemSize | null>(null);
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   useEffect(() => {
@@ -143,7 +155,6 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
                 key={`${item.id}-${(item.modifiers || []).map((m) => m.id || m.name).join("-")}`}
                 item={item}
                 cartItem={cart.find((ci) => ci.item.id === item.id)}
-                onAdd={handleItemTap}
                 onOpenModal={openModifierModal}
               />
             ))}
@@ -154,11 +165,31 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
       {modifierItem && (
         <ModifierModal
           item={modifierItem}
-          onAdd={(item, modifiers) => {
-            onAddItem(item, modifiers);
+          selectedSize={pendingSize || undefined}
+          onAdd={(item, modifiers, selectedSize) => {
+            onAddItem(item, modifiers, selectedSize);
             setModifierItem(null);
+            setPendingSize(null);
           }}
-          onClose={() => setModifierItem(null)}
+          onClose={() => { setModifierItem(null); setPendingSize(null); }}
+        />
+      )}
+
+      {sizeItem && (
+        <SizePickerModal
+          item={sizeItem}
+          onSelect={(sizedItem, size) => {
+            setSizeItem(null);
+            if (sizedItem.modifiers && sizedItem.modifiers.length > 0) {
+              // Has modifiers → open modifier modal with the sized item + size
+              setPendingSize(size);
+              setModifierItem(sizedItem);
+            } else {
+              // No modifiers → add directly with size
+              onAddItem(sizedItem, undefined, size);
+            }
+          }}
+          onClose={() => setSizeItem(null)}
         />
       )}
     </div>
@@ -170,22 +201,18 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
 interface MenuCardProps {
   item: MenuItem;
   cartItem?: CartItem;
-  onAdd: (item: MenuItem, modifiers?: CartItemModifier[]) => void;
   onOpenModal: (item: MenuItem) => void;
 }
 
-const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd, onOpenModal }) => {
+const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onOpenModal }) => {
   const [hovered, setHovered] = useState(false);
   const [pressed, setPressed] = useState(false);
   const hasImage = !!item.image;
   const modifiers = item.modifiers || [];
+  const sizes = item.sizes || [];
 
   const handleCardClick = () => {
-    if (modifiers.length === 0) {
-      onAdd(item);
-    } else {
-      onOpenModal(item);
-    }
+    onOpenModal(item);  // MenuGrid handles sizes vs modifiers vs direct add
   };
 
   return (
@@ -259,9 +286,19 @@ const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onAdd, onOpenModal 
 
         {/* Bottom: price + qty */}
         <div className="flex items-center justify-between mt-auto pt-1.5">
-          <span className="font-display text-[15px] md:text-[16px] font-bold text-erl-accent tracking-tight">
-            {formatCurrency(item.price)}
-          </span>
+          {sizes.length > 0 ? (
+            <span className="font-display text-[13px] md:text-[14px] font-bold text-erl-accent tracking-tight">
+              {sizes.length === 1
+                ? formatCurrency(sizes[0].price)
+                : `${formatCurrency(Math.min(...sizes.map(s => s.price)))} – ${formatCurrency(Math.max(...sizes.map(s => s.price)))}`
+              }
+              <span className="text-[9px] font-normal text-erl-text-faint ml-1">{sizes.length} size{sizes.length !== 1 ? "s" : ""}</span>
+            </span>
+          ) : (
+            <span className="font-display text-[15px] md:text-[16px] font-bold text-erl-accent tracking-tight">
+              {formatCurrency(item.price)}
+            </span>
+          )}
           {cartItem && cartItem.qty > 0 && (
             <div className="bg-erl-accent text-erl-base rounded-xl min-w-[28px] h-8 md:min-w-[26px] md:h-7 flex items-center justify-center text-xs md:text-[11px] font-bold px-2 shadow-[0_2px_10px_rgba(196,149,106,0.3)]">
               {cartItem.qty}

@@ -137,7 +137,8 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
     const qtyStr = String(ci.qty).padStart(3);
     const amtStr = formatCurrency(lineTotal).replace("₱", "").trim();
     const maxNameLen = NAME_WIDTH - 1;
-    const name = ci.item.name.length > maxNameLen ? ci.item.name.substring(0, maxNameLen - 1) + "…" : ci.item.name;
+    const displayName = ci.selectedSize ? `${ci.item.name} (${ci.selectedSize.label})` : ci.item.name;
+    const name = displayName.length > maxNameLen ? displayName.substring(0, maxNameLen - 1) + "…" : displayName;
     lines.push(`${qtyStr}  ${padRight(name, NAME_WIDTH)} ${padLeft(amtStr, AMOUNT_WIDTH)}`);
     if (ci.qty > 1) lines.push(`     @ ${formatCurrency(ci.item.price + modifierTotal).replace("₱", "").trim()} ea`);
     if (ci.modifiers && ci.modifiers.length > 0) {

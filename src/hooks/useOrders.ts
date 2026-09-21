@@ -43,6 +43,7 @@ interface ServerOrderItem {
   emoji?: string;
   qty?: number;
   notes?: string;
+  size?: string;
   modifiers?: { name?: string; price?: number }[];
 }
 
@@ -86,6 +87,7 @@ export function serverOrderToOrder(o: ServerOrder): Order {
     qty: it.qty || 1,
     notes: it.notes || '',
     modifiers: (it.modifiers || []).map((m) => ({ name: m.name || '', price: Number(m.price) || 0 })),
+    selectedSize: it.size ? { label: it.size, price: Number(it.price) || 0 } : undefined,
   }));
 
   return {
@@ -276,6 +278,7 @@ export function useOrders() {
         price: ci.item.price,
         notes: ci.notes,
         modifiers: ci.modifiers || [],
+        size: ci.selectedSize?.label || undefined,
       }));
       const payload: Record<string, unknown> = {
         staff_id: staff ? staff.rfid : undefined,

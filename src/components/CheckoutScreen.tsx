@@ -67,7 +67,7 @@ export const CheckoutScreen: React.FC<Props> = ({
                   <div className="flex items-center gap-2.5">
                     <span className="w-5 h-5 flex items-center justify-center text-erl-text-secondary">{getIconByEmoji(ci.item.emoji)}</span>
                     <div className="text-sm text-erl-text-primary font-semibold">
-                      {ci.qty}× {ci.item.name}
+                      {ci.qty}× {ci.item.name}{ci.selectedSize ? <span className="text-erl-text-faint font-normal ml-1">({ci.selectedSize.label})</span> : ""}
                     </div>
                   </div>
                   {ci.modifiers && ci.modifiers.length > 0 && (

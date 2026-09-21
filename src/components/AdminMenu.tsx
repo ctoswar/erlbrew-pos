@@ -26,6 +26,7 @@ export const AdminMenu: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [formSizes, setFormSizes] = useState<{ label: string; price: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -86,6 +87,7 @@ export const AdminMenu: React.FC = () => {
 
   const openAddForm = () => {
     setForm({ ...EMPTY_FORM });
+    setFormSizes([]);
     setEditingId(null);
     setShowForm(true);
     setError("");
@@ -103,6 +105,7 @@ export const AdminMenu: React.FC = () => {
       emoji: item.emoji,
       popular: item.popular || false,
     });
+    setFormSizes((item.sizes || []).map(s => ({ label: s.label, price: String(s.price) })));
     setEditingId(item.id);
     setShowForm(true);
     setError("");
@@ -113,6 +116,7 @@ export const AdminMenu: React.FC = () => {
     setShowForm(false);
     setEditingId(null);
     setForm({ ...EMPTY_FORM });
+    setFormSizes([]);
     setError("");
     setCustomCategory(false);
   };
@@ -150,6 +154,21 @@ export const AdminMenu: React.FC = () => {
         await apiAdminPut(`/menu/${editingId}`, payload);
       } else {
         await apiAdminPost("/menu", payload);
+      }
+      // Save sizes if any
+      const targetId = editingId || form.id.trim();
+      const validSizes = formSizes.filter(s => s.label.trim() && s.price);
+      if (targetId && validSizes.length > 0) {
+        const { saveMenuSizes } = await import("../utils/api");
+        await saveMenuSizes(targetId, validSizes.map((s, i) => ({
+          label: s.label.trim(),
+          price: parseFloat(s.price) || 0,
+          sortOrder: i,
+        })));
+      } else if (targetId) {
+        // Clear sizes if none provided
+        const { saveMenuSizes } = await import("../utils/api");
+        await saveMenuSizes(targetId, []);
       }
       closeForm();
       loadItems();
@@ -412,6 +431,53 @@ export const AdminMenu: React.FC = () => {
 
                   <div className="h-px bg-erl-border-subtle" />
 
+                  {/* Sizes */}
+                  <FormSection label="Sizes" hint="optional — e.g. 16oz, 22oz with different prices">
+                    <div className="flex flex-col gap-2">
+                      {formSizes.map((sz, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input
+                            value={sz.label}
+                            onChange={(e) => {
+                              const next = [...formSizes];
+                              next[idx] = { ...next[idx], label: e.target.value };
+                              setFormSizes(next);
+                            }}
+                            placeholder="Size label"
+                            className="flex-1 !text-[12px] text-erl-text-primary"
+                          />
+                          <input
+                            type="number"
+                            value={sz.price}
+                            onChange={(e) => {
+                              const next = [...formSizes];
+                              next[idx] = { ...next[idx], price: e.target.value };
+                              setFormSizes(next);
+                            }}
+                            placeholder="Price"
+                            min="0"
+                            step="0.01"
+                            className="w-[80px] !text-[12px] !text-center text-erl-text-primary"
+                          />
+                          <button
+                            onClick={() => setFormSizes(formSizes.filter((_, i) => i !== idx))}
+                            className="text-erl-danger/60 hover:text-erl-danger text-sm bg-transparent border-none cursor-pointer px-1"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => setFormSizes([...formSizes, { label: "", price: form.price || "0" }])}
+                        className="text-[11px] text-erl-accent hover:text-erl-accent/80 font-semibold bg-transparent border-none cursor-pointer text-left"
+                      >
+                        + Add size
+                      </button>
+                    </div>
+                  </FormSection>
+
+                  <div className="h-px bg-erl-border-subtle" />
+
                   <FormSection label="Badge" hint="optional, e.g. SIGNATURE, NEW">
                     <input value={form.badge} onChange={(e) => setField("badge", e.target.value)} placeholder="SIGNATURE"
                       className="text-erl-text-primary" />
@@ -537,7 +603,17 @@ const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, o
         {/* Category + Price row */}
         <div className="flex justify-between items-center">
           <span className="text-[11px] text-erl-text-faint tracking-wider uppercase font-semibold px-2 py-0.5 rounded-md bg-erl-base/60">{item.category}</span>
-          <span className="font-display text-[17px] font-bold text-erl-accent">{formatCurrency(item.price)}</span>
+          {item.sizes && item.sizes.length > 0 ? (
+            <div className="text-right">
+              <span className="font-display text-[17px] font-bold text-erl-accent">
+                {formatCurrency(Math.min(...item.sizes.map(s => s.price)))}
+                {item.sizes.length > 1 && <span className="text-[11px] font-normal text-erl-text-faint"> – {formatCurrency(Math.max(...item.sizes.map(s => s.price)))}</span>}
+              </span>
+              <div className="text-[9px] text-erl-text-faint">{item.sizes.length} size{item.sizes.length !== 1 ? "s" : ""}</div>
+            </div>
+          ) : (
+            <span className="font-display text-[17px] font-bold text-erl-accent">{formatCurrency(item.price)}</span>
+          )}
         </div>
 
         {/* Description */}

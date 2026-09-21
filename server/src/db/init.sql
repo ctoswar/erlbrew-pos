@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   qty INT,
   notes TEXT,
   price DECIMAL(10,2),
+  size VARCHAR(64) DEFAULT NULL,
   FOREIGN KEY (order_id) REFERENCES orders(id),
   FOREIGN KEY (menu_item_id) REFERENCES menu_items(id)
 );
@@ -225,6 +226,18 @@ CREATE TABLE IF NOT EXISTS menu_modifiers (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,
   INDEX idx_menu_item (menu_item_id)
+);
+
+-- Menu item sizes (e.g., 16oz, 22oz with different prices)
+CREATE TABLE IF NOT EXISTS menu_item_sizes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  menu_item_id VARCHAR(64) NOT NULL,
+  label VARCHAR(64) NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,
+  INDEX idx_sizes_menu_item (menu_item_id)
 );
 
 -- Modifiers selected per order item

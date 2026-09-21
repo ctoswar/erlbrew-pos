@@ -1,15 +1,16 @@
 import React, { useState } from "react";
-import { MenuItem, Modifier, CartItemModifier } from "../types";
+import { MenuItem, Modifier, CartItemModifier, MenuItemSize } from "../types";
 import { formatCurrency } from "../utils";
 import { getIconByEmoji } from "./FoodIcons";
 
 interface Props {
   item: MenuItem;
-  onAdd: (item: MenuItem, modifiers: CartItemModifier[]) => void;
+  selectedSize?: MenuItemSize;
+  onAdd: (item: MenuItem, modifiers: CartItemModifier[], selectedSize?: MenuItemSize) => void;
   onClose: () => void;
 }
 
-export const ModifierModal: React.FC<Props> = ({ item, onAdd, onClose }) => {
+export const ModifierModal: React.FC<Props> = ({ item, selectedSize, onAdd, onClose }) => {
   const [selected, setSelected] = useState<CartItemModifier[]>([]);
 
   const modifiers = item.modifiers || [];
@@ -41,7 +42,7 @@ export const ModifierModal: React.FC<Props> = ({ item, onAdd, onClose }) => {
   const totalPrice = item.price + selected.reduce((s, m) => s + (m.price * (m.qty || 1)), 0);
 
   const handleAdd = () => {
-    onAdd(item, selected);
+    onAdd(item, selected, selectedSize);
     onClose();
   };
 

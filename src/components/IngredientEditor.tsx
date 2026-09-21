@@ -57,6 +57,8 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
       .finally(() => setLoading(false));
   }, [menuItem.id]);
 
+  const [defaultQty, setDefaultQty] = useState("1");
+
   const handleToggle = (invId: string) => {
     setSelected((prev) => {
       if (prev[invId]) {
@@ -64,8 +66,35 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
         delete next[invId];
         return next;
       } else {
-        return { ...prev, [invId]: "1" };
+        return { ...prev, [invId]: defaultQty || "1" };
       }
+    });
+  };
+
+  const handleSelectCategory = (catItems: InventoryItem[]) => {
+    setSelected((prev) => {
+      const next = { ...prev };
+      const allChecked = catItems.every((i) => next[i.id]);
+      if (allChecked) {
+        catItems.forEach((i) => delete next[i.id]);
+      } else {
+        catItems.forEach((i) => { if (!next[i.id]) next[i.id] = defaultQty || "1"; });
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    const allVisible = grouped.flatMap((g) => g.items);
+    setSelected((prev) => {
+      const next = { ...prev };
+      const allChecked = allVisible.every((i) => next[i.id]);
+      if (allChecked) {
+        allVisible.forEach((i) => delete next[i.id]);
+      } else {
+        allVisible.forEach((i) => { if (!next[i.id]) next[i.id] = defaultQty || "1"; });
+      }
+      return next;
     });
   };
 
@@ -111,6 +140,11 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
     }));
     return { grouped: groups, filteredTotal: items.length };
   }, [inventory, searchQuery]);
+
+  const allVisibleSelected = useMemo(() => {
+    const allVisible = grouped.flatMap((g) => g.items);
+    return allVisible.length > 0 && allVisible.every((i) => selected[i.id]);
+  }, [grouped, selected]);
 
   const getStockStatus = (item: InventoryItem) => {
     if (item.stock <= 0) return "out";
@@ -169,8 +203,32 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
               </button>
             )}
           </div>
-          <div className="text-[11px] text-erl-text-faint mt-1.5">
-            {searchQuery ? `${filteredTotal} result${filteredTotal !== 1 ? "s" : ""}` : `${inventory.length} inventory items`}
+          <div className="flex items-center justify-between mt-1.5">
+            <div className="text-[11px] text-erl-text-faint">
+              {searchQuery ? `${filteredTotal} result${filteredTotal !== 1 ? "s" : ""}` : `${inventory.length} inventory items`}
+            </div>
+            {filteredTotal > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-erl-text-faint">Qty</span>
+                  <input
+                    type="number"
+                    value={defaultQty}
+                    onChange={(e) => setDefaultQty(e.target.value)}
+                    min="0.01"
+                    step="0.1"
+                    className="w-[48px] !px-1.5 !py-0.5 !text-[11px] !text-center !rounded-md"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <button
+                  onClick={handleSelectAll}
+                  className="text-[11px] text-erl-accent hover:text-erl-accent/80 font-semibold cursor-pointer bg-transparent border-none transition-colors"
+                >
+                  {allVisibleSelected ? "Deselect All" : "Select All"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -194,6 +252,12 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                 <div className="flex items-center gap-2 mb-2">
                   <div className="text-[11px] text-erl-text-faint tracking-wider uppercase font-bold">{cat}</div>
                   <div className="flex-1 h-px bg-erl-border-subtle" />
+                  <button
+                    onClick={() => handleSelectCategory(items)}
+                    className="text-[10px] text-erl-accent hover:text-erl-accent/80 font-semibold cursor-pointer bg-transparent border-none transition-colors"
+                  >
+                    {items.every((i) => selected[i.id]) ? "Deselect" : "Select"}
+                  </button>
                 </div>
                 <div className="flex flex-col gap-2">
                   {items.map((inv) => {

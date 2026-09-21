@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { generateZReport, getZReports, ZReport } from "../utils/api";
 import { formatCurrency } from "../utils";
+import { ZReportPreview } from "./ZReportPreview";
 
 export const ZReportScreen: React.FC = () => {
   const [reports, setReports] = useState<ZReport[]>([]);
@@ -8,6 +9,7 @@ export const ZReportScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
+  const [printReport, setPrintReport] = useState<ZReport | null>(null);
 
   const loadReports = () => {
     setLoading(true);
@@ -76,9 +78,16 @@ export const ZReportScreen: React.FC = () => {
             Generate end-of-day sales summaries
           </div>
         </div>
-        <button onClick={handleGenerate} disabled={generating} className="btn btn-accent text-[11px] px-4 py-2 tracking-wide">
-          {generating ? "Generating…" : "Generate Report"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleGenerate} disabled={generating} className="btn btn-accent text-[11px] px-4 py-2 tracking-wide">
+            {generating ? "Generating…" : "Generate Report"}
+          </button>
+          {lastReport && (
+            <button onClick={() => setPrintReport(lastReport)} className="btn btn-outline text-[11px] px-4 py-2 tracking-wide">
+              🖨️ Print
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Error ──────────────────────────────────────────── */}
@@ -172,6 +181,9 @@ export const ZReportScreen: React.FC = () => {
                         {formatCurrency(r.gross_profit)}
                       </div>
                     </div>
+                    <button onClick={() => setPrintReport(r)} className="ml-1 px-2 py-1.5 rounded-lg text-[11px] text-erl-text-faint hover:text-erl-text-primary hover:bg-erl-surface transition-colors" title="Print report">
+                      🖨️
+                    </button>
                   </div>
                 </div>
               </div>
@@ -179,6 +191,11 @@ export const ZReportScreen: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* ── Print Preview Modal ─────────────────────────────── */}
+      {printReport && (
+        <ZReportPreview report={printReport} onClose={() => setPrintReport(null)} />
+      )}
     </div>
   );
 };

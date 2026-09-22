@@ -2,6 +2,12 @@ import React, { useState, useEffect, useMemo } from "react";
 import { MenuItem } from "../types";
 import { apiAdminGet, batchApplyIngredients } from "../utils/api";
 import { getIconByEmoji } from "./FoodIcons";
+import {
+  getCompatibleUnits,
+  defaultRecipeUnit,
+  toInventoryUnit,
+  fromInventoryUnit,
+} from "../utils/units";
 
 interface InventoryItem {
   id: string;
@@ -36,6 +42,7 @@ export const ApplyIngredientModal: React.FC<Props> = ({
 }) => {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [selectedRecipe, setSelectedRecipe] = useState<Record<string, string>>({});
+  const [selectedUnits, setSelectedUnits] = useState<Record<string, string>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
@@ -54,8 +61,17 @@ export const ApplyIngredientModal: React.FC<Props> = ({
         if (sourceItemId) {
           const recipe = await apiAdminGet<{ inventory_item_id: string; quantity: number }[]>(`/recipes/${sourceItemId}`);
           const init: Record<string, string> = {};
-          recipe.forEach((r) => { init[r.inventory_item_id] = String(r.quantity); });
+          const units: Record<string, string> = {};
+          recipe.forEach((r) => {
+            const invItem = inv.find((i) => i.id === r.inventory_item_id);
+            const invUnit = invItem?.unit || "pcs";
+            const displayUnit = defaultRecipeUnit(invUnit);
+            const displayQty = fromInventoryUnit(r.quantity, invUnit, displayUnit);
+            init[r.inventory_item_id] = String(displayQty === r.quantity ? r.quantity : displayQty);
+            units[r.inventory_item_id] = displayUnit;
+          });
           setSelectedRecipe(init);
+          setSelectedUnits(units);
         }
       } catch {
         setError("Failed to load data");
@@ -122,10 +138,33 @@ export const ApplyIngredientModal: React.FC<Props> = ({
         return { ...prev, [invId]: "1" };
       }
     });
+    setSelectedUnits(prev => {
+      if (prev[invId]) return prev;
+      const invItem = inventory.find((i) => i.id === invId);
+      if (!invItem) return prev;
+      return { ...prev, [invId]: defaultRecipeUnit(invItem.unit) };
+    });
   };
 
   const handleQtyChange = (invId: string, val: string) => {
     setSelectedRecipe(prev => ({ ...prev, [invId]: val }));
+  };
+
+  const handleUnitChange = (invId: string, newUnit: string) => {
+    const invItem = inventory.find((i) => i.id === invId);
+    if (!invItem) return;
+    const oldUnit = selectedUnits[invId] || invItem.unit;
+    const oldQty = parseFloat(selectedRecipe[invId]) || 0;
+    const converted = oldUnit === newUnit
+      ? oldQty
+      : (() => {
+          const inInvUnit = toInventoryUnit(oldQty, oldUnit, invItem.unit);
+          return oldUnit === invItem.unit
+            ? oldQty
+            : fromInventoryUnit(inInvUnit, invItem.unit, newUnit);
+        })();
+    setSelectedRecipe(prev => ({ ...prev, [invId]: String(converted || oldQty) }));
+    setSelectedUnits(prev => ({ ...prev, [invId]: newUnit }));
   };
 
   const recipeCount = useMemo(
@@ -147,7 +186,14 @@ export const ApplyIngredientModal: React.FC<Props> = ({
     try {
       const items = Object.entries(selectedRecipe)
         .filter(([, qty]) => qty && parseFloat(qty) > 0)
-        .map(([inventory_item_id, quantity]) => ({ inventory_item_id, quantity: parseFloat(quantity) }));
+        .map(([inventory_item_id, displayQtyStr]) => {
+          const displayQty = parseFloat(displayQtyStr);
+          const displayUnit = selectedUnits[inventory_item_id];
+          const invItem = inventory.find((i) => i.id === inventory_item_id);
+          const invUnit = invItem?.unit || "pcs";
+          const dbQty = toInventoryUnit(displayQty, displayUnit || invUnit, invUnit);
+          return { inventory_item_id, quantity: dbQty };
+        });
 
       const res = await batchApplyIngredients(items, Array.from(selectedIds));
       setResult(res);
@@ -256,19 +302,36 @@ export const ApplyIngredientModal: React.FC<Props> = ({
                             <div className="text-[11px] font-semibold text-erl-text-primary truncate">{inv.name}</div>
                             <div className="text-[9px] text-erl-text-faint">{inv.stock} {inv.unit}</div>
                           </div>
-                          {isChecked && (
-                            <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="number"
-                                value={qty}
-                                onChange={(e) => handleQtyChange(inv.id, e.target.value)}
-                                min="0.01"
-                                step="0.1"
-                                className="w-[52px] !px-1.5 !py-1 !text-[11px] !text-center !rounded-md"
-                              />
-                              <span className="text-[9px] text-erl-text-faint">{inv.unit}</span>
-                            </div>
-                          )}
+                          {isChecked && (() => {
+                            const compatUnits = getCompatibleUnits(inv.unit);
+                            const currentUnit = selectedUnits[inv.id] || defaultRecipeUnit(inv.unit);
+                            const showDropdown = compatUnits.length > 1;
+                            return (
+                              <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="number"
+                                  value={qty}
+                                  onChange={(e) => handleQtyChange(inv.id, e.target.value)}
+                                  min="0.01"
+                                  step="0.1"
+                                  className="w-[48px] !px-1.5 !py-1 !text-[11px] !text-center !rounded-md"
+                                />
+                                {showDropdown ? (
+                                  <select
+                                    value={currentUnit}
+                                    onChange={(e) => handleUnitChange(inv.id, e.target.value)}
+                                    className="!text-[9px] !py-1 !px-0.5 !rounded-md !bg-erl-surface border border-erl-border-subtle text-erl-text-secondary cursor-pointer min-w-[36px]"
+                                  >
+                                    {compatUnits.map((u) => (
+                                      <option key={u} value={u}>{u}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span className="text-[9px] text-erl-text-faint">{inv.unit}</span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })}

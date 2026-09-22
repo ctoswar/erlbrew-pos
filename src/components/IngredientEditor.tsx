@@ -2,6 +2,12 @@ import React, { useState, useEffect, useMemo } from "react";
 import { MenuItem } from "../types";
 import { apiAdminGet, apiAdminPut } from "../utils/api";
 import { getIconByEmoji } from "./FoodIcons";
+import {
+  getCompatibleUnits,
+  defaultRecipeUnit,
+  toInventoryUnit,
+  fromInventoryUnit,
+} from "../utils/units";
 
 interface RecipeIngredient {
   id: number;
@@ -34,8 +40,10 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Build a map of current recipe: inventory_id → quantity string
+  // Build a map of current recipe: inventory_id → quantity string (in display unit)
   const [selected, setSelected] = useState<Record<string, string>>({});
+  // Track the display unit per inventory item (what the user sees/edits in)
+  const [selectedUnits, setSelectedUnits] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -44,11 +52,23 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
       apiAdminGet<InventoryItem[]>("/inventory"),
     ])
       .then(([r, inv]) => {
-        // Enrich with low_stock_threshold if available
         setInventory(inv);
         const init: Record<string, string> = {};
-        r.forEach((rec) => { init[rec.inventory_item_id] = String(rec.quantity); });
+        const units: Record<string, string> = {};
+        r.forEach((rec) => {
+          // Determine a human-friendly display unit for this ingredient
+          const invItem = inv.find((i) => i.id === rec.inventory_item_id);
+          const invUnit = invItem?.unit || "pcs";
+          const displayUnit = defaultRecipeUnit(invUnit);
+          // Convert stored DB quantity (in inventory unit) to the display unit
+          const displayQty = fromInventoryUnit(rec.quantity, invUnit, displayUnit);
+          init[rec.inventory_item_id] = String(
+            displayQty === rec.quantity ? rec.quantity : displayQty,
+          );
+          units[rec.inventory_item_id] = displayUnit;
+        });
         setSelected(init);
+        setSelectedUnits(units);
       })
       .catch((err) => {
         console.error("Failed to load recipe/inventory:", err);
@@ -69,6 +89,32 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
         return { ...prev, [invId]: defaultQty || "1" };
       }
     });
+    // When first selecting, set a sensible default display unit
+    setSelectedUnits((prev) => {
+      if (prev[invId]) return prev;
+      const invItem = inventory.find((i) => i.id === invId);
+      if (!invItem) return prev;
+      return { ...prev, [invId]: defaultRecipeUnit(invItem.unit) };
+    });
+  };
+
+  const handleUnitChange = (invId: string, newUnit: string) => {
+    const invItem = inventory.find((i) => i.id === invId);
+    if (!invItem) return;
+    const oldUnit = selectedUnits[invId] || invItem.unit;
+    const oldQty = parseFloat(selected[invId]) || 0;
+    // Convert the current quantity from old display unit to new display unit
+    const converted = oldUnit === newUnit
+      ? oldQty
+      : (() => {
+          // Convert oldUnit → inventoryUnit → newUnit
+          const inInvUnit = toInventoryUnit(oldQty, oldUnit, invItem.unit);
+          return oldUnit === invItem.unit
+            ? oldQty // already in inventory unit
+            : fromInventoryUnit(inInvUnit, invItem.unit, newUnit);
+        })();
+    setSelected((prev) => ({ ...prev, [invId]: String(converted || oldQty) }));
+    setSelectedUnits((prev) => ({ ...prev, [invId]: newUnit }));
   };
 
   const handleSelectCategory = (catItems: InventoryItem[]) => {
@@ -108,7 +154,15 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
     try {
       const items = Object.entries(selected)
         .filter(([, qty]) => qty && parseFloat(qty) > 0)
-        .map(([inventory_item_id, quantity]) => ({ inventory_item_id, quantity: parseFloat(quantity) }));
+        .map(([inventory_item_id, displayQtyStr]) => {
+          const displayQty = parseFloat(displayQtyStr);
+          const displayUnit = selectedUnits[inventory_item_id];
+          const invItem = inventory.find((i) => i.id === inventory_item_id);
+          const invUnit = invItem?.unit || "pcs";
+          // Convert from display unit → inventory native unit for DB storage
+          const dbQty = toInventoryUnit(displayQty, displayUnit || invUnit, invUnit);
+          return { inventory_item_id, quantity: dbQty };
+        });
 
       await apiAdminPut(`/recipes/${menuItem.id}`, { items });
       onClose();
@@ -296,20 +350,42 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                             </span>
                           </div>
                         </div>
-                        {isChecked && (
-                          <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <span className="text-[11px] text-erl-text-faint">Qty</span>
-                            <input
-                              type="number"
-                              value={qty}
-                              onChange={(e) => handleQtyChange(inv.id, e.target.value)}
-                              min="0.01"
-                              step="0.1"
-                              className="w-[64px] !px-2 !py-1.5 !text-[13px] !text-center !rounded-lg"
-                            />
-                            <span className="text-[11px] text-erl-text-faint">{inv.unit}</span>
-                          </div>
-                        )}
+                        {isChecked && (() => {
+                          const compatUnits = getCompatibleUnits(inv.unit);
+                          const currentUnit = selectedUnits[inv.id] || defaultRecipeUnit(inv.unit);
+                          const showDropdown = compatUnits.length > 1;
+                          return (
+                            <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <span className="text-[11px] text-erl-text-faint">Qty</span>
+                              <input
+                                type="number"
+                                value={qty}
+                                onChange={(e) => handleQtyChange(inv.id, e.target.value)}
+                                min="0.01"
+                                step="0.1"
+                                className="w-[56px] !px-2 !py-1.5 !text-[13px] !text-center !rounded-lg"
+                              />
+                              {showDropdown ? (
+                                <select
+                                  value={currentUnit}
+                                  onChange={(e) => handleUnitChange(inv.id, e.target.value)}
+                                  className="!text-[11px] !py-1.5 !px-1 !rounded-lg !bg-erl-surface border border-erl-border-subtle text-erl-text-secondary cursor-pointer min-w-[44px]"
+                                >
+                                  {compatUnits.map((u) => (
+                                    <option key={u} value={u}>{u}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className="text-[11px] text-erl-text-faint min-w-[28px]">{inv.unit}</span>
+                              )}
+                              {showDropdown && inv.unit !== currentUnit && (
+                                <span className="text-[9px] text-erl-text-faint italic" title={`Stored in inventory as ${inv.unit}`}>
+                                  ({inv.unit})
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}

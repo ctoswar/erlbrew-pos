@@ -77,7 +77,8 @@ export async function apiAdminGet<T>(path: string): Promise<T> {
       // Token exists but is invalid/expired - clear it locally
       clearAuthToken();
     }
-    throw new Error(`API ${path} failed: ${res.status}`);
+    const bodyText = await res.text().catch(() => '');
+    throw new Error(`API ${path} failed: ${res.status} ${bodyText}`);
   }
   return res.json();
 }
@@ -97,7 +98,8 @@ export async function apiAdminPost<T>(path: string, body: unknown, tokenOverride
     if (res.status === 401 && token) {
       clearAuthToken();
     }
-    throw new Error(`API ${path} failed: ${res.status}`);
+    const bodyText = await res.text().catch(() => '');
+    throw new Error(`API ${path} failed: ${res.status} ${bodyText}`);
   }
   return res.json();
 }
@@ -117,7 +119,8 @@ export async function apiAdminPut<T>(path: string, body: unknown): Promise<T> {
     if (res.status === 401 && token) {
       clearAuthToken();
     }
-    throw new Error(`API ${path} failed: ${res.status}`);
+    const bodyText = await res.text().catch(() => '');
+    throw new Error(`API ${path} failed: ${res.status} ${bodyText}`);
   }
   return res.json();
 }

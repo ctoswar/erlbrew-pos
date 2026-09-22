@@ -505,7 +505,34 @@ await pool.query(`
     console.error('DB connection failed', e);
   }
 }
-const dbReady = initDb();
+async function validateSchema() {
+  const required = {
+    orders: ['id', 'staff_id', 'status', 'subtotal', 'tax', 'total', 'customer_name', 'customer_id', 'table_name', 'type', 'pay_method', 'reference_number', 'discount_json', 'location_id', 'created_at', 'completed_at', 'void_reason', 'refund_reason'],
+    order_items: ['id', 'order_id', 'menu_item_id', 'qty', 'notes', 'price', 'size'],
+    inventory: ['id', 'location_id', 'name', 'category', 'unit', 'stock', 'low_stock_threshold'],
+    recipes: ['menu_item_id', 'inventory_item_id', 'quantity'],
+  };
+  const missing = [];
+  for (const [table, columns] of Object.entries(required)) {
+    try {
+      const [rows] = await pool.query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?`, [table]);
+      const existing = new Set(rows.map((r) => r.COLUMN_NAME));
+      for (const col of columns) {
+        if (!existing.has(col)) missing.push(`${table}.${col}`);
+      }
+    } catch (e) {
+      console.error(`[schema] Could not validate ${table}:`, e.message);
+    }
+  }
+  if (missing.length > 0) {
+    console.error('[schema] CRITICAL: missing required columns:', missing.join(', '));
+    console.error('[schema] Order creation and other features may fail. Run the latest migrations or restart the server to apply them.');
+  } else {
+    console.log('[schema] All required columns present');
+  }
+}
+
+const dbReady = initDb().then(async () => { await validateSchema(); });
 
 // Initialize Google Sheets client (on demand)
 const gs = googleSheetsClientInit(pool);

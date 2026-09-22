@@ -349,8 +349,9 @@ export function useOrders() {
               };
             })
           );
-        }).catch((err) => {
-          console.error("Failed to persist order to server (admin):", err);
+        }).catch(async (err) => {
+          const body = err instanceof Error ? err.message : String(err);
+          console.error("Failed to persist order to server (admin):", body);
           // Offline — save to IndexedDB for later retry
           addToQueue(payload, localOrder.id);
         });

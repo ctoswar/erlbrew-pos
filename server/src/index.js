@@ -509,21 +509,32 @@ async function validateSchema() {
   const required = {
     orders: ['id', 'staff_id', 'status', 'subtotal', 'tax', 'total', 'customer_name', 'customer_id', 'table_name', 'type', 'pay_method', 'reference_number', 'discount_json', 'location_id', 'created_at', 'completed_at', 'void_reason', 'refund_reason'],
     order_items: ['id', 'order_id', 'menu_item_id', 'qty', 'notes', 'price', 'size'],
+    order_item_modifiers: ['id', 'order_item_id', 'modifier_name', 'modifier_price'],
     inventory: ['id', 'location_id', 'name', 'category', 'unit', 'stock', 'low_stock_threshold'],
     recipes: ['menu_item_id', 'inventory_item_id', 'quantity'],
+    staff: ['id', 'rfid', 'name', 'role', 'initials', 'color'],
   };
   const missing = [];
+  const tableStatus = {};
   for (const [table, columns] of Object.entries(required)) {
     try {
       const [rows] = await pool.query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?`, [table]);
       const existing = new Set(rows.map((r) => r.COLUMN_NAME));
+      const tableMissing = [];
       for (const col of columns) {
-        if (!existing.has(col)) missing.push(`${table}.${col}`);
+        if (!existing.has(col)) {
+          const key = `${table}.${col}`;
+          missing.push(key);
+          tableMissing.push(key);
+        }
       }
+      tableStatus[table] = tableMissing.length > 0 ? `missing ${tableMissing.join(', ')}` : 'ok';
     } catch (e) {
+      tableStatus[table] = `could not validate: ${e.message}`;
       console.error(`[schema] Could not validate ${table}:`, e.message);
     }
   }
+  console.log('[schema] Validation results:', tableStatus);
   if (missing.length > 0) {
     console.error('[schema] CRITICAL: missing required columns:', missing.join(', '));
     console.error('[schema] Order creation and other features may fail. Run the latest migrations or restart the server to apply them.');

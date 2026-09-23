@@ -166,7 +166,8 @@ export function useOrders() {
           prev.map((o) => (o.id === pending.id ? { ...o, id: data.id || o.id } : o))
         );
         await removeFromQueue(pending.id);
-      } catch {
+      } catch (err) {
+        console.error(`[useOrders] Retry failed for queued order ${pending.id}:`, err);
         // Still offline — leave in queue
       }
     }
@@ -275,7 +276,7 @@ export function useOrders() {
       const items = cart.map((ci) => ({
         id: ci.item.id,
         qty: ci.qty,
-        price: ci.item.price,
+        price: Number(ci.item.price) || 0,
         notes: ci.notes,
         modifiers: ci.modifiers || [],
         size: ci.selectedSize?.label || undefined,
@@ -350,10 +351,11 @@ export function useOrders() {
             })
           );
         }).catch(async (err) => {
-          const body = err instanceof Error ? err.message : String(err);
-          console.error("Failed to persist order to server (admin):", body);
+          console.error(`[useOrders] Failed to persist order ${localOrder.id} to server (admin):`, err);
+          console.error('[useOrders] Order payload:', JSON.stringify(payload));
           // Offline — save to IndexedDB for later retry
-          addToQueue(payload, localOrder.id);
+          await addToQueue(payload, localOrder.id);
+          setPendingCount((c) => c + 1);
         });
       } else {
         // Fallback: try without auth (will fail if server requires auth)
@@ -371,9 +373,11 @@ export function useOrders() {
               };
             })
           );
-        }).catch((err) => {
-          console.error("Failed to persist order to server (fallback):", err);
-          addToQueue(payload, localOrder.id);
+        }).catch(async (err) => {
+          console.error(`[useOrders] Failed to persist order ${localOrder.id} to server (fallback):`, err);
+          console.error('[useOrders] Order payload:', JSON.stringify(payload));
+          await addToQueue(payload, localOrder.id);
+          setPendingCount((c) => c + 1);
         });
       }
 

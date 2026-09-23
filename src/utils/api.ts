@@ -4,11 +4,31 @@ function getApiUrl(path: string) {
   return `${BASE_URL}/api${path}`;
 }
 
+async function readErrorBody(res: Response): Promise<string> {
+  try {
+    const text = await res.text();
+    if (!text) return '';
+    try {
+      const json = JSON.parse(text);
+      if (json && typeof json === 'object') {
+        const msg = json.error || json.message || json.detail;
+        if (msg) return String(msg);
+      }
+    } catch { /* not JSON */ }
+    return text.slice(0, 500);
+  } catch {
+    return '';
+  }
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(getApiUrl(path), {
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    const errBody = await readErrorBody(res);
+    throw new Error(`API ${path} failed: ${res.status}${errBody ? ` — ${errBody}` : ''}`);
+  }
   return res.json();
 }
 
@@ -19,7 +39,10 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
     credentials: 'include',
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    const errBody = await readErrorBody(res);
+    throw new Error(`API ${path} failed: ${res.status}${errBody ? ` — ${errBody}` : ''}`);
+  }
   return res.json();
 }
 
@@ -30,7 +53,10 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
     credentials: 'include',
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    const errBody = await readErrorBody(res);
+    throw new Error(`API ${path} failed: ${res.status}${errBody ? ` — ${errBody}` : ''}`);
+  }
   return res.json();
 }
 
@@ -77,8 +103,8 @@ export async function apiAdminGet<T>(path: string): Promise<T> {
       // Token exists but is invalid/expired - clear it locally
       clearAuthToken();
     }
-    const bodyText = await res.text().catch(() => '');
-    throw new Error(`API ${path} failed: ${res.status} ${bodyText}`);
+    const errBody = await readErrorBody(res);
+    throw new Error(`API ${path} failed: ${res.status}${errBody ? ` — ${errBody}` : ''}`);
   }
   return res.json();
 }
@@ -98,8 +124,8 @@ export async function apiAdminPost<T>(path: string, body: unknown, tokenOverride
     if (res.status === 401 && token) {
       clearAuthToken();
     }
-    const bodyText = await res.text().catch(() => '');
-    throw new Error(`API ${path} failed: ${res.status} ${bodyText}`);
+    const errBody = await readErrorBody(res);
+    throw new Error(`API ${path} failed: ${res.status}${errBody ? ` — ${errBody}` : ''}`);
   }
   return res.json();
 }
@@ -119,8 +145,8 @@ export async function apiAdminPut<T>(path: string, body: unknown): Promise<T> {
     if (res.status === 401 && token) {
       clearAuthToken();
     }
-    const bodyText = await res.text().catch(() => '');
-    throw new Error(`API ${path} failed: ${res.status} ${bodyText}`);
+    const errBody = await readErrorBody(res);
+    throw new Error(`API ${path} failed: ${res.status}${errBody ? ` — ${errBody}` : ''}`);
   }
   return res.json();
 }
@@ -136,7 +162,8 @@ export async function apiAdminDelete<T>(path: string): Promise<T> {
     if (res.status === 401 && token) {
       clearAuthToken();
     }
-    throw new Error(`API ${path} failed: ${res.status}`);
+    const errBody = await readErrorBody(res);
+    throw new Error(`API ${path} failed: ${res.status}${errBody ? ` — ${errBody}` : ''}`);
   }
   return res.json();
 }

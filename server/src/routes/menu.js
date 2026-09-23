@@ -40,7 +40,7 @@ export default function menuRouter(pool){
         modMap[mod.menu_item_id].push({
           id: mod.id,
           name: mod.name,
-          price: mod.price,
+          price: Number(mod.price) || 0,
           isDefault: !!mod.isDefault,
         });
       }
@@ -53,13 +53,14 @@ export default function menuRouter(pool){
           sizeMap[sz.menu_item_id].push({
             id: sz.id,
             label: sz.label,
-            price: sz.price,
-            sortOrder: sz.sortOrder,
+            price: Number(sz.price) || 0,
+            sortOrder: Number(sz.sortOrder) || 0,
           });
         }
       } catch (_) { /* menu_item_sizes table doesn't exist yet */ }
       const result = rows.map(row => ({
         ...row,
+        price: Number(row.price) || 0,
         modifiers: modMap[row.id] || [],
         sizes: sizeMap[row.id] || [],
       }));
@@ -85,7 +86,7 @@ export default function menuRouter(pool){
         modMap[mod.menu_item_id].push({
           id: mod.id,
           name: mod.name,
-          price: mod.price,
+          price: Number(mod.price) || 0,
           isDefault: !!mod.isDefault,
         });
       }
@@ -100,8 +101,8 @@ export default function menuRouter(pool){
           sizeMap[sz.menu_item_id].push({
             id: sz.id,
             label: sz.label,
-            price: sz.price,
-            sortOrder: sz.sortOrder,
+            price: Number(sz.price) || 0,
+            sortOrder: Number(sz.sortOrder) || 0,
           });
         }
       } catch (_) { /* menu_item_sizes table doesn't exist yet */ }
@@ -112,11 +113,12 @@ export default function menuRouter(pool){
         if (!categories[cat]) categories[cat] = [];
         categories[cat].push({
           ...row,
+          price: Number(row.price) || 0,
           modifiers: modMap[row.id] || [],
           sizes: sizeMap[row.id] || [],
         });
       }
-      res.json({ items: rows.map(r => ({ ...r, modifiers: modMap[r.id] || [], sizes: sizeMap[r.id] || [] })), categories, modifiers: modMap, sizes: sizeMap });
+      res.json({ items: rows.map(r => ({ ...r, price: Number(r.price) || 0, modifiers: modMap[r.id] || [], sizes: sizeMap[r.id] || [] })), categories, modifiers: modMap, sizes: sizeMap });
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });

@@ -275,7 +275,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     for (const it of items) {
       if (typeof it.id !== 'string' || it.id.length > 64) return res.status(400).json({ error: 'Each item id must be a string up to 64 chars' });
       if (!Number.isInteger(it.qty) || it.qty <= 0) return res.status(400).json({ error: 'Each item qty must be a positive integer' });
-      if (typeof it.price !== 'number' || it.price < 0) return res.status(400).json({ error: 'Each item price must be a non-negative number' });
+      const itemPrice = Number(it.price);
+      if (Number.isNaN(itemPrice) || itemPrice < 0) return res.status(400).json({ error: 'Each item price must be a non-negative number' });
     }
     try {
       // Server-side calculation as fallback if frontend didn't send totals

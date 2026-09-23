@@ -59,8 +59,9 @@ export const generateOrderId = (): string =>
 
 export const calcSubtotal = (cart: CartItem[]): number =>
   cart.reduce((sum, ci) => {
-    const modifierTotal = (ci.modifiers || []).reduce((s, m) => s + m.price * (m.qty || 1), 0);
-    return sum + (ci.item.price + modifierTotal) * ci.qty;
+    const basePrice = Number(ci.item.price) || 0;
+    const modifierTotal = (ci.modifiers || []).reduce((s, m) => s + (Number(m.price) || 0) * (m.qty || 1), 0);
+    return sum + (basePrice + modifierTotal) * ci.qty;
   }, 0);
 
 export const calcTax = (subtotal: number): number => Math.round(subtotal * 0.12 * 100) / 100;

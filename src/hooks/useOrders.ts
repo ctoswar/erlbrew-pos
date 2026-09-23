@@ -276,7 +276,7 @@ export function useOrders() {
       const items = cart.map((ci) => ({
         id: ci.item.id,
         qty: ci.qty,
-        price: ci.item.price,
+        price: Number(ci.item.price) || 0,
         notes: ci.notes,
         modifiers: ci.modifiers || [],
         size: ci.selectedSize?.label || undefined,

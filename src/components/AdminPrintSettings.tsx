@@ -313,6 +313,17 @@ export const AdminPrintSettings: React.FC = () => {
                 />
               </FormSection>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormSection label="TIN">
+                <input
+                  type="text"
+                  value={companyInfo.company_tin}
+                  onChange={(e) => setCompanyInfo(c => ({ ...c, company_tin: e.target.value }))}
+                  placeholder="000-000-000-000"
+                  className="w-full"
+                />
+              </FormSection>
+            </div>
           </div>
 
           {companyError && (
@@ -601,15 +612,6 @@ export const AdminPrintSettings: React.FC = () => {
 
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FormSection label="TIN Number">
-                <input
-                  type="text"
-                  value={companyInfo.company_tin}
-                  onChange={(e) => setCompanyInfo(c => ({ ...c, company_tin: e.target.value }))}
-                  placeholder="000-000-000-000"
-                  className="w-full"
-                />
-              </FormSection>
               <FormSection label="COR Number">
                 <input
                   type="text"
@@ -619,8 +621,6 @@ export const AdminPrintSettings: React.FC = () => {
                   className="w-full"
                 />
               </FormSection>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormSection label="ATP Number">
                 <input
                   type="text"
@@ -630,6 +630,8 @@ export const AdminPrintSettings: React.FC = () => {
                   className="w-full"
                 />
               </FormSection>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormSection label="ATP Date">
                 <input
                   type="text"
@@ -639,8 +641,6 @@ export const AdminPrintSettings: React.FC = () => {
                   className="w-full"
                 />
               </FormSection>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormSection label="Serial Number">
                 <input
                   type="text"
@@ -650,6 +650,8 @@ export const AdminPrintSettings: React.FC = () => {
                   className="w-full"
                 />
               </FormSection>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormSection label="PTU Number">
                 <input
                   type="text"
@@ -659,8 +661,6 @@ export const AdminPrintSettings: React.FC = () => {
                   className="w-full"
                 />
               </FormSection>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormSection label="Machine Number">
                 <input
                   type="text"
@@ -670,6 +670,8 @@ export const AdminPrintSettings: React.FC = () => {
                   className="w-full"
                 />
               </FormSection>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormSection label="POS Accreditation No">
                 <input
                   type="text"

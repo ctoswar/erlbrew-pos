@@ -95,13 +95,15 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
                 {STORE.tel && <div className="text-[9px] text-[#555]">Tel: {STORE.tel}</div>}
               </div>
             )}
+            {settings.showStoreHeader && (
+              <div className="border-y-2 border-[#222] py-1 text-center mb-2">
+                <strong className="text-[10px] tracking-wider">ACKNOWLEDGMENT RECEIPT</strong>
+              </div>
+            )}
 
             {/* 2. BIR Info */}
             {settings.showBIRInfo && (
               <>
-                <div className="border-y-2 border-[#222] py-1 text-center mb-2">
-                  <strong className="text-[10px] tracking-wider">ACKNOWLEDGMENT RECEIPT</strong>
-                </div>
                 <div className="text-[9px] mb-1.5 leading-relaxed">
                   <div>TIN     : {STORE.tin}</div>
                   <div>ATP No  : {STORE.atpNo}</div>

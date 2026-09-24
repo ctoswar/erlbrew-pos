@@ -62,12 +62,12 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
     addressLines.forEach(line => lines.push(padCenter(line)));
     if (STORE.tel) lines.push(padCenter(`Tel: ${STORE.tel}`));
     lines.push(ln("="));
+    lines.push(padCenter("ACKNOWLEDGMENT RECEIPT"));
+    lines.push(ln("="));
   }
 
   // 2. BIR Accreditations
   if (settings.showBIRInfo) {
-    lines.push(padCenter("ACKNOWLEDGMENT RECEIPT"));
-    lines.push(ln("="));
     lines.push(`TIN     : ${STORE.tin}`);
     lines.push(`ATP No  : ${STORE.atpNo}`);
     lines.push(`ATP Date: ${STORE.atpDate}`);

@@ -103,7 +103,6 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
     if (STORE.addr1) lines.push(padCenter(STORE.addr1));
     if (STORE.addr2) lines.push(padCenter(STORE.addr2));
     if (STORE.tel) lines.push(padCenter(`Tel: ${STORE.tel}`));
-    if (STORE.tin) lines.push(padCenter(`TIN: ${STORE.tin}`));
     lines.push(ln("="));
   }
 
@@ -111,6 +110,7 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
   if (settings.showBIRInfo) {
     lines.push(padCenter("ACKNOWLEDGMENT RECEIPT"));
     lines.push(ln("="));
+    lines.push(`TIN     : ${STORE.tin}`);
     lines.push(`ATP No  : ${STORE.atpNo}`);
     lines.push(`ATP Date: ${STORE.atpDate}`);
     lines.push(`COR No  : ${STORE.birCorNo}`);

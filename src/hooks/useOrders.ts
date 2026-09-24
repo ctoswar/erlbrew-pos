@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Order, CartItem, Staff, OrderStatus, OrderType, PayMethod, MenuItem, Role, Discount } from "../types";
 import { calcSubtotal, calcTax, calcGrand, generateOrderId, parseServerDatetime } from "../utils";
-import { apiGet, apiPost, apiAdminPost, apiAdminPut, getAuthToken } from "../utils/api";
+import { apiGet, apiPost, apiAdminPost, apiAdminPut, apiAdminDelete, getAuthToken } from "../utils/api";
 import { addOfflineOrder, getOfflineOrders, removeOfflineOrder } from "../utils/offlineDb";
 
 const POLL_INTERVAL = 15000; // 15s — sync with server for multi-device
@@ -69,6 +69,10 @@ interface ServerOrder {
   reference_number?: string;
   referenceNumber?: string;
   discount_json?: string | null;
+  pay_status?: string;
+  order_source?: string;
+  external_order_id?: string;
+  checkout_url?: string;
 }
 
 // Convert a server order object (snake_case) to a frontend Order
@@ -111,6 +115,8 @@ export function serverOrderToOrder(o: ServerOrder): Order {
     type: (o.type || 'dine-in') as OrderType,
     payMethod: (o.pay_method || 'cash') as PayMethod,
     referenceNumber: o.referenceNumber || o.reference_number || undefined,
+    payStatus: (o.pay_status as Order['payStatus']) || undefined,
+    orderSource: (o.order_source as Order['orderSource']) || 'pos',
     discount: (() => {
       if (!o.discount_json) return undefined;
       try {
@@ -206,8 +212,8 @@ export function useOrders() {
               // Also update status for existing orders from server
               const updated = prev.map(local => {
                 const server = serverOrders.find(s => s.id === local.id);
-                if (server && server.status !== local.status) {
-                  return { ...local, status: server.status, completedAt: server.completedAt };
+                if (server && (server.status !== local.status || server.payStatus !== local.payStatus)) {
+                  return { ...local, status: server.status, payStatus: server.payStatus, completedAt: server.completedAt, referenceNumber: server.referenceNumber ?? local.referenceNumber };
                 }
                 return local;
               });
@@ -386,6 +392,89 @@ export function useOrders() {
     []
   );
 
+  /**
+   * Phase 2: create an order that awaits PayMongo gateway payment.
+   * The order is created server-side with status 'pending_payment' and comes
+   * back with a hosted checkout_url. The caller shows the QR/link and polls
+   * until the webhook flips pay_status to 'paid'.
+   */
+  const placeGatewayOrder = useCallback(
+    async (
+      cart: CartItem[], staff: Staff, type: OrderType,
+      customerName: string | undefined, customerPhone: string | undefined,
+      payMethod: PayMethod, discount?: Discount | null
+    ): Promise<{ orderId: string; checkoutUrl: string }> => {
+      const subtotal = calcSubtotal(cart);
+      const tax = calcTax(subtotal);
+      const total = calcGrand(subtotal, discount);
+      const items = cart.map((ci) => ({
+        id: ci.item.id,
+        qty: ci.qty,
+        price: Number(ci.item.price) || 0,
+        notes: ci.notes,
+        modifiers: ci.modifiers || [],
+        size: ci.selectedSize?.label || undefined,
+      }));
+      const payload: Record<string, unknown> = {
+        staff_id: staff ? staff.rfid : undefined,
+        staff_name: staff?.name,
+        type,
+        customer_name: customerName || null,
+        customer_phone: customerPhone || null,
+        pay_method: payMethod,
+        items,
+        subtotal,
+        tax,
+        total,
+        use_gateway: true,
+      };
+      if (discount) {
+        payload.discount_type = discount.type;
+        payload.discount_label = discount.label;
+        payload.discount_value = discount.value;
+        payload.discount_amount = discount.amount;
+      }
+      const data = await apiAdminPost<{ id: string; checkout_url?: string; error?: string }>('/orders', payload);
+      if (!data.checkout_url) throw new Error(data.error || 'No checkout URL returned');
+      const localOrder: Order = {
+        id: data.id,
+        items: [...cart],
+        staff,
+        status: "pending_payment",
+        subtotal, tax, total,
+        createdAt: new Date(),
+        customerName: customerName || (type === "dine-in" ? "Dine-in" : undefined),
+        type, payMethod,
+        discount: discount ?? undefined,
+        payStatus: "pending",
+        checkoutUrl: data.checkout_url,
+      };
+      setOrders((prev) => prev.some(o => o.id === data.id) ? prev : [localOrder, ...prev]);
+      return { orderId: data.id, checkoutUrl: data.checkout_url };
+    },
+    []
+  );
+
+  /** Flip a pending gateway order to paid after the webhook confirms it. */
+  const markGatewayPaid = useCallback((orderId: string) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId ? { ...o, status: "preparing" as OrderStatus, payStatus: "paid" as const } : o
+      )
+    );
+  }, []);
+
+  /** Cancel a pending gateway order — remove locally + delete on server. */
+  const cancelGatewayOrder = useCallback((orderId: string) => {
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    const token = getAuthToken();
+    if (token) {
+      apiAdminDelete(`/orders/${orderId}`).catch((err) =>
+        console.error("Failed to delete pending gateway order:", err)
+      );
+    }
+  }, []);
+
   const updateStatus = useCallback((id: string, status: OrderStatus) => {
     setOrders((prev) =>
       prev.map((o) =>
@@ -419,5 +508,5 @@ export function useOrders() {
     setOrders((prev) => prev.filter((o) => o.id !== id));
   }, []);
 
-  return { orders, placeOrder, updateStatus, voidOrder, refundOrder, dismissOrder, activeOrders, completedOrders, pendingCount };
+  return { orders, placeOrder, placeGatewayOrder, markGatewayPaid, cancelGatewayOrder, updateStatus, voidOrder, refundOrder, dismissOrder, activeOrders, completedOrders, pendingCount };
 }

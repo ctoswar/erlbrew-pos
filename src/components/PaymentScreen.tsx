@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { PayMethod } from "../types";
 import { formatCurrency, getQuickCashAmounts } from "../utils";
 import { loadPrintSettings } from "./AdminPrintSettings";
+import { apiGet } from "../utils/api";
+import { QRCodeSVG } from "qrcode.react";
 
 interface Props {
   total: number;
@@ -9,7 +11,30 @@ interface Props {
   discountAmount?: number;
   onBack: () => void;
   onConfirm: (method: PayMethod, cashTendered?: number, referenceNumber?: string) => void;
+  /** Phase 2: PayMongo enabled — card/e-wallet go through hosted QR/link checkout */
+  gatewayEnabled?: boolean;
+  /** Creates the pending order + checkout session; returns orderId + hosted URL */
+  onConfirmGateway?: (method: PayMethod) => Promise<{ orderId: string; checkoutUrl: string }>;
+  /** Webhook confirmed payment — advance to success screen */
+  onGatewayPaid?: (orderId: string) => void;
+  /** User abandoned checkout — delete the pending order (cart stays intact) */
+  onGatewayCancel?: (orderId: string) => void;
 }
+
+interface PaymentStatus {
+  status?: string;
+  pay_status?: string;
+  reference_number?: string;
+}
+
+type GatewayPhase =
+  | { phase: "idle" }
+  | { phase: "creating" }
+  | { phase: "waiting"; orderId: string; checkoutUrl: string; deadline: number }
+  | { phase: "error"; message: string; orderId?: string };
+
+const POLL_MS = 2500;
+const WAIT_TIMEOUT_MS = 10 * 60 * 1000;
 
 export const PaymentScreen: React.FC<Props> = ({
   total,
@@ -17,6 +42,10 @@ export const PaymentScreen: React.FC<Props> = ({
   discountAmount,
   onBack,
   onConfirm,
+  gatewayEnabled,
+  onConfirmGateway,
+  onGatewayPaid,
+  onGatewayCancel,
 }) => {
   const [method, setMethod] = useState<PayMethod>("cash");
   const [cashGiven, setCashGiven] = useState("");
@@ -24,6 +53,8 @@ export const PaymentScreen: React.FC<Props> = ({
   const [splitMode, setSplitMode] = useState(false);
   const [splitEwallet, setSplitEwallet] = useState("");
   const [splitRef, setSplitRef] = useState("");
+  const [gateway, setGateway] = useState<GatewayPhase>({ phase: "idle" });
+  const paidRef = useRef(false);
   const printSettings = loadPrintSettings();
 
   const cash = parseFloat(cashGiven) || 0;
@@ -31,18 +62,153 @@ export const PaymentScreen: React.FC<Props> = ({
   const quickAmounts = getQuickCashAmounts(total);
   const splitEwalletNum = parseFloat(splitEwallet) || 0;
   const splitCashNeeded = total - splitEwalletNum;
+  // Gateway applies to single card/e-wallet payments when PayMongo is on
+  const useGateway = !!gatewayEnabled && !splitMode && (method === "card" || method === "ewallet");
   const canConfirm = splitMode
     ? splitEwalletNum > 0 && splitEwalletNum < total && splitRef.trim() !== "" && cashGiven !== "" && parseFloat(cashGiven) >= splitCashNeeded
     : method !== "cash" || (cashGiven !== "" && cash >= total);
-  const canConfirmEwallet = method === "ewallet" && referenceNumber.trim() !== "";
+  const canConfirmEwallet = useGateway || (method === "ewallet" && referenceNumber.trim() !== "");
+
+  // Poll order payment status while waiting for the gateway webhook
+  useEffect(() => {
+    if (gateway.phase !== "waiting") return;
+    const { orderId, deadline } = gateway;
+    paidRef.current = false;
+    let cancelled = false;
+
+    const tick = async () => {
+      if (cancelled || paidRef.current) return;
+      if (Date.now() > deadline) {
+        setGateway({ phase: "error", message: "Payment timed out. The customer can still pay from the link until it expires.", orderId });
+        return;
+      }
+      try {
+        const o = await apiGet<PaymentStatus>(`/orders/${orderId}`);
+        if (cancelled || paidRef.current) return;
+        if (o.pay_status === "paid") {
+          paidRef.current = true;
+          onGatewayPaid?.(orderId);
+        } else if (o.pay_status === "failed" || o.pay_status === "expired") {
+          setGateway({ phase: "error", message: o.pay_status === "expired" ? "Checkout session expired." : "Payment failed.", orderId });
+        }
+      } catch { /* transient network error — keep polling */ }
+    };
+
+    tick();
+    const iv = setInterval(tick, POLL_MS);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [gateway, onGatewayPaid]);
+
+  const startGateway = async () => {
+    setGateway({ phase: "creating" });
+    try {
+      const res = await onConfirmGateway?.(method);
+      if (!res?.orderId || !res?.checkoutUrl) throw new Error("Checkout session not created");
+      setGateway({
+        phase: "waiting",
+        orderId: res.orderId,
+        checkoutUrl: res.checkoutUrl,
+        deadline: Date.now() + WAIT_TIMEOUT_MS,
+      });
+    } catch (e) {
+      setGateway({ phase: "error", message: e instanceof Error ? e.message : "Checkout failed" });
+    }
+  };
+
+  const cancelGateway = () => {
+    if (gateway.phase === "waiting" || (gateway.phase === "error" && gateway.orderId)) {
+      const orderId = gateway.phase === "waiting" ? gateway.orderId : gateway.orderId!;
+      onGatewayCancel?.(orderId);
+    }
+    setGateway({ phase: "idle" });
+  };
+
+  const handleBack = () => {
+    if (gateway.phase === "waiting" || gateway.phase === "error") {
+      cancelGateway();
+      return;
+    }
+    if (gateway.phase === "creating") return; // in-flight — don't orphan the order
+    onBack();
+  };
 
   const handleConfirm = () => {
     if (splitMode) {
       onConfirm("cash", parseFloat(cashGiven) || 0, `SPLIT:₱${splitEwalletNum.toFixed(0)}-${splitRef}`);
+    } else if (useGateway) {
+      startGateway();
     } else {
       onConfirm(method, method === "cash" ? cash : undefined, method === "ewallet" ? referenceNumber : undefined);
     }
   };
+
+  // ── Gateway states: creating / waiting (QR + link) / error ────────────────
+  if (gateway.phase !== "idle") {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-erl-base p-3 sm:p-4 md:p-6 relative overflow-hidden">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-erl-accent/[0.02] blur-[120px] pointer-events-none" />
+        <div className="animate-scale-in card-glass py-6 px-4 sm:py-8 sm:px-7 w-full max-w-[460px] rounded-2xl relative">
+          <div className="flex items-center gap-4 mb-6">
+            <button onClick={handleBack} disabled={gateway.phase === "creating"}
+              className="btn-ghost text-xs py-2 px-3 min-h-[44px] text-erl-text-muted rounded-xl hover:bg-white/[0.03] transition-colors flex items-center gap-1.5 disabled:opacity-40">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              {gateway.phase === "waiting" || gateway.phase === "error" ? "Cancel" : "Back"}
+            </button>
+            <div className="font-display text-xl font-bold text-erl-text-primary tracking-wide">PayMongo Checkout</div>
+          </div>
+
+          <div className="text-center mb-6">
+            <div className="text-[10px] text-erl-text-muted tracking-[4px] uppercase mb-2 font-bold">Amount Due</div>
+            <div className="font-display text-[32px] sm:text-[40px] font-bold text-erl-accent tracking-tight leading-none">{formatCurrency(total)}</div>
+          </div>
+
+          {gateway.phase === "creating" && (
+            <div className="py-10 text-center">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-erl-accent/30 border-t-erl-accent animate-spin" />
+              <div className="text-sm text-erl-text-secondary font-medium">Creating secure checkout…</div>
+            </div>
+          )}
+
+          {gateway.phase === "waiting" && (
+            <div className="text-center">
+              <div className="inline-block bg-white p-3 rounded-2xl mb-4">
+                <QRCodeSVG value={gateway.checkoutUrl} size={196} includeMargin={false} />
+              </div>
+              <div className="text-sm text-erl-text-primary font-semibold mb-1">Scan to pay — GCash · Maya · Card · QR Ph</div>
+              <div className="text-xs text-erl-text-muted mb-4">Order stays pending until payment is confirmed</div>
+              <a href={gateway.checkoutUrl} target="_blank" rel="noreferrer"
+                className="block px-3 py-2.5 text-[11px] font-mono rounded-xl bg-erl-surface border border-erl-border-default text-erl-text-secondary hover:border-erl-accent truncate mb-4">
+                {gateway.checkoutUrl}
+              </a>
+              <div className="flex items-center justify-center gap-2 text-[11px] text-erl-accent font-semibold">
+                <span className="w-2 h-2 rounded-full bg-erl-accent animate-pulse" />
+                Waiting for payment…
+              </div>
+            </div>
+          )}
+
+          {gateway.phase === "error" && (
+            <div className="text-center py-4">
+              <div className="text-4xl mb-3">⚠️</div>
+              <div className="text-sm text-erl-danger font-semibold mb-4">{gateway.message}</div>
+              <div className="flex flex-col gap-2">
+                {!gateway.orderId && (
+                  <button onClick={() => setGateway({ phase: "idle" })}
+                    className="btn w-full text-[11px] py-3.5 min-h-[44px] rounded-2xl tracking-[0.12em] font-bold btn-accent">
+                    Try Again
+                  </button>
+                )}
+                <button onClick={() => setGateway({ phase: "idle" })}
+                  className="w-full text-[11px] py-3.5 min-h-[44px] rounded-2xl tracking-[0.12em] font-bold border-2 border-erl-border-default text-erl-text-secondary hover:border-erl-accent transition-colors">
+                  {gateway.orderId ? "Start Over (voids pending order)" : "Pay Manually Instead"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex items-center justify-center bg-erl-base p-3 sm:p-4 md:p-6 relative overflow-hidden">
@@ -52,7 +218,7 @@ export const PaymentScreen: React.FC<Props> = ({
       <div className="animate-scale-in card-glass py-6 px-4 sm:py-8 sm:px-7 w-full max-w-[460px] rounded-2xl relative">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <button onClick={onBack} className="btn-ghost text-xs py-2 px-3 min-h-[44px] text-erl-text-muted rounded-xl hover:bg-white/[0.03] transition-colors flex items-center gap-1.5">
+          <button onClick={handleBack} className="btn-ghost text-xs py-2 px-3 min-h-[44px] text-erl-text-muted rounded-xl hover:bg-white/[0.03] transition-colors flex items-center gap-1.5">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             Back
           </button>
@@ -122,17 +288,24 @@ export const PaymentScreen: React.FC<Props> = ({
 
         {/* Card Panel */}
         {method === "card" && (
-          <div className="text-center py-10 mb-6">
-            <div className="w-20 h-20 rounded-2xl bg-erl-accent/[0.05] border border-erl-accent/10 flex items-center justify-center mx-auto mb-4">
-              <span className="text-4xl">💳</span>
+          useGateway ? (
+            <div className="text-center py-6 mb-6 bg-erl-accent/[0.03] rounded-2xl border border-erl-accent/[0.08]">
+              <div className="text-base text-erl-text-primary font-semibold mb-1">PayMongo Checkout</div>
+              <div className="text-sm text-erl-text-muted leading-relaxed">Customer scans a QR or opens a payment link<br />for card, GCash, Maya, or QR Ph</div>
             </div>
-            <div className="text-base text-erl-text-primary font-semibold mb-2">Present Card to Terminal</div>
-            <div className="text-sm text-erl-text-muted leading-relaxed">Tap, insert, or swipe<br />then confirm below</div>
-          </div>
+          ) : (
+            <div className="text-center py-10 mb-6">
+              <div className="w-20 h-20 rounded-2xl bg-erl-accent/[0.05] border border-erl-accent/10 flex items-center justify-center mx-auto mb-4">
+                <span className="text-4xl">💳</span>
+              </div>
+              <div className="text-base text-erl-text-primary font-semibold mb-2">Present Card to Terminal</div>
+              <div className="text-sm text-erl-text-muted leading-relaxed">Tap, insert, or swipe<br />then confirm below</div>
+            </div>
+          )
         )}
 
         {/* E-Wallet Panel */}
-        {method === "ewallet" && (
+        {method === "ewallet" && !useGateway && (
           <div className="mb-6">
             <div className="bg-erl-accent/[0.03] rounded-2xl p-6 mb-4 text-center border border-erl-accent/[0.06]">
               <div className="text-[10px] text-erl-text-muted tracking-[4px] uppercase mb-3 font-bold">GCash Reference</div>
@@ -153,6 +326,14 @@ export const PaymentScreen: React.FC<Props> = ({
               <input type="text" value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} placeholder="e.g. REF-123456789" className="min-h-[44px]" />
             </div>
             <div className="text-xs text-erl-text-muted text-center font-medium">Tap <strong className="text-erl-accent">Confirm & Place Order</strong> once paid</div>
+          </div>
+        )}
+
+        {/* E-Wallet via gateway */}
+        {method === "ewallet" && useGateway && (
+          <div className="text-center py-6 mb-6 bg-erl-accent/[0.03] rounded-2xl border border-erl-accent/[0.08]">
+            <div className="text-base text-erl-text-primary font-semibold mb-1">GCash · Maya · QR Ph via PayMongo</div>
+            <div className="text-sm text-erl-text-muted leading-relaxed">Confirm to generate a QR code / payment link<br />Order enters the kitchen once paid</div>
           </div>
         )}
 
@@ -194,18 +375,22 @@ export const PaymentScreen: React.FC<Props> = ({
 
         <button
           className={`btn w-full text-[11px] py-4 min-h-[44px] rounded-2xl tracking-[0.12em] font-bold transition-all duration-300 whitespace-normal break-words leading-tight ${
-            canConfirm && (method !== "ewallet" || canConfirmEwallet)
+            canConfirm && canConfirmEwallet
               ? "btn-accent shadow-lg hover:shadow-xl hover:-translate-y-0.5"
               : "bg-erl-border-default text-erl-text-disabled cursor-not-allowed"
           }`}
           onClick={handleConfirm}
-          disabled={!canConfirm || (method === "ewallet" && !canConfirmEwallet)}
+          disabled={!canConfirm || !canConfirmEwallet}
         >
-          {splitMode ? `Split (₱${splitEwalletNum.toFixed(0)} GCash + ₱${Math.max(0, splitCashNeeded).toFixed(0)} Cash)` : "Confirm & Place Order ✓"}
+          {splitMode
+            ? `Split (₱${splitEwalletNum.toFixed(0)} GCash + ₱${Math.max(0, splitCashNeeded).toFixed(0)} Cash)`
+            : useGateway
+              ? "Create Payment QR / Link ✓"
+              : "Confirm & Place Order ✓"}
         </button>
         <div className="text-center mt-3">
           <span className="text-[10px] text-erl-text-faint tracking-wide font-medium">
-            {method === "cash" ? `Change: ${formatCurrency(change)}` : method === "card" ? "Present card" : "Pay via GCash"}
+            {method === "cash" ? `Change: ${formatCurrency(change)}` : useGateway ? "Scan with GCash / Maya / any bank app" : method === "card" ? "Present card" : "Pay via GCash"}
           </span>
         </div>
       </div>

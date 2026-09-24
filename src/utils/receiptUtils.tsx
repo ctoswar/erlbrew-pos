@@ -161,7 +161,7 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
   lines.push(ln("="));
 
   // 6. Payment
-  const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : "E-WALLET";
+  const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : order.payMethod === "delivery" ? "DELIVERY" : "E-WALLET";
   lines.push(`Payment : ${payLabel}`);
   if (order.payMethod === "ewallet" && order.referenceNumber) {
     lines.push(`Ref No  : ${order.referenceNumber}`);

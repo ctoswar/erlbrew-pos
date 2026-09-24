@@ -93,6 +93,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
                   <div key={i} className="text-[9px] mt-[2px] text-[#555]">{line}</div>
                 ))}
                 {STORE.tel && <div className="text-[9px] text-[#555]">Tel: {STORE.tel}</div>}
+                {STORE.tin && <div className="text-[9px] text-[#555]">TIN: {STORE.tin}</div>}
               </div>
             )}
 

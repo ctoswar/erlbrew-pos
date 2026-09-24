@@ -61,6 +61,7 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
     lines.push(padCenter(STORE.name));
     addressLines.forEach(line => lines.push(padCenter(line)));
     if (STORE.tel) lines.push(padCenter(`Tel: ${STORE.tel}`));
+    if (STORE.tin) lines.push(padCenter(`TIN: ${STORE.tin}`));
     lines.push(ln("="));
   }
 

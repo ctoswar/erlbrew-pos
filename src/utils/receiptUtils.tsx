@@ -103,6 +103,7 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
     if (STORE.addr1) lines.push(padCenter(STORE.addr1));
     if (STORE.addr2) lines.push(padCenter(STORE.addr2));
     if (STORE.tel) lines.push(padCenter(`Tel: ${STORE.tel}`));
+    if (STORE.tin) lines.push(padCenter(`TIN: ${STORE.tin}`));
     lines.push(ln("="));
   }
 

@@ -449,8 +449,8 @@ export const AdminPrintSettings: React.FC = () => {
           <SectionTitle title="Receipt Options" subtitle="Toggle sections shown on printed receipts" />
 
           {([
-            ["showStoreHeader", "Store Header", "Cafe name, address, and TIN on receipt"],
-            ["showBIRInfo", "BIR Accreditation", "ATP No., COR No., Serial, PTU, and Machine details"],
+            ["showStoreHeader", "Store Header", "Cafe name, address, and Tel on receipt"],
+            ["showBIRInfo", "BIR Accreditation", "TIN, ATP No., COR No., Serial, PTU, and Machine details"],
             ["showCustomerCopy", "Customer Copy Footer", "Thank you message and customer copy note"],
           ] as [keyof PrintSettings, string, string][]).map(([key, label, desc]) => (
             <div key={key} className="flex items-center justify-between py-3">

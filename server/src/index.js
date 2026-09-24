@@ -22,6 +22,8 @@ import customersRoutes from './routes/customers.js';
 import locationsRoutes from './routes/locations.js';
 import transfersRoutes from './routes/transfers.js';
 import loyaltyRouter from './routes/loyalty.js';
+import webhooksRouter from './routes/webhooks.js';
+import integrationsRouter from './routes/integrations.js';
 import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
@@ -85,7 +87,9 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use(express.json({ limit: '10mb' }));
+// NOTE: express.json is registered AFTER the DB pool (below) so the webhook
+// router can capture the raw body for HMAC signature verification first.
+
 
 // Apply login-specific limiter early (before login route handling)
 app.use('/api/staff/login', loginLimiter);
@@ -134,6 +138,13 @@ async function _withTimezoneExecute(sql, params) {
 
 pool.query = _withTimezone;
 pool.execute = _withTimezoneExecute;
+
+// Webhooks: capture the raw body for HMAC verification — must run BEFORE express.json
+app.use('/api/webhooks', express.raw({ type: '*/*', limit: '2mb' }));
+app.use('/api/webhooks', webhooksRouter(pool, broadcastEvent));
+
+// Global JSON body parser (registered after webhooks so raw body is preserved there)
+app.use(express.json({ limit: '10mb' }));
 
 // Print server URL resolver: env var › DB company_settings
 function normalizePrintServerUrl(url) {
@@ -382,6 +393,33 @@ await pool.query(`
 
     // Link orders to customers
     await pool.query(`ALTER TABLE orders ADD COLUMN customer_id INT DEFAULT NULL AFTER customer_name`).catch(() => {});
+
+    // ── Phase 2: Integrations (issue #127) ─────────────────────────────────
+    // order_source: where the order originated (pos = created at the till)
+    await pool.query(`ALTER TABLE orders ADD COLUMN order_source VARCHAR(16) DEFAULT 'pos' AFTER type`).catch(() => {});
+    // external_order_id: platform order id for inbound delivery orders
+    await pool.query(`ALTER TABLE orders ADD COLUMN external_order_id VARCHAR(64) DEFAULT NULL AFTER order_source`).catch(() => {});
+    // pay_status: pending (awaiting gateway) | paid | failed | expired
+    await pool.query(`ALTER TABLE orders ADD COLUMN pay_status VARCHAR(16) DEFAULT 'paid' AFTER reference_number`).catch(() => {});
+    await pool.query(`ALTER TABLE orders ADD INDEX idx_orders_ext (order_source, external_order_id)`).catch(() => {});
+    // Webhook idempotency: gateways retry, UNIQUE(provider, event_id) dedupes
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payment_events (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        provider VARCHAR(32) NOT NULL,
+        event_id VARCHAR(128) NOT NULL,
+        event_type VARCHAR(64),
+        payload MEDIUMTEXT,
+        order_id VARCHAR(64),
+        status VARCHAR(16) DEFAULT 'received',
+        error VARCHAR(512),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_provider_event (provider, event_id),
+        INDEX idx_payment_events_order (order_id)
+      )
+    `);
+    console.log('payment_events table ready');
+
     await pool.query(`ALTER TABLE orders ADD FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL`).catch(() => {});
 
     // Add image column to menu_items
@@ -595,6 +633,8 @@ app.use('/api/menu', menuRoutes(pool));
 // Orders: public creates and reads, admin status updates (auth applied inline)
 const ordersExports = ordersRoutes(pool, gs, broadcastEvent);
 app.use('/api/orders', ordersExports.router);
+// Integrations settings (admin-only except /enabled) — Phase 2 issue #127
+app.use('/api/integrations', integrationsRouter(pool));
 // Inventory + movements: admin only
 app.use('/api/inventory', inventoryRoutes(pool, gs));
 app.use('/api/recipes', recipesRouter(pool));
@@ -871,6 +911,31 @@ cron.schedule('0 0 0 * * *', async () => {
     console.log(`[cron] Z-Report #${ins.insertId} for ${yesterdayStr} saved.`);
   } catch (e) {
     console.error(`[cron] Z-Report generation failed: ${e.message}`);
+  }
+});
+
+// Phase 2: expire stale pending_payment orders (customers abandoned checkout).
+// >30 min: pay_status = 'expired' (session unusable, stops POS polling).
+// >24 h: status = 'voided' (removes from active views; stock was never deducted
+// for unpaid gateway orders, so no inventory restore needed).
+cron.schedule('*/5 * * * *', async () => {
+  try {
+    const [exp] = await pool.query(
+      `UPDATE orders SET pay_status = 'expired'
+       WHERE status = 'pending_payment' AND pay_status = 'pending'
+         AND created_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE)`
+    );
+    const [vo] = await pool.query(
+      `UPDATE orders SET status = 'voided', void_reason = 'Payment session expired'
+       WHERE status = 'pending_payment'
+         AND created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)`
+    );
+    if (exp.affectedRows || vo.affectedRows) {
+      console.log(`[cron] pending_payment expiry: ${exp.affectedRows} pay_status, ${vo.affectedRows} voided`);
+      if (broadcastEvent && vo.affectedRows) broadcastEvent('order:updated', { ids: 'bulk-expired' });
+    }
+  } catch (e) {
+    console.error(`[cron] pending_payment expiry failed: ${e.message}`);
   }
 });
 

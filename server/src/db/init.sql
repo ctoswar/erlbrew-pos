@@ -34,9 +34,28 @@ CREATE TABLE IF NOT EXISTS orders (
   type VARCHAR(16),
   pay_method VARCHAR(16),
   reference_number VARCHAR(128),
+  pay_status VARCHAR(16) DEFAULT 'paid',
+  order_source VARCHAR(16) DEFAULT 'pos',
+  external_order_id VARCHAR(64) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   completed_at TIMESTAMP NULL,
-  FOREIGN KEY (staff_id) REFERENCES staff(id)
+  FOREIGN KEY (staff_id) REFERENCES staff(id),
+  INDEX idx_orders_ext (order_source, external_order_id)
+);
+
+-- Phase 2: webhook idempotency (gateways retry — UNIQUE(provider, event_id) dedupes)
+CREATE TABLE IF NOT EXISTS payment_events (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  provider VARCHAR(32) NOT NULL,
+  event_id VARCHAR(128) NOT NULL,
+  event_type VARCHAR(64),
+  payload MEDIUMTEXT,
+  order_id VARCHAR(64),
+  status VARCHAR(16) DEFAULT 'received',
+  error VARCHAR(512),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_provider_event (provider, event_id),
+  INDEX idx_payment_events_order (order_id)
 );
 
 CREATE TABLE IF NOT EXISTS order_items (

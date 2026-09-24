@@ -20,7 +20,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
   const dateStr = now.toLocaleDateString("en-PH", { month: "short", day: "2-digit", year: "numeric" });
   const timeStr = now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-  const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : "E-WALLET";
+  const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : order.payMethod === "delivery" ? "DELIVERY" : "E-WALLET";
 
   const handlePrint = async () => {
     setPrintError("");

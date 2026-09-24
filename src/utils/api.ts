@@ -353,6 +353,8 @@ export interface CompanySettings {
   company_email: string;
   company_logo: string;
   print_server_url: string;
+  /** Public base URL — used to build integration webhook callback URLs */
+  base_url?: string;
 }
 
 export async function getCompanySettings(): Promise<CompanySettings> {
@@ -379,6 +381,43 @@ export async function updateCompanySettings(settings: Partial<CompanySettings>):
     throw new Error(`API failed: ${res.status}`);
   }
   return res.json();
+}
+
+// Integrations API (Phase 2 — issue #127)
+export interface IntegrationField {
+  configured: boolean;
+  /** Masked preview for secrets (never the raw value) */
+  masked?: string;
+  /** Plain value for non-secret fields */
+  value?: string;
+}
+
+export interface IntegrationProviderStatus {
+  label: string;
+  enabled: boolean;
+  webhook_url: string | null;
+  fields: Record<string, IntegrationField>;
+}
+
+export type IntegrationsStatus = Record<string, IntegrationProviderStatus>;
+
+export async function getIntegrations(): Promise<IntegrationsStatus> {
+  return apiAdminGet<IntegrationsStatus>('/integrations');
+}
+
+export async function updateIntegration(
+  provider: string,
+  body: Record<string, string | boolean | undefined>
+): Promise<IntegrationProviderStatus> {
+  return apiAdminPut<IntegrationProviderStatus>(`/integrations/${provider}`, body);
+}
+
+export async function testIntegration(provider: string): Promise<{ ok: boolean; message: string }> {
+  return apiAdminPost<{ ok: boolean; message: string }>(`/integrations/${provider}/test`, {});
+}
+
+export async function getEnabledIntegrations(): Promise<Record<string, boolean>> {
+  return apiGet<Record<string, boolean>>('/integrations/enabled');
 }
 
 // Staff management

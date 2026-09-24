@@ -24,7 +24,9 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
   const [mobileFilter, setMobileFilter] = useState<OrderStatus | 'all'>('all');
   const { isMobile } = useViewport();
 
-  const mobileOrders = mobileFilter === 'all' ? orders : orders.filter((o) => o.status === mobileFilter);
+  // Phase 2: orders awaiting gateway payment never hit the kitchen until paid
+  const visibleOrders = orders.filter((o) => o.status !== "pending_payment");
+  const mobileOrders = mobileFilter === 'all' ? visibleOrders : visibleOrders.filter((o) => o.status === mobileFilter);
 
   const handleVoidSuccess = () => {
     if (voidTarget) { onVoidOrder(voidTarget); setVoidTarget(null); }
@@ -46,10 +48,10 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
                 mobileFilter === 'all' ? 'bg-erl-accent text-erl-sidebar' : 'bg-erl-surface text-erl-text-muted'
               }`}
             >
-              All ({orders.length})
+              All ({visibleOrders.length})
             </button>
             {COLUMNS.map((col) => {
-              const count = orders.filter((o) => o.status === col.status).length;
+              const count = visibleOrders.filter((o) => o.status === col.status).length;
               return (
                 <button
                   key={col.status}
@@ -87,7 +89,7 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
       ) : (
         <>
           {COLUMNS.map((col) => {
-            const colOrders = orders.filter((o) => o.status === col.status);
+            const colOrders = visibleOrders.filter((o) => o.status === col.status);
             return (
               <div key={col.status} className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-[200px]">
                 {/* Column header */}

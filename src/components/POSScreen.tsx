@@ -17,6 +17,7 @@ import { DiscountModal } from "./DiscountModal";
 import { useViewport } from "../hooks/useViewport";
 import { openCashDrawer } from "../utils/receiptUtils";
 import { calcGrand } from "../utils";
+import { apiGet } from "../utils/api";
 
 interface Props {
   staff: Staff;
@@ -71,8 +72,16 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     } catch {}
   }, [orderType, customerName, cart]);
 
-  const { orders, placeOrder, updateStatus, voidOrder, refundOrder, dismissOrder, activeOrders, pendingCount } = useOrders();
+  const { orders, placeOrder, placeGatewayOrder, markGatewayPaid, cancelGatewayOrder, updateStatus, voidOrder, refundOrder, dismissOrder, activeOrders, pendingCount } = useOrders();
   useKitchenEvents();
+
+  // Phase 2: is PayMongo gateway payment available? (integrations ship dark)
+  const [gatewayEnabled, setGatewayEnabled] = useState(false);
+  useEffect(() => {
+    apiGet<Record<string, boolean>>("/integrations/enabled")
+      .then((flags) => setGatewayEnabled(!!flags.paymongo))
+      .catch(() => setGatewayEnabled(false));
+  }, []);
 
   const handleNavigate = useCallback((s: Screen) => setScreen(s), []);
 
@@ -88,6 +97,26 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     setMobileCartOpen(false);
     openCashDrawer().catch((err) => console.error("Failed to open cash drawer:", err));
     setScreen("success");
+  };
+
+  // Gateway (PayMongo) flow: create pending order + hosted checkout session
+  const handleConfirmGateway = (method: PayMethod) =>
+    placeGatewayOrder(cart, staff, orderType, customerName, customerPhone, method, discount);
+
+  // Webhook confirmed payment → proceed to success screen
+  const handleGatewayPaid = (orderId: string) => {
+    const order = orders.find((o) => o.id === orderId);
+    markGatewayPaid(orderId);
+    if (order) setLastOrder({ ...order, status: "preparing", payStatus: "paid" });
+    clearCart();
+    setCustomerPhone("");
+    setMobileCartOpen(false);
+    setScreen("success");
+  };
+
+  // Customer abandoned checkout → delete pending order, cart stays intact
+  const handleGatewayCancel = (orderId: string) => {
+    cancelGatewayOrder(orderId);
   };
 
   const handleOrderDone = () => {
@@ -270,6 +299,10 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
             discountAmount={discount?.amount}
             onBack={handleBack}
             onConfirm={handleConfirmPayment}
+            gatewayEnabled={gatewayEnabled}
+            onConfirmGateway={handleConfirmGateway}
+            onGatewayPaid={handleGatewayPaid}
+            onGatewayCancel={handleGatewayCancel}
           />
         );
       case "success":

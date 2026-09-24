@@ -1,6 +1,10 @@
 export type Role = "Barista" | "Senior Barista" | "Shift Supervisor" | "Manager";
 export type Category = string;
-export type OrderStatus = "pending" | "preparing" | "ready" | "completed" | "voided" | "refunded";
+export type OrderStatus = "pending" | "pending_payment" | "preparing" | "ready" | "completed" | "voided" | "refunded";
+/** Gateway payment state — only meaningful when payMethod is card/e-wallet via PayMongo */
+export type PayStatus = "pending" | "paid" | "failed" | "expired";
+/** Where the order originated — pos = created at the till */
+export type OrderSource = "pos" | "grab" | "foodpanda";
 export type DiscountType = "pwd" | "senior" | "custom_pct" | "custom_fixed" | null;
 
 export interface Discount {
@@ -12,7 +16,7 @@ export interface Discount {
 export type Screen = "login" | "pos" | "kitchen" | "checkout" | "payment" | "success" | "dashboard" | "admin" | "time";
 export type LoginMode = "rfid" | "pin";
 export type OrderType = "dine-in" | "takeout";
-export type PayMethod = "cash" | "card" | "ewallet";
+export type PayMethod = "cash" | "card" | "ewallet" | "delivery";
 
 export interface Staff {
   id?: number;
@@ -85,6 +89,12 @@ export interface Order {
   discount?: Discount;
   /** Reference number for E-Wallet payments (e.g., GCash reference) */
   referenceNumber?: string;
+  /** Gateway payment state — orders sit in pending_payment until this becomes 'paid' */
+  payStatus?: PayStatus;
+  /** Where the order originated (default pos) */
+  orderSource?: OrderSource;
+  /** Hosted PayMongo checkout URL — shown as QR/link while awaiting payment */
+  checkoutUrl?: string;
 }
 
 export interface InventoryItem {

@@ -6,6 +6,7 @@ import { useViewport } from "../hooks/useViewport";
 import { AdminStaff } from "./AdminStaff";
 import { AdminMenu } from "./AdminMenu";
 import { AdminPrintSettings } from "./AdminPrintSettings";
+import { AdminIntegrations } from "./AdminIntegrations";
 import { AdminInventory } from "./AdminInventory";
 import { Dashboard } from "./Dashboard";
 import { AdminReports } from "./AdminReports";
@@ -109,6 +110,8 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
           payMethod: (o.payMethod || (o.pay_method as string) || 'cash') as Order['payMethod'],
           referenceNumber: o.referenceNumber ? String(o.referenceNumber) : (o.reference_number ? String(o.reference_number) : undefined),
           cashTendered: o.cashTendered ? Number(o.cashTendered) : undefined,
+          payStatus: (o.payStatus || o.pay_status || undefined) as Order['payStatus'],
+          orderSource: (o.orderSource || o.order_source || 'pos') as Order['orderSource'],
           discount: (() => {
             if (o.discount && typeof o.discount === 'object') return o.discount as Order['discount'];
             if (o.discount_json) {
@@ -157,6 +160,8 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
         payMethod: (String(o.payMethod || o.pay_method || 'cash')) as Order['payMethod'],
         referenceNumber: o.referenceNumber ? String(o.referenceNumber) : (o.reference_number ? String(o.reference_number) : undefined),
         cashTendered: o.cashTendered ? Number(o.cashTendered) : (o.cash_tendered as number | undefined) ? Number(o.cash_tendered) : undefined,
+        payStatus: (o.payStatus || o.pay_status || undefined) as Order['payStatus'],
+        orderSource: (o.orderSource || o.order_source || 'pos') as Order['orderSource'],
         discount: (() => {
           if (!o.discount_json) return undefined;
           try {
@@ -364,6 +369,9 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
               <button onClick={toggleFullscreen} className="py-2 px-3 text-[10px] rounded-lg border border-erl-border-default bg-erl-surface text-erl-text-muted cursor-pointer hover:bg-white/[0.06] hover:text-erl-text-secondary transition-all duration-200">
                 {isFullscreen ? '✕ Exit Fullscreen' : '⛶ Fullscreen'}
               </button>
+            </div>
+            <div className="bg-erl-surface rounded-xl border border-erl-border-subtle mb-4">
+              <AdminIntegrations />
             </div>
             <div className="bg-erl-surface rounded-xl border border-erl-border-subtle">
               <AdminPrintSettings />

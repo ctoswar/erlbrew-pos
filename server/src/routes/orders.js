@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logInventoryMovement } from './inventory.js';
 import { logAudit } from '../services/audit.js';
+import { isPaymongoReady, createCheckoutSession } from '../services/paymongo.js';
+import { pushOrderState } from '../services/deliveryChannels.js';
 
 // Helpers for Asia/Taipei time (UTC+8) — server timezone-independent
 function taipeiNow() {
@@ -146,6 +148,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       const [rows] = await pool.query(`
          SELECT o.id, o.status, o.subtotal, o.tax, o.total,
                o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number, o.discount_json,
+               o.order_source, o.external_order_id, o.pay_status,
                o.created_at, o.completed_at,
                s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
          FROM orders o
@@ -172,6 +175,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       const [rows] = await pool.query(`
          SELECT o.id, o.status, o.subtotal, o.tax, o.total,
                 o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number, o.discount_json,
+                o.order_source, o.external_order_id, o.pay_status,
                 o.created_at, o.completed_at, o.location_id,
                 s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
          FROM orders o
@@ -268,7 +272,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     const err = validate(req, res, {
       items: { required: true, type: 'object', array: true },
       type: { enum: ['dine-in', 'takeout'] },
-      pay_method: { enum: ['cash', 'card', 'ewallet'] },
+      pay_method: { enum: ['cash', 'card', 'ewallet', 'delivery'] },
     });
     if (err) return err;
     if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'items must be a non-empty array' });
@@ -302,6 +306,32 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         ? JSON.stringify({ type: discount_type || null, label: discount_label || null, value: discount_value ?? null, amount: discount_amount ?? null })
         : null;
 
+      // ── PayMongo gateway flow (Phase 2 / #127) ───────────────────────────
+      // Cash skips pending-payment (immediate as today). Card/e-wallet with
+      // PayMongo ready + use_gateway flag → pending_payment until webhook.
+      let checkoutUrl = null;
+      let initialStatus = 'preparing';
+      let initialPayStatus = 'paid';
+      const wantGateway = req.body?.use_gateway === true && pay_method !== 'cash';
+      if (wantGateway) {
+        const ready = await isPaymongoReady(pool);
+        if (ready) {
+          initialStatus = 'pending_payment';
+          initialPayStatus = 'pending';
+          try {
+            const session = await createCheckoutSession(pool, {
+              orderId: id,
+              total: orderTotal,
+              description: `${type || 'dine-in'} order`,
+            });
+            checkoutUrl = session.checkout_url;
+          } catch (e) {
+            // No order inserted yet — fail cleanly, frontend falls back to manual flow
+            return res.status(502).json({ error: `PayMongo checkout failed: ${e.message}` });
+          }
+        }
+      }
+
       // Look up or create customer by phone
       let customerId = null;
       if (customer_phone && typeof customer_phone === 'string' && customer_phone.trim()) {
@@ -319,8 +349,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       }
 
       await pool.query(
-        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name, customer_id, table_name, type, pay_method, reference_number, discount_json, location_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, staffDbId, 'preparing', orderSubtotal, orderTax, orderTotal, customer_name || null, customerId, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null, discountJson, location_id || 1]
+        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name, customer_id, table_name, type, pay_method, reference_number, discount_json, location_id, pay_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, staffDbId, initialStatus, orderSubtotal, orderTax, orderTotal, customer_name || null, customerId, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null, discountJson, location_id || 1, initialPayStatus]
       );
       for (const it of itemsOut) {
         const [itemResult] = await pool.query(
@@ -340,14 +370,16 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
       if (googleSheets) {
         try {
-          await googleSheets.appendOrder({ orderId: id, staffName: staff_name || '', items: itemsOut, subtotal: orderSubtotal, tax: orderTax, total: orderTotal, payMethod: pay_method, referenceNumber: reference_number, status: 'preparing' });
+          await googleSheets.appendOrder({ orderId: id, staffName: staff_name || '', items: itemsOut, subtotal: orderSubtotal, tax: orderTax, total: orderTotal, payMethod: pay_method, referenceNumber: reference_number, status: initialStatus });
         } catch (e) {
           console.error('Sheets write failed:', e.message, e.stack);
         }
       }
 
     // Auto-deduct inventory based on recipes
-    try {
+    // Phase 2: gateway orders (pending_payment) are NOT deducted until the
+    // PayMongo webhook confirms payment (deduct happens there) — see paymongo.js.
+    if (initialStatus !== 'pending_payment') try {
       const conn = await pool.getConnection();
       await conn.beginTransaction();
       try {
@@ -412,7 +444,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       console.error('Inventory deduction error:', e);
     }
 
-    res.json({ id, subtotal: orderSubtotal, tax: orderTax, total: orderTotal, status: 'preparing' });
+    res.json({ id, subtotal: orderSubtotal, tax: orderTax, total: orderTotal, status: initialStatus, pay_status: initialPayStatus, checkout_url: checkoutUrl });
 
     // Audit: order creation
     await logAudit(pool, req, { action: 'order_create', entityType: 'order', entityId: id, details: { type, pay_method, total: orderTotal, itemCount: itemsOut.length } });
@@ -447,7 +479,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       try {
         const [rows] = await pool.query(`
           SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.table_name, o.type, o.pay_method,
-                 o.reference_number, o.discount_json, o.created_at,
+                 o.reference_number, o.discount_json, o.order_source, o.external_order_id, o.pay_status, o.created_at,
                  s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
           FROM orders o LEFT JOIN staff s ON o.staff_id = s.id WHERE o.id = ?`, [id]);
         if (rows[0]) {
@@ -465,7 +497,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   router.put('/:id/status', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-  const allowed = ['pending','preparing','ready','completed'];
+  const allowed = ['pending','pending_payment','preparing','ready','completed'];
   if (typeof id !== 'string' || id.length < 1) {
     return res.status(400).json({ error: 'Invalid order id' });
   }
@@ -520,6 +552,16 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     // Audit: status change
     await logAudit(pool, req, { action: 'order_status_change', entityType: 'order', entityId: id, details: { newStatus: status } });
     res.json({ ok: true });
+
+    // Phase 2: push status to delivery platform for inbound orders (fire-and-forget)
+    try {
+      const [srcRows] = await pool.query(
+        'SELECT order_source, external_order_id FROM orders WHERE id = ?', [id]
+      );
+      if (srcRows[0] && srcRows[0].order_source && srcRows[0].order_source !== 'pos') {
+        pushOrderState(pool, srcRows[0].order_source, srcRows[0].external_order_id, status);
+      }
+    } catch (e) { /* non-fatal */ }
 
     // Broadcast status change to all SSE clients
     if (broadcastEvent) {
@@ -898,7 +940,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
       // Fetch order before voiding to reverse loyalty points
       const [orderRows] = await conn.query(
-        'SELECT customer_id, total, status FROM orders WHERE id = ? FOR UPDATE',
+        'SELECT customer_id, total, status, pay_status FROM orders WHERE id = ? FOR UPDATE',
         [id]
       );
       const order = orderRows[0];
@@ -916,8 +958,10 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         );
       }
 
-      // Restore inventory — reverse the order's recipe deductions
-      try {
+      // Restore inventory — only if stock was actually deducted.
+      // Unpaid gateway orders (pay_status != 'paid') never deducted, so restore
+      // would incorrectly ADD stock.
+      if (order && (order.pay_status || 'paid') === 'paid') try {
         const [orderItems] = await conn.query(
           'SELECT menu_item_id, qty FROM order_items WHERE order_id = ?', [id]
         );
@@ -1339,6 +1383,30 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       }
 
       res.json(rows[0]);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // GET single order — used by the POS to poll payment status while waiting
+  // for the gateway webhook. Registered last so static paths win.
+  router.get('/:id', async (req, res) => {
+    const { id } = req.params;
+    if (typeof id !== 'string' || id.length < 1 || id.length > 64) {
+      return res.status(400).json({ error: 'Invalid order id' });
+    }
+    try {
+      const [rows] = await pool.query(`
+        SELECT o.id, o.status, o.pay_status, o.subtotal, o.tax, o.total, o.customer_name,
+               o.table_name, o.type, o.pay_method, o.reference_number, o.discount_json,
+               o.order_source, o.external_order_id, o.created_at, o.completed_at,
+               s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
+        FROM orders o LEFT JOIN staff s ON o.staff_id = s.id
+        WHERE o.id = ?`, [id]);
+      if (!rows[0]) return res.status(404).json({ error: 'Order not found' });
+      const items = await fetchOrderItems([id]);
+      res.json(attachItems([rows[0]], items)[0]);
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });

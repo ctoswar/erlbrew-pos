@@ -93,7 +93,6 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
                   <div key={i} className="text-[9px] mt-[2px] text-[#555]">{line}</div>
                 ))}
                 {STORE.tel && <div className="text-[9px] text-[#555]">Tel: {STORE.tel}</div>}
-                {STORE.tin && <div className="text-[9px] text-[#555]">TIN: {STORE.tin}</div>}
               </div>
             )}
 
@@ -104,6 +103,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
                   <strong className="text-[10px] tracking-wider">ACKNOWLEDGMENT RECEIPT</strong>
                 </div>
                 <div className="text-[9px] mb-1.5 leading-relaxed">
+                  <div>TIN     : {STORE.tin}</div>
                   <div>ATP No  : {STORE.atpNo}</div>
                   <div>ATP Date: {STORE.atpDate}</div>
                   <div>COR No  : {STORE.birCorNo}</div>

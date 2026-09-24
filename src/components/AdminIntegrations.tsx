@@ -47,6 +47,8 @@ export const AdminIntegrations: React.FC = () => {
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
   // Edited field values (only non-empty edits are sent — blank = unchanged)
   const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({});
+  // Accordion: which provider's sub-settings are dropped down (one at a time)
+  const [expanded, setExpanded] = useState<string | null>("paymongo");
 
   const load = useCallback(async () => {
     try {
@@ -171,96 +173,129 @@ export const AdminIntegrations: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="space-y-2">
         {ORDER.filter(p => status?.[p]).map(p => {
           const prov = status![p];
           const labels = FIELD_LABELS[p] || {};
           const draft = drafts[p] || {};
+          const isOpen = expanded === p;
+          const fieldKeys = Object.keys(labels);
+          const configuredCount = fieldKeys.filter(f => prov.fields[f]?.configured).length;
           return (
-            <div key={p} className="p-3 rounded-lg bg-white/[0.03] border border-erl-border-subtle">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
+            <div key={p} className="rounded-lg bg-white/[0.03] border border-erl-border-subtle overflow-hidden">
+              {/* Collapsed header — click to drop down sub-settings */}
+              <div
+                className="flex items-center justify-between gap-2 px-3 py-2.5 cursor-pointer select-none hover:bg-white/[0.04] transition-colors"
+                onClick={() => setExpanded(isOpen ? null : p)}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isOpen}
+                onKeyDown={e => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setExpanded(isOpen ? null : p);
+                  }
+                }}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <svg
+                    width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    className={`text-erl-text-muted transition-transform duration-200 shrink-0 ${isOpen ? "rotate-90" : ""}`}
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
                   <span className="text-xs font-semibold text-erl-text-primary">{prov.label}</span>
                   <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${prov.enabled ? "bg-erl-success/20 text-erl-success" : "bg-white/10 text-erl-text-muted"}`}>
                     {prov.enabled ? "ENABLED" : "OFF"}
                   </span>
+                  <span className="text-[9px] text-erl-text-muted truncate">
+                    {configuredCount}/{fieldKeys.length} keys
+                  </span>
                 </div>
-                <button
-                  onClick={() => handleToggle(p, !prov.enabled)}
-                  disabled={saving === p}
-                  className={`relative w-9 h-5 rounded-full transition-colors ${prov.enabled ? "bg-erl-accent" : "bg-white/15"} disabled:opacity-50`}
-                  aria-label={`Toggle ${prov.label}`}
-                >
-                  <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${prov.enabled ? "left-4.5 left-[18px]" : "left-0.5"}`} />
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                {Object.keys(labels).map(f => {
-                  const field = prov.fields[f];
-                  if (!field) return null;
-                  const isSecret = field.configured && field.masked !== undefined && field.value === undefined;
-                  return (
-                    <div key={f}>
-                      <label className="block text-[9px] uppercase tracking-wider text-erl-text-muted mb-0.5">
-                        {labels[f]}
-                        {field.configured && isSecret && (
-                          <span className="ml-1 normal-case text-erl-success">✓ {field.masked}</span>
-                        )}
-                      </label>
-                      <input
-                        type={isSecret ? "password" : "text"}
-                        value={draft[f] ?? ""}
-                        onChange={e => setDrafts(prev => ({ ...prev, [p]: { ...prev[p], [f]: e.target.value } }))}
-                        placeholder={
-                          isSecret
-                            ? "•••• (saved — type to replace)"
-                            : field.value || (field.configured ? "" : "not set")
-                        }
-                        className="w-full px-2 py-1 text-xs rounded-md bg-erl-surface border border-erl-border-default text-erl-text-primary focus:outline-none focus:border-erl-accent"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              {prov.webhook_url && (
-                <div className="mt-2">
-                  <label className="block text-[9px] uppercase tracking-wider text-erl-text-muted mb-0.5">Webhook URL</label>
+                <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => copyWebhook(prov.webhook_url!)}
-                    title="Click to copy"
-                    className="w-full px-2 py-1 text-[10px] text-left font-mono rounded-md bg-erl-surface border border-erl-border-default text-erl-text-secondary hover:border-erl-accent truncate"
+                    onClick={e => { e.stopPropagation(); handleToggle(p, !prov.enabled); }}
+                    disabled={saving === p}
+                    className={`relative w-9 h-5 rounded-full transition-colors ${prov.enabled ? "bg-erl-accent" : "bg-white/15"} disabled:opacity-50`}
+                    aria-label={`Toggle ${prov.label}`}
                   >
-                    {prov.webhook_url}
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${prov.enabled ? "left-[18px]" : "left-0.5"}`} />
                   </button>
                 </div>
-              )}
-              {!prov.webhook_url && (
-                <p className="mt-2 text-[9px] text-erl-danger">Set the Public Base URL to generate a webhook URL</p>
-              )}
-
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={() => handleSave(p)}
-                  disabled={saving === p || !Object.values(draft).some(v => v.trim())}
-                  className="flex-1 px-2 py-1.5 text-[11px] font-semibold rounded-md bg-erl-accent text-white hover:opacity-90 disabled:opacity-40"
-                >
-                  {saving === p ? "Saving…" : "Save Keys"}
-                </button>
-                <button
-                  onClick={() => handleTest(p)}
-                  disabled={testing === p || !prov.enabled}
-                  className="flex-1 px-2 py-1.5 text-[11px] font-semibold rounded-md border border-erl-border-default text-erl-text-secondary hover:bg-white/[0.06] disabled:opacity-40"
-                >
-                  {testing === p ? "Testing…" : "Test Connection"}
-                </button>
               </div>
 
-              {testResult?.provider === p && (
-                <p className={`mt-2 text-[10px] font-semibold ${testResult.ok ? "text-erl-success" : "text-erl-danger"}`}>
-                  {testResult.ok ? "✓ " : "✗ "}{testResult.message}
-                </p>
+              {/* Dropped-down sub-settings */}
+              {isOpen && (
+                <div className="px-3 pb-3 pt-1 border-t border-erl-border-subtle">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-2">
+                    {fieldKeys.map(f => {
+                      const field = prov.fields[f];
+                      if (!field) return null;
+                      const isSecret = field.configured && field.masked !== undefined && field.value === undefined;
+                      return (
+                        <div key={f}>
+                          <label className="block text-[9px] uppercase tracking-wider text-erl-text-muted mb-0.5">
+                            {labels[f]}
+                            {field.configured && isSecret && (
+                              <span className="ml-1 normal-case text-erl-success">✓ {field.masked}</span>
+                            )}
+                          </label>
+                          <input
+                            type={isSecret ? "password" : "text"}
+                            value={draft[f] ?? ""}
+                            onChange={e => setDrafts(prev => ({ ...prev, [p]: { ...prev[p], [f]: e.target.value } }))}
+                            placeholder={
+                              isSecret
+                                ? "•••• (saved — type to replace)"
+                                : field.value || (field.configured ? "" : "not set")
+                            }
+                            className="w-full px-2 py-1 text-xs rounded-md bg-erl-surface border border-erl-border-default text-erl-text-primary focus:outline-none focus:border-erl-accent"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {prov.webhook_url && (
+                    <div className="mt-2">
+                      <label className="block text-[9px] uppercase tracking-wider text-erl-text-muted mb-0.5">Webhook URL</label>
+                      <button
+                        onClick={() => copyWebhook(prov.webhook_url!)}
+                        title="Click to copy"
+                        className="w-full px-2 py-1 text-[10px] text-left font-mono rounded-md bg-erl-surface border border-erl-border-default text-erl-text-secondary hover:border-erl-accent truncate"
+                      >
+                        {prov.webhook_url}
+                      </button>
+                    </div>
+                  )}
+                  {!prov.webhook_url && (
+                    <p className="mt-2 text-[9px] text-erl-danger">Set the Public Base URL to generate a webhook URL</p>
+                  )}
+
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => handleSave(p)}
+                      disabled={saving === p || !Object.values(draft).some(v => v.trim())}
+                      className="flex-1 px-2 py-1.5 text-[11px] font-semibold rounded-md bg-erl-accent text-white hover:opacity-90 disabled:opacity-40"
+                    >
+                      {saving === p ? "Saving…" : "Save Keys"}
+                    </button>
+                    <button
+                      onClick={() => handleTest(p)}
+                      disabled={testing === p || !prov.enabled}
+                      className="flex-1 px-2 py-1.5 text-[11px] font-semibold rounded-md border border-erl-border-default text-erl-text-secondary hover:bg-white/[0.06] disabled:opacity-40"
+                    >
+                      {testing === p ? "Testing…" : "Test Connection"}
+                    </button>
+                  </div>
+
+                  {testResult?.provider === p && (
+                    <p className={`mt-2 text-[10px] font-semibold ${testResult.ok ? "text-erl-success" : "text-erl-danger"}`}>
+                      {testResult.ok ? "✓ " : "✗ "}{testResult.message}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           );

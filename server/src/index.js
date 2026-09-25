@@ -811,7 +811,7 @@ function printServerRequest(urlStr, options = {}, attempt = 1) {
 }
 
 app.post('/api/print', async (req, res) => {
-  const { lines, paperSize, qrCodeUrl } = req.body || {};
+  const { lines, paperSize, qrCodeUrl, wifiQrData } = req.body || {};
   if (!lines || !Array.isArray(lines)) {
     return res.status(400).json({ error: 'lines array required' });
   }
@@ -823,7 +823,13 @@ app.post('/api/print', async (req, res) => {
     const br = await printServerRequest(`${serverUrl}/print`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lines, paperSize: paperSize || '80mm', qrCodeUrl: qrCodeUrl || null }),
+      body: JSON.stringify({
+        lines,
+        paperSize: paperSize || '80mm',
+        qrCodeUrl: qrCodeUrl || null,
+        // Wi-Fi join QR (WIFI:T:WPA;S:...;P:...;;) — must reach the Pi or no QR is printed
+        wifiQrData: typeof wifiQrData === 'string' && wifiQrData.length > 0 ? wifiQrData : null,
+      }),
     });
     const data = await br.json();
     res.status(br.ok ? 200 : 502).json(data);

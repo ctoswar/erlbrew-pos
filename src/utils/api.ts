@@ -396,6 +396,8 @@ export interface IntegrationProviderStatus {
   label: string;
   enabled: boolean;
   webhook_url: string | null;
+  /** False for providers without a callback endpoint (e.g. accounting/OAuth). */
+  has_webhook?: boolean;
   fields: Record<string, IntegrationField>;
 }
 
@@ -418,6 +420,87 @@ export async function testIntegration(provider: string): Promise<{ ok: boolean; 
 
 export async function getEnabledIntegrations(): Promise<Record<string, boolean>> {
   return apiGet<Record<string, boolean>>('/integrations/enabled');
+}
+
+// ─── Accounting API (Phase 2 — Roadmap: QuickBooks) ──────────────────────────
+export interface AccountingStatus {
+  provider: string;
+  label: string;
+  enabled: boolean;
+  /** OAuth completed — tokens stored (possibly refresh-only) */
+  connected: boolean;
+  accessTokenLive: boolean;
+  canRefresh: boolean;
+  realmId: string | null;
+  environment: string;
+  expiresAt: string | null;
+  connectedAt: string | null;
+  clientIdConfigured: boolean;
+  clientSecretConfigured: boolean;
+  /** QUICKBOOKS_DRY_RUN=1 — payloads are built but never sent */
+  dryRunForced: boolean;
+}
+
+export type AccountingSyncStatus = 'success' | 'dry_run' | 'skipped' | 'failed';
+
+export interface AccountingSyncResult {
+  period: string;
+  status: AccountingSyncStatus;
+  reason?: string;
+  externalId?: string | null;
+  docNumber?: string;
+  error?: string;
+  /** Present on dry_run rows — the exact payload that would be sent */
+  payload?: unknown;
+}
+
+export interface AccountingSyncResponse {
+  provider: string;
+  kind: 'invoice' | 'bill';
+  dryRunRequested: boolean;
+  live: boolean;
+  results: AccountingSyncResult[];
+  counts: Record<AccountingSyncStatus, number>;
+}
+
+export interface AccountingSyncLogEntry {
+  id: number;
+  type: string;
+  period: string;
+  status: string;
+  externalId: string | null;
+  summary: { txnDate?: string; docNumber?: string; total?: number; lines?: number } | null;
+  error: string | null;
+  createdAt: string;
+}
+
+export function getAccountingStatus(provider: string): Promise<AccountingStatus> {
+  return apiAdminGet<AccountingStatus>(`/accounting/${provider}/status`);
+}
+
+export function getAccountingConnect(provider: string): Promise<{
+  url: string;
+  redirectUri: string;
+  environment: string;
+}> {
+  return apiAdminGet<{ url: string; redirectUri: string; environment: string }>(
+    `/accounting/${provider}/connect`
+  );
+}
+
+export function syncAccounting(
+  provider: string,
+  body: { kind: 'invoice' | 'bill'; start: string; end?: string; dryRun?: boolean; force?: boolean }
+): Promise<AccountingSyncResponse> {
+  return apiAdminPost<AccountingSyncResponse>(`/accounting/${provider}/sync`, body);
+}
+
+export function getAccountingSyncLog(provider: string, limit = 20): Promise<AccountingSyncLogEntry[]> {
+  return apiAdminGet<AccountingSyncLogEntry[]>(`/accounting/${provider}/sync-log?limit=${limit}`);
+}
+
+export function disconnectAccounting(provider: string): Promise<AccountingStatus> {
+  return apiAdminPost<AccountingStatus>(`/accounting/${provider}/disconnect`, {});
 }
 
 // Staff management

@@ -5,6 +5,7 @@ import { logInventoryMovement } from './inventory.js';
 import { logAudit } from '../services/audit.js';
 import { isPaymongoReady, createCheckoutSession } from '../services/paymongo.js';
 import { pushOrderState } from '../services/deliveryChannels.js';
+import { autoSyncDailySales } from '../services/accountingQuickBooks.js';
 
 // Helpers for Asia/Taipei time (UTC+8) — server timezone-independent
 function taipeiNow() {
@@ -1174,6 +1175,9 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       if (googleSheets) {
         try { await googleSheets.appendZReport(report); } catch (e2) { console.error('[Sheets] Z-report sync failed (non-fatal):', e2.message); }
       }
+      // Accounting: push this day's sales summary to QuickBooks when connected.
+      // Fire-and-forget — an accounting failure must never fail the Z-Report.
+      autoSyncDailySales(pool, String(report.report_date).slice(0, 10)).catch(() => {});
       res.json(report);
     } catch (e) {
       console.error(e);

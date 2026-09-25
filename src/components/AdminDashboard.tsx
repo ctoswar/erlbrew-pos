@@ -194,6 +194,11 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
   }, []);
 
   useEffect(() => { syncData().finally(() => setLoading(false)); }, [syncData]);
+  // Coming back from an OAuth redirect (QuickBooks connect) → land on Settings
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('accounting')) setActiveTab('settings');
+  }, []);
+
   useEffect(() => { if (activeTab === 'dashboard') syncData(); }, [activeTab, syncData]);
 
   const calculateCOGS = useCallback((startDate?: string, endDate?: string) => {

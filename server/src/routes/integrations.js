@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logAudit } from '../services/audit.js';
 import { buildMenuExport } from '../services/deliveryChannels.js';
+import { testConnection as testQuickBooksConnection } from '../services/accountingQuickBooks.js';
 import {
   PROVIDERS,
   getProviderStatus,
@@ -97,6 +98,11 @@ export default function integrationsRouter(pool) {
         } finally {
           clearTimeout(timer);
         }
+      }
+
+      // QuickBooks: OAuth-aware probe (checks creds, then live CompanyInfo query).
+      if (provider === 'quickbooks') {
+        return res.json(await testQuickBooksConnection(pool));
       }
 
       // Delivery platforms: config check only until partner accounts are approved.

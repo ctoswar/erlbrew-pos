@@ -24,6 +24,7 @@ import transfersRoutes from './routes/transfers.js';
 import loyaltyRouter from './routes/loyalty.js';
 import webhooksRouter from './routes/webhooks.js';
 import integrationsRouter from './routes/integrations.js';
+import accountingRouter from './routes/accounting.js';
 import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
@@ -537,6 +538,26 @@ await pool.query(`
     console.log('menu_item_sizes table ready');
     await pool.query(`ALTER TABLE order_items ADD COLUMN size VARCHAR(64) DEFAULT NULL AFTER price`).catch(() => {});
 
+    // ── Accounting integration (Roadmap → Phase 2) ─────────────────────────
+    // Dedupe ledger: one row per (provider, sync_type, period). UNIQUE key is
+    // what makes re-running a sync date-range idempotent.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS accounting_sync_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        provider VARCHAR(32) NOT NULL,
+        sync_type VARCHAR(32) NOT NULL,
+        period_key VARCHAR(64) NOT NULL,
+        status VARCHAR(16) NOT NULL DEFAULT 'success',
+        external_id VARCHAR(64) DEFAULT NULL,
+        summary JSON DEFAULT NULL,
+        error VARCHAR(1024) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_provider_period (provider, sync_type, period_key),
+        INDEX idx_sync_logs_created (created_at)
+      )
+    `).catch(e => console.error('[migration] accounting_sync_logs create failed:', e.message));
+    console.log('accounting_sync_logs table ready');
+
     // Seed menu_items from DB init if they ever existed
     // Auto-seed removed — use init.sql or Fresh Start is the only way to reset
   } catch (e) {
@@ -635,6 +656,8 @@ const ordersExports = ordersRoutes(pool, gs, broadcastEvent);
 app.use('/api/orders', ordersExports.router);
 // Integrations settings (admin-only except /enabled) — Phase 2 issue #127
 app.use('/api/integrations', integrationsRouter(pool));
+// Accounting sync (QuickBooks OAuth + invoice/bill push) — admin, except /callback
+app.use('/api/accounting', accountingRouter(pool));
 // Inventory + movements: admin only
 app.use('/api/inventory', inventoryRoutes(pool, gs));
 app.use('/api/recipes', recipesRouter(pool));

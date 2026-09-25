@@ -58,6 +58,22 @@ CREATE TABLE IF NOT EXISTS payment_events (
   INDEX idx_payment_events_order (order_id)
 );
 
+-- Accounting integration (Phase 2 — QuickBooks): one row per (provider, period).
+-- The UNIQUE key is what makes re-running a sync date-range idempotent.
+CREATE TABLE IF NOT EXISTS accounting_sync_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  provider VARCHAR(32) NOT NULL,
+  sync_type VARCHAR(32) NOT NULL,
+  period_key VARCHAR(64) NOT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'success', -- success | dry_run | failed
+  external_id VARCHAR(64) DEFAULT NULL,
+  summary JSON DEFAULT NULL,
+  error VARCHAR(1024) DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_provider_period (provider, sync_type, period_key),
+  INDEX idx_sync_logs_created (created_at)
+);
+
 CREATE TABLE IF NOT EXISTS order_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   order_id VARCHAR(64),

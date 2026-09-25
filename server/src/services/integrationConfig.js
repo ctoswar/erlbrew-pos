@@ -56,6 +56,7 @@ export const PROVIDERS = {
     },
     enabledEnv: 'PAYMONGO_ENABLED',
     enabledSetting: 'paymongo_enabled',
+    webhook: true,
   },
   grab: {
     label: 'GrabFood',
@@ -67,6 +68,7 @@ export const PROVIDERS = {
     },
     enabledEnv: 'GRAB_ENABLED',
     enabledSetting: 'grab_enabled',
+    webhook: true,
   },
   foodpanda: {
     label: 'FoodPanda',
@@ -77,6 +79,20 @@ export const PROVIDERS = {
     },
     enabledEnv: 'FOODPANDA_ENABLED',
     enabledSetting: 'foodpanda_enabled',
+    webhook: true,
+  },
+  // Accounting (Phase 2 — Roadmap). OAuth2: connect flow stores tokens separately
+  // (integration_tokens) — client credentials here only drive the authorize/exchange calls.
+  quickbooks: {
+    label: 'QuickBooks',
+    fields: {
+      client_id: { env: 'QUICKBOOKS_CLIENT_ID', setting: 'quickbooks_client_id' },
+      client_secret: { env: 'QUICKBOOKS_CLIENT_SECRET', setting: 'quickbooks_client_secret', secret: true },
+      environment: { env: 'QUICKBOOKS_ENV', setting: 'quickbooks_environment' }, // sandbox | production
+      company_id: { env: 'QUICKBOOKS_COMPANY_ID', setting: 'quickbooks_company_id' }, // realmId override
+    },
+    enabledEnv: 'QUICKBOOKS_ENABLED',
+    enabledSetting: 'quickbooks_enabled',
   },
 };
 
@@ -153,7 +169,9 @@ export async function getProviderStatus(pool, provider) {
   return {
     label: def.label,
     enabled: await isProviderEnabled(pool, provider),
-    webhook_url: await getWebhookUrl(pool, provider),
+    // Only webhook providers have a callback endpoint — accounting (OAuth) does not.
+    has_webhook: !!def.webhook,
+    webhook_url: def.webhook ? await getWebhookUrl(pool, provider) : null,
     fields,
   };
 }

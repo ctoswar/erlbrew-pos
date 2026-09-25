@@ -7,6 +7,7 @@ import {
   getCompanySettings,
   IntegrationsStatus,
 } from "../utils/api";
+import { AdminAccountingPanel } from "./AdminAccountingPanel";
 
 interface TestResult {
   provider: string;
@@ -32,9 +33,15 @@ const FIELD_LABELS: Record<string, Record<string, string>> = {
     vendor_id: "Vendor ID",
     webhook_secret: "Webhook Secret",
   },
+  quickbooks: {
+    client_id: "Client ID",
+    client_secret: "Client Secret",
+    environment: "Environment (sandbox / production)",
+    company_id: "Company ID (realmId)",
+  },
 };
 
-const ORDER = ["paymongo", "grab", "foodpanda"];
+const ORDER = ["paymongo", "grab", "foodpanda", "quickbooks"];
 
 export const AdminIntegrations: React.FC = () => {
   const [status, setStatus] = useState<IntegrationsStatus | null>(null);
@@ -138,7 +145,7 @@ export const AdminIntegrations: React.FC = () => {
     <div className="p-4">
       <div className="flex items-center justify-between mb-1">
         <h3 className="text-sm font-semibold text-erl-text-primary">Integrations</h3>
-        <span className="text-[10px] text-erl-text-muted">Phase 2 — PayMongo · GrabFood · FoodPanda</span>
+        <span className="text-[10px] text-erl-text-muted">Phase 2 — PayMongo · GrabFood · FoodPanda · QuickBooks</span>
       </div>
       <p className="text-[11px] text-erl-text-muted mb-3">
         Credentials are encrypted at rest and never shown in full. Secrets entered here override server env vars.
@@ -269,7 +276,7 @@ export const AdminIntegrations: React.FC = () => {
                       </button>
                     </div>
                   )}
-                  {!prov.webhook_url && (
+                  {prov.has_webhook && !prov.webhook_url && (
                     <p className="mt-2 text-[9px] text-erl-danger">Set the Public Base URL to generate a webhook URL</p>
                   )}
 
@@ -295,6 +302,9 @@ export const AdminIntegrations: React.FC = () => {
                       {testResult.ok ? "✓ " : "✗ "}{testResult.message}
                     </p>
                   )}
+
+                  {/* Accounting: OAuth connect + invoice/expense sync controls */}
+                  {p === "quickbooks" && <AdminAccountingPanel />}
                 </div>
               )}
             </div>

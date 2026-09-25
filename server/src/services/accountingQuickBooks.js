@@ -472,11 +472,13 @@ export async function getSyncLog(pool, limit = 20) {
       period: r.period_key,
       status: r.status,
       externalId: r.external_id,
-      summary: r.summary ? JSON.parse(r.summary) : null,
+      // mysql2 returns JSON columns as objects — only parse when it is a string.
+      summary: typeof r.summary === 'string' ? JSON.parse(r.summary) : (r.summary || null),
       error: r.error,
       createdAt: r.created_at,
     }));
-  } catch {
+  } catch (e) {
+    console.error('[accounting] getSyncLog failed:', e.message);
     return [];
   }
 }
@@ -564,7 +566,8 @@ function payloadSummary(payload) {
 
 // ─── Sync: expenses (supplier invoices → Bills) ──────────────────────────────
 export async function syncExpenses(pool, { start, end, dryRun = false, force = false } = {}) {
-  const dates = enumerateDates(start, end || start);
+  // Bills are a filtered list, not one call per day — allow a full year of catch-up.
+  const dates = enumerateDates(start, end || start, 400);
   const from = dates[0];
   const to = dates[dates.length - 1];
   const state = await getConnectionState(pool);

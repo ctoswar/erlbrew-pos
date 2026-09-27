@@ -110,8 +110,8 @@ The core POS system is fully functional with order management, inventory trackin
 - [x] **Kitchen Display System (KDS)** ✅ _(live since v2.0.0 — credited under Completed Milestones)_
   - [x] Touch screen interface — tap-to-advance tickets (Start → Mark Ready → Serve), 44px touch targets, mobile status filter tabs
   - [x] Timer alerts — live elapsed-time counter, pulsing red "Late" badge at ≥10 min preparing, Web Audio chime on new orders
-  - [ ] Order routing — tickets only group by status (pending → preparing → ready → completed) over realtime SSE; no station / printer / channel routing yet
-  - Still to build: dedicated kiosk/fullscreen mode, station routing, overdue sound + browser notifications
+  - [ ] Order routing — delivery vs walk-in lanes & priority, delivery tickets surfaced first (issue #163); station/printer routing deferred — single-station café
+  - Still to build: overdue alert sound + notifications (issue #162), dedicated kiosk/fullscreen mode
 
 - [ ] **Customer Display** _(partially built — fullscreen `?customer` second-monitor view ships)_
   - [x] Order confirmation screen — live cart, totals and order type mirrored from the POS

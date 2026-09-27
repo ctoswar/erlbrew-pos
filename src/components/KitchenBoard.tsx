@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Order, OrderStatus } from "../types";
 import { formatTime, formatCurrency } from "../utils";
+import { playOverdueAlert, unlockAudio } from "../utils/sound";
 import { VoidCredentialModal } from "./VoidCredentialModal";
 import { useViewport } from "../hooks/useViewport";
 
@@ -18,6 +19,26 @@ const COLUMNS: { status: OrderStatus; label: string; color: string }[] = [
   { status: "completed", label: "Completed", color: "var(--gold)" },
 ];
 
+/** A preparing ticket counts as late after this many minutes */
+const LATE_AFTER_MINUTES = 10;
+/** Deliberate repeat cadence for the overdue alert while a ticket stays late */
+const OVERDUE_REPEAT_MS = 60_000;
+
+/** Fire a browser notification only when permitted AND the tab is hidden/unfocused. */
+const notifyLate = (order: Order): void => {
+  try {
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    // Tab focused → no notification; staff can already see the board
+    if (!document.hidden && document.hasFocus()) return;
+    const label = order.customerName || (order.type === "dine-in" ? "Dine-in" : "Takeout");
+    new Notification("Ticket late", {
+      body: `${order.id.slice(0, 8).toUpperCase()} · ${label} — preparing ${LATE_AFTER_MINUTES}+ min`,
+    });
+  } catch {
+    /* notifications unavailable in this context — silent no-op */
+  }
+};
+
 export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOrder, onRefundOrder }) => {
   const [voidTarget, setVoidTarget] = useState<string | null>(null);
   const [refundTarget, setRefundTarget] = useState<string | null>(null);
@@ -25,8 +46,69 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
   const { isMobile } = useViewport();
 
   // Phase 2: orders awaiting gateway payment never hit the kitchen until paid
-  const visibleOrders = orders.filter((o) => o.status !== "pending_payment");
+  const visibleOrders = useMemo(() => orders.filter((o) => o.status !== "pending_payment"), [orders]);
   const mobileOrders = mobileFilter === 'all' ? visibleOrders : visibleOrders.filter((o) => o.status === mobileFilter);
+
+  // Single 1s ticker for the whole board — cards derive elapsed time from nowMs
+  // (replaces one setInterval per ticket card).
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Edge-triggered overdue alert bookkeeping: orderId → last alert timestamp.
+  // Lives in a ref so it survives re-renders; entries are pruned each tick so a
+  // genuine re-late re-alerts and the map never grows unbounded.
+  const alertedAtRef = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    const now = nowMs;
+    const stillLate = new Set<string>();
+
+    for (const order of visibleOrders) {
+      const createdAt = order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt);
+      const elapsed = Math.floor((now - createdAt.getTime()) / 60000);
+      const isLate = order.status === "preparing" && elapsed >= LATE_AFTER_MINUTES;
+      if (!isLate) continue;
+
+      stillLate.add(order.id);
+      const lastAlertedAt = alertedAtRef.current.get(order.id);
+      const shouldAlert = lastAlertedAt === undefined || now - lastAlertedAt >= OVERDUE_REPEAT_MS;
+      if (shouldAlert) {
+        alertedAtRef.current.set(order.id, now);
+        playOverdueAlert();
+        notifyLate(order); // itself gated: granted permission + hidden/unfocused tab
+      }
+    }
+
+    // Drop orders that are no longer late (or no longer on the board)
+    for (const orderId of Array.from(alertedAtRef.current.keys())) {
+      if (!stillLate.has(orderId)) alertedAtRef.current.delete(orderId);
+    }
+  }, [nowMs, visibleOrders]);
+
+  // Permission for browser notifications — requested once, from a real user
+  // gesture, and only while the kitchen screen is mounted. Also unlocks the
+  // shared AudioContext from that same gesture (autoplay policy).
+  useEffect(() => {
+    const onFirstGesture = () => {
+      window.removeEventListener("click", onFirstGesture);
+      unlockAudio();
+      try {
+        if (typeof Notification === "undefined") return;
+        if (Notification.permission === "default") {
+          void Notification.requestPermission().catch(() => {
+            /* user dismissed or browser blocked — stay silent */
+          });
+        }
+      } catch {
+        /* Notification unsupported in this context — silent no-op */
+      }
+    };
+    window.addEventListener("click", onFirstGesture);
+    return () => window.removeEventListener("click", onFirstGesture);
+  }, []);
 
   const handleVoidSuccess = () => {
     if (voidTarget) { onVoidOrder(voidTarget); setVoidTarget(null); }
@@ -75,6 +157,7 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
               <div key={order.id} className="mb-3">
                 <KitchenCard
                   order={order}
+                  nowMs={nowMs}
                   colColor={COLUMNS.find((c) => c.status === order.status)?.color || '#888'}
                   onUpdateStatus={onUpdateStatus}
                   isVoidPending={voidTarget === order.id}
@@ -105,7 +188,7 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
                     <div className="text-center py-8 text-erl-text-disabled text-[9px] tracking-wide">Empty</div>
                   )}
                   {colOrders.map((order) => (
-                    <KitchenCard key={order.id} order={order} colColor={col.color}
+                    <KitchenCard key={order.id} order={order} nowMs={nowMs} colColor={col.color}
                       onUpdateStatus={onUpdateStatus}
                       isVoidPending={voidTarget === order.id} onRequestVoid={() => setVoidTarget(order.id)}
                       isRefundPending={refundTarget === order.id} onRequestRefund={() => setRefundTarget(order.id)}
@@ -131,6 +214,8 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
 
 interface KitchenCardProps {
   order: Order;
+  /** Wall-clock ms from the parent's single 1s ticker — cards stay pure */
+  nowMs: number;
   colColor: string;
   onUpdateStatus: (id: string, status: OrderStatus) => void;
   isVoidPending: boolean;
@@ -139,17 +224,10 @@ interface KitchenCardProps {
   onRequestRefund?: () => void;
 }
 
-const KitchenCard: React.FC<KitchenCardProps> = ({ order, colColor, onUpdateStatus, isVoidPending, onRequestVoid, isRefundPending, onRequestRefund }) => {
-  // Live ticker — re-render every second so elapsed time and Late badge stay current
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const interval = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(interval);
-  }, []);
-
+const KitchenCard: React.FC<KitchenCardProps> = ({ order, nowMs, colColor, onUpdateStatus, isVoidPending, onRequestVoid, isRefundPending, onRequestRefund }) => {
   const createdAt = order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt);
-  const elapsed = Math.floor((Date.now() - createdAt.getTime()) / 60000);
-  const isLate = order.status === "preparing" && elapsed >= 10;
+  const elapsed = Math.floor((nowMs - createdAt.getTime()) / 60000);
+  const isLate = order.status === "preparing" && elapsed >= LATE_AFTER_MINUTES;
 
   return (
     <div className="animate-scale-in bg-erl-surface rounded-xl p-4 sm:p-3 transition-fast"

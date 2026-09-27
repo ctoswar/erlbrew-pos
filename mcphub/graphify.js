@@ -165,13 +165,20 @@ function summarize(arch) {
 async function handleRequest(request) {
   const { method, params, id } = request;
 
+  // JSON-RPC notifications have no id and must never get a response
+  if (id === undefined || id === null) return null;
+
   switch (method) {
+    case 'ping':
+      return { jsonrpc: '2.0', id, result: {} };
+
     case 'initialize':
       return {
         jsonrpc: '2.0',
         id,
         result: {
-          protocolVersion: '2024-11-05',
+          // Echo the requested version (we are version-agnostic); fall back to the base version
+          protocolVersion: params?.protocolVersion || '2024-11-05',
           capabilities: {
             tools: { listChanged: false },
           },
@@ -297,10 +304,6 @@ async function handleRequest(request) {
       }
     }
 
-    case 'notifications/initialized':
-      // No response needed for notifications
-      return null;
-
     default:
       return {
         jsonrpc: '2.0',
@@ -310,7 +313,13 @@ async function handleRequest(request) {
   }
 }
 
-// Main: Read from stdin, write to stdout
+// MCP stdio transport: one JSON-RPC message per line (newline-delimited JSON).
+// stdout carries protocol messages ONLY — diagnostics must go to stderr.
+function send(message) {
+  process.stdout.write(`${JSON.stringify(message)}\n`);
+}
+
+// Main: read newline-delimited JSON from stdin, write NDJSON to stdout
 async function main() {
   let buffer = '';
 
@@ -318,32 +327,17 @@ async function main() {
   process.stdin.on('data', (chunk) => {
     buffer += chunk;
 
-    // Process complete messages
-    while (true) {
-      const headerEnd = buffer.indexOf('\r\n\r\n');
-      if (headerEnd === -1) break;
+    let newlineIndex;
+    while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+      const line = buffer.slice(0, newlineIndex).replace(/\r$/, '').trim();
+      buffer = buffer.slice(newlineIndex + 1);
 
-      const header = buffer.slice(0, headerEnd);
-      const contentLengthMatch = header.match(/Content-Length:\s*(\d+)/i);
-      if (!contentLengthMatch) break;
-
-      const contentLength = parseInt(contentLengthMatch[1], 10);
-      const bodyStart = headerEnd + 4;
-      const bodyEnd = bodyStart + contentLength;
-
-      if (buffer.length < bodyEnd) break;
-
-      const body = buffer.slice(bodyStart, bodyEnd);
-      buffer = buffer.slice(bodyEnd);
+      if (!line) continue;
 
       try {
-        const request = JSON.parse(body);
+        const request = JSON.parse(line);
         handleRequest(request).then((response) => {
-          if (response) {
-            const responseStr = JSON.stringify(response);
-            const responseMsg = `Content-Length: ${Buffer.byteLength(responseStr)}\r\n\r\n${responseStr}`;
-            process.stdout.write(responseMsg);
-          }
+          if (response) send(response);
         });
       } catch (e) {
         console.error('Error parsing request:', e.message);

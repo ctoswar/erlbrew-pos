@@ -94,6 +94,20 @@ export const PROVIDERS = {
     enabledEnv: 'QUICKBOOKS_ENABLED',
     enabledSetting: 'quickbooks_enabled',
   },
+  xero: {
+    label: 'Xero',
+    fields: {
+      client_id: { env: 'XERO_CLIENT_ID', setting: 'xero_client_id' },
+      client_secret: { env: 'XERO_CLIENT_SECRET', setting: 'xero_client_secret', secret: true },
+      // tenant_id doubles as the OAuth-connected organisation id: the connect
+      // callback stores it under the same company_settings key (env still wins).
+      tenant_id: { env: 'XERO_TENANT_ID', setting: 'xero_tenant_id' },
+      environment: { env: 'XERO_ENVIRONMENT', setting: 'xero_environment' }, // sandbox | live
+    },
+    enabledEnv: 'XERO_ENABLED',
+    enabledSetting: 'xero_enabled',
+    webhook: false,
+  },
 };
 
 async function getSetting(pool, key) {

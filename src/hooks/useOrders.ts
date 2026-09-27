@@ -475,6 +475,8 @@ export function useOrders() {
     }
   }, []);
 
+  const isLocalOrderId = (id: string) => id.startsWith('#') || id.startsWith('ORD-');
+
   const updateStatus = useCallback((id: string, status: OrderStatus) => {
     setOrders((prev) =>
       prev.map((o) =>
@@ -483,9 +485,9 @@ export function useOrders() {
           : o
       )
     );
-    // Sync to server using PUT with auth
+    // Sync to server using PUT with auth (skip optimistic local-only orders)
     const token = getAuthToken();
-    if (token) {
+    if (token && !isLocalOrderId(id)) {
       apiAdminPut(`/orders/${id}/status`, { status }).catch((err) => console.error("Failed to sync status to server:", err));
     }
   }, []);

@@ -67,7 +67,7 @@ export const PaymentScreen: React.FC<Props> = ({
   const canConfirm = splitMode
     ? splitEwalletNum > 0 && splitEwalletNum < total && splitRef.trim() !== "" && cashGiven !== "" && parseFloat(cashGiven) >= splitCashNeeded
     : method !== "cash" || (cashGiven !== "" && cash >= total);
-  const canConfirmEwallet = useGateway || (method === "ewallet" && referenceNumber.trim() !== "");
+  const canConfirmEwallet = splitMode || method === "cash" || method === "card" || (method === "ewallet" && (useGateway || referenceNumber.trim() !== ""));
 
   // Poll order payment status while waiting for the gateway webhook
   useEffect(() => {

@@ -10,9 +10,11 @@ export function useKitchenEvents() {
     window.dispatchEvent(new CustomEvent('kitchen:refresh'));
   }, []);
 
-  useEffect(() => {
-    // Only connect if document is visible (don't waste resources on hidden tabs)
-    if (document.hidden) return;
+  const connect = useCallback(() => {
+    // Connect only while the tab is visible — but re-connect on
+    // visibilitychange below, so hiding the tab no longer kills the
+    // order chime for the rest of the session.
+    if (eventSourceRef.current || document.hidden) return;
 
     const es = new EventSource('/api/events');
     eventSourceRef.current = es;
@@ -33,12 +35,27 @@ export function useKitchenEvents() {
     es.onerror = () => {
       // EventSource auto-reconnects
     };
+  }, [syncOrders]);
+
+  const disconnect = useCallback(() => {
+    eventSourceRef.current?.close();
+    eventSourceRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    connect();
+
+    const onVisibilityChange = () => {
+      if (document.hidden) disconnect();
+      else connect();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
-      es.close();
-      eventSourceRef.current = null;
+      disconnect();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [syncOrders]);
+  }, [connect, disconnect]);
 
   return { syncOrders };
 }

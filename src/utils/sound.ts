@@ -13,6 +13,10 @@ type WebkitAudioContextCtor = typeof AudioContext | undefined;
 
 let sharedCtx: AudioContext | null = null;
 
+/** Two chimes closer than this are one event (direct play + SSE echo of the same order). */
+const CHIME_DEDUPE_MS = 1000;
+let lastChimeAt = 0;
+
 /** Lazily create (or return) the shared AudioContext — never throws. */
 function getAudioContext(): AudioContext | null {
   if (sharedCtx) return sharedCtx;
@@ -57,6 +61,11 @@ export function unlockAudio(): void {
 export function playNewOrderChime(): void {
   const ctx = getAudioContext();
   if (!ctx) return;
+  // Dedupe: SuccessScreen plays this on order placement and the SSE echo of the
+  // same order plays it again ~100ms later — one audible chime, not two.
+  const now = Date.now();
+  if (now - lastChimeAt < CHIME_DEDUPE_MS) return;
+  lastChimeAt = now;
   try {
     resumeIfSuspended(ctx);
     const t = ctx.currentTime;
@@ -117,4 +126,23 @@ export function playOverdueAlert(): void {
     { freq: 523.25, start: 0, dur: 0.2 },     // C5
     { freq: 698.46, start: 0.25, dur: 0.22 }, // F5
   ]);
+}
+
+let unlockInstalled = false;
+
+/**
+ * Install a one-time global unlock: the first pointer or keyboard gesture
+ * anywhere in the app resumes the shared AudioContext. Covers session-restore
+ * reloads where LoginScreen (and its unlockAudio call) never mounts.
+ */
+export function installAudioUnlock(): void {
+  if (unlockInstalled) return;
+  unlockInstalled = true;
+  const onGesture = () => {
+    window.removeEventListener("pointerdown", onGesture);
+    window.removeEventListener("keydown", onGesture);
+    unlockAudio();
+  };
+  window.addEventListener("pointerdown", onGesture);
+  window.addEventListener("keydown", onGesture);
 }

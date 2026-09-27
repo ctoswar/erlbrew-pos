@@ -9,6 +9,7 @@ import { LocationProvider } from "./contexts/LocationContext";
 import { getStoredTheme } from "./hooks/useTheme";
 import { getStoredFontSize, applyFontSize } from "./hooks/useFontSize";
 import { apiAdminGet, getAuthToken, clearAuthToken } from "./utils/api";
+import { installAudioUnlock } from "./utils/sound";
 import "./styles/global.css";
 
 // Apply stored theme on app load
@@ -34,6 +35,12 @@ const App: React.FC = () => {
     if (staff) localStorage.setItem(AUTH_KEY, JSON.stringify(staff));
     else localStorage.removeItem(AUTH_KEY);
   }, [staff]);
+
+  // Autoplay policy: unlock the shared AudioContext from the first gesture on any
+  // screen. Session restore skips LoginScreen, so that call alone isn't enough.
+  useEffect(() => {
+    installAudioUnlock();
+  }, []);
 
   // Re-validate cached staff on mount so role/name/color changes are picked up
   useEffect(() => {

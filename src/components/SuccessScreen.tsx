@@ -3,6 +3,7 @@ import { Order } from "../types";
 import { formatCurrency } from "../utils";
 import { ReceiptPreview } from "./ReceiptPreview";
 import { openCashDrawer } from "../utils/receiptUtils";
+import { playNewOrderChime } from "../utils/sound";
 
 const AUTO_CLOSE_DELAY = 15000;
 
@@ -28,6 +29,12 @@ export const SuccessScreen: React.FC<Props> = ({ order, onDone, onRepeat }) => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []); // eslint-disable-line
+
+  // Audible "order placed" feedback for the cashier — deduped against the SSE
+  // echo of the same order, so it plays exactly once.
+  useEffect(() => {
+    playNewOrderChime();
+  }, []);
 
   const handlePrintAndDone = () => {
     openCashDrawer().catch(() => {});

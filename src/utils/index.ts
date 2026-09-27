@@ -55,7 +55,7 @@ export const formatFullDate = (d: Date): string =>
   d.toLocaleDateString("en-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: TZ });
 
 export const generateOrderId = (): string =>
-  `#${Math.floor(1000 + Math.random() * 9000)}`;
+  `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
 
 export const calcSubtotal = (cart: CartItem[]): number =>
   cart.reduce((sum, ci) => {

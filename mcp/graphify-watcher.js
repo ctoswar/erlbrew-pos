@@ -262,14 +262,46 @@ class GraphifyWatcher {
 
     const mergedNodes = Array.from(allNodes.values());
 
-    // Keep existing edges + auto-generate missing ones
-    const existingEdges = currentGraph.edges || [];
-    const edgeSet = new Set(existingEdges.map(e => `${e.from}->${e.to}`));
-    
+    // Saved edges are preserved across regenerations, so re-point the IDs of
+    // nodes that have been renamed since the graph was last written.
+    const EDGE_ID_ALIASES = {
+      'util-receipt': 'util-receiptutils',
+      'service-gsheets': 'service-googlesheets',
+      'flutter-login': 'flutter-login_screen',
+      'flutter-signup': 'flutter-signup_screen',
+      'flutter-home': 'flutter-home_shell',
+      'flutter-adminhome': 'flutter-admin-admin_home_shell',
+      'flutter-order': 'flutter-order_sheet',
+      'flutter-pickup': 'flutter-pickup_screen',
+      'flutter-rewards': 'flutter-rewards_screen',
+      'flutter-myqr': 'flutter-my_qr_screen',
+      'flutter-adminmenu': 'flutter-admin-admin_menu_screen',
+      'flutter-adminorders': 'flutter-admin-admin_orders_screen',
+      'flutter-admincustomers': 'flutter-admin-admin_customers_screen',
+      'flutter-adminrewards': 'flutter-admin-admin_rewards_screen',
+      'flutter-adminscan': 'flutter-admin-admin_scan_screen',
+    };
+    const remapId = id => EDGE_ID_ALIASES[id] || id;
+
+    const validIds = new Set(mergedNodes.map(n => n.id));
+    const savedEdges = [];
+    const seenEdges = new Set();
+    let staleEdges = 0;
+    for (const edge of currentGraph.edges || []) {
+      const from = remapId(edge.from);
+      const to = remapId(edge.to);
+      // Drop edges that still point at a node we no longer generate
+      if (!validIds.has(from) || !validIds.has(to)) { staleEdges++; continue; }
+      const key = `${from}->${to}`;
+      if (seenEdges.has(key)) continue;
+      seenEdges.add(key);
+      savedEdges.push({ ...edge, from, to });
+    }
+
     // Auto-generate edges for new nodes that don't have any connections
     const autoEdges = [];
     for (const node of mergedNodes) {
-      const hasEdge = existingEdges.some(e => e.from === node.id || e.to === node.id);
+      const hasEdge = savedEdges.some(e => e.from === node.id || e.to === node.id);
       if (!hasEdge) {
         // Connect orphan nodes to their logical parent
         if (node.type === 'route') autoEdges.push({ from: 'server', to: node.id, label: 'mounts' });
@@ -279,7 +311,7 @@ class GraphifyWatcher {
       }
     }
 
-    const edges = [...existingEdges, ...autoEdges];
+    const edges = [...savedEdges, ...autoEdges];
 
     const updatedGraph = {
       nodes: mergedNodes,
@@ -306,6 +338,9 @@ class GraphifyWatcher {
       }
       fs.writeFileSync(this.graphFile, JSON.stringify(updatedGraph, null, 2));
       console.log(`✅ Graph updated: ${mergedNodes.length} nodes, ${edges.length} edges`);
+      if (staleEdges > 0) {
+        console.log(`   Dropped ${staleEdges} stale edge(s) pointing at removed/renamed nodes`);
+      }
       console.log(`   Components: ${components.length} | Hooks: ${hooks.length} | Utils: ${utils.length}`);
       console.log(`   Routes: ${routes.length} | Services: ${services.length} | Flutter: ${flutterScreens.length}`);
       return true;

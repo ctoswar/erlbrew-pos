@@ -4,6 +4,7 @@ import { useClock } from "../hooks/useClock";
 import { useFullscreen } from "../hooks/useFullscreen";
 import { formatTime, formatDate } from "../utils";
 import { apiPost, apiGet, setAuthToken } from "../utils/api";
+import { unlockAudio } from "../utils/sound";
 
 interface CompanyInfo {
   company_name: string;
@@ -100,6 +101,8 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
 
   const submitLogin = () => {
     if (!selectedStaff || pin.length !== 4) return;
+    // Autoplay policy: create/resume the shared AudioContext from this user gesture
+    unlockAudio();
     setLoading(true);
     apiPost<{ token: string; clockAction?: string }>("/staff/login", {
       rfid: selectedStaff.rfid,

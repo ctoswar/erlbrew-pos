@@ -97,6 +97,7 @@ server/src/
 │   └── auth.js        # JWT authentication
 ├── services/          # External integrations
 │   ├── googleSheets.js
+│   ├── accounting*.js # QuickBooks + Xero accounting sync (invoice, bills, bank reconciliation)
 │   └── audit.js
 └── db/                # Database schema
     └── init.sql

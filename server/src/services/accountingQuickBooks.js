@@ -241,7 +241,7 @@ export async function getConnectionState(pool) {
   const hasRefresh = !!refresh;
   const expMs = expiresAt ? Date.parse(expiresAt) : NaN;
   const accessTokenLive = !Number.isNaN(expMs) && expMs > Date.now() + 60_000;
-  return {
+  const state = {
     provider: PROVIDER,
     label: PROVIDERS[PROVIDER]?.label || 'QuickBooks',
     enabled: await isProviderEnabled(pool, PROVIDER),
@@ -255,7 +255,13 @@ export async function getConnectionState(pool) {
     clientIdConfigured: !!(await resolveField(pool, PROVIDER, 'client_id')),
     clientSecretConfigured: !!(await resolveField(pool, PROVIDER, 'client_secret')),
     dryRunForced: forceDryRun(),
+    // Contract fields shared with the Xero status shape (issue #156).
+    tenantId: realmId || null,
+    tokenExpiresAt: expiresAt || null,
+    features: ['invoice', 'bill'],
   };
+  state.mode = state.connected && state.clientIdConfigured && !state.dryRunForced ? 'live' : 'mock';
+  return state;
 }
 
 export async function getRedirectUri(pool) {
@@ -551,7 +557,16 @@ export async function syncDailySales(pool, { start, end, dryRun = false, force =
     }
   }
 
-  return { provider: PROVIDER, kind: 'invoice', dryRunRequested: dryRun, live, results, counts: tally(results) };
+  return {
+    provider: PROVIDER,
+    kind: 'invoice',
+    dryRun: !live,
+    dryRunRequested: dryRun,
+    live,
+    mode: live ? 'live' : 'mock',
+    results,
+    counts: tally(results),
+  };
 }
 
 function payloadSummary(payload) {
@@ -622,7 +637,16 @@ export async function syncExpenses(pool, { start, end, dryRun = false, force = f
     }
   }
 
-  return { provider: PROVIDER, kind: 'bill', dryRunRequested: dryRun, live, results, counts: tally(results) };
+  return {
+    provider: PROVIDER,
+    kind: 'bill',
+    dryRun: !live,
+    dryRunRequested: dryRun,
+    live,
+    mode: live ? 'live' : 'mock',
+    results,
+    counts: tally(results),
+  };
 }
 
 /** Fire-and-forget daily push — called after a Z-Report is generated. */

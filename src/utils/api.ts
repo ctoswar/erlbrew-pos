@@ -422,23 +422,35 @@ export async function getEnabledIntegrations(): Promise<Record<string, boolean>>
   return apiGet<Record<string, boolean>>('/integrations/enabled');
 }
 
-// ─── Accounting API (Phase 2 — Roadmap: QuickBooks) ──────────────────────────
+// ─── Accounting API (Phase 2 — Roadmap: QuickBooks + Xero) ───────────────────
+/** Accounting providers under /api/accounting/:provider */
+export type AccountingProvider = 'quickbooks' | 'xero';
+
 export interface AccountingStatus {
-  provider: string;
-  label: string;
-  enabled: boolean;
+  provider: AccountingProvider;
+  label?: string;
+  enabled?: boolean;
   /** OAuth completed — tokens stored (possibly refresh-only) */
   connected: boolean;
-  accessTokenLive: boolean;
-  canRefresh: boolean;
-  realmId: string | null;
-  environment: string;
-  expiresAt: string | null;
-  connectedAt: string | null;
+  /** 'live' when real credentials/tokens are in play, 'mock' otherwise */
+  mode?: 'live' | 'mock';
+  accessTokenLive?: boolean;
+  canRefresh?: boolean;
+  /** QuickBooks realm (Intuit companyId) */
+  realmId?: string | null;
+  /** Xero authorised tenant (organisation) id */
+  tenantId?: string | null;
+  environment?: string;
+  expiresAt?: string | null;
+  /** Alias of expiresAt on newer responses */
+  tokenExpiresAt?: string | null;
+  connectedAt?: string | null;
   clientIdConfigured: boolean;
-  clientSecretConfigured: boolean;
-  /** QUICKBOOKS_DRY_RUN=1 — payloads are built but never sent */
-  dryRunForced: boolean;
+  clientSecretConfigured?: boolean;
+  /** Server-side dry-run forced (env var) — payloads are built but never sent */
+  dryRunForced?: boolean;
+  /** What this provider can sync, e.g. ['invoice','bill'] or ['invoice','reconcile'] */
+  features?: string[];
 }
 
 export type AccountingSyncStatus = 'success' | 'dry_run' | 'skipped' | 'failed';
@@ -455,16 +467,20 @@ export interface AccountingSyncResult {
 }
 
 export interface AccountingSyncResponse {
-  provider: string;
-  kind: 'invoice' | 'bill';
-  dryRunRequested: boolean;
+  provider: AccountingProvider;
+  kind?: 'invoice' | 'bill';
+  dryRunRequested?: boolean;
+  /** True only when the payloads were actually pushed to the provider */
   live: boolean;
+  mode?: 'live' | 'mock';
   results: AccountingSyncResult[];
-  counts: Record<AccountingSyncStatus, number>;
+  /** Present on older responses — always derivable from `results` */
+  counts?: Record<AccountingSyncStatus, number>;
 }
 
 export interface AccountingSyncLogEntry {
   id: number;
+  /** 'invoice' | 'bill' | 'reconcile' (snake_case `sync_type` on the wire) */
   type: string;
   period: string;
   status: string;
@@ -474,11 +490,54 @@ export interface AccountingSyncLogEntry {
   createdAt: string;
 }
 
-export function getAccountingStatus(provider: string): Promise<AccountingStatus> {
+/** Raw row from `accounting_sync_logs` — snake_case as returned by the backend. */
+interface AccountingSyncLogRow {
+  id: number;
+  sync_type?: string;
+  type?: string;
+  period_key?: string;
+  period?: string;
+  status?: string;
+  external_id?: string | null;
+  externalId?: string | null;
+  summary?: AccountingSyncLogEntry['summary'];
+  error?: string | null;
+  created_at?: string;
+  createdAt?: string;
+}
+
+export type AccountingReconcileStatus = 'matched' | 'unmatched';
+
+export interface AccountingReconcileResult {
+  date: string;
+  description: string;
+  amount: number;
+  status: AccountingReconcileStatus;
+  orderId?: string | number | null;
+  drawerTransactionId?: number | null;
+  reason?: string | null;
+}
+
+export interface AccountingReconcileResponse {
+  provider: AccountingProvider;
+  dryRun: boolean;
+  live: boolean;
+  mode?: 'live' | 'mock';
+  matched: number;
+  unmatched: number;
+  /** Total amount difference between recorded transactions and the statement */
+  variance: number;
+  summary?: Record<string, unknown>;
+  results: AccountingReconcileResult[];
+  /** Present on dry-run responses — the exact payload that would be sent */
+  payload?: unknown;
+}
+
+export function getAccountingStatus(provider: AccountingProvider): Promise<AccountingStatus> {
   return apiAdminGet<AccountingStatus>(`/accounting/${provider}/status`);
 }
 
-export function getAccountingConnect(provider: string): Promise<{
+export function getAccountingConnect(provider: AccountingProvider): Promise<{
   url: string;
   redirectUri: string;
   environment: string;
@@ -489,18 +548,46 @@ export function getAccountingConnect(provider: string): Promise<{
 }
 
 export function syncAccounting(
-  provider: string,
+  provider: AccountingProvider,
   body: { kind: 'invoice' | 'bill'; start: string; end?: string; dryRun?: boolean; force?: boolean }
 ): Promise<AccountingSyncResponse> {
   return apiAdminPost<AccountingSyncResponse>(`/accounting/${provider}/sync`, body);
 }
 
-export function getAccountingSyncLog(provider: string, limit = 20): Promise<AccountingSyncLogEntry[]> {
-  return apiAdminGet<AccountingSyncLogEntry[]>(`/accounting/${provider}/sync-log?limit=${limit}`);
+/** Xero — match recorded cash/card transactions against a bank statement feed. */
+export function reconcileAccounting(
+  provider: AccountingProvider,
+  body: { start: string; end?: string; dryRun?: boolean }
+): Promise<AccountingReconcileResponse> {
+  return apiAdminPost<AccountingReconcileResponse>(`/accounting/${provider}/reconcile`, body);
 }
 
-export function disconnectAccounting(provider: string): Promise<AccountingStatus> {
+export function getAccountingSyncLog(
+  provider: AccountingProvider,
+  limit = 20
+): Promise<AccountingSyncLogEntry[]> {
+  return apiAdminGet<AccountingSyncLogRow[]>(
+    `/accounting/${provider}/sync-log?limit=${limit}`
+  ).then(rows =>
+    rows.map(row => ({
+      id: row.id,
+      type: row.sync_type ?? row.type ?? '',
+      period: row.period_key ?? row.period ?? '',
+      status: row.status ?? '',
+      externalId: row.external_id ?? row.externalId ?? null,
+      summary: row.summary ?? null,
+      error: row.error ?? null,
+      createdAt: row.created_at ?? row.createdAt ?? '',
+    }))
+  );
+}
+
+export function disconnectAccounting(provider: AccountingProvider): Promise<AccountingStatus> {
   return apiAdminPost<AccountingStatus>(`/accounting/${provider}/disconnect`, {});
+}
+
+export function testAccounting(provider: AccountingProvider): Promise<{ ok: boolean; message: string }> {
+  return apiAdminPost<{ ok: boolean; message: string }>(`/accounting/${provider}/test`, {});
 }
 
 // Staff management

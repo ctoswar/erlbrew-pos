@@ -3,6 +3,7 @@ import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logAudit } from '../services/audit.js';
 import { buildMenuExport } from '../services/deliveryChannels.js';
 import { testConnection as testQuickBooksConnection } from '../services/accountingQuickBooks.js';
+import { testConnection as testXeroConnection } from '../services/accountingXero.js';
 import {
   PROVIDERS,
   getProviderStatus,
@@ -100,9 +101,13 @@ export default function integrationsRouter(pool) {
         }
       }
 
-      // QuickBooks: OAuth-aware probe (checks creds, then live CompanyInfo query).
+      // QuickBooks / Xero: OAuth-aware probe (checks creds, then a live query —
+      // otherwise an explicit mock/dry-run result, never a network call).
       if (provider === 'quickbooks') {
         return res.json(await testQuickBooksConnection(pool));
+      }
+      if (provider === 'xero') {
+        return res.json(await testXeroConnection(pool));
       }
 
       // Delivery platforms: config check only until partner accounts are approved.

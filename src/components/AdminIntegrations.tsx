@@ -39,9 +39,15 @@ const FIELD_LABELS: Record<string, Record<string, string>> = {
     environment: "Environment (sandbox / production)",
     company_id: "Company ID (realmId)",
   },
+  xero: {
+    client_id: "Client ID",
+    client_secret: "Client Secret",
+    tenant_id: "Tenant ID",
+    environment: "Environment",
+  },
 };
 
-const ORDER = ["paymongo", "grab", "foodpanda", "quickbooks"];
+const ORDER = ["paymongo", "grab", "foodpanda", "quickbooks", "xero"] as const;
 
 export const AdminIntegrations: React.FC = () => {
   const [status, setStatus] = useState<IntegrationsStatus | null>(null);
@@ -145,7 +151,7 @@ export const AdminIntegrations: React.FC = () => {
     <div className="p-4">
       <div className="flex items-center justify-between mb-1">
         <h3 className="text-sm font-semibold text-erl-text-primary">Integrations</h3>
-        <span className="text-[10px] text-erl-text-muted">Phase 2 — PayMongo · GrabFood · FoodPanda · QuickBooks</span>
+        <span className="text-[10px] text-erl-text-muted">Phase 2 — PayMongo · GrabFood · FoodPanda · QuickBooks · Xero</span>
       </div>
       <p className="text-[11px] text-erl-text-muted mb-3">
         Credentials are encrypted at rest and never shown in full. Secrets entered here override server env vars.
@@ -303,8 +309,8 @@ export const AdminIntegrations: React.FC = () => {
                     </p>
                   )}
 
-                  {/* Accounting: OAuth connect + invoice/expense sync controls */}
-                  {p === "quickbooks" && <AdminAccountingPanel />}
+                  {/* Accounting: OAuth connect + invoice/expense sync + reconcile controls */}
+                  {(p === "quickbooks" || p === "xero") && <AdminAccountingPanel provider={p} />}
                 </div>
               )}
             </div>

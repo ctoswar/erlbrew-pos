@@ -656,7 +656,7 @@ const ordersExports = ordersRoutes(pool, gs, broadcastEvent);
 app.use('/api/orders', ordersExports.router);
 // Integrations settings (admin-only except /enabled) — Phase 2 issue #127
 app.use('/api/integrations', integrationsRouter(pool));
-// Accounting sync (QuickBooks OAuth + invoice/bill push) — admin, except /callback
+// Accounting sync (QuickBooks + Xero: OAuth, invoice/bill push, Xero reconcile) — admin, except /callback
 app.use('/api/accounting', accountingRouter(pool));
 // Inventory + movements: admin only
 app.use('/api/inventory', inventoryRoutes(pool, gs));

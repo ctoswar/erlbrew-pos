@@ -68,13 +68,13 @@ The core POS system is fully functional with order management, inventory trackin
 
 ### Accounting
 
-- [ ] **QuickBooks Integration**
-  - Invoice sync *(implemented — daily summary invoice, ready for Intuit credentials)*
-  - Expense tracking *(implemented — supplier invoices → Bills)*
+- [x] **QuickBooks Integration**
+  - [x] Invoice sync *(implemented — daily summary invoice, ready for Intuit credentials)*
+  - [x] Expense tracking *(implemented — supplier invoices → Bills)*
 
-- [ ] **Xero Integration**
-  - Invoice sync
-  - Bank reconciliation
+- [x] **Xero Integration**
+  - [x] Invoice sync
+  - [x] Bank reconciliation
 
 ---
 

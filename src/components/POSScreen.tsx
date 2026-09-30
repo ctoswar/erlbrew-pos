@@ -15,6 +15,7 @@ import { AdminScreen } from "./AdminScreen";
 import { TimeKeeping } from "./TimeKeeping";
 import { DiscountModal } from "./DiscountModal";
 import { useViewport } from "../hooks/useViewport";
+import { installKioskFullscreen } from "../hooks/useFullscreen";
 import { openCashDrawer } from "../utils/receiptUtils";
 import { calcGrand } from "../utils";
 import { apiGet } from "../utils/api";
@@ -26,8 +27,11 @@ interface Props {
 
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
+// ?kiosk → dedicated kitchen-display mode: boots straight to the board with no POS chrome (#172)
+const KIOSK_MODE = new URLSearchParams(window.location.search).has("kiosk");
+
 export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
-  const [screen, setScreen] = useState<Screen>("pos");
+  const [screen, setScreen] = useState<Screen>(KIOSK_MODE ? "kitchen" : "pos");
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>("dine-in");
   const [customerName, setCustomerName] = useState("");
@@ -62,6 +66,11 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
 
   const isOrderFlow = screen === "pos" || screen === "checkout" || screen === "payment";
   const showDesktopCart = !isMobile && isOrderFlow;
+
+  // Kiosk tablets: the first user gesture enters fullscreen (denied → kiosk layout still applies)
+  useEffect(() => {
+    if (KIOSK_MODE) installKioskFullscreen();
+  }, []);
 
   const { cart, discount, addItem, updateQty, clearCart, applyDiscount, removeDiscount, addNote } = useCart();
 
@@ -330,13 +339,16 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
     <div className="flex h-screen overflow-hidden relative">
       {/* Left Column */}
       <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'max-w-full' : ''}`}>
-        <Topbar
-          staff={staff}
-          screen={screen}
-          activeOrderCount={activeOrders.length}
-          onNavigate={handleNavigate}
-          onLogout={onLogout}
-        />
+        {/* Kiosk mode hides the POS nav chrome so the board fills the screen (#172) */}
+        {!KIOSK_MODE && (
+          <Topbar
+            staff={staff}
+            screen={screen}
+            activeOrderCount={activeOrders.length}
+            onNavigate={handleNavigate}
+            onLogout={onLogout}
+          />
+        )}
         <div className="flex-1 flex overflow-hidden min-h-0">
           {renderMainScreen()}
         </div>

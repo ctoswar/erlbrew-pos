@@ -25,6 +25,7 @@ import loyaltyRouter from './routes/loyalty.js';
 import webhooksRouter from './routes/webhooks.js';
 import integrationsRouter from './routes/integrations.js';
 import accountingRouter from './routes/accounting.js';
+import insightsRouter from './routes/insights.js';
 import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
 import rateLimit from 'express-rate-limit';
@@ -661,6 +662,8 @@ app.use('/api/orders', ordersExports.router);
 app.use('/api/integrations', integrationsRouter(pool));
 // Accounting sync (QuickBooks + Xero: OAuth, invoice/bill push, Xero reconcile) — admin, except /callback
 app.use('/api/accounting', accountingRouter(pool));
+// Phase 3 insights (menu analytics, later: forecasts) — admin only
+app.use('/api/insights', insightsRouter(pool));
 // Inventory + movements: admin only
 app.use('/api/inventory', inventoryRoutes(pool, gs));
 app.use('/api/recipes', recipesRouter(pool));

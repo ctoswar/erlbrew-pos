@@ -115,8 +115,8 @@ The core POS system is fully functional with order management, inventory trackin
 
 - [ ] **Customer Display** _(partially built — fullscreen `?customer` second-monitor view ships)_
   - [x] Order confirmation screen — live cart, totals and order type mirrored from the POS
-  - [ ] Loyalty points display
-  - [ ] Promotional messages
+  - [x] Loyalty points display — phone captured at checkout → public `GET /api/customers/lookup` → points/tier card on the display (issue #173)
+  - [x] Promotional messages — `promo_messages` company setting, admin editor, 60s-refresh ticker on the display (issue #174)
 
 ### Mobile
 

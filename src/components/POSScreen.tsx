@@ -76,10 +76,10 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
 
   useEffect(() => {
     try {
-      localStorage.setItem("erlbrew_cart_meta", JSON.stringify({ orderType, customerName }));
+      localStorage.setItem("erlbrew_cart_meta", JSON.stringify({ orderType, customerName, customerPhone }));
       localStorage.setItem("erlbrew_cart_version", String(Date.now()));
     } catch {}
-  }, [orderType, customerName, cart]);
+  }, [orderType, customerName, customerPhone, cart]);
 
   const { orders, placeOrder, placeGatewayOrder, markGatewayPaid, cancelGatewayOrder, updateStatus, voidOrder, refundOrder, dismissOrder, activeOrders, pendingCount } = useOrders();
   useKitchenEvents();

@@ -355,6 +355,22 @@ export interface CompanySettings {
   print_server_url: string;
   /** Public base URL — used to build integration webhook callback URLs */
   base_url?: string;
+  /** Promotional messages for the customer display — JSON array of strings (issue #174) */
+  promo_messages?: string;
+}
+
+/** promo_messages is stored as a JSON array of strings — invalid or empty input → [] */
+export function parsePromoMessages(raw: unknown): string[] {
+  if (typeof raw !== 'string' || !raw.trim()) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((m): m is string => typeof m === 'string' && m.trim() !== '')
+      .map((m) => m.trim());
+  } catch {
+    return [];
+  }
 }
 
 export async function getCompanySettings(): Promise<CompanySettings> {
@@ -1010,6 +1026,39 @@ export async function updateCustomer(id: number, data: Partial<Customer>): Promi
   });
   if (!res.ok) throw new Error(`API failed: ${res.status}`);
   return res.json();
+}
+
+// --- Customer loyalty lookup (public, minimal payload — issue #173) ---
+
+/** Snake_case response from GET /api/customers/lookup — never includes email/password_hash */
+interface CustomerLoyaltyResponse {
+  found: boolean;
+  name?: string | null;
+  loyalty_points?: number | null;
+  loyalty_tier?: string | null;
+}
+
+/** camelCase view of the lookup result used by the customer display */
+export interface CustomerLoyalty {
+  found: boolean;
+  name?: string;
+  loyaltyPoints?: number;
+  loyaltyTier?: string;
+}
+
+export async function lookupCustomerByPhone(phone: string): Promise<CustomerLoyalty> {
+  const res = await fetch(getApiUrl(`/customers/lookup?phone=${encodeURIComponent(phone)}`), {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`API failed: ${res.status}`);
+  const data: CustomerLoyaltyResponse = await res.json();
+  if (!data.found) return { found: false };
+  return {
+    found: true,
+    name: data.name || undefined,
+    loyaltyPoints: Number(data.loyalty_points) || 0,
+    loyaltyTier: data.loyalty_tier || undefined,
+  };
 }
 
 // --- Reports ---

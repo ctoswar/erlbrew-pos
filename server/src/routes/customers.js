@@ -350,6 +350,35 @@ export default function customersRouter(pool) {
     }
   });
 
+  // GET /api/customers/lookup?phone=… — minimal public loyalty lookup (#173)
+  // Powers the customer display: returns name + points + tier only, never email/password_hash.
+  // Must stay before the /:id routes below.
+  router.get('/lookup', async (req, res) => {
+    const { phone } = req.query;
+    if (!phone || typeof phone !== 'string' || !phone.trim()) {
+      return res.status(400).json({ error: 'phone is required' });
+    }
+    try {
+      // Same normalization as order creation (orders.js) so the phone matches
+      const normalizedPhone = phone.trim();
+      const [rows] = await pool.query(
+        'SELECT name, loyalty_points, loyalty_tier FROM customers WHERE phone = ?',
+        [normalizedPhone]
+      );
+      if (!rows.length) return res.json({ found: false });
+      const customer = rows[0];
+      res.json({
+        found: true,
+        name: customer.name,
+        loyalty_points: Number(customer.loyalty_points) || 0,
+        loyalty_tier: customer.loyalty_tier,
+      });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   // ── Admin Endpoints (MUST be after /me routes, before /:id) ──────────
 
   // GET /api/customers/:id — single customer

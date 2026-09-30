@@ -2,28 +2,53 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { CartItem, OrderType } from "../types";
 import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
 import { useCart } from "../hooks/useCart";
-import { apiGet } from "../utils/api";
+import {
+  apiGet,
+  getCompanySettings,
+  lookupCustomerByPhone,
+  parsePromoMessages,
+  CustomerLoyalty,
+} from "../utils/api";
 import { getIconByEmoji } from "./FoodIcons";
 
 const CART_KEY = "erlbrew_cart";
 const POLL_INTERVAL = 3000;
+const PROMO_REFRESH_MS = 60000;
+const PROMO_ROTATE_MS = 8000;
+const LOOKUP_DEBOUNCE_MS = 400;
+
+/** Points earned per ₱100 spent — mirrors the award rule in server/src/routes/orders.js */
+const POINTS_PER_PESO = 100;
+
+const TIER_EMOJI: Record<string, string> = {
+  bronze: "🥉",
+  silver: "🥈",
+  gold: "🥇",
+  platinum: "💎",
+};
 
 interface DisplayCart {
   items: CartItem[];
   orderType: OrderType;
   customerName: string;
+  customerPhone: string;
 }
 
 function readCart(): DisplayCart {
   try {
     const raw = localStorage.getItem(CART_KEY);
-    if (!raw) return { items: [], orderType: "dine-in" as OrderType, customerName: "" };
+    if (!raw) return { items: [], orderType: "dine-in" as OrderType, customerName: "", customerPhone: "" };
     const cart: CartItem[] = JSON.parse(raw);
     const metaRaw = localStorage.getItem("erlbrew_cart_meta");
-    const meta = metaRaw ? JSON.parse(metaRaw) : { orderType: "dine-in", customerName: "" };
-    return { items: cart, orderType: meta.orderType || "dine-in", customerName: meta.customerName || "" };
+    const meta = metaRaw ? JSON.parse(metaRaw) : { orderType: "dine-in", customerName: "", customerPhone: "" };
+    return {
+      items: cart,
+      orderType: meta.orderType || "dine-in",
+      customerName: meta.customerName || "",
+      customerPhone: meta.customerPhone || "",
+    };
   } catch {
-    return { items: [], orderType: "dine-in", customerName: "" };
+    return { items: [], orderType: "dine-in", customerName: "", customerPhone: "" };
   }
 }
 
@@ -70,10 +95,62 @@ export const CustomerDisplay: React.FC = () => {
     // remember last length to help debug/logging if needed
   }, [cart.items.length]);
 
-  const { items, orderType, customerName } = cart;
+  const { items, orderType, customerName, customerPhone } = cart;
   const subtotal = calcSubtotal(items);
   const grand = calcGrand(subtotal, discount);
   const isEmpty = items.length === 0;
+
+  // Loyalty lookup for the phone captured at checkout (#173) — re-runs when cart meta changes
+  const [loyalty, setLoyalty] = useState<CustomerLoyalty | null>(null);
+  useEffect(() => {
+    const phone = customerPhone.trim();
+    if (!phone) {
+      setLoyalty(null);
+      return;
+    }
+    let cancelled = false;
+    // Debounced: the POS writes meta on every keystroke in the phone field
+    const timer = window.setTimeout(() => {
+      lookupCustomerByPhone(phone)
+        .then((result) => { if (!cancelled) setLoyalty(result); })
+        .catch(() => { if (!cancelled) setLoyalty(null); });
+    }, LOOKUP_DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [customerPhone]);
+
+  // Promotional messages ticker (#174) — refreshed every 60s (display runs in a long-lived window)
+  const [promoMessages, setPromoMessages] = useState<string[]>([]);
+  const [promoIndex, setPromoIndex] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      getCompanySettings()
+        .then((settings) => { if (alive) setPromoMessages(parsePromoMessages(settings.promo_messages)); })
+        // Hidden entirely when the fetch fails
+        .catch(() => { if (alive) setPromoMessages([]); });
+    };
+    load();
+    const refresh = window.setInterval(load, PROMO_REFRESH_MS);
+    return () => {
+      alive = false;
+      window.clearInterval(refresh);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (promoMessages.length <= 1) return; // single message stays static
+    const rotate = window.setInterval(
+      () => setPromoIndex((i) => (i + 1) % promoMessages.length),
+      PROMO_ROTATE_MS
+    );
+    return () => window.clearInterval(rotate);
+  }, [promoMessages.length]);
+
+  const currentPromo = promoMessages.length > 0 ? promoMessages[promoIndex % promoMessages.length] : "";
+  const pointsToEarn = Math.floor(grand / POINTS_PER_PESO);
 
   const orderLabel = orderType === "dine-in" ? (customerName || "Dine-in") : "Takeout";
 
@@ -181,10 +258,53 @@ export const CustomerDisplay: React.FC = () => {
                 <div className="text-[10px] text-[#f5e6d0]/35 tracking-wide mb-1">Order Type</div>
                 <div className="text-sm md:text-base font-bold text-[#f5e6d0]">{orderType === "dine-in" ? `🍽️ ${customerName || "Dine-in"}` : "🥤 Takeout"}</div>
               </div>
+
+              {/* Loyalty — only when a phone was captured at checkout (#173) */}
+              {loyalty && (
+                <div className="mt-3 md:mt-4 px-4 py-3 md:py-3.5 bg-erl-accent/10 border border-erl-accent/25 rounded-[10px] text-center animate-fade-in">
+                  {loyalty.found ? (
+                    <>
+                      <div className="text-[10px] text-[#f5e6d0]/45 tracking-widest uppercase mb-1">
+                        {loyalty.loyaltyTier && (
+                          <>{TIER_EMOJI[loyalty.loyaltyTier.toLowerCase()] || "⭐"} {loyalty.loyaltyTier} · </>
+                        )}
+                        Loyalty
+                      </div>
+                      <div className="font-display text-lg md:text-xl font-bold text-erl-accent">
+                        {loyalty.loyaltyPoints ?? 0} pts
+                      </div>
+                      <div className="text-[11px] text-[#f5e6d0]/55 mt-1">
+                        {loyalty.name ? `${loyalty.name} · ` : ""}
+                        You'll earn {pointsToEarn} point{pointsToEarn === 1 ? "" : "s"} on this order
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-[10px] text-[#f5e6d0]/45 tracking-widest uppercase mb-1">Loyalty</div>
+                      <div className="text-[11px] text-[#f5e6d0]/60 leading-snug">
+                        ⭐ Earn 1 point for every ₱100 spent — place this order to start earning with this number.
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
       </div>
+
+      {/* Promotional ticker (#174) — hidden entirely when no messages are configured */}
+      {currentPromo && (
+        <div className="px-4 md:px-12 py-2.5 md:py-3 border-t border-erl-accent/10 bg-erl-accent/[0.07] flex items-center gap-3 flex-shrink-0">
+          <span className="pill pill-accent flex-shrink-0">✦ Promo</span>
+          <span
+            key={promoIndex}
+            className="text-[12px] md:text-[13px] font-semibold text-erl-accent truncate animate-fade-in"
+          >
+            {currentPromo}
+          </span>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="px-4 md:px-12 py-4 border-t border-erl-accent/10 flex justify-between items-center flex-shrink-0">

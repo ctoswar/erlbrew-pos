@@ -7,6 +7,7 @@ import { AdminStaff } from "./AdminStaff";
 import { AdminMenu } from "./AdminMenu";
 import { AdminPrintSettings } from "./AdminPrintSettings";
 import { AdminIntegrations } from "./AdminIntegrations";
+import { AdminDisplayMessages } from "./AdminDisplayMessages";
 import { AdminInventory } from "./AdminInventory";
 import { Dashboard } from "./Dashboard";
 import { AdminReports } from "./AdminReports";
@@ -378,8 +379,11 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             <div className="bg-erl-surface rounded-xl border border-erl-border-subtle mb-4">
               <AdminIntegrations />
             </div>
-            <div className="bg-erl-surface rounded-xl border border-erl-border-subtle">
+            <div className="bg-erl-surface rounded-xl border border-erl-border-subtle mb-4">
               <AdminPrintSettings />
+            </div>
+            <div className="bg-erl-surface rounded-xl border border-erl-border-subtle">
+              <AdminDisplayMessages />
             </div>
           </div>
         )}

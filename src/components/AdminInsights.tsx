@@ -195,7 +195,7 @@ export const AdminInsights: React.FC = () => {
                 {chartData.length === 0 ? (
                   <div className="text-center text-erl-muted py-8 text-[11px]">No sales in this period</div>
                 ) : (
-                  <div className="h-[240px]">
+                  <div className="h-[240px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartData} margin={{ top: 4, right: 8, left: -12, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />

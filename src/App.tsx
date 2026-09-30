@@ -70,7 +70,7 @@ const App: React.FC = () => {
   }, []);
 
   // ?customer → fullscreen customer-facing display (second monitor)
-  if (window.location.search.includes("customer")) {
+  if (new URLSearchParams(window.location.search).has("customer")) {
     return <CustomerDisplay />;
   }
 

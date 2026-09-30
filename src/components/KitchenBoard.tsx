@@ -113,29 +113,39 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
     return () => clearInterval(interval);
   }, []);
 
-  // Edge-triggered overdue alert bookkeeping: orderId → last alert timestamp.
+  // Edge-triggered overdue alert bookkeeping: orderId → last notification timestamp.
   // Lives in a ref so it survives re-renders; entries are pruned each tick so a
   // genuine re-late re-alerts and the map never grows unbounded.
   const alertedAtRef = useRef<Map<string, number>>(new Map());
+  // Global sound throttle: one overdue alert sound per minute max, even when
+  // several tickets become/remain late at the same time.
+  const lastSoundAtRef = useRef<number>(0);
 
   useEffect(() => {
     const now = nowMs;
     const stillLate = new Set<string>();
+    let shouldPlaySound = false;
 
     for (const order of visibleOrders) {
-      const createdAt = order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt);
-      const elapsed = Math.floor((now - createdAt.getTime()) / 60000);
+      const timerStart = order.preparingAt || order.createdAt;
+      const startAt = timerStart instanceof Date ? timerStart : new Date(timerStart);
+      const elapsed = Math.floor((now - startAt.getTime()) / 60000);
       const isLate = order.status === "preparing" && elapsed >= LATE_AFTER_MINUTES;
       if (!isLate) continue;
 
       stillLate.add(order.id);
       const lastAlertedAt = alertedAtRef.current.get(order.id);
-      const shouldAlert = lastAlertedAt === undefined || now - lastAlertedAt >= OVERDUE_REPEAT_MS;
-      if (shouldAlert) {
+      const shouldNotify = lastAlertedAt === undefined || now - lastAlertedAt >= OVERDUE_REPEAT_MS;
+      if (shouldNotify) {
         alertedAtRef.current.set(order.id, now);
-        playOverdueAlert();
+        shouldPlaySound = true;
         notifyLate(order); // itself gated: granted permission + hidden/unfocused tab
       }
+    }
+
+    if (shouldPlaySound && now - lastSoundAtRef.current >= OVERDUE_REPEAT_MS) {
+      lastSoundAtRef.current = now;
+      playOverdueAlert();
     }
 
     // Drop orders that are no longer late (or no longer on the board)
@@ -329,8 +339,9 @@ interface KitchenCardProps {
 }
 
 const KitchenCard: React.FC<KitchenCardProps> = ({ order, nowMs, colColor, onUpdateStatus, isVoidPending, onRequestVoid, isRefundPending, onRequestRefund }) => {
-  const createdAt = order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt);
-  const elapsed = Math.floor((nowMs - createdAt.getTime()) / 60000);
+  const timerStart = order.preparingAt || order.createdAt;
+  const startAt = timerStart instanceof Date ? timerStart : new Date(timerStart);
+  const elapsed = Math.floor((nowMs - startAt.getTime()) / 60000);
   const isLate = order.status === "preparing" && elapsed >= LATE_AFTER_MINUTES;
 
   return (

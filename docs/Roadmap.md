@@ -107,16 +107,16 @@ The core POS system is fully functional with order management, inventory trackin
 
 ### Hardware Integration
 
-- [x] **Kitchen Display System (KDS)** ✅ _(live since v2.0.0 — credited under Completed Milestones)_
+- [x] **Kitchen Display System (KDS)** ✅ _(live since v2.0.0 — credited in Completed Milestones)_
   - [x] Touch screen interface — tap-to-advance tickets (Start → Mark Ready → Serve), 44px touch targets, mobile status filter tabs
   - [x] Timer alerts — live elapsed-time counter, pulsing red "Late" badge at ≥10 min preparing, overdue alert sound (once on becoming late, then every 60s) with a browser notification when the tab is hidden, Web Audio chime on new orders
-  - [x] Order routing — delivery vs walk-in lanes & priority, delivery tickets surfaced first (All/Delivery/Counter lanes, channel badges, per-column delivery counts); station/printer routing deferred — single-station café
-  - [x] Kiosk/fullscreen mode — ⛶ toggle in the KDS header + `?kiosk` boots straight to the board with no POS chrome (issue #172; overdue alert sound ✅ shipped earlier, issue #162)
+  - [x] Order routing — delivery vs walk-in lanes and priority, delivery tickets surfaced first (All/Delivery/Counter lanes, channel badges, per-column delivery counts); station/printer routing deferred — single-station café
+  - [x] Kiosk/fullscreen mode — ⛶ toggle in the KDS header; append `?kiosk` to boot straight to the board with no POS chrome (issue #172). Overdue alert sound ✅ shipped earlier in issue #162.
 
-- [x] **Customer Display** _(second-monitor `?customer` fullscreen view — fully built)_
+- [x] **Customer Display** (second-monitor customer fullscreen view via `?customer` — fully built)
   - [x] Order confirmation screen — live cart, totals and order type mirrored from the POS
   - [x] Loyalty points display — phone captured at checkout → public `GET /api/customers/lookup` → tier/points card on the display (issue #173)
-  - [x] Promotional messages — `promo_messages` company setting, admin editor, 60s-refresh 8s-rotate ticker above the display footer (issue #174)
+  - [x] Promotional messages — `promo_messages` company setting, admin editor, 60-second refresh / 8-second rotate ticker above the display footer (issue #174)
 
 ### Mobile
 

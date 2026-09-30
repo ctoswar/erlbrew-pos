@@ -184,10 +184,10 @@ export async function handleDeliveryWebhook(pool, provider, payload, broadcastEv
     await conn.beginTransaction();
     await conn.query(
       `INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name,
-         type, pay_method, reference_number, order_source, external_order_id, pay_status, created_at)
-       VALUES (?, NULL, 'preparing', ?, ?, ?, ?, 'takeout', 'delivery', ?, ?, ?, 'paid', ?)`,
+         type, pay_method, reference_number, order_source, external_order_id, pay_status, created_at, preparing_at)
+       VALUES (?, NULL, 'preparing', ?, ?, ?, ?, 'takeout', 'delivery', ?, ?, ?, 'paid', ?, ?)`,
       [orderId, subtotal, tax, total, normalized.customer_name,
-        normalized.external_order_id, provider, normalized.external_order_id, toMysqlDatetime(taipeiNow())]
+        normalized.external_order_id, provider, normalized.external_order_id, toMysqlDatetime(taipeiNow()), toMysqlDatetime(taipeiNow())]
     );
     for (const m of matched) {
       await conn.query(

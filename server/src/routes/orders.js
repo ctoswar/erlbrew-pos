@@ -151,7 +151,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
          SELECT o.id, o.status, o.subtotal, o.tax, o.total,
                o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number, o.discount_json,
                o.order_source, o.external_order_id, o.pay_status,
-               o.created_at, o.completed_at,
+               o.created_at, o.completed_at, o.preparing_at,
                s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
          FROM orders o
          LEFT JOIN staff s ON o.staff_id = s.id
@@ -178,7 +178,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
          SELECT o.id, o.status, o.subtotal, o.tax, o.total,
                 o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number, o.discount_json,
                 o.order_source, o.external_order_id, o.pay_status,
-                o.created_at, o.completed_at, o.location_id,
+                o.created_at, o.completed_at, o.preparing_at, o.location_id,
                 s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
          FROM orders o
          LEFT JOIN staff s ON o.staff_id = s.id
@@ -242,7 +242,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       const [rows] = await pool.query(`
          SELECT o.id, o.status, o.subtotal, o.tax, o.total,
                 o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number, o.discount_json,
-                o.created_at, o.completed_at,
+                o.created_at, o.completed_at, o.preparing_at,
                 s.id AS staff_id, s.name AS staff_name, s.initials AS staff_initials,
                 s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
          FROM orders o
@@ -351,8 +351,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       }
 
       await pool.query(
-        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name, customer_id, table_name, type, pay_method, reference_number, discount_json, location_id, pay_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, staffDbId, initialStatus, orderSubtotal, orderTax, orderTotal, customer_name || null, customerId, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null, discountJson, location_id || 1, initialPayStatus]
+        'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name, customer_id, table_name, type, pay_method, reference_number, discount_json, location_id, pay_status, preparing_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, staffDbId, initialStatus, orderSubtotal, orderTax, orderTotal, customer_name || null, customerId, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null, discountJson, location_id || 1, initialPayStatus, initialStatus === 'preparing' ? new Date() : null]
       );
       for (const it of itemsOut) {
         const [itemResult] = await pool.query(
@@ -481,7 +481,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       try {
         const [rows] = await pool.query(`
           SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.table_name, o.type, o.pay_method,
-                 o.reference_number, o.discount_json, o.order_source, o.external_order_id, o.pay_status, o.created_at,
+                 o.reference_number, o.discount_json, o.order_source, o.external_order_id, o.pay_status, o.created_at, o.preparing_at,
                  s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
           FROM orders o LEFT JOIN staff s ON o.staff_id = s.id WHERE o.id = ?`, [id]);
         if (rows[0]) {
@@ -549,7 +549,10 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         }
       }
     }
-    await conn.query('UPDATE orders SET status = ?, completed_at = ? WHERE id = ?', [status, status === 'completed' ? new Date() : null, id]);
+    await conn.query(
+      'UPDATE orders SET status = ?, completed_at = ?, preparing_at = IF(? = "preparing", COALESCE(preparing_at, NOW()), preparing_at) WHERE id = ?',
+      [status, status === 'completed' ? new Date() : null, status, id]
+    );
     await conn.commit();
     // Audit: status change
     await logAudit(pool, req, { action: 'order_status_change', entityType: 'order', entityId: id, details: { newStatus: status } });
@@ -570,7 +573,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       try {
         const [rows] = await pool.query(`
           SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.table_name, o.type, o.pay_method,
-                 o.reference_number, o.discount_json, o.created_at, o.completed_at,
+                 o.reference_number, o.discount_json, o.created_at, o.completed_at, o.preparing_at,
                  s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
           FROM orders o LEFT JOIN staff s ON o.staff_id = s.id WHERE o.id = ?`, [id]);
         if (rows[0]) {
@@ -1406,7 +1409,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       const [rows] = await pool.query(`
         SELECT o.id, o.status, o.pay_status, o.subtotal, o.tax, o.total, o.customer_name,
                o.table_name, o.type, o.pay_method, o.reference_number, o.discount_json,
-               o.order_source, o.external_order_id, o.created_at, o.completed_at,
+               o.order_source, o.external_order_id, o.created_at, o.completed_at, o.preparing_at,
                s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
         FROM orders o LEFT JOIN staff s ON o.staff_id = s.id
         WHERE o.id = ?`, [id]);

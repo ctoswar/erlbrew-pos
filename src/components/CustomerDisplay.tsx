@@ -52,6 +52,16 @@ function readCart(): DisplayCart {
   }
 }
 
+const cartSignature = (cart: DisplayCart): string =>
+  `${cart.items.length}|${cart.items.reduce((s, c) => s + c.qty, 0)}|` +
+  cart.items.map((i) => `${i.item.id}:${i.qty}:${i.selectedSize?.label || ""}:${i.notes || ""}`).join(",") +
+  `|${cart.orderType}|${cart.customerName}|${cart.customerPhone}`;
+
+const itemLineTotal = (ci: CartItem): number => {
+  const modifierTotal = (ci.modifiers || []).reduce((s, m) => s + (m.price || 0) * (m.qty || 1), 0);
+  return (ci.item.price + modifierTotal) * ci.qty;
+};
+
 export const CustomerDisplay: React.FC = () => {
   const [cart, setCart] = useState<DisplayCart>(() => readCart());
   const [categories, setCategories] = useState<string[]>([]);
@@ -69,9 +79,16 @@ export const CustomerDisplay: React.FC = () => {
       .catch(() => {});
   }, []);
 
+  const lastCartSigRef = useRef<string>(cartSignature(readCart()));
+
   const reload = useCallback(() => {
-    setCart(readCart());
-    setFadeKey((k) => k + 1);
+    const next = readCart();
+    setCart(next);
+    const sig = cartSignature(next);
+    if (lastCartSigRef.current !== sig) {
+      lastCartSigRef.current = sig;
+      setFadeKey((k) => k + 1);
+    }
   }, []);
 
   // Pull discount from centralized cart store (do not rely on local readCart for discount)
@@ -225,10 +242,10 @@ export const CustomerDisplay: React.FC = () => {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <div className="text-[10px] md:text-[11px] text-[#f5e6d0]/40 mb-0.5">
-                        {ci.qty} × {formatCurrency(ci.item.price)}
+                        {ci.qty} × {formatCurrency(itemLineTotal(ci) / ci.qty)}
                       </div>
                       <div className="text-[15px] md:text-[17px] font-bold text-erl-accent">
-                        {formatCurrency(ci.item.price * ci.qty)}
+                        {formatCurrency(itemLineTotal(ci))}
                       </div>
                     </div>
                   </div>

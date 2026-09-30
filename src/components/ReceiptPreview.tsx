@@ -42,6 +42,8 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
 
   // Pixel widths matching the print output at Courier New 11px
   const PAPER_WIDTH = settings.paperSize === "57mm" ? 216 : settings.paperSize === "58mm" ? 226 : 302;
+  // Make the WiFi join QR a bit larger on narrow 57mm paper so it's easier to scan
+  const WIFI_QR_SIZE = settings.paperSize === "57mm" ? 120 : 100;
 
   // Resolve store address: use company_address, splitting on commas if long
   const addressLines = STORE.addr1
@@ -215,7 +217,7 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
                     <>
                       <QRCodeSVG
                         value={`WIFI:T:WPA;S:${settings.wifiSsid};P:${settings.wifiPassword};;`}
-                        size={100}
+                        size={WIFI_QR_SIZE}
                         level="M"
                         includeMargin={false}
                         style={{ margin: "0 auto" }}

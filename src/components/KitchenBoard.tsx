@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Order, OrderStatus } from "../types";
+import { Order, OrderStatus, OrderSource } from "../types";
 import { formatTime, formatCurrency } from "../utils";
 import { playOverdueAlert, unlockAudio } from "../utils/sound";
 import { VoidCredentialModal } from "./VoidCredentialModal";
 import { useViewport } from "../hooks/useViewport";
+import { useFullscreen } from "../hooks/useFullscreen";
 
 interface Props {
   orders: Order[];
@@ -24,6 +25,35 @@ const LATE_AFTER_MINUTES = 10;
 /** Deliberate repeat cadence for the overdue alert while a ticket stays late */
 const OVERDUE_REPEAT_MS = 60_000;
 
+/* Channel lanes (delivery vs counter) — issue #163 */
+
+/** Lane filter (delivery vs counter) — used by the desktop columns; mobile exposes the same lanes as tabs */
+type ChannelFilter = "all" | "delivery" | "counter";
+/** Mobile tab = an existing status tab or one of the channel tabs */
+type MobileFilter = OrderStatus | ChannelFilter;
+
+const CHANNEL_TABS: { key: ChannelFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "delivery", label: "Delivery" },
+  { key: "counter", label: "Counter" },
+];
+/** Narrowing helper so mobile tabs can be status OR channel without abusing OrderStatus */
+const CHANNEL_KEYS = new Set<MobileFilter>(["all", "delivery", "counter"]);
+const isChannelTab = (f: MobileFilter): f is ChannelFilter => CHANNEL_KEYS.has(f);
+
+/** GrabFood / FoodPanda tickets carry stricter SLAs than counter orders */
+const isDelivery = (o: Order): boolean => o.orderSource === "grab" || o.orderSource === "foodpanda";
+
+const SOURCE_LABELS: Record<OrderSource, string> = { pos: "POS", grab: "GrabFood", foodpanda: "FoodPanda" };
+
+const matchesChannel = (o: Order, channel: ChannelFilter): boolean =>
+  channel === "all" || (channel === "delivery" ? isDelivery(o) : !isDelivery(o));
+
+/** Pure priority sort: delivery first, then oldest first — always applied to a copy. */
+const byPriority = (a: Order, b: Order): number =>
+  Number(isDelivery(b)) - Number(isDelivery(a)) ||
+  new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+
 /** Fire a browser notification only when permitted AND the tab is hidden/unfocused. */
 const notifyLate = (order: Order): void => {
   try {
@@ -39,15 +69,41 @@ const notifyLate = (order: Order): void => {
   }
 };
 
+/** Fullscreen toggle for the KDS header — same labels as the Topbar control. */
+const FullscreenButton: React.FC<{ compact?: boolean }> = ({ compact }) => {
+  const { isFullscreen, toggle } = useFullscreen();
+  return (
+    <button
+      onClick={toggle}
+      className="btn-ghost text-[10px] py-2 px-2.5 rounded-xl transition-all duration-200 opacity-70 hover:opacity-100 shrink-0 font-bold tracking-wide whitespace-nowrap ml-auto"
+      title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+    >
+      {compact ? (isFullscreen ? "✕ Exit" : "⛶ Full") : isFullscreen ? "✕ Exit Fullscreen" : "⛶ Fullscreen"}
+    </button>
+  );
+};
+
 export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOrder, onRefundOrder }) => {
   const [voidTarget, setVoidTarget] = useState<string | null>(null);
   const [refundTarget, setRefundTarget] = useState<string | null>(null);
-  const [mobileFilter, setMobileFilter] = useState<OrderStatus | 'all'>('all');
+  const [mobileFilter, setMobileFilter] = useState<MobileFilter>('all');
+  const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
   const { isMobile } = useViewport();
 
   // Phase 2: orders awaiting gateway payment never hit the kitchen until paid
   const visibleOrders = useMemo(() => orders.filter((o) => o.status !== "pending_payment"), [orders]);
-  const mobileOrders = mobileFilter === 'all' ? visibleOrders : visibleOrders.filter((o) => o.status === mobileFilter);
+  // Delivery lane leads every column; the mobile list follows the same rule
+  const channelOrders = useMemo(
+    () => visibleOrders.filter((o) => matchesChannel(o, channelFilter)),
+    [visibleOrders, channelFilter]
+  );
+  const deliveryTotal = useMemo(() => visibleOrders.filter(isDelivery).length, [visibleOrders]);
+  const mobileOrders = useMemo(() => {
+    const base = isChannelTab(mobileFilter)
+      ? visibleOrders.filter((o) => matchesChannel(o, mobileFilter))
+      : visibleOrders.filter((o) => o.status === mobileFilter);
+    return [...base].sort(byPriority);
+  }, [visibleOrders, mobileFilter]);
 
   // Single 1s ticker for the whole board — cards derive elapsed time from nowMs
   // (replaces one setInterval per ticket card).
@@ -119,34 +175,51 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
   };
 
   return (
-    <div className={`flex-1 min-h-0 ${isMobile ? 'overflow-hidden' : 'flex gap-3 p-4 overflow-x-auto'}`}>
+    <div className={`flex-1 min-h-0 ${isMobile ? 'overflow-hidden' : 'flex flex-col'}`}>
       {isMobile ? (
         <div className="flex flex-col flex-1 overflow-hidden min-h-0 h-full">
-          {/* Mobile tabs */}
-          <div className="flex gap-1.5 p-3 overflow-x-auto shrink-0">
-            <button
-              onClick={() => setMobileFilter('all')}
-              className={`py-2.5 px-3.5 rounded-lg text-[11px] font-bold whitespace-nowrap min-h-[44px] transition-all ${
-                mobileFilter === 'all' ? 'bg-erl-accent text-erl-sidebar' : 'bg-erl-surface text-erl-text-muted'
-              }`}
-            >
-              All ({visibleOrders.length})
-            </button>
-            {COLUMNS.map((col) => {
-              const count = visibleOrders.filter((o) => o.status === col.status).length;
-              return (
-                <button
-                  key={col.status}
-                  onClick={() => setMobileFilter(col.status)}
-                  className={`py-2.5 px-3.5 rounded-lg text-[11px] font-bold whitespace-nowrap min-h-[44px] transition-all ${
-                    mobileFilter === col.status ? 'text-erl-sidebar' : 'bg-erl-surface text-erl-text-muted'
-                  }`}
-                  style={mobileFilter === col.status ? { background: col.color } : undefined}
-                >
-                  {col.label} ({count})
-                </button>
-              );
-            })}
+          {/* Mobile tabs: status lanes + delivery/counter lanes */}
+          <div className="flex items-center gap-1.5 p-3 shrink-0">
+            <div className="flex gap-1.5 overflow-x-auto flex-1 min-w-0">
+              <button
+                onClick={() => setMobileFilter('all')}
+                className={`py-2.5 px-3.5 rounded-lg text-[11px] font-bold whitespace-nowrap min-h-[44px] transition-all ${
+                  mobileFilter === 'all' ? 'bg-erl-accent text-erl-sidebar' : 'bg-erl-surface text-erl-text-muted'
+                }`}
+              >
+                All ({visibleOrders.length})
+              </button>
+              {COLUMNS.map((col) => {
+                const count = visibleOrders.filter((o) => o.status === col.status).length;
+                return (
+                  <button
+                    key={col.status}
+                    onClick={() => setMobileFilter(col.status)}
+                    className={`py-2.5 px-3.5 rounded-lg text-[11px] font-bold whitespace-nowrap min-h-[44px] transition-all ${
+                      mobileFilter === col.status ? 'text-erl-sidebar' : 'bg-erl-surface text-erl-text-muted'
+                    }`}
+                    style={mobileFilter === col.status ? { background: col.color } : undefined}
+                  >
+                    {col.label} ({count})
+                  </button>
+                );
+              })}
+              {CHANNEL_TABS.filter((t) => t.key !== 'all').map((tab) => {
+                const count = tab.key === 'delivery' ? deliveryTotal : visibleOrders.length - deliveryTotal;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setMobileFilter(tab.key)}
+                    className={`py-2.5 px-3.5 rounded-lg text-[11px] font-bold whitespace-nowrap min-h-[44px] transition-all ${
+                      mobileFilter === tab.key ? 'bg-erl-accent text-erl-sidebar' : 'bg-erl-surface text-erl-text-muted'
+                    }`}
+                  >
+                    {tab.label} ({count})
+                  </button>
+                );
+              })}
+            </div>
+            <FullscreenButton compact />
           </div>
           {/* Mobile list */}
           <div className="scroll-area flex-1 overflow-y-auto p-3">
@@ -171,33 +244,64 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
         </div>
       ) : (
         <>
-          {COLUMNS.map((col) => {
-            const colOrders = visibleOrders.filter((o) => o.status === col.status);
-            return (
-              <div key={col.status} className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-[200px]">
-                {/* Column header */}
-                <div className="card-glass flex items-center gap-1.5 mb-2.5 shrink-0 py-2 px-3 rounded-[10px]">
-                  <div className="w-[7px] h-[7px] rounded-full" style={{ background: col.color, boxShadow: `0 0 5px ${col.color}44` }} />
-                  <div className="text-[8.5px] tracking-[1.5px] uppercase font-bold" style={{ color: col.color }}>{col.label}</div>
-                  <div className="text-[8px] text-erl-text-disabled ml-auto bg-erl-surface rounded-[10px] px-[7px] leading-[18px] font-bold">{colOrders.length}</div>
-                </div>
+          {/* KDS toolbar: delivery/counter lane filter + fullscreen (#163/#172) */}
+          <div className="flex items-center gap-1.5 px-4 pt-3 pb-2 shrink-0">
+            <div className="flex gap-1.5 overflow-x-auto">
+              {CHANNEL_TABS.map((tab) => {
+                const count = tab.key === 'all' ? visibleOrders.length
+                  : tab.key === 'delivery' ? deliveryTotal
+                  : visibleOrders.length - deliveryTotal;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setChannelFilter(tab.key)}
+                    className={`py-2 px-3 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
+                      channelFilter === tab.key ? 'bg-erl-accent text-erl-sidebar' : 'bg-erl-surface text-erl-text-muted'
+                    }`}
+                  >
+                    {tab.label} ({count})
+                  </button>
+                );
+              })}
+            </div>
+            <FullscreenButton />
+          </div>
 
-                {/* Orders */}
-                <div className="scroll-area flex-1 flex flex-col gap-1.5 overflow-y-auto min-h-0">
-                  {colOrders.length === 0 && (
-                    <div className="text-center py-8 text-erl-text-disabled text-[9px] tracking-wide">Empty</div>
-                  )}
-                  {colOrders.map((order) => (
-                    <KitchenCard key={order.id} order={order} nowMs={nowMs} colColor={col.color}
-                      onUpdateStatus={onUpdateStatus}
-                      isVoidPending={voidTarget === order.id} onRequestVoid={() => setVoidTarget(order.id)}
-                      isRefundPending={refundTarget === order.id} onRequestRefund={() => setRefundTarget(order.id)}
-                    />
-                  ))}
+          {/* Status columns */}
+          <div className="flex gap-3 px-4 pb-4 flex-1 min-h-0 overflow-x-auto">
+            {COLUMNS.map((col) => {
+              const colOrders = channelOrders.filter((o) => o.status === col.status).sort(byPriority);
+              const colDelivery = colOrders.filter(isDelivery).length;
+              const showDeliveryCount = channelFilter === 'all' && colDelivery > 0;
+              return (
+                <div key={col.status} className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-[200px]">
+                  {/* Column header */}
+                  <div className="card-glass flex items-center gap-1.5 mb-2.5 shrink-0 py-2 px-3 rounded-[10px]">
+                    <div className="w-[7px] h-[7px] rounded-full" style={{ background: col.color, boxShadow: `0 0 5px ${col.color}44` }} />
+                    <div className="text-[8.5px] tracking-[1.5px] uppercase font-bold" style={{ color: col.color }}>{col.label}</div>
+                    {showDeliveryCount && (
+                      <div className="text-[8px] text-erl-sidebar bg-erl-accent rounded-[10px] px-[7px] leading-[18px] font-bold ml-auto" title="Delivery tickets">{colDelivery} Dlv</div>
+                    )}
+                    <div className={`text-[8px] text-erl-text-disabled bg-erl-surface rounded-[10px] px-[7px] leading-[18px] font-bold ${showDeliveryCount ? '' : 'ml-auto'}`}>{colOrders.length}</div>
+                  </div>
+
+                  {/* Orders */}
+                  <div className="scroll-area flex-1 flex flex-col gap-1.5 overflow-y-auto min-h-0">
+                    {colOrders.length === 0 && (
+                      <div className="text-center py-8 text-erl-text-disabled text-[9px] tracking-wide">Empty</div>
+                    )}
+                    {colOrders.map((order) => (
+                      <KitchenCard key={order.id} order={order} nowMs={nowMs} colColor={col.color}
+                        onUpdateStatus={onUpdateStatus}
+                        isVoidPending={voidTarget === order.id} onRequestVoid={() => setVoidTarget(order.id)}
+                        isRefundPending={refundTarget === order.id} onRequestRefund={() => setRefundTarget(order.id)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </>
       )}
       {voidTarget && (
@@ -250,11 +354,23 @@ const KitchenCard: React.FC<KitchenCardProps> = ({ order, nowMs, colColor, onUpd
         </div>
       </div>
 
+      {/* Channel badge: source + order type (#163) */}
+      <div className="flex gap-1.5 sm:gap-1 mb-2.5 sm:mb-2 flex-wrap">
+        <span className={`pill text-[10px] sm:text-[7.5px] py-1 sm:py-[3px] px-2.5 sm:px-2 ${isDelivery(order) ? "pill-accent" : "pill-muted"}`}>
+          {SOURCE_LABELS[order.orderSource || "pos"]}
+        </span>
+        <span className="pill pill-muted text-[10px] sm:text-[7.5px] py-1 sm:py-[3px] px-2.5 sm:px-2">
+          {order.type === "dine-in" ? "Dine-in" : "Takeout"}
+        </span>
+      </div>
+
       {/* Meta pills */}
       <div className="flex gap-1.5 sm:gap-1 mb-2.5 sm:mb-2 flex-wrap">
-        <span className="pill pill-gold text-[10px] sm:text-[7.5px] py-1 sm:py-[3px] px-2.5 sm:px-2">
-          {order.customerName || (order.type === "dine-in" ? "Dine-in" : "Takeout")}
-        </span>
+        {order.customerName && (
+          <span className="pill pill-gold text-[10px] sm:text-[7.5px] py-1 sm:py-[3px] px-2.5 sm:px-2">
+            {order.customerName}
+          </span>
+        )}
         <span className="pill pill-muted text-[10px] sm:text-[7.5px] py-1 sm:py-[3px] px-2.5 sm:px-2">
           {order.staff.name.split(" ")[0]}
         </span>

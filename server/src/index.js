@@ -277,6 +277,9 @@ await pool.query(`
     await pool.query(`ALTER TABLE company_settings MODIFY setting_value MEDIUMTEXT`).catch(() => {});
     console.log('company_settings table ready');
 
+    // KDS late-timer: track when an order actually started preparing (issue #1)
+    await pool.query(`ALTER TABLE orders ADD COLUMN preparing_at TIMESTAMP NULL AFTER completed_at`).catch(() => {});
+
     // Add rfid_alt column for tablet RFID reader compatibility (reversed byte order)
     await pool.query(`ALTER TABLE staff ADD COLUMN rfid_alt VARCHAR(64) DEFAULT NULL AFTER rfid`).catch(() => {});
 

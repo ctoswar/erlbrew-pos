@@ -80,6 +80,7 @@ export interface Order {
   total: number;
   createdAt: Date;
   completedAt?: Date;
+  preparingAt?: Date;
   customerName?: string;
   type: OrderType;
   payMethod: PayMethod;

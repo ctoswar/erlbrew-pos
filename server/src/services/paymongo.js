@@ -89,7 +89,8 @@ export async function handlePaymongoEvent(pool, body, broadcastEvent) {
       await conn.query(
         `UPDATE orders SET pay_status = 'paid',
            reference_number = COALESCE(?, reference_number),
-           status = IF(status = 'pending_payment', 'preparing', status)
+           status = IF(status = 'pending_payment', 'preparing', status),
+           preparing_at = IF(status = 'pending_payment' AND preparing_at IS NULL, NOW(), preparing_at)
          WHERE id = ?`,
         [paymentId, order.id]
       );

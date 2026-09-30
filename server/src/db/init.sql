@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS orders (
   external_order_id VARCHAR(64) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   completed_at TIMESTAMP NULL,
+  preparing_at TIMESTAMP NULL,
   FOREIGN KEY (staff_id) REFERENCES staff(id),
   INDEX idx_orders_ext (order_source, external_order_id)
 );

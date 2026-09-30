@@ -62,6 +62,7 @@ interface ServerOrder {
   total?: number;
   created_at?: string;
   completed_at?: string | null;
+  preparing_at?: string | null;
   customer_name?: string;
   table_name?: string;
   type?: string;
@@ -111,6 +112,7 @@ export function serverOrderToOrder(o: ServerOrder): Order {
     total: Number(o.total) || 0,
     createdAt: parseServerDatetime(o.created_at),
     completedAt: o.completed_at ? parseServerDatetime(o.completed_at) : undefined,
+    preparingAt: o.preparing_at ? parseServerDatetime(o.preparing_at) : undefined,
     customerName: o.customer_name || (o.type === 'dine-in' ? o.table_name : undefined) || undefined,
     type: (o.type || 'dine-in') as OrderType,
     payMethod: (o.pay_method || 'cash') as PayMethod,

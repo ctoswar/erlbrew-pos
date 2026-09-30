@@ -1106,3 +1106,62 @@ export async function getStaffReport(start: string, end: string): Promise<StaffR
   if (!res.ok) throw new Error(`API failed: ${res.status}`);
   return res.json();
 }
+
+// --- Insights (Phase 3) ---
+
+export type AbcClass = 'A' | 'B' | 'C';
+export type MenuQuadrant = 'star' | 'workhorse' | 'hidden_gem' | 'dog' | 'unsold' | null;
+
+export interface MenuItemInsight {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  emoji: string;
+  qty: number;
+  revenue: number;
+  unitCogs: number | null;
+  cogs: number | null;
+  grossProfit: number | null;
+  marginPct: number | null;
+  abc: AbcClass;
+  quadrant: MenuQuadrant;
+}
+
+export interface MenuInsights {
+  windowDays: number;
+  generatedAt: string;
+  quality: {
+    orderCount: number;
+    weeksOfHistory: number;
+    enoughHistory: boolean;
+    itemsAnalyzed: number;
+    itemsSold: number;
+    itemsMissingCost: number;
+    marginCoveragePct: number;
+  };
+  totals: {
+    revenue: number;
+    units: number;
+    orderCount: number;
+    avgOrderValue: number | null;
+    grossProfit: number | null;
+    profitCoveragePct: number;
+    marginPct: number | null;
+  };
+  thresholds: { revenue: number | null; marginPct: number | null };
+  items: MenuItemInsight[];
+  best: MenuItemInsight[];
+  worst: MenuItemInsight[];
+  matrix: {
+    star: MenuItemInsight[];
+    workhorse: MenuItemInsight[];
+    hidden_gem: MenuItemInsight[];
+    dog: MenuItemInsight[];
+  };
+  uncosted: MenuItemInsight[];
+}
+
+export function getMenuInsights(days: number): Promise<MenuInsights> {
+  return apiAdminGet<MenuInsights>(`/insights/menu?days=${days}`);
+}

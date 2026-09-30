@@ -11,6 +11,7 @@ import { AdminDisplayMessages } from "./AdminDisplayMessages";
 import { AdminInventory } from "./AdminInventory";
 import { Dashboard } from "./Dashboard";
 import { AdminReports } from "./AdminReports";
+import { AdminInsights } from "./AdminInsights";
 import { AdminSupplierInvoices } from "./AdminSupplierInvoices";
 import { ZReportScreen } from "./ZReportScreen";
 import { CashDrawerScreen } from "./CashDrawerScreen";
@@ -33,10 +34,11 @@ interface Props {
   onLogout: () => void;
 }
 
-type AdminTab = 'dashboard' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'payroll' | 'audit' | 'customers' | 'locations' | 'transfers';
+type AdminTab = 'dashboard' | 'insights' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'payroll' | 'audit' | 'customers' | 'locations' | 'transfers';
 
 const TABS: { label: string; value: AdminTab; icon: string }[] = [
   { label: 'Dashboard', value: 'dashboard', icon: 'dashboard' },
+  { label: 'Insights', value: 'insights', icon: 'insights' },
   { label: 'Reports', value: 'reports', icon: 'reports' },
   { label: 'Order History', value: 'history', icon: 'history' },
   { label: 'Customers', value: 'customers', icon: 'customers' },
@@ -363,6 +365,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
           </div>
         )}
         {activeTab === 'dashboard' && <Dashboard orders={orders} staffName={staff.name} />}
+        {activeTab === 'insights' && <AdminInsights />}
         {activeTab === 'reports' && <AdminReports />}
         {activeTab === 'history' && <OrderHistory />}
         {activeTab === 'menu' && <AdminMenu />}

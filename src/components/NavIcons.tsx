@@ -8,6 +8,8 @@ export const getNavIcon = (iconName: string): React.ReactNode => {
       return <svg viewBox="0 0 24 24" width="18" height="18" {...s}><rect x="3" y="3" width="7" height="9" rx="1.5" fill="#C4956A" stroke="#8B5E3C"/><rect x="14" y="3" width="7" height="5" rx="1.5" fill="#E8D5C4" stroke="#8B5E3C"/><rect x="14" y="12" width="7" height="9" rx="1.5" fill="#D4A87A" stroke="#8B5E3C"/><rect x="3" y="16" width="7" height="5" rx="1.5" fill="#B8956A" stroke="#8B5E3C"/></svg>;
     case "reports":
       return <svg viewBox="0 0 24 24" width="18" height="18" {...s}><path d="M3 3v18h18" stroke="#8B5E3C"/><path d="M7 14l3-3 4 4 5-5" stroke="#C4956A" strokeWidth="2"/><circle cx="7" cy="14" r="1.5" fill="#C4956A"/><circle cx="10" cy="11" r="1.5" fill="#C4956A"/><circle cx="14" cy="15" r="1.5" fill="#C4956A"/><circle cx="19" cy="10" r="1.5" fill="#C4956A"/></svg>;
+    case "insights":
+      return <svg viewBox="0 0 24 24" width="18" height="18" {...s}><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3z" fill="#C9873A" stroke="#8B5E3C"/><path d="M18.5 14.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z" fill="#E8D5C4" stroke="#8B5E3C"/><path d="M5 15l.7 1.6 1.6.7-1.6.7L5 19.6l-.7-1.6-1.6-.7 1.6-.7L5 15z" fill="#C4956A" stroke="#8B5E3C"/></svg>;
     case "history":
       return <svg viewBox="0 0 24 24" width="18" height="18" {...s}><rect x="5" y="4" width="14" height="17" rx="2" fill="#E8D5C4" stroke="#8B5E3C"/><path d="M9 4V2h6v2" fill="none" stroke="#8B5E3C"/><line x1="9" y1="10" x2="15" y2="10" stroke="#8B5E3C"/><line x1="9" y1="14" x2="13" y2="14" stroke="#8B5E3C"/><line x1="9" y1="18" x2="11" y2="18" stroke="#8B5E3C"/></svg>;
     case "customers":

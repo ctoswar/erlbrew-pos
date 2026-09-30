@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { formatCurrency } from "../utils";
 import { getMenuInsights, MenuInsights, MenuItemInsight } from "../utils/api";
 import {
@@ -69,17 +69,22 @@ export const AdminInsights: React.FC = () => {
   const [data, setData] = useState<MenuInsights | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   const load = useCallback(async (d: number) => {
+    const id = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
-      setData(await getMenuInsights(d));
+      const result = await getMenuInsights(d);
+      if (id === requestIdRef.current) setData(result);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load insights");
-      setData(null);
+      if (id === requestIdRef.current) {
+        setError(e instanceof Error ? e.message : "Failed to load insights");
+        setData(null);
+      }
     } finally {
-      setLoading(false);
+      if (id === requestIdRef.current) setLoading(false);
     }
   }, []);
 
@@ -157,7 +162,15 @@ export const AdminInsights: React.FC = () => {
               </div>
               <div className="bg-erl-surface rounded-[10px] p-3">
                 <div className={labelStyle}>Gross Profit</div>
-                <div className="text-base font-bold mt-1 text-erl-success">
+                <div
+                  className={`text-base font-bold mt-1 ${
+                    data.totals.grossProfit == null
+                      ? "text-erl-muted"
+                      : data.totals.grossProfit < 0
+                        ? "text-erl-danger"
+                        : "text-erl-success"
+                  }`}
+                >
                   {money(data.totals.grossProfit)}
                   {data.totals.grossProfit != null && data.totals.profitCoveragePct < 100 && (
                     <span className="text-[9px] font-normal text-erl-muted"> ({data.totals.profitCoveragePct}%)</span>

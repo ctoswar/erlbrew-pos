@@ -1,0 +1,78 @@
+services:
+  # ── Backend API ─────────────────────────────────────────────────────────────
+  erlbw-api:
+    build: ./server
+    container_name: erlbw-api
+    restart: unless-stopped
+    expose:
+      - "3001"                     # Internal port (not published to host)
+    ports:
+      - "3001:3001"                # Still accessible on host for dev/debug
+    env_file:
+      - ./server/.env              # All secrets come from .env — no hardcoded credentials
+    environment:
+      PORT: 3001
+      # Optional AI briefing service. Start it with:
+      # OLLAMA_ENABLED=true docker compose --profile ai up -d
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-false}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
+      OLLAMA_TIMEOUT_MS: ${OLLAMA_TIMEOUT_MS:-5000}
+      # CORS: allow the frontend container by Docker DNS name
+      # Also allow by IP range for direct tablet access on LAN
+      # Override or append in your .env as needed
+      CORS_ORIGINS: http://erlbrew-pos,http://localhost:3000,http://localhost:3004,http://192.168.*,http://100.*,https://pos.tirona.site
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/menu"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - erlbrew-net
+
+  # Optional local model runtime. Analytics remain deterministic if this
+  # profile is disabled or the model is unavailable.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: erlbrew-ollama
+    profiles:
+      - ai
+    restart: unless-stopped
+    expose:
+      - "11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - erlbrew-net
+
+  # ── Frontend (React → nginx) ────────────────────────────────────────────────
+  erlbrew-pos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # VITE_API_URL empty → nginx proxies /api to backend (see nginx.conf)
+        VITE_API_URL: ""
+    container_name: erlbrew-pos
+    restart: unless-stopped
+    ports:
+      - "3004:80"                   # Host:container — tablets browse to this
+    depends_on:
+      erlbw-api:
+        condition: service_healthy  # Don't start frontend until API is up
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - erlbrew-net
+
+networks:
+  erlbrew-net:
+    driver: bridge
+
+volumes:
+  ollama-data:

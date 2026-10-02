@@ -28,6 +28,7 @@ import accountingRouter from './routes/accounting.js';
 import insightsRouter from './routes/insights.js';
 import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware } from './middleware/auth.js';
+import { locationScope, scopedLocationCondition } from './middleware/location.js';
 import rateLimit from 'express-rate-limit';
 
 const DEFAULT_PRINT_SERVER = null; // must be configured via env or settings
@@ -108,6 +109,7 @@ const pool = mysql.createPool({
   uri: process.env.DATABASE_URL,
   dateStrings: true,
 });
+app.locals.pool = pool;
 
 // Force MySQL session timezone to Asia/Manila (UTC+8) for every query.
 // TIMESTAMP columns store UTC internally and convert to session timezone on read.
@@ -498,6 +500,15 @@ await pool.query(`
     await pool.query(`ALTER TABLE time_records ADD INDEX idx_clock_location (location_id)`).catch(() => {});
     await pool.query(`ALTER TABLE staff ADD COLUMN location_id INT DEFAULT NULL AFTER schedule_id`).catch(() => {});
     await pool.query(`ALTER TABLE staff ADD INDEX idx_staff_location (location_id)`).catch(() => {});
+    const [[defaultLocation]] = await pool.query(
+      'SELECT id FROM locations WHERE is_default = TRUE ORDER BY id LIMIT 1'
+    ).catch(() => [[{ id: 1 }]]);
+    if (defaultLocation?.id) {
+      await pool.query(
+        'UPDATE staff SET location_id = ? WHERE location_id IS NULL AND role <> "Manager"',
+        [defaultLocation.id]
+      ).catch(() => {});
+    }
 
     // Inventory transfers table
     await pool.query(`
@@ -575,7 +586,7 @@ async function validateSchema() {
     order_item_modifiers: ['id', 'order_item_id', 'modifier_name', 'modifier_price'],
     inventory: ['id', 'location_id', 'name', 'category', 'unit', 'stock', 'low_stock_threshold'],
     recipes: ['menu_item_id', 'inventory_item_id', 'quantity'],
-    staff: ['id', 'rfid', 'name', 'role', 'initials', 'color'],
+    staff: ['id', 'rfid', 'name', 'role', 'initials', 'color', 'location_id'],
   };
   const missing = [];
   const tableStatus = {};
@@ -615,16 +626,35 @@ const sseClients = new Set();
 
 function broadcastEvent(event, data) {
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-  for (const res of sseClients) {
+  const eventLocationId = Number(data?.location_id);
+  for (const client of sseClients) {
+    if (Number.isInteger(eventLocationId) && client.locationId !== null && client.locationId !== eventLocationId) {
+      continue;
+    }
     try {
-      res.write(payload);
+      client.res.write(payload);
     } catch (e) {
-      sseClients.delete(res);
+      sseClients.delete(client);
     }
   }
 }
 
 app.get('/api/events', (req, res) => {
+  const token = typeof req.query.token === 'string' ? req.query.token : '';
+  let user;
+  try {
+    user = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (e) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+  const requestedLocationId = req.query.location_id ? Number(req.query.location_id) : null;
+  const assignedLocationId = Number(user.location_id);
+  const locationId = user.role === 'Manager'
+    ? (Number.isInteger(requestedLocationId) && requestedLocationId > 0 ? requestedLocationId : null)
+    : (Number.isInteger(assignedLocationId) && assignedLocationId > 0 ? assignedLocationId : null);
+  if (user.role !== 'Manager' && locationId === null) {
+    return res.status(403).json({ error: 'Staff account is not assigned to a location' });
+  }
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -636,9 +666,10 @@ app.get('/api/events', (req, res) => {
     try { res.write(': heartbeat\n\n'); } catch (e) { clearInterval(heartbeat); }
   }, 30000);
 
-  sseClients.add(res);
+  const client = { res, locationId };
+  sseClients.add(client);
   req.on('close', () => {
-    sseClients.delete(res);
+    sseClients.delete(client);
     clearInterval(heartbeat);
   });
 });
@@ -680,11 +711,12 @@ app.use('/api/locations', locationsRoutes(pool));
 app.use('/api/transfers', transfersRoutes(pool));
 
 // Google Sheets sync: write Dashboard to Dashboard tab
-app.post('/api/sheets/sync-dashboard', async (req, res) => {
+app.post('/api/sheets/sync-dashboard', authMiddleware, locationScope, async (req, res) => {
   if (!gs) return res.status(503).json({ error: 'Sheets not configured' });
   try {
     // Fetch today's orders (same as GET /orders/today)
     const today = new Date().toISOString().slice(0, 10);
+    const orderScope = scopedLocationCondition(req, 'o.location_id');
     const [orderRows] = await pool.query(`
       SELECT o.id, o.status, o.subtotal, o.tax, o.total,
 o.customer_name, o.table_name, o.type, o.pay_method,
@@ -692,9 +724,9 @@ o.customer_name, o.table_name, o.type, o.pay_method,
              s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
       FROM orders o
       LEFT JOIN staff s ON o.staff_id = s.id
-      WHERE DATE(o.created_at) = CURDATE()
+      WHERE DATE(o.created_at) = CURDATE()${orderScope.sql}
       ORDER BY o.created_at DESC
-    `);
+    `, orderScope.params);
 
     // Fetch order items
     const ids = orderRows.map((r) => r.id);
@@ -741,9 +773,9 @@ o.customer_name, o.table_name, o.type, o.pay_method,
         FROM orders o
         JOIN order_items oi ON o.id = oi.order_id
         JOIN recipes r ON oi.menu_item_id = r.menu_item_id
-        JOIN inventory i ON r.inventory_item_id = i.id
-        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)`,
-        [today, today]
+        JOIN inventory i ON r.inventory_item_id = i.id AND i.location_id = o.location_id
+        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)${orderScope.sql}`,
+        [today, today, ...orderScope.params]
       );
       const cogs = Number((tot && tot[0] && tot[0].cogs) || 0);
       const [detailsRows] = await pool.query(`
@@ -752,10 +784,10 @@ o.customer_name, o.table_name, o.type, o.pay_method,
         FROM orders o
         JOIN order_items oi ON o.id = oi.order_id
         JOIN recipes r ON oi.menu_item_id = r.menu_item_id
-        JOIN inventory i ON r.inventory_item_id = i.id
-        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)
+        JOIN inventory i ON r.inventory_item_id = i.id AND i.location_id = o.location_id
+        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)${orderScope.sql}
         GROUP BY o.id`,
-        [today, today]
+        [today, today, ...orderScope.params]
       );
       cogsData = {
         cogs,
@@ -935,15 +967,18 @@ cron.schedule('0 0 0 * * *', async () => {
 
   console.log(`[cron] Generating Z-Report for ${yesterdayStr}...`);
   try {
-    const report = await ordersExports.buildZReportData(pool, yesterdayStr);
-    const [ins] = await pool.query(`
-      INSERT INTO z_reports (staff_id, report_date, period_start, period_end, total_sales, total_orders,
-        total_cash, total_card, total_ewallet, total_refunds, total_voids, total_cogs, gross_profit)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [report.staff_id, report.report_date, report.period_start, report.period_end,
-        report.total_sales, report.total_orders, report.total_cash, report.total_card,
-        report.total_ewallet, report.total_refunds, report.total_voids, report.total_cogs, report.gross_profit]);
-    console.log(`[cron] Z-Report #${ins.insertId} for ${yesterdayStr} saved.`);
+    const [locations] = await pool.query('SELECT id FROM locations WHERE is_active = TRUE ORDER BY id');
+    for (const location of locations) {
+      const report = await ordersExports.buildZReportData(pool, yesterdayStr, location.id);
+      const [ins] = await pool.query(`
+        INSERT INTO z_reports (staff_id, report_date, period_start, period_end, total_sales, total_orders,
+          total_cash, total_card, total_ewallet, total_refunds, total_voids, total_cogs, gross_profit, location_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [report.staff_id, report.report_date, report.period_start, report.period_end,
+          report.total_sales, report.total_orders, report.total_cash, report.total_card,
+          report.total_ewallet, report.total_refunds, report.total_voids, report.total_cogs, report.gross_profit, location.id]);
+      console.log(`[cron] Z-Report #${ins.insertId} for ${yesterdayStr} location ${location.id} saved.`);
+    }
   } catch (e) {
     console.error(`[cron] Z-Report generation failed: ${e.message}`);
   }

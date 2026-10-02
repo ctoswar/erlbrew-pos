@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import { locationScope, requireLocationId, scopedLocationCondition } from '../middleware/location.js';
 import { logAudit } from '../services/audit.js';
 
 // Helper: log a stock movement to the audit trail
@@ -40,11 +41,11 @@ export default function inventoryRouter(pool, googleSheets) {
   }
 
   // GET all inventory (requires authentication)
-  router.get('/', authMiddleware, async (req, res) => {
+  router.get('/', authMiddleware, locationScope, async (req, res) => {
     try {
-      const { location_id } = req.query;
-      const locCondition = location_id ? 'WHERE i.location_id = ?' : '';
-      const locParams = location_id ? [location_id] : [];
+      const scope = scopedLocationCondition(req, 'i.location_id');
+      const locCondition = scope.sql ? `WHERE ${scope.sql.slice(5)}` : '';
+      const locParams = scope.params;
       // Check if cost columns exist before selecting them (graceful if migration not applied)
       let hasCost = false;
       try {
@@ -69,8 +70,8 @@ export default function inventoryRouter(pool, googleSheets) {
   });
 
 // POST create inventory item (admin only)
-router.post('/', authMiddleware, async (req, res) => {
-    const { id, name, category, unit, stock, low_stock_threshold, purchase_cost, unit_cost, location_id } = req.body;
+router.post('/', authMiddleware, adminMiddleware, locationScope, requireLocationId, async (req, res) => {
+    const { id, name, category, unit, stock, low_stock_threshold, purchase_cost, unit_cost } = req.body;
     const err = validate(req, res, {
       id: { required: true, type: 'string', maxLen: 32 },
       name: { required: true, type: 'string', maxLen: 128 },
@@ -85,7 +86,7 @@ router.post('/', authMiddleware, async (req, res) => {
     try {
       // Only insert cost columns if they exist in the DB (migration may not be applied yet)
       const baseCols = '(id, name, category, unit, stock, low_stock_threshold, location_id)';
-      const baseVals = [id, name, category, unit || 'pcs', stock ?? 0, low_stock_threshold ?? 10, location_id || 1];
+      const baseVals = [id, name, category, unit || 'pcs', stock ?? 0, low_stock_threshold ?? 10, req.locationId];
       const ph = baseVals.map(() => '?').join(', ');
       let sql = `INSERT INTO inventory ${baseCols} VALUES (${ph})`;
       let vals = baseVals;
@@ -119,10 +120,10 @@ router.post('/', authMiddleware, async (req, res) => {
   });
 
 // PUT update inventory item (including stock adjustment) (admin only)
-router.put('/:id', authMiddleware, async (req, res) => {
+router.put('/:id', authMiddleware, adminMiddleware, locationScope, requireLocationId, async (req, res) => {
     const { id } = req.params;
     const { name, category, unit, stock, low_stock_threshold, purchase_cost, unit_cost } = req.body;
-    const locationId = req.query.location_id || req.body.location_id || 1;
+    const locationId = req.locationId;
     if (!id || typeof id !== 'string' || id.length > 32) {
       return res.status(400).json({ error: 'Invalid id' });
     }
@@ -190,9 +191,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
   });
 
 // DELETE inventory item (admin only)
-  router.delete('/:id', authMiddleware, async (req, res) => {
+  router.delete('/:id', authMiddleware, adminMiddleware, locationScope, requireLocationId, async (req, res) => {
     const { id } = req.params;
-    const locationId = req.query.location_id || 1;
+    const locationId = req.locationId;
     if (!id || typeof id !== 'string' || id.length > 32) {
       return res.status(400).json({ error: 'Invalid id' });
     }
@@ -247,7 +248,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
   });
 
   // GET /api/inventory/movements — list movements with filters
-  router.get('/movements', authMiddleware, async (req, res) => {
+  router.get('/movements', authMiddleware, locationScope, async (req, res) => {
     try {
       const { itemId, type, start, end, limit } = req.query;
       const where = [];
@@ -269,9 +270,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
         where.push('im.created_at < DATE_ADD(?, INTERVAL 1 DAY)');
         params.push(end);
       }
-      if (req.query.location_id) {
+      if (req.locationId !== null && req.locationId !== undefined) {
         where.push('im.location_id = ?');
-        params.push(req.query.location_id);
+        params.push(req.locationId);
       }
 
       const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
@@ -286,7 +287,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
                im.notes, im.created_at,
                i.name AS inventory_name, i.category AS inventory_category, i.unit
         FROM inventory_movements im
-        JOIN inventory i ON i.id = im.inventory_item_id
+        JOIN inventory i ON i.id = im.inventory_item_id AND i.location_id = im.location_id
         ${whereClause}
         ORDER BY im.created_at DESC
         ${limitClause}
@@ -300,9 +301,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
   });
 
   // POST /api/inventory/movements — manual stock adjustment (admin only)
-  router.post('/movements', authMiddleware, adminMiddleware, async (req, res) => {
-    const { inventory_item_id, movement_type, quantity, notes, location_id } = req.body;
-    const locationId = location_id || 1;
+  router.post('/movements', authMiddleware, adminMiddleware, locationScope, requireLocationId, async (req, res) => {
+    const { inventory_item_id, movement_type, quantity, notes } = req.body;
+    const locationId = req.locationId;
 
     if (!inventory_item_id || !movement_type || quantity === undefined) {
       return res.status(400).json({ error: 'inventory_item_id, movement_type, and quantity are required' });

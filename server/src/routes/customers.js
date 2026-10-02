@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { customerAuthMiddleware } from '../middleware/customerAuth.js';
 import { logAudit } from '../services/audit.js';
+import { locationScope, scopedLocationCondition } from '../middleware/location.js';
 
 export default function customersRouter(pool) {
   const router = Router();
@@ -394,16 +395,17 @@ export default function customersRouter(pool) {
   });
 
   // GET /api/customers/:id/orders — order history
-  router.get('/:id/orders', authMiddleware, async (req, res) => {
+  router.get('/:id/orders', authMiddleware, locationScope, async (req, res) => {
     try {
+      const scope = scopedLocationCondition(req, 'o.location_id');
       const [rows] = await pool.query(
         `SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.pay_method, o.created_at, o.completed_at,
                 s.name AS staff_name
          FROM orders o
          LEFT JOIN staff s ON o.staff_id = s.id
-         WHERE o.customer_id = ?
+         WHERE o.customer_id = ?${scope.sql}
          ORDER BY o.created_at DESC`,
-        [req.params.id]
+        [req.params.id, ...scope.params]
       );
       res.json(rows);
     } catch (e) {

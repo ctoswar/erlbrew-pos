@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { MenuItem } from "../types";
 import { apiAdminGet, batchApplyIngredients } from "../utils/api";
 import { getIconByEmoji } from "./FoodIcons";
+import { useLocation } from "../contexts/LocationContext";
 import {
   getCompatibleUnits,
   defaultRecipeUnit,
@@ -40,6 +41,7 @@ export const ApplyIngredientModal: React.FC<Props> = ({
   onApplied,
   onClose,
 }) => {
+  const { currentLocationId } = useLocation();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [selectedRecipe, setSelectedRecipe] = useState<Record<string, string>>({});
   const [selectedUnits, setSelectedUnits] = useState<Record<string, string>>({});
@@ -80,7 +82,7 @@ export const ApplyIngredientModal: React.FC<Props> = ({
       }
     };
     load();
-  }, [sourceItemId]);
+  }, [sourceItemId, currentLocationId]);
 
   // Derive categories for menu items
   const categories = useMemo(() => {
@@ -195,7 +197,7 @@ export const ApplyIngredientModal: React.FC<Props> = ({
           return { inventory_item_id, quantity: dbQty };
         });
 
-      const res = await batchApplyIngredients(items, Array.from(selectedIds));
+      const res = await batchApplyIngredients(items, Array.from(selectedIds), currentLocationId);
       setResult(res);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);

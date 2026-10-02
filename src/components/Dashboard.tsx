@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Order, CartItem, DiscountType } from "../types";
 import { buildDailySummary, formatCurrency, formatTime, toLocalDateStr } from "../utils";
-import { apiAdminGet, apiGet, resetCogs, resetInventoryCosts } from "../utils/api";
+import { apiAdminGet, apiAdminPost, apiGet, resetCogs, resetInventoryCosts } from "../utils/api";
 import { ReceiptPreview } from "./ReceiptPreview";
 import { AnimatedDatePicker } from "./AnimatedDatePicker";
 import { useLocation } from "../contexts/LocationContext";
@@ -102,13 +102,13 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
     const timer = setTimeout(async () => {
       setSyncStatus('syncing');
       try {
-        const res = await fetch('/api/sheets/sync-dashboard', { method: 'POST' });
-        setSyncStatus(res.ok ? 'ok' : 'error');
+        await apiAdminPost('/sheets/sync-dashboard', { location_id: currentLocationId });
+        setSyncStatus('ok');
       } catch { setSyncStatus('error'); }
       setTimeout(() => setSyncStatus('idle'), 3000);
     }, 2000);
     return () => clearTimeout(timer);
-  }, [orders.length]);
+  }, [orders.length, currentLocationId]);
 
   // Fetch yesterday's orders
   useEffect(() => {
@@ -169,12 +169,13 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
 
   // Low inventory
   useEffect(() => {
-    apiGet<Record<string, unknown>[]>('/inventory')
+    const locationQuery = currentLocationId == null ? "" : `?location_id=${encodeURIComponent(String(currentLocationId))}`;
+    apiGet<Record<string, unknown>[]>(`/inventory${locationQuery}`)
       .then((data) => {
         const low = data.filter((item: any) => item.stock <= item.low_stock_threshold && item.low_stock_threshold > 0);
         setLowStockItems(low.map((item: any) => ({ name: item.name, stock: item.stock, threshold: item.low_stock_threshold })));
       }).catch(() => {});
-  }, []);
+  }, [currentLocationId]);
 
   const filteredOrders = orders.filter((o) => {
     const d = toLocalDateStr(o.createdAt);

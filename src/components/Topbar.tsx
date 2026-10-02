@@ -7,6 +7,7 @@ import { useViewport } from "../hooks/useViewport";
 import { useFullscreen } from "../hooks/useFullscreen";
 import { formatTime } from "../utils";
 import { apiPost } from "../utils/api";
+import { useLocation } from "../contexts/LocationContext";
 
 interface Props {
   staff: Staff;
@@ -31,6 +32,7 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
   const [drawerStatus, setDrawerStatus] = useState<'idle' | 'opening' | 'ok' | 'error'>('idle');
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
   const { isMobile, isDesktop } = useViewport();
+  const { currentLocation } = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleOpenDrawer = useCallback(async () => {
@@ -166,6 +168,11 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
 
           {/* Staff pill */}
           <div className="flex items-center gap-2 md:gap-2.5 ml-0.5">
+            {!isMobile && currentLocation && (
+              <div className="text-[9px] text-erl-accent-dim tracking-wide max-w-[90px] truncate" title={currentLocation.name}>
+                {currentLocation.name}
+              </div>
+            )}
             <div
               className="w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-bold text-white shrink-0"
               style={{

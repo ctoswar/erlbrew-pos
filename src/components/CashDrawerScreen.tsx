@@ -5,6 +5,7 @@ import {
   getCashDrawerTransactions, createCashDrawerTransaction,
   type CashDrawer, type CashDrawerTransaction,
 } from "../utils/api";
+import { useLocation } from "../contexts/LocationContext";
 
 const TX_LABELS: Record<string, string> = {
   cash_in: 'Cash In',
@@ -21,6 +22,7 @@ const TX_COLORS: Record<string, string> = {
 };
 
 export const CashDrawerScreen: React.FC = () => {
+  const { currentLocationId } = useLocation();
   const [drawer, setDrawer] = useState<CashDrawer | null>(null);
   const [drawerStatus, setDrawerStatus] = useState<'idle' | 'opening' | 'saving' | 'ok' | 'error'>('idle');
   const [msg, setMsg] = useState<{ text: string; type: 'info' | 'success' | 'error' }>({ text: '', type: 'info' });
@@ -43,7 +45,7 @@ export const CashDrawerScreen: React.FC = () => {
 
   const loadDrawer = useCallback(async () => {
     try {
-      const d = await getCashDrawer();
+      const d = await getCashDrawer(currentLocationId);
       setDrawer(d);
       setDrawerId(d.id);
       setCashPayouts(d.cash_payouts);
@@ -52,19 +54,19 @@ export const CashDrawerScreen: React.FC = () => {
     } catch (e) {
       setMsg({ text: 'Failed to load cash drawer', type: 'error' });
     }
-  }, []);
+  }, [currentLocationId]);
 
   const loadTransactions = useCallback(async () => {
     setTxLoading(true);
     try {
-      const data = await getCashDrawerTransactions();
+      const data = await getCashDrawerTransactions(currentLocationId);
       setTransactions(data);
     } catch {
       setTransactions([]);
     } finally {
       setTxLoading(false);
     }
-  }, []);
+  }, [currentLocationId]);
 
   useEffect(() => {
     loadDrawer();
@@ -77,7 +79,7 @@ export const CashDrawerScreen: React.FC = () => {
     try {
       // If no DB record exists yet, create one first with the opening float
       if (!drawerId) {
-        const d = await openCashDrawer(openingFloat);
+        const d = await openCashDrawer(openingFloat, currentLocationId);
         setDrawer(d);
         setDrawerId(d.id);
         setCashPayouts(d.cash_payouts);
@@ -109,6 +111,7 @@ export const CashDrawerScreen: React.FC = () => {
         cash_payouts: cashPayouts,
         notes,
         action: 'save',
+        location_id: currentLocationId,
       });
       setDrawer(updated);
       setDrawerStatus('ok');
@@ -131,6 +134,7 @@ export const CashDrawerScreen: React.FC = () => {
         cash_payouts: cashPayouts,
         notes,
         action: 'close',
+        location_id: currentLocationId,
       });
       setDrawer(closed);
       setDrawerStatus('ok');
@@ -164,6 +168,7 @@ export const CashDrawerScreen: React.FC = () => {
         amount,
         reason: txReason || undefined,
         staff_name: undefined,
+        location_id: currentLocationId,
       });
       setShowTxModal(false);
       loadDrawer();

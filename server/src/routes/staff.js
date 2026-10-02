@@ -60,7 +60,7 @@ export default function staffRouter(pool){
     try {
       const rfid = (req.params.rfid || '').replace(/[\x00-\x1f]/g, '').trim().toUpperCase();
       const [rows] = await pool.query(
-        'SELECT id, rfid, rfid_alt, name, role, initials, color, created_at FROM staff WHERE rfid = ? OR rfid_alt = ?',
+        'SELECT id, rfid, rfid_alt, name, role, initials, color, location_id, created_at FROM staff WHERE rfid = ? OR rfid_alt = ?',
         [rfid, rfid]
       );
       return res.json(rows[0] || null);
@@ -74,7 +74,7 @@ export default function staffRouter(pool){
     try {
       // req.user is set by authMiddleware (decoded JWT payload has { sub: id, name, role })
       const [rows] = await pool.query(
-        'SELECT id, rfid, name, role, initials, color FROM staff WHERE id = ?',
+        'SELECT id, rfid, name, role, initials, color, location_id FROM staff WHERE id = ?',
         [req.user.sub]
       );
       if (!rows.length) return res.status(404).json({ error: 'Staff not found' });
@@ -90,6 +90,7 @@ export default function staffRouter(pool){
       const [rows] = await pool.query(`
         SELECT s.id, s.rfid, s.rfid_alt, s.name, s.role, s.initials, s.color,
                s.pay_basis, s.daily_rate, s.monthly_salary, s.schedule_id,
+               s.location_id,
                st.name AS schedule_name,
                ssd.shift_start, ssd.shift_end, ssd.lunch_start, ssd.lunch_end, ssd.snack_start, ssd.snack_end,
                s.created_at
@@ -110,7 +111,7 @@ export default function staffRouter(pool){
 
 // Create staff (admin only, token required)
 router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
-    const { rfid, rfid_alt, pin, name, role, initials, color } = req.body;
+    const { rfid, rfid_alt, pin, name, role, initials, color, location_id } = req.body;
     // Validation: required fields and constraints per FIX 5
     const err = validate(req, res, {
       rfid: { required: true, type: 'string', maxLen: 64 },
@@ -126,7 +127,11 @@ router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
       }
     }
     try {
-      const [r] = await pool.query('INSERT INTO staff (rfid, rfid_alt, pin, name, role, initials, color) VALUES (?, ?, ?, ?, ?, ?, ?)', [rfid, rfid_alt || null, pin, name, role, initials, color]);
+      const normalizedLocationId = location_id === null || location_id === undefined || location_id === '' ? null : Number(location_id);
+      if (normalizedLocationId !== null && (!Number.isInteger(normalizedLocationId) || normalizedLocationId < 1)) {
+        return res.status(400).json({ error: 'location_id must be a positive integer or null' });
+      }
+      const [r] = await pool.query('INSERT INTO staff (rfid, rfid_alt, pin, name, role, initials, color, location_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [rfid, rfid_alt || null, pin, name, role, initials, color, normalizedLocationId]);
       await logAudit(pool, req, { action: 'staff_create', entityType: 'staff', entityId: String(r.insertId), details: { name, role } });
       res.json({ id: r.insertId });
     } catch (e) {
@@ -138,7 +143,7 @@ router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
 router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
-    const [rows] = await pool.query('SELECT id, rfid, name, role, initials, color FROM staff WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT id, rfid, name, role, initials, color, location_id FROM staff WHERE id = ?', [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(rows[0]);
   } catch (e) {
@@ -149,7 +154,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // PUT update staff (admin only)
   router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
-    const { rfid, rfid_alt, name, role, initials, color, password, pay_basis, daily_rate, monthly_salary, schedule_id } = req.body;
+    const { rfid, rfid_alt, name, role, initials, color, password, pay_basis, daily_rate, monthly_salary, schedule_id, location_id } = req.body;
     try {
       const fields = [];
       const values = [];
@@ -163,6 +168,14 @@ router.get('/:id', authMiddleware, async (req, res) => {
       if (daily_rate !== undefined) { fields.push('daily_rate = ?'); values.push(daily_rate || null); }
       if (monthly_salary !== undefined) { fields.push('monthly_salary = ?'); values.push(monthly_salary || null); }
       if (schedule_id !== undefined) { fields.push('schedule_id = ?'); values.push(schedule_id || null); }
+      if (location_id !== undefined) {
+        const normalizedLocationId = location_id === null || location_id === '' ? null : Number(location_id);
+        if (normalizedLocationId !== null && (!Number.isInteger(normalizedLocationId) || normalizedLocationId < 1)) {
+          return res.status(400).json({ error: 'location_id must be a positive integer or null' });
+        }
+        fields.push('location_id = ?');
+        values.push(normalizedLocationId);
+      }
       if (password !== undefined) {
         const pw = String(password);
         if (pw.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
@@ -176,6 +189,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
     const [rows] = await pool.query(`
       SELECT s.id, s.rfid, s.rfid_alt, s.name, s.role, s.initials, s.color,
              s.pay_basis, s.daily_rate, s.monthly_salary, s.schedule_id,
+             s.location_id,
              ss.name AS schedule_name,
              ss.shift_start, ss.shift_end, ss.lunch_start, ss.lunch_end, ss.snack_start, ss.snack_end
       FROM staff s
@@ -215,7 +229,7 @@ router.post('/login', async (req, res) => {
   try {
     // RFID + PIN login (from card scan)
 if (rfid && pin) {
-      const [rows] = await pool.query('SELECT id, name, role, pin FROM staff WHERE rfid = ? OR rfid_alt = ?', [rfid, rfid]);
+      const [rows] = await pool.query('SELECT id, name, role, pin, location_id FROM staff WHERE rfid = ? OR rfid_alt = ?', [rfid, rfid]);
       if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' });
       const user = rows[0];
 // Verify PIN — supports both bcrypt-hashed and plain-text PINs
@@ -226,19 +240,22 @@ if (rfid && pin) {
         ok = pin === user.pin;
       }
       if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+      if (user.role !== 'Manager' && !user.location_id) {
+        return res.status(403).json({ error: 'Staff account is not assigned to a location', code: 'LOCATION_ASSIGNMENT_REQUIRED' });
+      }
 
     // Auto clock-in / clock-out on login
     let clockAction = null;
     try { clockAction = await autoClockIn(user.id, rfid); } catch (e) { console.error('Auto clock-in failed:', e); }
 
-    const token = jwt.sign({ sub: user.id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ sub: user.id, name: user.name, role: user.role, location_id: user.location_id || null }, process.env.JWT_SECRET, { expiresIn: '1d' });
     // Audit: login via RFID+PIN
     await logAuditDirect(pool, { staffId: user.id, staffName: user.name, action: 'staff_login', entityType: 'staff', entityId: String(user.id), details: { method: 'rfid_pin' }, ip: req.ip || req.socket?.remoteAddress });
     return res.json({ token, clockAction });
   }
   // Username + Password login (admin with password hash OR PIN login)
     if (username) {
-      const [rows] = await pool.query('SELECT id, name, role, pin, password_hash FROM staff WHERE name = ?', [username]);
+      const [rows] = await pool.query('SELECT id, name, role, pin, password_hash, location_id FROM staff WHERE name = ?', [username]);
       if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' });
       const user = rows[0];
       if (user.password_hash) {
@@ -250,7 +267,10 @@ if (rfid && pin) {
         const ok = await bcrypt.compare(password, user.pin);
         if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
       }
-      const token = jwt.sign({ sub: user.id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+      if (user.role !== 'Manager' && !user.location_id) {
+        return res.status(403).json({ error: 'Staff account is not assigned to a location', code: 'LOCATION_ASSIGNMENT_REQUIRED' });
+      }
+      const token = jwt.sign({ sub: user.id, name: user.name, role: user.role, location_id: user.location_id || null }, process.env.JWT_SECRET, { expiresIn: '1d' });
       // Audit: login via username+password
       await logAuditDirect(pool, { staffId: user.id, staffName: user.name, action: 'staff_login', entityType: 'staff', entityId: String(user.id), details: { method: 'username_password' }, ip: req.ip || req.socket?.remoteAddress });
       return res.json({ token });

@@ -7,6 +7,7 @@ import { ReceiptPreview } from "./ReceiptPreview";
 import { AnimatedSelect } from "./AnimatedSelect";
 import { AnimatedDatePicker } from "./AnimatedDatePicker";
 import { useViewport } from "../hooks/useViewport";
+import { useLocation } from "../contexts/LocationContext";
 
 interface HistoryResponse {
   orders: any[];
@@ -16,6 +17,7 @@ interface HistoryResponse {
 }
 
 export const OrderHistory: React.FC = () => {
+  const { currentLocationId } = useLocation();
   const [orders, setOrders] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -40,6 +42,7 @@ export const OrderHistory: React.FC = () => {
       if (statusFilter) params.set('status', statusFilter);
       params.set('limit', String(limit));
       params.set('offset', String(newOffset));
+      if (currentLocationId != null) params.set('location_id', String(currentLocationId));
 
       const data = await apiGet<HistoryResponse>(`/orders/history?${params}`);
       setOrders(data.orders.map(serverOrderToOrder));
@@ -50,7 +53,7 @@ export const OrderHistory: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate, search, statusFilter]);
+  }, [startDate, endDate, search, statusFilter, currentLocationId]);
 
   const handleSearch = () => { fetchHistory(0); };
 

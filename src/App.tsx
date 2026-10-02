@@ -29,6 +29,7 @@ const App: React.FC = () => {
       return stored ? JSON.parse(stored) : null;
     } catch { return null; }
   });
+  const [authChecking, setAuthChecking] = useState(true);
 
   // Persist auth state to localStorage so refresh doesn't log out
   useEffect(() => {
@@ -51,18 +52,23 @@ const App: React.FC = () => {
         setStaff(null);
         clearAuthToken();
       }
+      setAuthChecking(false);
       return;
     }
 
     let cancelled = false;
     apiAdminGet<Staff>("/staff/me")
       .then((fresh) => {
-        if (!cancelled) setStaff(fresh);
+        if (!cancelled) {
+          setStaff({ ...fresh, locationId: (fresh as Staff & { location_id?: number | null }).location_id ?? fresh.locationId });
+          setAuthChecking(false);
+        }
       })
       .catch(() => {
         if (!cancelled) {
           setStaff(null);
           clearAuthToken();
+          setAuthChecking(false);
         }
       });
 
@@ -74,31 +80,30 @@ const App: React.FC = () => {
     return <CustomerDisplay />;
   }
 
-  if (!staff) {
-    return <LoginScreen onLogin={setStaff} />;
-  }
-
-  // Manager role goes to Admin Dashboard, others go to POS
-  if (staff.role === 'Manager') {
-    return (
-      <LocationProvider>
-        <OnlineStatus />
-        <AdminDashboard
-          staff={staff}
-          onLogout={() => setStaff(null)}
-        />
-      </LocationProvider>
-    );
-  }
-
   return (
-    <>
-      <OnlineStatus />
-      <POSScreen
-        staff={staff}
-        onLogout={() => setStaff(null)}
-      />
-    </>
+    <LocationProvider staff={staff}>
+      {authChecking ? (
+        <div className="flex h-screen items-center justify-center bg-erl-base text-sm text-erl-text-muted">Checking session…</div>
+      ) : !staff ? (
+        <LoginScreen onLogin={setStaff} />
+      ) : staff.role === 'Manager' ? (
+        <>
+          <OnlineStatus />
+          <AdminDashboard
+            staff={staff}
+            onLogout={() => setStaff(null)}
+          />
+        </>
+      ) : (
+        <>
+          <OnlineStatus />
+          <POSScreen
+            staff={staff}
+            onLogout={() => setStaff(null)}
+          />
+        </>
+      )}
+    </LocationProvider>
   );
 };
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { formatCurrency, toLocalDateStr } from "../utils";
 import { apiAdminGet, getSalesReport, getStaffReport, DailySalesReport, SalesReportSummary, StaffReport } from "../utils/api";
+import { InventoryItem, InventoryMovement } from "../types";
+import { useLocation } from "../contexts/LocationContext";
 import { AnimatedSelect } from "./AnimatedSelect";
 import { AnimatedDatePicker } from "./AnimatedDatePicker";
 import {
@@ -22,6 +24,7 @@ import ExcelJS from "exceljs";
 type DateRange = "today" | "this_week" | "this_month" | "last_month" | "last_2_weeks" | "custom" | "jan" | "feb" | "mar" | "apr" | "may" | "jun" | "jul" | "aug" | "sep" | "oct" | "nov" | "dec" | "year_to_date";
 
 export const AdminReports: React.FC = () => {
+  const { currentLocationId } = useLocation();
   const [activeReport, setActiveReport] = useState<"sales" | "inventory" | "staff">("sales");
   const [dateRange, setDateRange] = useState<DateRange>("this_week");
   const [startDate, setStartDate] = useState(() => {
@@ -39,8 +42,8 @@ export const AdminReports: React.FC = () => {
   const [salesSummary, setSalesSummary] = useState<SalesReportSummary>({ totalRevenue: 0, totalOrders: 0, avgOrder: 0, totalCOGS: 0, grossProfit: 0 });
 
   // Inventory report data
-  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
-  const [inventoryHistory, setInventoryHistory] = useState<any[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [inventoryHistory, setInventoryHistory] = useState<InventoryMovement[]>([]);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<string | null>(null);
 
   // Staff report data
@@ -122,7 +125,7 @@ export const AdminReports: React.FC = () => {
     const { start, end } = getDateRange();
     setLoading(true);
     try {
-      const result = await getSalesReport(start, end);
+      const result = await getSalesReport(start, end, currentLocationId);
       setSalesData(result.data);
       setSalesSummary(result.summary);
     } catch (e) {
@@ -130,19 +133,20 @@ export const AdminReports: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [getDateRange, customApplyTick]);
+  }, [getDateRange, customApplyTick, currentLocationId]);
 
   const fetchInventoryData = useCallback(async () => {
     setLoading(true);
     try {
-      const items = await apiAdminGet<any[]>("/inventory");
+      const locationQuery = currentLocationId == null ? "" : `?location_id=${encodeURIComponent(String(currentLocationId))}`;
+      const items = await apiAdminGet<InventoryItem[]>(`/inventory${locationQuery}`);
       setInventoryItems(items);
     } catch (e) {
       console.error("Failed to fetch inventory", e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentLocationId]);
 
   const fetchInventoryHistory = useCallback(async (itemId?: string) => {
     try {
@@ -151,26 +155,27 @@ export const AdminReports: React.FC = () => {
       qs.append("start", start);
       qs.append("end", end);
       if (itemId) qs.append("itemId", itemId);
+      if (currentLocationId != null) qs.append("location_id", String(currentLocationId));
       qs.append("limit", "500");
-      const rows = await apiAdminGet<any[]>(`/inventory/movements?${qs.toString()}`);
+      const rows = await apiAdminGet<InventoryMovement[]>(`/inventory/movements?${qs.toString()}`);
       setInventoryHistory(rows || []);
     } catch (e) {
       console.error("Failed to fetch inventory history", e);
     }
-  }, [getDateRange, customApplyTick]);
+  }, [getDateRange, customApplyTick, currentLocationId]);
 
   const fetchStaffData = useCallback(async () => {
     const { start, end } = getDateRange();
     setLoading(true);
     try {
-      const result = await getStaffReport(start, end);
+      const result = await getStaffReport(start, end, currentLocationId);
       setStaffStats(result);
     } catch (e) {
       console.error("Failed to fetch staff data", e);
     } finally {
       setLoading(false);
     }
-  }, [getDateRange, customApplyTick]);
+  }, [getDateRange, customApplyTick, currentLocationId]);
 
   useEffect(() => {
     if (activeReport === "sales") fetchSalesData();

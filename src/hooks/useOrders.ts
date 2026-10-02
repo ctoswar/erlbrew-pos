@@ -3,6 +3,7 @@ import { Order, CartItem, Staff, OrderStatus, OrderType, PayMethod, MenuItem, Ro
 import { calcSubtotal, calcTax, calcGrand, generateOrderId, parseServerDatetime } from "../utils";
 import { apiGet, apiPost, apiAdminPost, apiAdminPut, apiAdminDelete, getAuthToken } from "../utils/api";
 import { addOfflineOrder, getOfflineOrders, removeOfflineOrder } from "../utils/offlineDb";
+import { useLocation } from "../contexts/LocationContext";
 
 const POLL_INTERVAL = 15000; // 15s — sync with server for multi-device
 
@@ -48,7 +49,7 @@ interface ServerOrderItem {
 }
 
 // Raw server order shape (snake_case fields from DB/API)
-interface ServerOrder {
+export interface ServerOrder {
   id: string;
   items?: ServerOrderItem[];
   staff_rfid?: string;
@@ -72,6 +73,7 @@ interface ServerOrder {
   discount_json?: string | null;
   pay_status?: string;
   order_source?: string;
+  location_id?: number;
   external_order_id?: string;
   checkout_url?: string;
 }
@@ -119,6 +121,7 @@ export function serverOrderToOrder(o: ServerOrder): Order {
     referenceNumber: o.referenceNumber || o.reference_number || undefined,
     payStatus: (o.pay_status as Order['payStatus']) || undefined,
     orderSource: (o.order_source as Order['orderSource']) || 'pos',
+    locationId: o.location_id ? Number(o.location_id) : undefined,
     discount: (() => {
       if (!o.discount_json) return undefined;
       try {
@@ -138,6 +141,7 @@ export function serverOrderToOrder(o: ServerOrder): Order {
 }
 
 export function useOrders() {
+  const { currentLocationId } = useLocation();
   const [orders, setOrders] = useState<Order[]>(() => {
     // Rehydrate local (pending-sync) orders from localStorage on mount
     // JSON.parse turns Date objects into strings — convert them back
@@ -145,15 +149,18 @@ export function useOrders() {
       const raw = localStorage.getItem('erlbrew_local_orders');
       if (!raw) return [];
       const parsed = JSON.parse(raw);
-      return (Array.isArray(parsed) ? parsed : []).map((o: any) => ({
+      return (Array.isArray(parsed) ? parsed : []).filter((o: any) => (
+        currentLocationId === null || Number(o.locationId ?? o.location_id) === currentLocationId
+      )).map((o: any) => ({
         ...o,
         createdAt: o.createdAt ? new Date(o.createdAt) : new Date(),
         completedAt: o.completedAt ? new Date(o.completedAt) : undefined,
+        locationId: o.locationId ? Number(o.locationId) : undefined,
       }));
     } catch { return []; }
   });
   const [pendingCount, setPendingCount] = useState(0);
-  const syncedRef = useRef(false);
+  const syncedLocationRef = useRef<number | null | undefined>(undefined);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Track recently-placed local orders to prevent SSE race-condition duplicates
   // When placeOrder creates a local optimistic order, we record its fingerprint.
@@ -185,11 +192,15 @@ export function useOrders() {
 
   // Sync today's orders from backend on mount (once)
   useEffect(() => {
-    if (syncedRef.current) return;
-    syncedRef.current = true;
+    if (syncedLocationRef.current === currentLocationId) return;
+    if (syncedLocationRef.current !== undefined && currentLocationId !== null) {
+      setOrders((prev) => prev.filter((order) => order.locationId === currentLocationId));
+    }
+    syncedLocationRef.current = currentLocationId;
 
     const syncFromServer = () => {
-      apiGet<ServerOrder[]>('/orders/today').then((data) => {
+      const locationQuery = currentLocationId === null ? "" : `?location_id=${encodeURIComponent(String(currentLocationId))}`;
+      apiGet<ServerOrder[]>(`/orders/today${locationQuery}`).then((data) => {
         if (Array.isArray(data)) {
           if (data.length > 0) {
             const serverOrders = data.map(serverOrderToOrder);
@@ -266,7 +277,7 @@ export function useOrders() {
       window.removeEventListener('order:voided', handleVoided);
       window.removeEventListener('online', handleOnline);
     };
-  }, [retryPending]);
+  }, [retryPending, currentLocationId]);
 
   // Persist local (pending-sync) orders so they survive page refresh
   useEffect(() => {
@@ -292,6 +303,7 @@ export function useOrders() {
       const payload: Record<string, unknown> = {
         staff_id: staff ? staff.rfid : undefined,
         staff_name: staff?.name,
+        location_id: currentLocationId,
         type,
         customer_name: customerName || null,
         customer_phone: customerPhone || null,
@@ -328,6 +340,7 @@ export function useOrders() {
         cashTendered,
         discount: discount ?? undefined,
         referenceNumber,
+        locationId: currentLocationId ?? undefined,
       };
 
       // Track this local order in pendingLocalRef to prevent SSE race-condition duplicates
@@ -391,7 +404,7 @@ export function useOrders() {
 
       return localOrder;
     },
-    []
+    [currentLocationId]
   );
 
   /**
@@ -420,6 +433,7 @@ export function useOrders() {
       const payload: Record<string, unknown> = {
         staff_id: staff ? staff.rfid : undefined,
         staff_name: staff?.name,
+        location_id: currentLocationId,
         type,
         customer_name: customerName || null,
         customer_phone: customerPhone || null,
@@ -454,7 +468,7 @@ export function useOrders() {
       setOrders((prev) => prev.some(o => o.id === data.id) ? prev : [localOrder, ...prev]);
       return { orderId: data.id, checkoutUrl: data.checkout_url };
     },
-    []
+    [currentLocationId]
   );
 
   /** Flip a pending gateway order to paid after the webhook confirms it. */
@@ -471,11 +485,12 @@ export function useOrders() {
     setOrders((prev) => prev.filter((o) => o.id !== orderId));
     const token = getAuthToken();
     if (token) {
-      apiAdminDelete(`/orders/${orderId}`).catch((err) =>
+      const locationQuery = currentLocationId == null ? "" : `?location_id=${encodeURIComponent(String(currentLocationId))}`;
+      apiAdminDelete(`/orders/${orderId}${locationQuery}`).catch((err) =>
         console.error("Failed to delete pending gateway order:", err)
       );
     }
-  }, []);
+  }, [currentLocationId]);
 
   const isLocalOrderId = (id: string) => id.startsWith('#') || id.startsWith('ORD-');
 
@@ -490,9 +505,12 @@ export function useOrders() {
     // Sync to server using PUT with auth (skip optimistic local-only orders)
     const token = getAuthToken();
     if (token && !isLocalOrderId(id)) {
-      apiAdminPut(`/orders/${id}/status`, { status }).catch((err) => console.error("Failed to sync status to server:", err));
+      apiAdminPut(`/orders/${id}/status`, {
+        status,
+        ...(currentLocationId == null ? {} : { location_id: currentLocationId }),
+      }).catch((err) => console.error("Failed to sync status to server:", err));
     }
-  }, []);
+  }, [currentLocationId]);
 
   const activeOrders = orders.filter((o) => o.status === "pending" || o.status === "preparing" || o.status === "ready");
   const completedOrders = orders.filter((o) => o.status === "completed");

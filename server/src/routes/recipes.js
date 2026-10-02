@@ -1,20 +1,22 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logAudit } from '../services/audit.js';
+import { locationScope, requireLocationId, scopedLocationCondition } from '../middleware/location.js';
 
 export default function recipesRouter(pool) {
   const router = Router();
 
   // GET /api/recipes/:menuItemId — get all ingredients for a menu item
-  router.get('/:menuItemId', async (req, res) => {
+  router.get('/:menuItemId', authMiddleware, locationScope, async (req, res) => {
     try {
+      const scope = scopedLocationCondition(req, 'i.location_id');
       const [rows] = await pool.query(
         `SELECT r.id, r.inventory_item_id, r.quantity,
                 i.name AS inventory_name, i.category, i.unit, i.stock, i.low_stock_threshold
          FROM recipes r
          JOIN inventory i ON i.id = r.inventory_item_id
-         WHERE r.menu_item_id = ?`,
-        [req.params.menuItemId]
+         WHERE r.menu_item_id = ?${scope.sql}`,
+        [req.params.menuItemId, ...scope.params]
       );
       res.json(rows);
     } catch (err) {
@@ -24,7 +26,7 @@ export default function recipesRouter(pool) {
   });
 
   // PUT /api/recipes/:menuItemId — replace all ingredients for a menu item
-  router.put('/:menuItemId', authMiddleware, async (req, res) => {
+  router.put('/:menuItemId', authMiddleware, adminMiddleware, locationScope, requireLocationId, async (req, res) => {
     const conn = await pool.getConnection();
     try {
       const { items } = req.body;
@@ -47,13 +49,14 @@ export default function recipesRouter(pool) {
       // Audit: recipes updated
       await logAudit(pool, req, { action: 'recipes_update', entityType: 'recipes', entityId: req.params.menuItemId, details: { ingredientCount: items.length } });
 
+      const scope = scopedLocationCondition(req, 'i.location_id');
       const [rows] = await pool.query(
         `SELECT r.id, r.inventory_item_id, r.quantity,
                 i.name AS inventory_name, i.category, i.unit, i.stock, i.low_stock_threshold
          FROM recipes r
          JOIN inventory i ON i.id = r.inventory_item_id
-         WHERE r.menu_item_id = ?`,
-        [req.params.menuItemId]
+         WHERE r.menu_item_id = ?${scope.sql}`,
+        [req.params.menuItemId, ...scope.params]
       );
       res.json(rows);
     } catch (err) {
@@ -66,7 +69,7 @@ export default function recipesRouter(pool) {
   });
 
   // POST /api/recipes/batch — apply same ingredients to multiple menu items
-  router.post('/batch', authMiddleware, async (req, res) => {
+  router.post('/batch', authMiddleware, adminMiddleware, locationScope, requireLocationId, async (req, res) => {
     const conn = await pool.getConnection();
     try {
       const { items, menuItemIds } = req.body;

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { apiGet } from '../utils/api';
+import { apiGet, getAuthToken } from '../utils/api';
+import { useLocation } from '../contexts/LocationContext';
 import { playNewOrderChime } from '../utils/sound';
-import { serverOrderToOrder } from './useOrders';
+import { serverOrderToOrder, ServerOrder } from './useOrders';
 
 export function useKitchenEvents() {
+  const { currentLocationId } = useLocation();
   const eventSourceRef = useRef<EventSource | null>(null);
 
   const syncOrders = useCallback(() => {
@@ -16,7 +18,10 @@ export function useKitchenEvents() {
     // order chime for the rest of the session.
     if (eventSourceRef.current || document.hidden) return;
 
-    const es = new EventSource('/api/events');
+    const token = getAuthToken();
+    if (!token) return;
+    const locationQuery = currentLocationId == null ? "" : `&location_id=${encodeURIComponent(String(currentLocationId))}`;
+    const es = new EventSource(`/api/events?token=${encodeURIComponent(token)}${locationQuery}`);
     eventSourceRef.current = es;
 
     es.addEventListener('order:created', (_e: MessageEvent) => {
@@ -35,7 +40,7 @@ export function useKitchenEvents() {
     es.onerror = () => {
       // EventSource auto-reconnects
     };
-  }, [syncOrders]);
+  }, [currentLocationId, syncOrders]);
 
   const disconnect = useCallback(() => {
     eventSourceRef.current?.close();
@@ -62,7 +67,7 @@ export function useKitchenEvents() {
 
 export async function syncKitchenOrders(): Promise<void> {
   try {
-    const data = await apiGet<any[]>('/api/orders/today');
+    const data = await apiGet<ServerOrder[]>('/orders/today');
     if (Array.isArray(data)) {
       window.dispatchEvent(new CustomEvent('kitchen:ordersUpdated', {
         detail: data.map(serverOrderToOrder)

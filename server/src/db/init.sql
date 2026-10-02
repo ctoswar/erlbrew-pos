@@ -520,6 +520,13 @@ ALTER TABLE staff
   ADD COLUMN location_id INT DEFAULT NULL AFTER schedule_id,
   ADD INDEX idx_staff_location (location_id);
 
+-- Existing non-manager staff must have a branch before they can sign in.
+-- Historical rows are assigned to the seeded default location; managers remain
+-- unrestricted and may use the location selector.
+UPDATE staff
+SET location_id = 1
+WHERE location_id IS NULL AND role <> 'Manager';
+
 -- ── Inventory Transfers ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS inventory_transfers (
   id INT AUTO_INCREMENT PRIMARY KEY,

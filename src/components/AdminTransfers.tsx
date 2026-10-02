@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { InventoryTransfer, Location, InventoryItem, TransferStatus } from "../types";
-import { apiGet, apiPost, apiAdminPut } from "../utils/api";
+import { apiGet, apiAdminPost, apiAdminPut } from "../utils/api";
 import { AnimatedSelect } from "./AnimatedSelect";
+import { useLocation } from "../contexts/LocationContext";
 
 const STATUS_COLORS: Record<TransferStatus, string> = {
   pending: "bg-yellow-900/30 text-yellow-400",
@@ -12,6 +13,7 @@ const STATUS_COLORS: Record<TransferStatus, string> = {
 };
 
 export const AdminTransfers: React.FC = () => {
+  const { currentLocationId } = useLocation();
   const [transfers, setTransfers] = useState<InventoryTransfer[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -25,7 +27,10 @@ export const AdminTransfers: React.FC = () => {
     try {
       setLoading(true);
       const [tData, lData, iData] = await Promise.all([
-        apiGet<{ transfers: InventoryTransfer[]; total: number }>("/transfers" + (filterStatus ? `?status=${filterStatus}` : "")),
+        apiGet<{ transfers: InventoryTransfer[]; total: number }>(`/transfers?${[
+          filterStatus ? `status=${encodeURIComponent(filterStatus)}` : "",
+          currentLocationId != null ? `location_id=${currentLocationId}` : "",
+        ].filter(Boolean).join("&")}`),
         apiGet<Location[]>("/locations"),
         apiGet<InventoryItem[]>("/inventory"),
       ]);
@@ -37,7 +42,7 @@ export const AdminTransfers: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [filterStatus]);
+  }, [filterStatus, currentLocationId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -52,7 +57,7 @@ export const AdminTransfers: React.FC = () => {
     }
     setError(null);
     try {
-      await apiPost("/transfers", form);
+      await apiAdminPost("/transfers", form);
       setShowForm(false);
       setForm({ from_location_id: 0, to_location_id: 0, inventory_item_id: "", quantity: 0, notes: "" });
       fetchData();

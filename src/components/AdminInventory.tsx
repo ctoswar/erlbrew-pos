@@ -3,6 +3,7 @@ import { InventoryItem, InventoryMovement, MovementType } from "../types";
 import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete } from "../utils/api";
 import { cacheInventoryItems, getCachedInventoryItems } from "../utils/offlineDb";
 import { AnimatedSelect } from "./AnimatedSelect";
+import { useLocation } from "../contexts/LocationContext";
 
 const CATEGORIES = ["Cups", "Lids", "Supplies", "Milk", "Coffee", "Syrups", "Powders", "Tea", "Other"];
 const UNITS = ["pcs", "kg", "g", "L", "ml", "boxes", "packs"];
@@ -39,6 +40,7 @@ const EMPTY_FORM = {
 };
 
 export const AdminInventory: React.FC = () => {
+  const { currentLocationId } = useLocation();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -68,9 +70,13 @@ export const AdminInventory: React.FC = () => {
   const [adjustNotes, setAdjustNotes] = useState("");
   const [adjustSaving, setAdjustSaving] = useState(false);
 
+  const locationForItem = (id: string) =>
+    currentLocationId ?? items.find((item) => item.id === id)?.location_id ?? 1;
+
   const loadItems = () => {
     setLoading(true);
-    apiAdminGet<InventoryItem[]>("/inventory")
+    const locationQuery = currentLocationId == null ? "" : `?location_id=${currentLocationId}`;
+    apiAdminGet<InventoryItem[]>(`/inventory${locationQuery}`)
       .then((data) => {
         setItems(data);
         // Cache inventory items in IndexedDB for offline use
@@ -97,7 +103,7 @@ export const AdminInventory: React.FC = () => {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadItems(); }, []);
+  useEffect(() => { loadItems(); }, [currentLocationId]);
 
   const categories = ["All", ...CATEGORIES];
 
@@ -200,10 +206,11 @@ export const AdminInventory: React.FC = () => {
     };
     if (form.purchase_cost) payload.purchase_cost = parseFloat(form.purchase_cost);
     if (form.unit_cost) payload.unit_cost = parseFloat(form.unit_cost);
+    payload.location_id = currentLocationId ?? (editingId ? locationForItem(editingId) : 1);
 
     try {
       if (editingId) {
-        await apiAdminPut(`/inventory/${editingId}`, payload);
+        await apiAdminPut(`/inventory/${editingId}?location_id=${payload.location_id}`, payload);
       } else {
         await apiAdminPost("/inventory", payload);
       }
@@ -223,7 +230,7 @@ export const AdminInventory: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await apiAdminDelete(`/inventory/${id}`);
+      await apiAdminDelete(`/inventory/${id}?location_id=${locationForItem(id)}`);
       setDeleteConfirm(null);
       loadItems();
     } catch (e) {
@@ -235,7 +242,7 @@ export const AdminInventory: React.FC = () => {
     const stockNum = Number(currentStock);
     const newStock = Math.max(0, stockNum + delta);
     try {
-      await apiAdminPut(`/inventory/${itemId}`, { stock: newStock });
+      await apiAdminPut(`/inventory/${itemId}?location_id=${locationForItem(itemId)}`, { stock: newStock });
       loadItems();
     } catch (e: any) {
       setError(`Failed to update stock: ${e.message}`);
@@ -247,7 +254,8 @@ export const AdminInventory: React.FC = () => {
   const loadMovements = useCallback(async (itemId: string) => {
     setMovementsLoading(true);
     try {
-      const data = await apiAdminGet<InventoryMovement[]>(`/inventory/movements?itemId=${itemId}&limit=50`);
+      const locationQuery = currentLocationId == null ? "" : `&location_id=${currentLocationId}`;
+      const data = await apiAdminGet<InventoryMovement[]>(`/inventory/movements?itemId=${itemId}&limit=50${locationQuery}`);
       setMovements(data);
     } catch {
       setMovements([]);
@@ -266,7 +274,8 @@ export const AdminInventory: React.FC = () => {
     setShowAllMovements(true);
     setAllMovementsLoading(true);
     try {
-      const data = await apiAdminGet<InventoryMovement[]>('/inventory/movements?limit=200');
+      const locationQuery = currentLocationId == null ? "" : `&location_id=${currentLocationId}`;
+      const data = await apiAdminGet<InventoryMovement[]>(`/inventory/movements?limit=200${locationQuery}`);
       setAllMovements(data);
     } catch {
       setAllMovements([]);
@@ -296,6 +305,7 @@ export const AdminInventory: React.FC = () => {
         movement_type: adjustType,
         quantity: qty,
         notes: adjustNotes || null,
+        location_id: locationForItem(adjustItemId),
       });
       setShowAdjustModal(false);
       loadItems();

@@ -122,11 +122,12 @@ router.post('/', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
     const { id } = req.params;
     const { name, category, unit, stock, low_stock_threshold, purchase_cost, unit_cost } = req.body;
+    const locationId = req.query.location_id || req.body.location_id || 1;
     if (!id || typeof id !== 'string' || id.length > 32) {
       return res.status(400).json({ error: 'Invalid id' });
     }
     try {
-      const [existing] = await pool.query('SELECT id, stock, location_id FROM inventory WHERE id = ?', [id]);
+      const [existing] = await pool.query('SELECT id, stock, location_id FROM inventory WHERE id = ? AND location_id = ?', [id, locationId]);
       if (!existing.length) return res.status(404).json({ error: 'Item not found' });
 
       const oldStock = Number(existing[0].stock);
@@ -159,7 +160,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
       }
 
       values.push(id);
-      await pool.query(`UPDATE inventory SET ${fields.join(', ')} WHERE id = ?`, values);
+      values.push(locationId);
+      await pool.query(`UPDATE inventory SET ${fields.join(', ')} WHERE id = ? AND location_id = ?`, values);
 
       // Log stock movement if stock changed
       if (stock !== undefined) {
@@ -179,7 +181,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       }
 
       await logAudit(pool, req, { action: 'inventory_update', entityType: 'inventory', entityId: id });
-      const [updated] = await pool.query('SELECT * FROM inventory WHERE id = ?', [id]);
+      const [updated] = await pool.query('SELECT * FROM inventory WHERE id = ? AND location_id = ?', [id, locationId]);
       res.json(updated[0]);
     } catch (e) {
       console.error(e);
@@ -190,11 +192,12 @@ router.put('/:id', authMiddleware, async (req, res) => {
 // DELETE inventory item (admin only)
   router.delete('/:id', authMiddleware, async (req, res) => {
     const { id } = req.params;
+    const locationId = req.query.location_id || 1;
     if (!id || typeof id !== 'string' || id.length > 32) {
       return res.status(400).json({ error: 'Invalid id' });
     }
     try {
-      await pool.query('DELETE FROM inventory WHERE id = ?', [id]);
+      await pool.query('DELETE FROM inventory WHERE id = ? AND location_id = ?', [id, locationId]);
       await logAudit(pool, req, { action: 'inventory_delete', entityType: 'inventory', entityId: id });
       res.json({ ok: true });
     } catch (e) {
@@ -266,6 +269,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
         where.push('im.created_at < DATE_ADD(?, INTERVAL 1 DAY)');
         params.push(end);
       }
+      if (req.query.location_id) {
+        where.push('im.location_id = ?');
+        params.push(req.query.location_id);
+      }
 
       const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
       // SECURITY FIX: Use parameterized query for limit to prevent SQL injection
@@ -294,7 +301,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
   // POST /api/inventory/movements — manual stock adjustment (admin only)
   router.post('/movements', authMiddleware, adminMiddleware, async (req, res) => {
-    const { inventory_item_id, movement_type, quantity, notes } = req.body;
+    const { inventory_item_id, movement_type, quantity, notes, location_id } = req.body;
+    const locationId = location_id || 1;
 
     if (!inventory_item_id || !movement_type || quantity === undefined) {
       return res.status(400).json({ error: 'inventory_item_id, movement_type, and quantity are required' });
@@ -311,7 +319,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       await conn.beginTransaction();
 
       // Get current stock
-      const [inv] = await conn.query('SELECT id, stock, location_id FROM inventory WHERE id = ?', [inventory_item_id]);
+      const [inv] = await conn.query('SELECT id, stock, location_id FROM inventory WHERE id = ? AND location_id = ?', [inventory_item_id, locationId]);
       if (!inv.length) {
         await conn.rollback();
         return res.status(404).json({ error: 'Inventory item not found' });
@@ -324,7 +332,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       const actualQty = movement_type === 'restock' ? quantity : Math.min(quantity, stockBefore);
 
       // Update stock
-      await conn.query('UPDATE inventory SET stock = ? WHERE id = ?', [stockAfter, inventory_item_id]);
+      await conn.query('UPDATE inventory SET stock = ? WHERE id = ? AND location_id = ?', [stockAfter, inventory_item_id, locationId]);
 
       // Log movement
       await logInventoryMovement(conn, {

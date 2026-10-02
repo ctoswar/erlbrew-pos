@@ -95,15 +95,19 @@ The core POS system is fully functional with order management, inventory trackin
 
 ### AI & Analytics
 
-- [ ] **Sales Forecasting**
-  - Machine learning predictions
-  - Inventory optimization
-  - Staff scheduling suggestions
+- [x] **Sales Forecasting** ✅ Phase 3
+  - Deterministic moving-average baseline with confidence and history-quality signals
+  - Location-aware demand horizon and inventory reorder actions
+  - Advisory staff scheduling suggestions by day and hour
 
-- [ ] **Menu Optimization**
-  - Best/worst sellers analysis
-  - Price optimization suggestions
-  - Combo recommendations
+- [x] **Menu Optimization** ✅ Phase 3
+  - Best/worst sellers analysis with margin coverage and ABC classifications
+  - Guarded, advisory price optimization suggestions
+  - Support/confidence/lift combo recommendations from completed baskets
+
+- [x] **AI Briefing** ✅ Phase 3
+  - Optional Manager-only Ollama summary of deterministic signals
+  - Strict JSON validation with deterministic fallback when unavailable
 
 ### Hardware Integration
 

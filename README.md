@@ -125,12 +125,12 @@ Branch A → http://branch-a-printer:9100
 Branch B → http://branch-b-printer:9100
 ```
 
-#### Important multi-location limitation
+#### Multi-location isolation
 
-The admin dashboard, inventory, transfers, and reports support location filtering. Before
-deploying multiple active branches, POS terminals must also be assigned a branch location so
-new orders include the correct `location_id`; otherwise orders can fall back to the default
-location. The regular POS location-assignment work is not yet complete.
+The admin dashboard, POS terminals, inventory, transfers, reports, and Insights support
+location filtering. Configure each terminal with its branch during first-time setup; regular
+staff are locked to their assigned branch, while Managers may switch branches or use the
+consolidated view.
 
 ## Environment Variables
 
@@ -145,6 +145,10 @@ location. The regular POS location-assignment work is not yet complete.
 | `GOOGLE_SHEETS_ID` | No | Google Sheets ID for cloud sync |
 | `GOOGLE_SERVICE_ACCOUNT_KEY` | No | Google service account JSON |
 | `PRINT_SERVER_URL` | No | Raspberry Pi print server URL |
+| `OLLAMA_ENABLED` | No | Set `true` to enable optional Manager AI briefings; deterministic analytics do not require it |
+| `OLLAMA_BASE_URL` | No | Ollama service URL (Docker default: `http://ollama:11434`) |
+| `OLLAMA_MODEL` | No | Local model name used for briefings (default: `llama3.2:3b`) |
+| `OLLAMA_TIMEOUT_MS` | No | Briefing request timeout, bounded by the backend (default: `5000`) |
 
 ### Frontend (.env)
 
@@ -184,6 +188,14 @@ location. The regular POS location-assignment work is not yet complete.
 | POST | `/api/orders/:id/void` | Void with reason |
 | POST | `/api/orders/:id/refund` | Refund order |
 | DELETE | `/api/orders/all` | Clear all orders (fresh start) |
+
+Phase 3 analytics endpoints are Manager-only and accept an optional
+`location_id` query parameter. Omit it for all locations:
+`/api/insights/menu`, `/api/insights/forecast`,
+`/api/insights/inventory`, `/api/insights/optimization`, `/api/insights/staffing`, and
+`/api/insights/briefing`. The optional Ollama service is disabled by default;
+see [docs/AI-Analytics.md](docs/AI-Analytics.md) before enabling the `ai`
+Compose profile.
 
 ## Demo Credentials
 

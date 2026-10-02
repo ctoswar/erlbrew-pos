@@ -1175,6 +1175,149 @@ export interface MenuInsights {
   uncosted: MenuItemInsight[];
 }
 
-export function getMenuInsights(days: number): Promise<MenuInsights> {
-  return apiAdminGet<MenuInsights>(`/insights/menu?days=${days}`);
+export type ForecastConfidence = 'insufficient' | 'low' | 'medium' | 'high';
+
+export interface SalesForecast {
+  menuItemId: string;
+  name: string;
+  category: string;
+  asOfDate: string;
+  historyStartDate: string;
+  historyEndDate: string;
+  forecastStartDate: string;
+  forecastEndDate: string;
+  historyDays: number;
+  horizonDays: number;
+  dailyUnits: number;
+  forecastUnits: number;
+  averagePrice: number;
+  forecastRevenue: number;
+  trend: number;
+  confidence: ForecastConfidence;
+  historyQuality: 'strong' | 'usable' | 'thin' | 'insufficient';
+  observedUnits: number;
+}
+
+export interface ForecastResponse {
+  locationId: number | null;
+  windowDays: number;
+  horizonDays: number;
+  forecasts: SalesForecast[];
+}
+
+export type InventoryActionStatus = 'stockout' | 'critical' | 'reorder' | 'ok';
+
+export interface InventoryAction {
+  inventoryItemId: string;
+  name: string;
+  unit: string;
+  locationId: number | null;
+  stock: number;
+  lowStockThreshold: number;
+  dailyDemand: number;
+  targetStock: number;
+  daysOfStock: number | null;
+  recommendedOrderQty: number;
+  dataQualityFlags: string[];
+  status: InventoryActionStatus;
+  reason: string;
+}
+
+export interface InventoryActionsResponse {
+  locationId: number | null;
+  windowDays: number;
+  horizonDays: number;
+  inventoryActions: InventoryAction[];
+}
+
+export interface ComboRecommendation {
+  firstMenuItemId: string;
+  firstName: string;
+  secondMenuItemId: string;
+  secondName: string;
+  pairOrders: number;
+  support: number;
+  confidence: number;
+  lift: number;
+}
+
+export type PriceSuggestionAction = 'hold' | 'increase' | 'decrease';
+
+export interface PriceSuggestion {
+  menuItemId: string;
+  name: string;
+  currentPrice: number;
+  suggestedPrice: number;
+  changePct: number;
+  action: PriceSuggestionAction;
+  confidence: 'low' | 'medium' | 'high';
+  reason: string;
+  guarded: boolean;
+}
+
+export interface OptimizationResponse {
+  locationId: number | null;
+  windowDays: number;
+  horizonDays: number;
+  forecasts: SalesForecast[];
+  inventoryActions: InventoryAction[];
+  combos: ComboRecommendation[];
+  priceSuggestions: PriceSuggestion[];
+  staffing: StaffingSuggestion[];
+}
+
+export interface StaffingSuggestion {
+  dayOfWeek: number;
+  hour: number;
+  averageOrders: number;
+  currentStaff: number;
+  suggestedStaff: number;
+  gap: number;
+  confidence: 'low' | 'medium' | 'high';
+  advisoryOnly: boolean;
+}
+
+export type BriefingPriority = 'low' | 'medium' | 'high';
+
+export interface BriefingAction {
+  title: string;
+  reason: string;
+  priority: BriefingPriority;
+}
+
+export interface InsightsBriefing {
+  locationId: number | null;
+  windowDays: number;
+  horizonDays: number;
+  summary: string;
+  actions: BriefingAction[];
+  source: 'ollama' | 'deterministic-fallback' | string;
+  advisoryOnly: boolean;
+}
+
+function insightsQuery(days: number, locationId: number | null, horizonDays?: number): string {
+  const query = new URLSearchParams({ days: String(days) });
+  if (horizonDays !== undefined) query.set('horizonDays', String(horizonDays));
+  if (locationId !== null) query.set('location_id', String(locationId));
+  return `?${query.toString()}`;
+}
+
+export function getMenuInsights(days: number, locationId: number | null = null): Promise<MenuInsights> {
+  return apiAdminGet<MenuInsights>(`/insights/menu${insightsQuery(days, locationId)}`);
+}
+
+export function getInsightsOptimization(
+  days: number,
+  locationId: number | null = null,
+  horizonDays = 14,
+): Promise<OptimizationResponse> {
+  return apiAdminGet<OptimizationResponse>(`/insights/optimization${insightsQuery(days, locationId, horizonDays)}`);
+}
+
+export function getInsightsBriefing(
+  days: number,
+  locationId: number | null = null,
+  horizonDays = 14,
+): Promise<InsightsBriefing> {
+  return apiAdminGet<InsightsBriefing>(`/insights/briefing${insightsQuery(days, locationId, horizonDays)}`);
 }

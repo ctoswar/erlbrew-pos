@@ -4,6 +4,7 @@ import { buildDailySummary, formatCurrency, formatTime, toLocalDateStr } from ".
 import { apiAdminGet, apiGet, resetCogs, resetInventoryCosts } from "../utils/api";
 import { ReceiptPreview } from "./ReceiptPreview";
 import { AnimatedDatePicker } from "./AnimatedDatePicker";
+import { useLocation } from "../contexts/LocationContext";
 
 interface CogsData {
   cogs: number;
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder }) => {
+  const { currentLocationId } = useLocation();
   const [cogsData, setCogsData] = useState<CogsData | null>(null);
   const [reprintOrder, setReprintOrder] = useState<Order | null>(null);
   const [_syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'ok' | 'error'>('idle');
@@ -49,7 +51,8 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
 
   const fetchCogs = () => {
     const { start, end } = getDateRange();
-    apiAdminGet<CogsData>(`/orders/cogs?start=${start}&end=${end}`)
+    const locationQuery = currentLocationId == null ? "" : `&location_id=${currentLocationId}`;
+    apiAdminGet<CogsData>(`/orders/cogs?start=${start}&end=${end}${locationQuery}`)
       .then(setCogsData)
       .catch((err) => console.error("Failed to fetch COGS data:", err));
   };
@@ -83,7 +86,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
     setTimeout(() => setResetMsg(null), 3000);
   };
 
-  useEffect(() => { fetchCogs(); }, [dateRange, startDate, endDate]);
+  useEffect(() => { fetchCogs(); }, [dateRange, startDate, endDate, currentLocationId]);
 
   useEffect(() => {
     if (dateRange !== 'custom') {
@@ -111,7 +114,8 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
   useEffect(() => {
     const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
     const y = fmt(yesterday);
-    apiGet<Record<string, unknown>[]>('/orders?start=' + y + '&end=' + y)
+    const locationQuery = currentLocationId == null ? "" : `&location_id=${currentLocationId}`;
+    apiGet<Record<string, unknown>[]>('/orders?start=' + y + '&end=' + y + locationQuery)
       .then((data) => {
         const transformed = data.map((o) => ({
           id: String(o.id ?? ''),
@@ -147,7 +151,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
         })) as Order[];
         setYesterdayOrders(transformed);
       }).catch(() => {});
-  }, []);
+  }, [currentLocationId]);
 
   // Hourly revenue
   useEffect(() => {

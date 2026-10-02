@@ -24,6 +24,7 @@ import { AdminLocations } from "./AdminLocations";
 import { AdminTransfers } from "./AdminTransfers";
 import { LocationSelector } from "./LocationSelector";
 import { getNavIcon } from "./NavIcons";
+import { useLocation } from "../contexts/LocationContext";
 
 const STORAGE_KEY_ORDERS = 'erlbrew_admin_orders';
 const STORAGE_KEY_INVENTORY = 'erlbrew_admin_inventory';
@@ -59,6 +60,7 @@ const TABS: { label: string; value: AdminTab; icon: string }[] = [
 ];
 
 export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
+  const { currentLocationId } = useLocation();
   const { isMobile } = useViewport();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -140,7 +142,8 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
   const syncData = useCallback(async () => {
     setSyncStatus('syncing');
     try {
-      const ordersData = await apiGet<Record<string, unknown>[]>('/orders');
+      const locationQuery = currentLocationId == null ? '' : `?location_id=${encodeURIComponent(String(currentLocationId))}`;
+      const ordersData = await apiGet<Record<string, unknown>[]>(`/orders${locationQuery}`);
       const transformedOrders = ordersData.map((o) => ({
         id: String(o.id ?? ''),
         items: Array.isArray(o.items) ? o.items.map((it: any) => ({
@@ -179,7 +182,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
       setOrders(transformedOrders);
       localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(transformedOrders));
 
-      const invData = await apiAdminGet<InventoryItem[]>('/inventory');
+      const invData = await apiAdminGet<InventoryItem[]>(`/inventory${locationQuery}`);
       setInventory(invData);
       localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(invData));
 
@@ -194,7 +197,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
       setSyncStatus('error');
       setTimeout(() => setSyncStatus('idle'), 3000);
     }
-  }, []);
+  }, [currentLocationId]);
 
   useEffect(() => { syncData().finally(() => setLoading(false)); }, [syncData]);
   // Coming back from an OAuth redirect (QuickBooks connect) → land on Settings

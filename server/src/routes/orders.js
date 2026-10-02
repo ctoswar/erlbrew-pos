@@ -650,7 +650,9 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     // New: Cost of Goods Sold (COGS) endpoint
   router.get('/cogs', authMiddleware, async (req, res) => {
     try {
-      const { start, end } = req.query;
+      const { start, end, location_id } = req.query;
+      const locationCondition = location_id ? ' AND o.location_id = ?' : '';
+      const locationParams = location_id ? [location_id] : [];
       const today = taipeiNow();
       const toDate = (d) => {
         const dt = d ? new Date(d) : today;
@@ -691,16 +693,16 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         FROM orders o
         JOIN order_items oi ON o.id = oi.order_id
         JOIN recipes r ON oi.menu_item_id = r.menu_item_id
-        JOIN inventory i ON r.inventory_item_id = i.id
-        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)`;
-      const [tot] = await pool.query(sqlCogs, [startStr, endStr]);
+        JOIN inventory i ON r.inventory_item_id = i.id AND i.location_id = o.location_id
+        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)${locationCondition}`;
+      const [tot] = await pool.query(sqlCogs, [startStr, endStr, ...locationParams]);
       const cogs = Number((tot && tot[0] && tot[0].cogs) || 0);
 
       // 2) Count of orders in range
       const sqlCount = `SELECT COUNT(*) AS count
         FROM orders o
-        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)`;
-      const [cnt] = await pool.query(sqlCount, [startStr, endStr]);
+        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)${locationCondition}`;
+      const [cnt] = await pool.query(sqlCount, [startStr, endStr, ...locationParams]);
       const orderCount = Number((cnt && cnt[0] && cnt[0].count) || 0);
 
       // 3) Per-order breakdown (total, cogs, profit)
@@ -709,10 +711,10 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         FROM orders o
         JOIN order_items oi ON o.id = oi.order_id
         JOIN recipes r ON oi.menu_item_id = r.menu_item_id
-        JOIN inventory i ON r.inventory_item_id = i.id
-        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)
+        JOIN inventory i ON r.inventory_item_id = i.id AND i.location_id = o.location_id
+        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)${locationCondition}
         GROUP BY o.id`;
-      const [detailsRows] = await pool.query(sqlDetails, [startStr, endStr]);
+      const [detailsRows] = await pool.query(sqlDetails, [startStr, endStr, ...locationParams]);
       const details = (detailsRows || []).map(r => {
         const total = Number(r.total) || 0;
         const c = Number(r.cogs) || 0;

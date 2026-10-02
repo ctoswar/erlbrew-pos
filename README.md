@@ -83,6 +83,55 @@ Services:
 - Frontend: http://localhost:3004
 - Backend API: http://localhost:3001
 
+### Tailscale Deployment for Multiple Locations
+
+Use one central POS deployment and one shared MySQL database. Each branch connects to the
+central server over the Tailscale network; do not create a separate database for each branch
+if you need consolidated reports and inventory transfers.
+
+Recommended topology:
+
+```text
+Branch A tablet ─┐
+Branch B tablet ─┼── Tailscale network ── POS server ── MySQL
+Branch C tablet ─┘
+```
+
+1. Install Tailscale on the server running Docker, and on every branch tablet or computer.
+2. Start the stack from `infra/` with `docker compose up -d`.
+3. Allow the Tailscale network to reach the frontend port (`3004`) on the POS server.
+4. Open the POS from each branch using the server's Tailscale IP or MagicDNS hostname:
+
+   ```text
+   http://100.x.x.x:3004
+   # or
+   http://pos-server.your-tailnet.ts.net:3004
+   ```
+
+5. Create the branches in **Admin → Locations**. Use the same central URL at every branch.
+6. Configure Tailscale ACLs so only approved POS devices and staff devices can access the
+   server.
+
+For HTTPS, use a Tailscale MagicDNS hostname and Tailscale certificates, then terminate TLS
+at Nginx. Keep port `3001` private to Docker/Nginx; branch devices should access the frontend
+URL rather than the backend directly. With the frontend and `/api` served by the same Nginx
+host, leave `VITE_API_URL` empty.
+
+For branch-local receipt printing, install Tailscale on each Raspberry Pi print server and
+assign each branch its own print-server hostname, for example:
+
+```text
+Branch A → http://branch-a-printer:9100
+Branch B → http://branch-b-printer:9100
+```
+
+#### Important multi-location limitation
+
+The admin dashboard, inventory, transfers, and reports support location filtering. Before
+deploying multiple active branches, POS terminals must also be assigned a branch location so
+new orders include the correct `location_id`; otherwise orders can fall back to the default
+location. The regular POS location-assignment work is not yet complete.
+
 ## Environment Variables
 
 ### Backend (server/.env)

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { formatCurrency, formatDate } from "../utils";
 import { Order, Staff } from "../types";
 import { Customer, getCustomers, getTopCustomers, getCustomerOrders, updateCustomer } from "../utils/api";
+import { useLocation } from "../contexts/LocationContext";
 
 export const AdminCustomers: React.FC = () => {
+  const { currentLocationId } = useLocation();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [topCustomers, setTopCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
@@ -54,7 +56,7 @@ export const AdminCustomers: React.FC = () => {
     setEditNotes(customer.notes || "");
     setView("detail");
     try {
-      const rawOrders = await getCustomerOrders(customer.id);
+      const rawOrders = await getCustomerOrders(customer.id, currentLocationId);
       setCustomerOrders(rawOrders.map((o: Record<string, unknown>) => ({
         id: String(o.id ?? ''),
         items: Array.isArray(o.items) ? o.items : [],

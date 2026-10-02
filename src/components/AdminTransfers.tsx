@@ -57,21 +57,24 @@ export const AdminTransfers: React.FC = () => {
     }
     setError(null);
     try {
-      await apiAdminPost("/transfers", form);
+      await apiAdminPost("/transfers", {
+        ...form,
+        ...(currentLocationId == null ? {} : { location_id: currentLocationId }),
+      });
       setShowForm(false);
       setForm({ from_location_id: 0, to_location_id: 0, inventory_item_id: "", quantity: 0, notes: "" });
       fetchData();
-    } catch (e: any) {
-      setError(e.message || "Failed to create transfer");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to create transfer");
     }
   };
 
   const handleAction = async (id: number, action: string) => {
     try {
-      await apiAdminPut(`/transfers/${id}/${action}`, {});
+      await apiAdminPut(`/transfers/${id}/${action}`, currentLocationId == null ? {} : { location_id: currentLocationId });
       fetchData();
-    } catch (e: any) {
-      setError(e.message || `Failed to ${action} transfer`);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : `Failed to ${action} transfer`);
     }
   };
 

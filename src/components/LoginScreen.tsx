@@ -5,6 +5,7 @@ import { useFullscreen } from "../hooks/useFullscreen";
 import { formatTime, formatDate } from "../utils";
 import { apiPost, apiGet, setAuthToken } from "../utils/api";
 import { unlockAudio } from "../utils/sound";
+import { useLocation } from "../contexts/LocationContext";
 
 interface CompanyInfo {
   company_name: string;
@@ -21,6 +22,7 @@ interface RfidStaffResponse {
   role: Role;
   initials: string;
   color: string;
+  location_id?: number | null;
 }
 
 interface Props {
@@ -28,6 +30,7 @@ interface Props {
 }
 
 export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
+  const { locations, loading: locationsLoading, isDeviceConfigured, configureDeviceLocation } = useLocation();
   const time = useClock();
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
   const [company] = useState<CompanyInfo>(() => {
@@ -47,6 +50,7 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
   const [msg, setMsg] = useState({ text: "", type: "info" as "info" | "error" | "success" });
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"rfid" | "pin">("rfid");
+  const [setupLocationId, setSetupLocationId] = useState("");
 
   const rfidInputRef = useRef<HTMLInputElement>(null);
   const pinInputRef = useRef<HTMLInputElement>(null);
@@ -77,7 +81,7 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
         setRfid("");
         return;
       }
-      const staff: Staff = { ...found, pin: "" };
+      const staff: Staff = { ...found, pin: "", locationId: found.location_id ?? null };
       setSelectedStaff(staff);
       setRfid(trimmed);
       setStep("pin");
@@ -121,9 +125,12 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
           throw new Error("No token");
         }
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         setLoading(false);
-        setMsg({ text: "Incorrect PIN. Try again.", type: "error" });
+        const message = error instanceof Error && error.message.includes("not assigned")
+          ? "This staff account is not assigned to a branch. Ask a manager."
+          : "Incorrect PIN. Try again.";
+        setMsg({ text: message, type: "error" });
         setPin("");
       });
   };
@@ -142,6 +149,52 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
       : msg.type === "success"
         ? "text-erl-success"
         : "text-erl-text-muted";
+
+  if (!isDeviceConfigured) {
+    const activeLocations = locations.filter((location) => location.is_active);
+    const selectedLocationId = setupLocationId || String(
+      activeLocations.find((location) => location.is_default)?.id ?? activeLocations[0]?.id ?? ""
+    );
+
+    return (
+      <div className="flex h-screen bg-erl-base overflow-hidden relative items-center justify-center p-5">
+        <div className="card-glass w-full max-w-[420px] p-8 md:p-10 text-center">
+          <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-erl-accent/10 border border-erl-accent/20 flex items-center justify-center text-2xl">
+            ☕
+          </div>
+          <p className="text-[9px] text-erl-accent tracking-[0.25em] uppercase font-bold mb-3">Terminal setup</p>
+          <h1 className="font-display text-2xl font-bold text-erl-text-primary mb-3">Choose this branch</h1>
+          <p className="text-sm text-erl-text-muted leading-relaxed mb-7">
+            Set this device&apos;s branch once. Managers can switch branches later; staff accounts remain locked to their assigned branch.
+          </p>
+          {locationsLoading ? (
+            <div className="text-sm text-erl-text-muted py-5">Loading branches…</div>
+          ) : activeLocations.length === 0 ? (
+            <div className="text-sm text-erl-danger py-5">No active branches are configured. Ask a manager to add one.</div>
+          ) : (
+            <>
+              <select
+                value={selectedLocationId}
+                onChange={(event) => setSetupLocationId(event.target.value)}
+                className="w-full bg-erl-base border border-erl-border-medium rounded-xl text-erl-text-primary px-4 py-3 text-sm outline-none focus:border-erl-accent mb-4"
+              >
+                {activeLocations.map((location) => (
+                  <option key={location.id} value={location.id}>{location.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => configureDeviceLocation(Number(selectedLocationId))}
+                disabled={!selectedLocationId}
+                className="btn btn-accent w-full py-3 text-xs tracking-[0.15em] uppercase font-bold disabled:opacity-40"
+              >
+                Save terminal branch
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-erl-base overflow-hidden relative">

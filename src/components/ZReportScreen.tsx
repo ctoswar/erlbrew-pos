@@ -2,8 +2,10 @@ import React, { useState, useEffect, useMemo } from "react";
 import { generateZReport, getZReports, ZReport } from "../utils/api";
 import { formatCurrency } from "../utils";
 import { ZReportPreview } from "./ZReportPreview";
+import { useLocation } from "../contexts/LocationContext";
 
 export const ZReportScreen: React.FC = () => {
+  const { currentLocationId } = useLocation();
   const [reports, setReports] = useState<ZReport[]>([]);
   const [lastReport, setLastReport] = useState<ZReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -14,19 +16,19 @@ export const ZReportScreen: React.FC = () => {
   const loadReports = () => {
     setLoading(true);
     setError("");
-    getZReports(10)
+    getZReports(10, currentLocationId)
       .then(setReports)
       .catch(() => setError("Failed to load reports"))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadReports(); }, []);
+  useEffect(() => { loadReports(); }, [currentLocationId]);
 
   const handleGenerate = async () => {
     setGenerating(true);
     setError("");
     try {
-      const report = await generateZReport();
+      const report = await generateZReport(currentLocationId);
       setLastReport(report);
       loadReports();
     } catch (e: any) {

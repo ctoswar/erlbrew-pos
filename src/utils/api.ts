@@ -22,8 +22,10 @@ async function readErrorBody(res: Response): Promise<string> {
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
+  const token = getAuthToken();
   const res = await fetch(getApiUrl(path), {
     credentials: 'include',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) {
     const errBody = await readErrorBody(res);
@@ -614,6 +616,7 @@ export interface CreateStaffData {
   initials?: string;
   color?: string;
   pin?: string; // 4-digit PIN
+  location_id?: number | null;
 }
 
 export async function createStaff(data: CreateStaffData): Promise<{ id: number }> {
@@ -718,7 +721,7 @@ export async function batchApplyModifier(modifier: { name: string; price: number
   return res.json();
 }
 
-export async function batchApplyIngredients(items: { inventory_item_id: string; quantity: number }[], menuItemIds: string[]): Promise<{ ok: boolean; applied: number }> {
+export async function batchApplyIngredients(items: { inventory_item_id: string; quantity: number }[], menuItemIds: string[], locationId?: number | null): Promise<{ ok: boolean; applied: number }> {
   const token = getAuthToken();
   const res = await fetch(getApiUrl('/recipes/batch'), {
     method: 'POST',
@@ -727,7 +730,7 @@ export async function batchApplyIngredients(items: { inventory_item_id: string; 
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     credentials: 'include',
-    body: JSON.stringify({ items, menuItemIds }),
+    body: JSON.stringify({ items, menuItemIds, ...(locationId == null ? {} : { location_id: locationId }) }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -773,12 +776,14 @@ export interface ZReport {
   printed_at?: string;
 }
 
-export async function generateZReport(): Promise<ZReport> {
+export async function generateZReport(locationId?: number | null): Promise<ZReport> {
   const token = getAuthToken();
-  const res = await fetch(getApiUrl('/orders/z-report'), {
+  const locationQuery = locationId == null ? "" : `?location_id=${encodeURIComponent(String(locationId))}`;
+  const res = await fetch(getApiUrl(`/orders/z-report${locationQuery}`), {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     credentials: 'include',
+    body: JSON.stringify(locationId == null ? {} : { location_id: locationId }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -787,9 +792,10 @@ export async function generateZReport(): Promise<ZReport> {
   return res.json();
 }
 
-export async function getZReports(limit = 10): Promise<ZReport[]> {
+export async function getZReports(limit = 10, locationId?: number | null): Promise<ZReport[]> {
   const token = getAuthToken();
-  const res = await fetch(getApiUrl(`/orders/z-reports?limit=${limit}`), {
+  const locationQuery = locationId == null ? "" : `&location_id=${encodeURIComponent(String(locationId))}`;
+  const res = await fetch(getApiUrl(`/orders/z-reports?limit=${limit}${locationQuery}`), {
     credentials: 'include',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -810,9 +816,10 @@ export interface CashDrawer {
   notes: string;
 }
 
-export async function getCashDrawer(): Promise<CashDrawer> {
+export async function getCashDrawer(locationId?: number | null): Promise<CashDrawer> {
   const token = getAuthToken();
-  const res = await fetch(getApiUrl('/orders/cash-drawer'), {
+  const locationQuery = locationId == null ? "" : `?location_id=${encodeURIComponent(String(locationId))}`;
+  const res = await fetch(getApiUrl(`/orders/cash-drawer${locationQuery}`), {
     credentials: 'include',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -820,7 +827,7 @@ export async function getCashDrawer(): Promise<CashDrawer> {
   return res.json();
 }
 
-export async function openCashDrawer(openingFloat: number): Promise<CashDrawer> {
+export async function openCashDrawer(openingFloat: number, locationId?: number | null): Promise<CashDrawer> {
   const token = getAuthToken();
   const res = await fetch(getApiUrl('/orders/cash-drawer'), {
     method: 'POST',
@@ -829,7 +836,7 @@ export async function openCashDrawer(openingFloat: number): Promise<CashDrawer> 
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     credentials: 'include',
-    body: JSON.stringify({ opening_float: openingFloat }),
+    body: JSON.stringify({ opening_float: openingFloat, ...(locationId == null ? {} : { location_id: locationId }) }),
   });
   if (!res.ok) throw new Error(`API failed: ${res.status}`);
   return res.json();
@@ -861,9 +868,10 @@ export interface CashDrawerTransaction {
   created_at: string;
 }
 
-export async function getCashDrawerTransactions(): Promise<CashDrawerTransaction[]> {
+export async function getCashDrawerTransactions(locationId?: number | null): Promise<CashDrawerTransaction[]> {
   const token = getAuthToken();
-  const res = await fetch(getApiUrl('/orders/cash-drawer/transactions'), {
+  const locationQuery = locationId == null ? "" : `?location_id=${encodeURIComponent(String(locationId))}`;
+  const res = await fetch(getApiUrl(`/orders/cash-drawer/transactions${locationQuery}`), {
     credentials: 'include',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -876,6 +884,7 @@ export async function createCashDrawerTransaction(data: {
   amount: number;
   reason?: string;
   staff_name?: string;
+  location_id?: number | null;
 }): Promise<CashDrawerTransaction> {
   const token = getAuthToken();
   const res = await fetch(getApiUrl('/orders/cash-drawer/transactions'), {
@@ -899,6 +908,7 @@ export async function updateCashDrawer(id: number, data: {
   cash_payouts?: number;
   notes?: string;
   action?: 'save' | 'close';
+  location_id?: number | null;
 }): Promise<CashDrawer> {
   const token = getAuthToken();
   const res = await fetch(getApiUrl(`/orders/cash-drawer/${id}`), {
@@ -997,8 +1007,9 @@ export async function getCustomer(id: number): Promise<Customer> {
   return res.json();
 }
 
-export async function getCustomerOrders(id: number): Promise<any[]> {
-  const res = await fetch(getApiUrl(`/customers/${id}/orders`), {
+export async function getCustomerOrders(id: number, locationId?: number | null): Promise<Record<string, unknown>[]> {
+  const locationQuery = locationId == null ? "" : `?location_id=${encodeURIComponent(String(locationId))}`;
+  const res = await fetch(getApiUrl(`/customers/${id}/orders${locationQuery}`), {
     headers: { ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) },
     credentials: 'include',
   });
@@ -1079,8 +1090,9 @@ export interface SalesReportSummary {
   grossProfit: number;
 }
 
-export async function getSalesReport(start: string, end: string): Promise<{ data: DailySalesReport[]; summary: SalesReportSummary }> {
-  const res = await fetch(getApiUrl(`/orders/reports/sales?start=${start}&end=${end}`), {
+export async function getSalesReport(start: string, end: string, locationId?: number | null): Promise<{ data: DailySalesReport[]; summary: SalesReportSummary }> {
+  const locationQuery = locationId == null ? "" : `&location_id=${encodeURIComponent(String(locationId))}`;
+  const res = await fetch(getApiUrl(`/orders/reports/sales?start=${start}&end=${end}${locationQuery}`), {
     headers: { ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) },
     credentials: 'include',
   });
@@ -1098,8 +1110,9 @@ export interface StaffReport {
   hoursWorked: number;
 }
 
-export async function getStaffReport(start: string, end: string): Promise<StaffReport[]> {
-  const res = await fetch(getApiUrl(`/orders/reports/staff?start=${start}&end=${end}`), {
+export async function getStaffReport(start: string, end: string, locationId?: number | null): Promise<StaffReport[]> {
+  const locationQuery = locationId == null ? "" : `&location_id=${encodeURIComponent(String(locationId))}`;
+  const res = await fetch(getApiUrl(`/orders/reports/staff?start=${start}&end=${end}${locationQuery}`), {
     headers: { ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) },
     credentials: 'include',
   });

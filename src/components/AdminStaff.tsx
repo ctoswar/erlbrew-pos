@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { apiAdminGet, apiAdminPut, apiAdminDelete, createStaff, CreateStaffData } from "../utils/api";
 import { formatCurrency } from "../utils";
 import { AnimatedSelect } from "./AnimatedSelect";
+import { useLocation } from "../contexts/LocationContext";
 
 interface StaffMember {
   id: number;
@@ -11,12 +12,18 @@ interface StaffMember {
   role: string;
   initials: string;
   color: string;
+  locationId?: number | null;
   pay_basis?: string | null;
   daily_rate?: number | null;
   monthly_salary?: number | null;
 }
 
+interface ServerStaffMember extends Omit<StaffMember, "locationId"> {
+  location_id?: number | null;
+}
+
 export const AdminStaff: React.FC = () => {
+  const { locations, currentLocationId } = useLocation();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
@@ -48,12 +55,13 @@ export const AdminStaff: React.FC = () => {
     initials: '',
     color: '#c4956a',
     pin: '',
+    locationId: currentLocationId,
   });
 
   const loadStaff = useCallback(() => {
     setLoading(true);
-    apiAdminGet<StaffMember[]>("/staff")
-      .then(setStaff)
+    apiAdminGet<ServerStaffMember[]>("/staff")
+      .then((rows) => setStaff(rows.map((row) => ({ ...row, locationId: row.location_id ?? null }))))
       .catch(() => setMsg({ text: "Failed to load staff", ok: false }))
       .finally(() => setLoading(false));
   }, []);
@@ -150,6 +158,18 @@ export const AdminStaff: React.FC = () => {
     } finally { setSaving(false); }
   };
 
+  const saveLocation = async (id: number, locationId: number | null) => {
+    setSaving(true);
+    try {
+      await apiAdminPut(`/staff/${id}`, { location_id: locationId });
+      showMsg("Branch assignment updated", true);
+      loadStaff();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to save branch";
+      showMsg(message, false);
+    } finally { setSaving(false); }
+  };
+
   // Add new staff
   const saveNewStaff = async () => {
     if (!addForm.rfid.trim()) { showMsg("RFID is required", false); return; }
@@ -166,10 +186,11 @@ export const AdminStaff: React.FC = () => {
         initials: addForm.initials.trim() || addForm.name.trim().split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 2),
         color: addForm.color,
         pin: addForm.pin,
+        location_id: addForm.locationId || null,
       };
       await createStaff(data);
       setShowAddForm(false);
-      setAddForm({ rfid: '', name: '', role: 'Barista', initials: '', color: '#c4956a', pin: '' });
+      setAddForm({ rfid: '', name: '', role: 'Barista', initials: '', color: '#c4956a', pin: '', locationId: currentLocationId });
       showMsg("Staff added", true);
       loadStaff();
     } catch (e: unknown) {
@@ -338,6 +359,17 @@ export const AdminStaff: React.FC = () => {
                     />
                   </div>
                   <div className="flex-1">
+                    <label className="text-xs text-erl-text-muted mb-1.5 block tracking-wide font-medium">Branch</label>
+                    <AnimatedSelect
+                      options={[
+                        { value: "", label: "Unassigned" },
+                        ...locations.filter((location) => location.is_active).map((location) => ({ value: String(location.id), label: location.name })),
+                      ]}
+                      value={addForm.locationId ? String(addForm.locationId) : ""}
+                      onChange={(value) => setAddForm((form) => ({ ...form, locationId: value ? Number(value) : null }))}
+                    />
+                  </div>
+                  <div className="flex-1">
                     <label className="text-xs text-erl-text-muted mb-1.5 block tracking-wide font-medium">Color</label>
                     <div className="flex gap-2 items-center">
                       <input
@@ -372,7 +404,7 @@ export const AdminStaff: React.FC = () => {
                     {saving ? "Adding..." : "Add Staff"}
                   </button>
                   <button
-                    onClick={() => { setShowAddForm(false); setAddForm({ rfid: '', name: '', role: 'Barista', initials: '', color: '#c4956a', pin: '' }); }}
+                    onClick={() => { setShowAddForm(false); setAddForm({ rfid: '', name: '', role: 'Barista', initials: '', color: '#c4956a', pin: '', locationId: currentLocationId }); }}
                     className="btn btn-ghost text-xs px-4 py-2.5"
                   >
                     Cancel
@@ -443,6 +475,21 @@ export const AdminStaff: React.FC = () => {
                         </button>
                       </div>
                     )}
+                  </div>
+
+                  {/* Branch assignment */}
+                  <div className="flex items-center gap-3 mb-3 pl-1">
+                    <span className="text-[10px] text-erl-text-faint tracking-[0.15em] uppercase font-semibold w-[52px] flex-shrink-0">Branch</span>
+                    <div className="flex-1 max-w-[260px]">
+                      <AnimatedSelect
+                        options={[
+                          { value: "", label: "Unassigned (cannot sign in)" },
+                          ...locations.filter((location) => location.is_active).map((location) => ({ value: String(location.id), label: location.name })),
+                        ]}
+                        value={s.locationId ? String(s.locationId) : ""}
+                        onChange={(value) => saveLocation(s.id, value ? Number(value) : null)}
+                      />
+                    </div>
                   </div>
 
                   {/* Row 2: RFID Badge */}

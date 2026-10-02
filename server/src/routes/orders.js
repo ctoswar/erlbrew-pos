@@ -7,10 +7,20 @@ import { isPaymongoReady, createCheckoutSession } from '../services/paymongo.js'
 import { pushOrderState } from '../services/deliveryChannels.js';
 import { autoSyncDailySales } from '../services/accountingQuickBooks.js';
 import { autoSyncDailySales as autoSyncDailySalesXero } from '../services/accountingXero.js';
+import { locationScope, requireLocationId, scopedLocationCondition } from '../middleware/location.js';
 
 // Helpers for Asia/Taipei time (UTC+8) — server timezone-independent
 function taipeiNow() {
   return new Date(Date.now() + 8 * 60 * 60 * 1000);
+}
+
+async function findOrderInScope(pool, req, id, columns = 'id, location_id') {
+  const scope = scopedLocationCondition(req, 'location_id');
+  const [rows] = await pool.query(
+    `SELECT ${columns} FROM orders WHERE id = ?${scope.sql}`,
+    [id, ...scope.params]
+  );
+  return rows[0] || null;
 }
 function toMysqlDatetime(d) {
   return d.toISOString().slice(0, 19).replace('T', ' ');
@@ -130,15 +140,12 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   }
 
   // GET all orders (public - for kitchen/dashboard)
-  router.get('/', async (req, res) => {
+  router.get('/', authMiddleware, locationScope, async (req, res) => {
     try {
-      const { start, end, location_id } = req.query;
-      let where = '';
-      const params = [];
-      if (location_id) {
-        where += 'WHERE o.location_id = ? ';
-        params.push(location_id);
-      }
+      const { start, end } = req.query;
+      const scope = scopedLocationCondition(req, 'o.location_id');
+      let where = scope.sql ? `WHERE ${scope.sql.slice(5)} ` : '';
+      const params = [...scope.params];
       if (start) {
         where += where ? 'AND o.created_at >= ? ' : 'WHERE o.created_at >= ? ';
         params.push(start);
@@ -169,11 +176,9 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
 
   // GET today's orders (public)
-  router.get('/today', async (req, res) => {
+  router.get('/today', authMiddleware, locationScope, async (req, res) => {
     try {
-      const { location_id } = req.query;
-      const locCondition = location_id ? 'AND o.location_id = ?' : '';
-      const locParams = location_id ? [location_id] : [];
+      const scope = scopedLocationCondition(req, 'o.location_id');
       const [rows] = await pool.query(`
          SELECT o.id, o.status, o.subtotal, o.tax, o.total,
                 o.customer_name, o.table_name, o.type, o.pay_method, o.reference_number, o.discount_json,
@@ -182,9 +187,9 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
                 s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
          FROM orders o
          LEFT JOIN staff s ON o.staff_id = s.id
-         WHERE DATE(o.created_at) = CURDATE() ${locCondition}
+         WHERE DATE(o.created_at) = CURDATE()${scope.sql}
          ORDER BY o.created_at DESC
-       `, locParams);
+       `, scope.params);
       const ids = rows.map(r => r.id);
       const items = ids.length ? await fetchOrderItems(ids) : [];
       res.json(attachItems(rows, items));
@@ -195,18 +200,18 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
 
   // GET /history — paginated order history with search, date range, status filter
-  router.get('/history', async (req, res) => {
+  router.get('/history', authMiddleware, locationScope, async (req, res) => {
     try {
-      const { start, end, search, status, location_id, limit = 50, offset = 0 } = req.query;
+      const { start, end, search, status, limit = 50, offset = 0 } = req.query;
       const lim = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 500);
       const off = Math.max(parseInt(String(offset), 10) || 0, 0);
 
       const conditions = [];
       const params = [];
 
-      if (location_id) {
+      if (req.locationId !== null && req.locationId !== undefined) {
         conditions.push('o.location_id = ?');
-        params.push(location_id);
+        params.push(req.locationId);
       }
       if (start) {
         conditions.push('o.created_at >= ?');
@@ -268,8 +273,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
 
   // Create order and append to Google Sheets (public) -> now protected by auth
-  router.post('/', authMiddleware, async (req, res) => {
-    const { staff_id, staff_name, items, type, customer_name, customer_phone, table_name, pay_method, reference_number, subtotal, tax, total, discount_type, discount_label, discount_value, discount_amount, location_id } = req.body;
+  router.post('/', authMiddleware, locationScope, requireLocationId, async (req, res) => {
+    const { staff_id, staff_name, items, type, customer_name, customer_phone, table_name, pay_method, reference_number, subtotal, tax, total, discount_type, discount_label, discount_value, discount_amount } = req.body;
     // Validation per FIX 5
     const err = validate(req, res, {
       items: { required: true, type: 'object', array: true },
@@ -297,12 +302,12 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       const orderTotal = typeof total === 'number' && total >= 0 ? total : orderSubtotal + orderTax;
       const id = uuidv4();
 
-      // Look up staff id from rfid if provided
-      let staffDbId = null;
-      if (staff_id) {
-        const [staffRows] = await pool.query('SELECT id FROM staff WHERE rfid = ?', [staff_id]);
-        if (staffRows.length) staffDbId = staffRows[0].id;
-      }
+      // Attribute the order to the authenticated staff member, never to a
+      // client-supplied RFID that could belong to another employee.
+      const authenticatedStaffId = Number(req.user?.sub);
+      const staffDbId = Number.isInteger(authenticatedStaffId) && authenticatedStaffId > 0
+        ? authenticatedStaffId
+        : null;
 
       const discountJson = (discount_type || discount_label || discount_value !== undefined || discount_amount !== undefined)
         ? JSON.stringify({ type: discount_type || null, label: discount_label || null, value: discount_value ?? null, amount: discount_amount ?? null })
@@ -352,7 +357,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
       await pool.query(
         'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name, customer_id, table_name, type, pay_method, reference_number, discount_json, location_id, pay_status, preparing_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, staffDbId, initialStatus, orderSubtotal, orderTax, orderTotal, customer_name || null, customerId, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null, discountJson, location_id || 1, initialPayStatus, initialStatus === 'preparing' ? new Date() : null]
+        [id, staffDbId, initialStatus, orderSubtotal, orderTax, orderTotal, customer_name || null, customerId, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null, discountJson, req.locationId, initialPayStatus, initialStatus === 'preparing' ? new Date() : null]
       );
       for (const it of itemsOut) {
         const [itemResult] = await pool.query(
@@ -397,8 +402,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
                     i.stock, i.low_stock_threshold, i.location_id
              FROM recipes r
              JOIN inventory i ON i.id = r.inventory_item_id
-             WHERE r.menu_item_id IN (?)`,
-            [menuItemIds]
+             WHERE r.menu_item_id IN (?) AND i.location_id = ?`,
+            [menuItemIds, req.locationId]
           );
 
           // Deduct stock — skip if not enough stock (log warning, don't fail order)
@@ -409,8 +414,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
               const stockBefore = Number(recipe.stock);
               const newStock = stockBefore - deduction;
               const [updateResult] = await conn.query(
-                "UPDATE inventory SET stock = ? WHERE id = ? AND stock >= ?",
-                [newStock, recipe.inventory_item_id, deduction]
+                "UPDATE inventory SET stock = ? WHERE id = ? AND location_id = ? AND stock >= ?",
+                [newStock, recipe.inventory_item_id, req.locationId, deduction]
               );
               // Only log movement if the update actually changed rows (means stock was sufficient)
               if (updateResult.affectedRows > 0) {
@@ -456,12 +461,12 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       try {
         const today = toMysqlDate(taipeiNow());
         const [drawers] = await pool.query(
-          'SELECT id, opening_float, cash_sales, cash_payouts FROM cash_drawer WHERE shift_date = ? AND status = "open" LIMIT 1',
-          [today]
+          'SELECT id, opening_float, cash_sales, cash_payouts FROM cash_drawer WHERE shift_date = ? AND status = "open" AND location_id = ? LIMIT 1',
+          [today, req.locationId]
         );
         if (drawers.length) {
           const drawer = drawers[0];
-          const cashSales = await computeCashSales();
+          const cashSales = await computeCashSales(req.locationId);
           const balanceBefore = Number(drawer.opening_float) + cashSales - Number(drawer.cash_payouts);
           const balanceAfter = balanceBefore + total;
           await pool.query(
@@ -480,7 +485,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     if (broadcastEvent) {
       try {
         const [rows] = await pool.query(`
-          SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.table_name, o.type, o.pay_method,
+          SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.table_name, o.type, o.pay_method, o.location_id,
                  o.reference_number, o.discount_json, o.order_source, o.external_order_id, o.pay_status, o.created_at, o.preparing_at,
                  s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
           FROM orders o LEFT JOIN staff s ON o.staff_id = s.id WHERE o.id = ?`, [id]);
@@ -496,7 +501,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 });
 
   // PUT /api/orders/:id/status — update order status (e.g., preparing→ready→completed)
-  router.put('/:id/status', authMiddleware, async (req, res) => {
+  router.put('/:id/status', authMiddleware, locationScope, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   const allowed = ['pending','pending_payment','preparing','ready','completed'];
@@ -506,6 +511,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   if (!allowed.includes(status)) {
     return res.status(400).json({ error: `status must be one of: ${allowed.join(', ')}` });
   }
+  const visibleOrder = await findOrderInScope(pool, req, id);
+  if (!visibleOrder) return res.status(404).json({ error: 'Order not found' });
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -550,8 +557,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       }
     }
     await conn.query(
-      'UPDATE orders SET status = ?, completed_at = ?, preparing_at = IF(? = "preparing", COALESCE(preparing_at, NOW()), preparing_at) WHERE id = ?',
-      [status, status === 'completed' ? new Date() : null, status, id]
+      `UPDATE orders SET status = ?, completed_at = ?, preparing_at = IF(? = "preparing", COALESCE(preparing_at, NOW()), preparing_at) WHERE id = ?${scopedLocationCondition(req, 'location_id').sql}`,
+      [status, status === 'completed' ? new Date() : null, status, id, ...scopedLocationCondition(req, 'location_id').params]
     );
     await conn.commit();
     // Audit: status change
@@ -572,7 +579,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     if (broadcastEvent) {
       try {
         const [rows] = await pool.query(`
-          SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.table_name, o.type, o.pay_method,
+          SELECT o.id, o.status, o.subtotal, o.tax, o.total, o.table_name, o.type, o.pay_method, o.location_id,
                  o.reference_number, o.discount_json, o.created_at, o.completed_at, o.preparing_at,
                  s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
           FROM orders o LEFT JOIN staff s ON o.staff_id = s.id WHERE o.id = ?`, [id]);
@@ -622,23 +629,28 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     }
   });
 
-  router.delete('/:id', authMiddleware, async (req, res) => {
+  router.delete('/:id', authMiddleware, locationScope, async (req, res) => {
     const { id } = req.params;
     if (typeof id !== 'string' || id.length < 1) {
       return res.status(400).json({ error: 'Invalid order id' });
     }
     try {
+      const order = await findOrderInScope(pool, req, id);
+      if (!order) return res.status(404).json({ error: 'Order not found' });
       // Broadcast void before actual deletion so clients can react
       if (broadcastEvent) {
         try {
           const [rows] = await pool.query('SELECT id FROM orders WHERE id = ?', [id]);
           if (rows[0]) {
-            broadcastEvent('order:voided', { id });
+            broadcastEvent('order:voided', { id, location_id: order.location_id });
           }
         } catch (e) { /* non-fatal */ }
       }
       await pool.query('DELETE FROM order_items WHERE order_id = ?', [id]);
-      await pool.query('DELETE FROM orders WHERE id = ?', [id]);
+      await pool.query(
+        `DELETE FROM orders WHERE id = ?${scopedLocationCondition(req, 'location_id').sql}`,
+        [id, ...scopedLocationCondition(req, 'location_id').params]
+      );
       // Audit: order deleted
       await logAudit(pool, req, { action: 'order_delete', entityType: 'order', entityId: id });
       res.json({ ok: true });
@@ -648,11 +660,11 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
   
     // New: Cost of Goods Sold (COGS) endpoint
-  router.get('/cogs', authMiddleware, async (req, res) => {
+  router.get('/cogs', authMiddleware, locationScope, async (req, res) => {
     try {
-      const { start, end, location_id } = req.query;
-      const locationCondition = location_id ? ' AND o.location_id = ?' : '';
-      const locationParams = location_id ? [location_id] : [];
+      const { start, end } = req.query;
+      const locationCondition = scopedLocationCondition(req, 'o.location_id').sql;
+      const locationParams = scopedLocationCondition(req, 'o.location_id').params;
       const today = taipeiNow();
       const toDate = (d) => {
         const dt = d ? new Date(d) : today;
@@ -784,7 +796,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
 
   // GET /api/orders/reports/sales — daily sales with real COGS, zero-filled
-  router.get('/reports/sales', authMiddleware, async (req, res) => {
+  router.get('/reports/sales', authMiddleware, locationScope, async (req, res) => {
     try {
       const { start, end } = req.query;
       const today = toDateOnly(taipeiNow());
@@ -814,9 +826,10 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
           FROM orders o
           LEFT JOIN order_items oi ON o.id = oi.order_id
           LEFT JOIN recipes r ON oi.menu_item_id = r.menu_item_id
-          LEFT JOIN inventory i ON r.inventory_item_id = i.id
+          LEFT JOIN inventory i ON r.inventory_item_id = i.id AND i.location_id = o.location_id
           WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)
             AND o.status = 'completed'
+            ${scopedLocationCondition(req, 'o.location_id').sql}
           GROUP BY DATE(o.created_at)
           ORDER BY DATE(o.created_at)
         `;
@@ -830,12 +843,14 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
           FROM orders o
           WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)
             AND o.status = 'completed'
+            ${scopedLocationCondition(req, 'o.location_id').sql}
           GROUP BY DATE(o.created_at)
           ORDER BY DATE(o.created_at)
         `;
       }
 
-      const [rows] = await pool.query(sql, [startStr, endStr]);
+      const reportScope = scopedLocationCondition(req, 'o.location_id');
+      const [rows] = await pool.query(sql, [startStr, endStr, ...reportScope.params]);
 
       // Zero-fill missing dates
       const result = [];
@@ -878,7 +893,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
 
   // GET /api/orders/reports/staff — staff performance with real data
-  router.get('/reports/staff', authMiddleware, async (req, res) => {
+  router.get('/reports/staff', authMiddleware, locationScope, async (req, res) => {
     try {
       const { start, end } = req.query;
       const today = toDateOnly(taipeiNow());
@@ -886,6 +901,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       const endStr = end || today;
 
       // Staff sales aggregation
+      const staffScope = scopedLocationCondition(req, 's.location_id');
+      const orderScope = scopedLocationCondition(req, 'o.location_id');
       const [salesRows] = await pool.query(`
         SELECT
           s.id AS staff_id,
@@ -898,9 +915,11 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         LEFT JOIN orders o ON o.staff_id = s.id
           AND o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)
           AND o.status = 'completed'
+          ${orderScope.sql}
+        WHERE 1 = 1${staffScope.sql}
         GROUP BY s.id
         ORDER BY revenue DESC
-      `, [startStr, endStr]);
+      `, [startStr, endStr, ...orderScope.params, ...staffScope.params]);
 
       // Staff hours from time_records
       const [timeRows] = await pool.query(`
@@ -912,8 +931,10 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         FROM staff s
         LEFT JOIN time_records t ON t.staff_id = s.id
           AND DATE(t.clock_in) >= ? AND DATE(t.clock_in) <= ?
+          ${scopedLocationCondition(req, 't.location_id').sql}
+        WHERE 1 = 1${staffScope.sql}
         GROUP BY s.id
-      `, [startStr, endStr]);
+      `, [startStr, endStr, ...scopedLocationCondition(req, 't.location_id').params, ...staffScope.params]);
 
       const timeMap = new Map((timeRows || []).map(r => [r.staff_id, Number(r.hours_worked) || 0]));
 
@@ -935,7 +956,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
 
   // POST /api/orders/:id/void — admin only
-  router.post('/:id/void', authMiddleware, adminMiddleware, async (req, res) => {
+  router.post('/:id/void', authMiddleware, adminMiddleware, locationScope, async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body || {};
     if (!reason || typeof reason !== 'string' || !reason.trim()) {
@@ -946,13 +967,18 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       await conn.beginTransaction();
 
       // Fetch order before voiding to reverse loyalty points
+      const scope = scopedLocationCondition(req, 'location_id');
       const [orderRows] = await conn.query(
-        'SELECT customer_id, total, status, pay_status FROM orders WHERE id = ? FOR UPDATE',
-        [id]
+        `SELECT customer_id, total, status, pay_status, location_id FROM orders WHERE id = ?${scope.sql} FOR UPDATE`,
+        [id, ...scope.params]
       );
       const order = orderRows[0];
+      if (!order) {
+        await conn.rollback();
+        return res.status(404).json({ error: 'Order not found' });
+      }
 
-      await conn.query('UPDATE orders SET status = ?, void_reason = ? WHERE id = ?', ['voided', reason.trim(), id]);
+      await conn.query(`UPDATE orders SET status = ?, void_reason = ? WHERE id = ?${scope.sql}`, ['voided', reason.trim(), id, ...scope.params]);
 
       // Reverse loyalty points if order was completed
       if (order && order.status === 'completed' && order.customer_id && order.total > 0) {
@@ -979,8 +1005,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
           const [recipes] = await conn.query(
             `SELECT r.menu_item_id, r.inventory_item_id, r.quantity, i.stock, i.location_id
-             FROM recipes r JOIN inventory i ON i.id = r.inventory_item_id
-             WHERE r.menu_item_id IN (?)`, [menuItemIds]
+             FROM recipes r JOIN inventory i ON i.id = r.inventory_item_id AND i.location_id = ?
+             WHERE r.menu_item_id IN (?)`, [order.location_id, menuItemIds]
           );
 
           for (const recipe of recipes) {
@@ -989,7 +1015,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
             if (restoreQty > 0) {
               const stockBefore = Number(recipe.stock);
               const stockAfter = stockBefore + restoreQty;
-              await conn.query('UPDATE inventory SET stock = ? WHERE id = ?', [stockAfter, recipe.inventory_item_id]);
+              await conn.query('UPDATE inventory SET stock = ? WHERE id = ? AND location_id = ?', [stockAfter, recipe.inventory_item_id, recipe.location_id]);
               await logInventoryMovement(conn, {
                 inventory_item_id: recipe.inventory_item_id,
                 location_id: recipe.location_id,
@@ -1011,7 +1037,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       await conn.commit();
 
       if (broadcastEvent) {
-        broadcastEvent('order:voided', { id, reason: reason.trim() });
+        broadcastEvent('order:voided', { id, reason: reason.trim(), location_id: order.location_id });
       }
       // Log void to Google Sheets
       if (googleSheets) {
@@ -1038,7 +1064,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
 
   // POST /api/orders/:id/refund — admin only
-  router.post('/:id/refund', authMiddleware, adminMiddleware, async (req, res) => {
+  router.post('/:id/refund', authMiddleware, adminMiddleware, locationScope, async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body || {};
     if (!reason || typeof reason !== 'string' || !reason.trim()) {
@@ -1049,13 +1075,18 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       await conn.beginTransaction();
 
       // Fetch order before refunding to reverse loyalty points
+      const scope = scopedLocationCondition(req, 'location_id');
       const [orderRows] = await conn.query(
-        'SELECT customer_id, total, status FROM orders WHERE id = ? FOR UPDATE',
-        [id]
+        `SELECT customer_id, total, status FROM orders WHERE id = ?${scope.sql} FOR UPDATE`,
+        [id, ...scope.params]
       );
       const order = orderRows[0];
+      if (!order) {
+        await conn.rollback();
+        return res.status(404).json({ error: 'Order not found' });
+      }
 
-      await conn.query('UPDATE orders SET status = ?, refund_reason = ? WHERE id = ?', ['refunded', reason.trim(), id]);
+      await conn.query(`UPDATE orders SET status = ?, refund_reason = ? WHERE id = ?${scope.sql}`, ['refunded', reason.trim(), id, ...scope.params]);
 
       // Reverse loyalty points if order was completed
       if (order && order.status === 'completed' && order.customer_id && order.total > 0) {
@@ -1070,7 +1101,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
       await conn.commit();
       if (broadcastEvent) {
-        broadcastEvent('order:updated', { id, status: 'refunded' });
+        broadcastEvent('order:updated', { id, status: 'refunded', location_id: order.location_id });
       }
       // Log refund to Google Sheets
       if (googleSheets) {
@@ -1098,7 +1129,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
   // Reusable Z-Report generator (used by route AND cron)
   // targetDate: YYYY-MM-DD string. Defaults to today if omitted.
-  async function buildZReportData(pool, targetDate) {
+  async function buildZReportData(pool, targetDate, locationId = null) {
     const now = taipeiNow();
 
     let periodStart, periodEnd, reportDateStr;
@@ -1117,6 +1148,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
     const periodStartStr = toMysqlDatetime(periodStart);
     const periodEndStr = toMysqlDatetime(periodEnd);
+    const locationSql = locationId === null || locationId === undefined ? '' : ' AND location_id = ?';
+    const locationParams = locationId === null || locationId === undefined ? [] : [locationId];
     const [salesRows] = await pool.query(`
       SELECT
         COUNT(*) AS total_orders,
@@ -1124,23 +1157,23 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         COALESCE(SUM(CASE WHEN pay_method = 'cash' THEN total ELSE 0 END), 0) AS total_cash,
         COALESCE(SUM(CASE WHEN pay_method = 'card' THEN total ELSE 0 END), 0) AS total_card,
         COALESCE(SUM(CASE WHEN pay_method = 'ewallet' THEN total ELSE 0 END), 0) AS total_ewallet
-      FROM orders WHERE DATE(created_at) = ${targetDate ? '?' : 'CURDATE()'} AND status = 'completed'
-    `, targetDate ? [targetDate] : []);
+      FROM orders WHERE DATE(created_at) = ${targetDate ? '?' : 'CURDATE()'} AND status = 'completed'${locationSql}
+    `, [...(targetDate ? [targetDate] : []), ...locationParams]);
     const [refundRows] = await pool.query(`
       SELECT COUNT(*) AS total_refunds, COALESCE(SUM(total), 0) AS refund_total
-      FROM orders WHERE DATE(created_at) = ${targetDate ? '?' : 'CURDATE()'} AND status = 'refunded'
-    `, targetDate ? [targetDate] : []);
+      FROM orders WHERE DATE(created_at) = ${targetDate ? '?' : 'CURDATE()'} AND status = 'refunded'${locationSql}
+    `, [...(targetDate ? [targetDate] : []), ...locationParams]);
     const [voidRows] = await pool.query(`
-      SELECT COUNT(*) AS total_voids FROM orders WHERE DATE(created_at) = ${targetDate ? '?' : 'CURDATE()'} AND status = 'voided'
-    `, targetDate ? [targetDate] : []);
+      SELECT COUNT(*) AS total_voids FROM orders WHERE DATE(created_at) = ${targetDate ? '?' : 'CURDATE()'} AND status = 'voided'${locationSql}
+    `, [...(targetDate ? [targetDate] : []), ...locationParams]);
     const [cogsRows] = await pool.query(`
       SELECT COALESCE(SUM(oi.qty * r.quantity * i.purchase_cost), 0) AS total_cogs
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       JOIN recipes r ON oi.menu_item_id = r.menu_item_id
-      JOIN inventory i ON r.inventory_item_id = i.id
-      WHERE DATE(o.created_at) = ${targetDate ? '?' : 'CURDATE()'} AND o.status = 'completed' AND i.purchase_cost > 0
-    `, targetDate ? [targetDate] : []);
+      JOIN inventory i ON r.inventory_item_id = i.id AND i.location_id = o.location_id
+      WHERE DATE(o.created_at) = ${targetDate ? '?' : 'CURDATE()'} AND o.status = 'completed' AND i.purchase_cost > 0${locationId === null || locationId === undefined ? '' : ' AND o.location_id = ?'}
+    `, [...(targetDate ? [targetDate] : []), ...locationParams]);
 
     const totalSales = Number(salesRows[0]?.total_sales) || 0;
     const totalCOGS = Number(cogsRows[0]?.total_cogs) || 0;
@@ -1160,20 +1193,21 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       total_voids: Number(voidRows[0]?.total_voids) || 0,
       total_cogs: totalCOGS,
       gross_profit: grossProfit,
+      location_id: locationId,
     };
   }
 
   // POST /api/orders/z-report — generate Z-Report for today
-  router.post('/z-report', authMiddleware, async (req, res) => {
+  router.post('/z-report', authMiddleware, locationScope, async (req, res) => {
     try {
-      const report = await buildZReportData(pool);
+      const report = await buildZReportData(pool, undefined, req.locationId);
       const [ins] = await pool.query(`
         INSERT INTO z_reports (staff_id, report_date, period_start, period_end, total_sales, total_orders,
-          total_cash, total_card, total_ewallet, total_refunds, total_voids, total_cogs, gross_profit)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          total_cash, total_card, total_ewallet, total_refunds, total_voids, total_cogs, gross_profit, location_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [report.staff_id, report.report_date, report.period_start, report.period_end,
           report.total_sales, report.total_orders, report.total_cash, report.total_card,
-          report.total_ewallet, report.total_refunds, report.total_voids, report.total_cogs, report.gross_profit]);
+          report.total_ewallet, report.total_refunds, report.total_voids, report.total_cogs, report.gross_profit, report.location_id]);
       report.id = ins.insertId;
       // Audit: Z-Report generated
       await logAudit(pool, req, { action: 'z_report_generate', entityType: 'z_report', entityId: String(ins.insertId), details: { date: report.report_date, total_sales: report.total_sales } });
@@ -1193,12 +1227,13 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
 
   // GET /api/orders/z-reports — retrieve recent Z-Reports
-  router.get('/z-reports', authMiddleware, async (req, res) => {
+  router.get('/z-reports', authMiddleware, locationScope, async (req, res) => {
     const limit = parseInt(String(req.query.limit || '10'), 10);
     try {
+      const scope = scopedLocationCondition(req, 'location_id');
       const [rows] = await pool.query(
-        'SELECT * FROM z_reports ORDER BY printed_at DESC LIMIT ?',
-        [limit]
+        `SELECT * FROM z_reports WHERE 1 = 1${scope.sql} ORDER BY printed_at DESC LIMIT ?`,
+        [...scope.params, limit]
       );
       res.json(rows);
     } catch (e) {
@@ -1207,12 +1242,13 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
 
   // Helper: compute cash_sales from actual completed cash orders (excl. tax = subtotal)
-  async function computeCashSales() {
+  async function computeCashSales(locationId = null) {
+    const scope = locationId === null || locationId === undefined ? { sql: '', params: [] } : { sql: ' AND location_id = ?', params: [locationId] };
     const [rows] = await pool.query(`
       SELECT COALESCE(SUM(subtotal), 0) AS total
       FROM orders
-      WHERE DATE(created_at) = CURDATE() AND status = 'completed' AND pay_method = 'cash'
-    `);
+      WHERE DATE(created_at) = CURDATE() AND status = 'completed' AND pay_method = 'cash'${scope.sql}
+    `, scope.params);
     return Number(rows[0]?.total) || 0;
   }
 
@@ -1223,13 +1259,14 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   }
 
   // GET /api/orders/cash-drawer — today's open drawer or null
-  router.get('/cash-drawer', authMiddleware, async (req, res) => {
+  router.get('/cash-drawer', authMiddleware, locationScope, async (req, res) => {
     try {
       const today = toMysqlDate(taipeiNow());
-      const cashSales = await computeCashSales();
+      const cashSales = await computeCashSales(req.locationId);
+      const scope = scopedLocationCondition(req, 'location_id');
       const [rows] = await pool.query(
-        'SELECT * FROM cash_drawer WHERE shift_date = ? AND status = "open" LIMIT 1',
-        [today]
+        `SELECT * FROM cash_drawer WHERE shift_date = ? AND status = "open"${scope.sql} LIMIT 1`,
+        [today, ...scope.params]
       );
       if (rows.length) {
         // Override stored cash_sales with computed value from orders table (excl. tax)
@@ -1256,18 +1293,18 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
 
   // POST /api/orders/cash-drawer — open (create) today's drawer
-  router.post('/cash-drawer', authMiddleware, async (req, res) => {
+  router.post('/cash-drawer', authMiddleware, locationScope, requireLocationId, async (req, res) => {
     try {
       const today = toMysqlDate(taipeiNow());
       const { opening_float = 0 } = req.body || {};
       // Close any existing open drawers for today
-      await pool.query('UPDATE cash_drawer SET status = "closed", closed_at = NOW() WHERE shift_date = ? AND status = "open"', [today]);
+      await pool.query('UPDATE cash_drawer SET status = "closed", closed_at = NOW() WHERE shift_date = ? AND status = "open" AND location_id = ?', [today, req.locationId]);
       // Create new open drawer
       const [ins] = await pool.query(`
-        INSERT INTO cash_drawer (shift_date, status, opening_float, expected_amount)
-        VALUES (?, 'open', ?, ?)
-      `, [today, opening_float, opening_float]);
-      const [rows] = await pool.query('SELECT * FROM cash_drawer WHERE id = ?', [ins.insertId]);
+        INSERT INTO cash_drawer (shift_date, status, opening_float, expected_amount, location_id)
+        VALUES (?, 'open', ?, ?, ?)
+      `, [today, opening_float, opening_float, req.locationId]);
+      const [rows] = await pool.query('SELECT * FROM cash_drawer WHERE id = ? AND location_id = ?', [ins.insertId, req.locationId]);
       // Audit: cash drawer opened
       await logAudit(pool, req, { action: 'cash_drawer_open', entityType: 'cash_drawer', entityId: String(ins.insertId), details: { shift_date: today, opening_float: Number(opening_float) } });
       if (googleSheets) {
@@ -1281,16 +1318,16 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
 
   // PUT /api/orders/cash-drawer/:id — update/close drawer
-  router.put('/cash-drawer/:id', authMiddleware, async (req, res) => {
+  router.put('/cash-drawer/:id', authMiddleware, locationScope, requireLocationId, async (req, res) => {
     try {
       const { id } = req.params;
       const { closing_amount, cash_payouts, notes, action } = req.body || {};
-      const [rows] = await pool.query('SELECT * FROM cash_drawer WHERE id = ?', [id]);
+      const [rows] = await pool.query('SELECT * FROM cash_drawer WHERE id = ? AND location_id = ?', [id, req.locationId]);
       if (!rows.length) return res.status(404).json({ error: 'Drawer not found' });
       const drawer = rows[0];
       const closing = Number(closing_amount) || 0;
       const payouts = Number(cash_payouts) || 0;
-      const cashSales = await computeCashSales();
+      const cashSales = await computeCashSales(req.locationId);
       const expected = Number(drawer.opening_float) + cashSales - payouts;
       const variance = closing - expected;
       const status = action === 'close' ? 'closed' : 'open';
@@ -1299,9 +1336,9 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         UPDATE cash_drawer SET
           closing_amount = ?, cash_payouts = ?, expected_amount = ?, variance = ?,
           status = ?, closed_at = ${closedAt}, notes = ?
-        WHERE id = ?
-      `, [closing, payouts, expected, variance, status, notes || '', id]);
-      const [updated] = await pool.query('SELECT * FROM cash_drawer WHERE id = ?', [id]);
+        WHERE id = ? AND location_id = ?
+      `, [closing, payouts, expected, variance, status, notes || '', id, req.locationId]);
+      const [updated] = await pool.query('SELECT * FROM cash_drawer WHERE id = ? AND location_id = ?', [id, req.locationId]);
       if (updated.length) updated[0].cash_sales = cashSales;
       // Audit: cash drawer close (only when explicitly closing)
       if (action === 'close') {
@@ -1318,12 +1355,13 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
 
   // GET /api/orders/cash-drawer/transactions — list transactions for today's drawer
-  router.get('/cash-drawer/transactions', authMiddleware, async (req, res) => {
+  router.get('/cash-drawer/transactions', authMiddleware, locationScope, async (req, res) => {
     try {
       const today = toMysqlDate(taipeiNow());
+      const drawerScope = scopedLocationCondition(req, 'location_id');
       const [drawers] = await pool.query(
-        'SELECT id FROM cash_drawer WHERE shift_date = ? ORDER BY id DESC LIMIT 1',
-        [today]
+        `SELECT id FROM cash_drawer WHERE shift_date = ?${drawerScope.sql} ORDER BY id DESC LIMIT 1`,
+        [today, ...drawerScope.params]
       );
       if (!drawers.length) return res.json([]);
       const [rows] = await pool.query(
@@ -1338,7 +1376,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
   });
 
   // POST /api/orders/cash-drawer/transactions — record a cash in/out entry
-  router.post('/cash-drawer/transactions', authMiddleware, async (req, res) => {
+  router.post('/cash-drawer/transactions', authMiddleware, locationScope, requireLocationId, async (req, res) => {
     try {
       const { transaction_type, amount, reason, staff_name } = req.body;
       if (!transaction_type || !['cash_in', 'cash_out'].includes(transaction_type)) {
@@ -1350,15 +1388,15 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
       const today = toMysqlDate(taipeiNow());
       const [drawers] = await pool.query(
-        'SELECT id, opening_float, cash_sales, cash_payouts FROM cash_drawer WHERE shift_date = ? AND status = "open" LIMIT 1',
-        [today]
+        'SELECT id, opening_float, cash_sales, cash_payouts FROM cash_drawer WHERE shift_date = ? AND status = "open" AND location_id = ? LIMIT 1',
+        [today, req.locationId]
       );
       if (!drawers.length) {
         return res.status(400).json({ error: 'No open cash drawer for today. Open a shift first.' });
       }
 
       const drawer = drawers[0];
-      const cashSales = await computeCashSales();
+      const cashSales = await computeCashSales(req.locationId);
       const balanceBefore = Number(drawer.opening_float) + cashSales - Number(drawer.cash_payouts);
       const balanceAfter = transaction_type === 'cash_in'
         ? balanceBefore + amount
@@ -1402,7 +1440,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
 
   // GET single order — used by the POS to poll payment status while waiting
   // for the gateway webhook. Registered last so static paths win.
-  router.get('/:id', async (req, res) => {
+  router.get('/:id', authMiddleware, locationScope, async (req, res) => {
     const { id } = req.params;
     if (typeof id !== 'string' || id.length < 1 || id.length > 64) {
       return res.status(400).json({ error: 'Invalid order id' });
@@ -1414,7 +1452,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
                o.order_source, o.external_order_id, o.created_at, o.completed_at, o.preparing_at,
                s.name AS staff_name, s.initials AS staff_initials, s.rfid AS staff_rfid, s.role AS staff_role, s.color AS staff_color
         FROM orders o LEFT JOIN staff s ON o.staff_id = s.id
-        WHERE o.id = ?`, [id]);
+        WHERE o.id = ?${scopedLocationCondition(req, 'o.location_id').sql}`, [id, ...scopedLocationCondition(req, 'o.location_id').params]);
       if (!rows[0]) return res.status(404).json({ error: 'Order not found' });
       const items = await fetchOrderItems([id]);
       res.json(attachItems([rows[0]], items)[0]);

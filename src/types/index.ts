@@ -26,6 +26,7 @@ export interface Staff {
   role: Role;
   initials: string;
   color: string;
+  locationId?: number | null;
 }
 
 export interface Modifier {
@@ -96,6 +97,7 @@ export interface Order {
   orderSource?: OrderSource;
   /** Hosted PayMongo checkout URL — shown as QR/link while awaiting payment */
   checkoutUrl?: string;
+  locationId?: number;
 }
 
 export interface InventoryItem {
@@ -397,4 +399,3 @@ export interface PrintResponse {
 }
 
 export type TimekeepingTab = "today" | "calendar" | "schedules";
-

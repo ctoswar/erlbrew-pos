@@ -1,20 +1,32 @@
 import { Router } from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logAudit } from '../services/audit.js';
+import { locationScope } from '../middleware/location.js';
+
+function scopedTransferCondition(req, alias = 't') {
+  if (req.locationId === null || req.locationId === undefined) {
+    return { sql: '', params: [] };
+  }
+  return {
+    sql: ` AND (${alias}.from_location_id = ? OR ${alias}.to_location_id = ?)`,
+    params: [req.locationId, req.locationId],
+  };
+}
 
 export default function transfersRouter(pool) {
   const router = Router();
 
   // GET all transfers — filterable by location, status
-  router.get('/', authMiddleware, async (req, res) => {
+  router.get('/', authMiddleware, locationScope, async (req, res) => {
     try {
-      const { location_id, status, limit = 50, offset = 0 } = req.query;
+      const { status, limit = 50, offset = 0 } = req.query;
       const conditions = [];
       const params = [];
 
-      if (location_id) {
-        conditions.push('(t.from_location_id = ? OR t.to_location_id = ?)');
-        params.push(location_id, location_id);
+      const scope = scopedTransferCondition(req);
+      if (scope.sql) {
+        conditions.push(scope.sql.slice(5));
+        params.push(...scope.params);
       }
       if (status) {
         conditions.push('t.status = ?');
@@ -58,7 +70,7 @@ export default function transfersRouter(pool) {
   });
 
   // POST create transfer request
-  router.post('/', authMiddleware, async (req, res) => {
+  router.post('/', authMiddleware, locationScope, async (req, res) => {
     const { from_location_id, to_location_id, inventory_item_id, quantity, notes } = req.body;
     if (!from_location_id || !to_location_id || !inventory_item_id || !quantity) {
       return res.status(400).json({ error: 'from_location_id, to_location_id, inventory_item_id, and quantity are required' });
@@ -68,6 +80,11 @@ export default function transfersRouter(pool) {
     }
     if (Number(quantity) <= 0) {
       return res.status(400).json({ error: 'Quantity must be positive' });
+    }
+    if (req.locationId !== null && req.locationId !== undefined
+      && Number(from_location_id) !== req.locationId
+      && Number(to_location_id) !== req.locationId) {
+      return res.status(403).json({ error: 'Transfer must involve your selected location', code: 'LOCATION_FORBIDDEN' });
     }
 
     const conn = await pool.getConnection();
@@ -109,13 +126,14 @@ export default function transfersRouter(pool) {
   });
 
   // PUT approve transfer (admin only)
-  router.put('/:id/approve', authMiddleware, adminMiddleware, async (req, res) => {
+  router.put('/:id/approve', authMiddleware, adminMiddleware, locationScope, async (req, res) => {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
+      const scope = scopedTransferCondition(req);
       const [rows] = await conn.query(
-        'SELECT * FROM inventory_transfers WHERE id = ? AND status = ? FOR UPDATE',
-        [req.params.id, 'pending']
+        `SELECT * FROM inventory_transfers WHERE id = ? AND status = ?${scope.sql} FOR UPDATE`,
+        [req.params.id, 'pending', ...scope.params]
       );
       if (!rows.length) {
         await conn.rollback();
@@ -141,13 +159,14 @@ export default function transfersRouter(pool) {
   });
 
   // PUT mark in-transit
-  router.put('/:id/ship', authMiddleware, async (req, res) => {
+  router.put('/:id/ship', authMiddleware, locationScope, async (req, res) => {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
+      const scope = scopedTransferCondition(req);
       const [rows] = await conn.query(
-        'SELECT * FROM inventory_transfers WHERE id = ? AND status = ? FOR UPDATE',
-        [req.params.id, 'approved']
+        `SELECT * FROM inventory_transfers WHERE id = ? AND status = ?${scope.sql} FOR UPDATE`,
+        [req.params.id, 'approved', ...scope.params]
       );
       if (!rows.length) {
         await conn.rollback();
@@ -197,13 +216,14 @@ export default function transfersRouter(pool) {
   });
 
   // PUT receive transfer
-  router.put('/:id/receive', authMiddleware, async (req, res) => {
+  router.put('/:id/receive', authMiddleware, locationScope, async (req, res) => {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
+      const scope = scopedTransferCondition(req);
       const [rows] = await conn.query(
-        'SELECT * FROM inventory_transfers WHERE id = ? AND status = ? FOR UPDATE',
-        [req.params.id, 'in_transit']
+        `SELECT * FROM inventory_transfers WHERE id = ? AND status = ?${scope.sql} FOR UPDATE`,
+        [req.params.id, 'in_transit', ...scope.params]
       );
       if (!rows.length) {
         await conn.rollback();
@@ -262,13 +282,14 @@ export default function transfersRouter(pool) {
   });
 
   // PUT cancel transfer
-  router.put('/:id/cancel', authMiddleware, adminMiddleware, async (req, res) => {
+  router.put('/:id/cancel', authMiddleware, adminMiddleware, locationScope, async (req, res) => {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
+      const scope = scopedTransferCondition(req);
       const [rows] = await conn.query(
-        'SELECT * FROM inventory_transfers WHERE id = ? FOR UPDATE',
-        [req.params.id]
+        `SELECT * FROM inventory_transfers WHERE id = ?${scope.sql} FOR UPDATE`,
+        [req.params.id, ...scope.params]
       );
       if (!rows.length) {
         await conn.rollback();

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { MenuItem } from "../types";
 import { apiAdminGet, apiAdminPut } from "../utils/api";
 import { getIconByEmoji } from "./FoodIcons";
+import { useLocation } from "../contexts/LocationContext";
 import {
   getCompatibleUnits,
   defaultRecipeUnit,
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
+  const { currentLocationId } = useLocation();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
         setError("Failed to load data");
       })
       .finally(() => setLoading(false));
-  }, [menuItem.id]);
+  }, [menuItem.id, currentLocationId]);
 
   const [defaultQty, setDefaultQty] = useState("1");
 
@@ -164,7 +166,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
           return { inventory_item_id, quantity: dbQty };
         });
 
-      await apiAdminPut(`/recipes/${menuItem.id}`, { items });
+      await apiAdminPut(`/recipes/${menuItem.id}`, { items, location_id: currentLocationId });
       onClose();
     } catch (err) {
       setError("Failed to save ingredients");

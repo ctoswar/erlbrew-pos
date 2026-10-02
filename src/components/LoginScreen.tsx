@@ -51,9 +51,11 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"rfid" | "pin">("rfid");
   const [setupLocationId, setSetupLocationId] = useState("");
+  const [branchMenuOpen, setBranchMenuOpen] = useState(false);
 
   const rfidInputRef = useRef<HTMLInputElement>(null);
   const pinInputRef = useRef<HTMLInputElement>(null);
+  const branchMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     rfidInputRef.current?.focus();
@@ -70,6 +72,15 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
       pinInputRef.current?.focus();
     }
   }, [step, selectedStaff]);
+
+  useEffect(() => {
+    if (!branchMenuOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!branchMenuRef.current?.contains(event.target as Node)) setBranchMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [branchMenuOpen]);
 
   const handleRfidSubmit = async (rfidValue: string) => {
     const trimmed = rfidValue.replace(/[\x00-\x1f]/g, "").trim().toUpperCase();
@@ -173,15 +184,67 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
             <div className="text-sm text-erl-danger py-5">No active branches are configured. Ask a manager to add one.</div>
           ) : (
             <>
-              <select
-                value={selectedLocationId}
-                onChange={(event) => setSetupLocationId(event.target.value)}
-                className="w-full bg-erl-base border border-erl-border-medium rounded-xl text-erl-text-primary px-4 py-3 text-sm outline-none focus:border-erl-accent mb-4"
-              >
-                {activeLocations.map((location) => (
-                  <option key={location.id} value={location.id}>{location.name}</option>
-                ))}
-              </select>
+              <div ref={branchMenuRef} className="relative mb-4 text-left">
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={branchMenuOpen}
+                  onClick={() => setBranchMenuOpen((open) => !open)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") setBranchMenuOpen(false);
+                    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                      event.preventDefault();
+                      setBranchMenuOpen(true);
+                    }
+                  }}
+                  className={`group flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-sm text-erl-text-primary outline-none transition-all duration-300 ${
+                    branchMenuOpen
+                      ? "border-erl-accent bg-erl-surface shadow-[0_0_0_4px_rgba(196,149,106,0.1),0_12px_32px_rgba(0,0,0,0.25)]"
+                      : "border-erl-border-medium bg-erl-base/80 hover:border-erl-accent/70 hover:bg-erl-surface"
+                  }`}
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-erl-accent/20 bg-erl-accent/10 text-sm text-erl-accent">⌖</span>
+                    <span className="truncate">{activeLocations.find((location) => String(location.id) === selectedLocationId)?.name}</span>
+                  </span>
+                  <span className={`ml-3 text-erl-accent transition-transform duration-300 ${branchMenuOpen ? "rotate-180" : ""}`}>⌄</span>
+                </button>
+                {branchMenuOpen && (
+                  <div
+                    role="listbox"
+                    aria-label="Choose branch"
+                    className="branch-select-menu absolute left-0 right-0 top-[calc(100%+8px)] z-30 overflow-hidden rounded-2xl border border-erl-accent/30 bg-[#24150d]/[.98] p-1.5 shadow-[0_18px_45px_rgba(0,0,0,0.5),0_0_28px_rgba(196,149,106,0.1)] backdrop-blur-xl"
+                  >
+                    {activeLocations.map((location, index) => {
+                      const isSelected = String(location.id) === selectedLocationId;
+                      return (
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          key={location.id}
+                          style={{ animationDelay: `${index * 45}ms` }}
+                          onClick={() => {
+                            setSetupLocationId(String(location.id));
+                            setBranchMenuOpen(false);
+                          }}
+                          className={`branch-select-option flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-200 ${
+                            isSelected
+                              ? "bg-erl-accent/15 text-erl-accent"
+                              : "text-erl-text-secondary hover:bg-white/[0.06] hover:pl-4 hover:text-erl-text-primary"
+                          }`}
+                        >
+                          <span className="flex items-center gap-3">
+                            <span className={`h-1.5 w-1.5 rounded-full transition-all ${isSelected ? "bg-erl-accent shadow-[0_0_8px_rgba(196,149,106,0.9)]" : "bg-erl-text-faint"}`} />
+                            {location.name}
+                          </span>
+                          {isSelected && <span className="text-xs">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => configureDeviceLocation(Number(selectedLocationId))}
                 disabled={!selectedLocationId}

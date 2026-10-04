@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { MenuItem, MenuItemSize } from "../types";
 import { apiAdminGet, apiAdminPut } from "../utils/api";
 import { getIconByEmoji } from "./FoodIcons";
@@ -220,9 +221,10 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
     return "ok";
   };
 
-  return (
+  return createPortal(
+    (
     <div className="ingredient-editor-backdrop fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-5">
-      <div className="ingredient-editor-modal animate-scale-in card-glass w-full max-w-[920px] max-h-[94dvh] flex flex-col overflow-hidden rounded-2xl">
+      <div className="ingredient-editor-modal relative z-[1001] animate-scale-in card-glass w-full max-w-[920px] max-h-[94dvh] flex flex-col overflow-hidden rounded-2xl">
         {/* ── Header ─────────────────────────────────────────── */}
         <div className="flex justify-between items-start px-5 py-3.5 border-b border-erl-border-subtle flex-shrink-0">
           <div className="flex-1 min-w-0">
@@ -449,5 +451,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
         </div>
       </div>
     </div>
+    ),
+    document.body,
   );
 };

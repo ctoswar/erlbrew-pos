@@ -557,7 +557,7 @@ const AdminItemCard: React.FC<AdminItemCardProps> = ({ item, onEdit, onDelete, o
     setUploading(true);
     try {
       await uploadMenuItemImage(item.id, file);
-      onEdit(); onEdit();
+      onEdit();
     } catch (err) {
       console.error('Upload failed', err);
     } finally {

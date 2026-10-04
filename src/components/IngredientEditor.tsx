@@ -222,9 +222,9 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
 
   return (
     <div className="ingredient-editor-backdrop fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-5">
-      <div className="ingredient-editor-modal animate-scale-in card-glass w-full max-w-[680px] max-h-[90vh] flex flex-col overflow-hidden rounded-2xl">
+      <div className="ingredient-editor-modal animate-scale-in card-glass w-full max-w-[920px] max-h-[94dvh] flex flex-col overflow-hidden rounded-2xl">
         {/* ── Header ─────────────────────────────────────────── */}
-        <div className="flex justify-between items-start px-6 py-5 border-b border-erl-border-subtle flex-shrink-0">
+        <div className="flex justify-between items-start px-5 py-3.5 border-b border-erl-border-subtle flex-shrink-0">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5">
               <span className="w-6 h-6 flex items-center justify-center text-erl-text-secondary">{getIconByEmoji(menuItem.emoji)}</span>
@@ -237,7 +237,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                 </div>
               </div>
             </div>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-1.5 flex items-center gap-2">
               <span className="pill text-[10px] px-2 py-0.5 bg-erl-accent/10 text-erl-accent border border-erl-accent/20">
                 {selectedCount} ingredient{selectedCount !== 1 ? "s" : ""}
               </span>
@@ -257,7 +257,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
             <div className="text-[10px] text-erl-text-faint uppercase tracking-[0.14em] font-bold mb-2">
               Ingredient profile
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="ingredient-size-tabs">
               {sizeOptions.map((size) => (
                 <button
                   key={size.id}
@@ -274,7 +274,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
         )}
 
         {/* ── Search ──────────────────────────────────────────── */}
-        <div className="px-6 pt-4 flex-shrink-0">
+        <div className="px-5 pt-3 flex-shrink-0">
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-erl-text-faint text-sm pointer-events-none">⌕</span>
             <input
@@ -293,7 +293,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
               </button>
             )}
           </div>
-          <div className="flex items-center justify-between mt-1.5">
+          <div className="flex items-center justify-between mt-1">
             <div className="text-[11px] text-erl-text-faint">
               {searchQuery ? `${filteredTotal} result${filteredTotal !== 1 ? "s" : ""}` : `${inventory.length} inventory items`}
             </div>
@@ -323,7 +323,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
         </div>
 
         {/* ── Scrollable body ──────────────────────────────── */}
-        <div className="scroll-area flex-1 px-6 py-3 overflow-y-auto min-h-0">
+        <div className="scroll-area flex-1 px-5 py-2.5 overflow-y-auto min-h-0">
           {loading ? (
             <div className="flex flex-col items-center py-12 gap-3">
               <div className="animate-shimmer w-28 h-4 rounded-md" />
@@ -349,7 +349,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                     {items.every((i) => selected[i.id]) ? "Deselect" : "Select"}
                   </button>
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="ingredient-items-grid">
                   {items.map((inv) => {
                     const isChecked = !!selected[inv.id];
                     const qty = selected[inv.id] || "";

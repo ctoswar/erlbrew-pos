@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { MenuItem } from "../types";
 import { formatCurrency } from "../utils";
 import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete, uploadMenuItemImage } from "../utils/api";
@@ -354,7 +355,8 @@ export const AdminMenu: React.FC = () => {
 
       {/* ── Add/Edit Form Modal ─────────────────────────────── */}
       {showForm && (
-        <>
+        createPortal(
+          <>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] animate-fade-in-overlay" onClick={closeForm} />
           <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
             <div className="animate-scale-in card-glass p-0 w-full max-w-[460px] max-h-[90dvh] max-h-[90vh] flex flex-col overflow-hidden rounded-2xl">
@@ -528,7 +530,9 @@ export const AdminMenu: React.FC = () => {
               </div>
             </div>
           </div>
-        </>
+          </>,
+          document.body,
+        )
       )}
     </div>
   );

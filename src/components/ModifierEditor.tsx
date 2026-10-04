@@ -127,39 +127,69 @@ export const ModifierEditor: React.FC<Props> = ({ item, allMenuItems = [], onClo
       <>
       <div className="ingredient-editor-backdrop fixed inset-0 z-[998] animate-fade-in-overlay" onClick={onClose} />
       <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-        <div className="modifier-editor-modal bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl w-full max-w-[600px] max-h-[88vh] overflow-hidden animate-fade-in-up">
+        <div className="modifier-editor-modal bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl w-full max-w-[680px] max-h-[88dvh] overflow-hidden animate-fade-in-up flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-erl-border-subtle">
-            <div>
-              <div className="font-display text-[17px] font-bold text-erl-text-primary flex items-center gap-2">
-                <span className="w-4 h-4 flex items-center justify-center">{getIconByEmoji(item.emoji)}</span> {item.name} — Modifiers
+          <div className="modifier-editor-header flex items-start justify-between gap-4 px-6 py-4 border-b border-erl-border-subtle flex-shrink-0">
+            <div className="min-w-0">
+              <div className="flex items-center gap-3">
+                <span className="modifier-editor-icon">{getIconByEmoji(item.emoji)}</span>
+                <div className="min-w-0">
+                  <div className="font-display text-[17px] font-bold text-erl-text-primary truncate">
+                    {item.name}
+                  </div>
+                  <div className="text-[10px] text-erl-text-faint uppercase tracking-[0.16em] font-semibold mt-0.5">
+                    Modifier editor
+                  </div>
+                </div>
               </div>
-              <div className="text-[11px] text-erl-muted mt-1">
-                Add-ons & customizations for this item
+              <div className="text-[11px] text-erl-text-muted mt-2 ml-11">
+                Add-ons and customizations for this item
               </div>
             </div>
-            <button onClick={onClose} className="bg-none border-none text-erl-muted text-lg cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center">✕</button>
+            <button onClick={onClose} aria-label="Close modifier editor" className="modifier-editor-close">✕</button>
           </div>
 
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-3 text-[11px] text-erl-danger">
-              {error}
+          <div className="modifier-editor-summary">
+            <div>
+              <span className="modifier-editor-summary-value">{modifiers.length}</span>
+              <span className="modifier-editor-summary-label">modifier{modifiers.length !== 1 ? "s" : ""}</span>
             </div>
-          )}
+            <div className="modifier-editor-summary-hint">
+              {modifiers.length > 0 ? "Ready to customize at checkout" : "Start with a single add-on or use batch add"}
+            </div>
+          </div>
 
-          {/* Modifier list */}
-          {loading ? (
-            <div className="text-center text-erl-muted py-8 text-xs">
-              Loading...
-            </div>
-          ) : modifiers.length === 0 && !showAddForm ? (
-            <div className="text-center text-erl-muted py-8 text-xs">
-              No modifiers yet. Add some below.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3.5">
-              {modifiers.map((mod) => (
-                <div key={mod.id} className="flex items-center gap-2.5 px-3 py-3 rounded-xl border-[1.5px] border-erl-border-default bg-erl-surface/80 hover:border-erl-border-medium transition-colors">
+          <div className="modifier-editor-body scroll-area flex-1 min-h-0 overflow-y-auto px-6 py-4">
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-3 text-[11px] text-erl-danger">
+                {error}
+              </div>
+            )}
+
+            {/* Modifier list */}
+            {loading ? (
+              <div className="modifier-editor-empty">
+                <div className="animate-shimmer w-28 h-4 rounded-md" />
+                <div className="animate-shimmer w-44 h-3 rounded-md" />
+              </div>
+            ) : modifiers.length === 0 && !showAddForm && !showBatchAdd ? (
+              <div className="modifier-editor-empty modifier-editor-empty-state">
+                <div className="modifier-editor-empty-icon">✦</div>
+                <div className="font-display text-[16px] font-bold text-erl-text-primary">No modifiers yet</div>
+                <div className="text-[12px] text-erl-text-muted max-w-[320px]">
+                  Add options like extra shot, oat milk, or whipped cream so customers can personalize this drink.
+                </div>
+                <button
+                  onClick={() => { setShowAddForm(true); setShowBatchAdd(false); }}
+                  className="btn btn-accent mt-2 px-5 py-2.5 text-[11px]"
+                >
+                  + Add first modifier
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {modifiers.map((mod) => (
+                  <div key={mod.id} className="modifier-card">
                   {editingId === mod.id ? (
                     <div className="flex-1 flex flex-col gap-1.5">
                       <input
@@ -215,16 +245,20 @@ export const ModifierEditor: React.FC<Props> = ({ item, allMenuItems = [], onClo
                       </button>
                     </>
                   )}
-                </div>
-              ))}
-            </div>
-          )}
+                  </div>
+                ))}
+              </div>
+            )}
 
-          {/* Batch add — paste multiple lines */}
-          {showBatchAdd ? (
-            <div className="border-[1.5px] border-erl-border-medium rounded-[10px] p-3 bg-erl-surface mb-2.5">
-              <div className="mb-2 text-[11px] font-bold text-erl-secondary tracking-wide">
+            {/* Batch add — paste multiple lines */}
+            {showBatchAdd ? (
+              <div className="modifier-editor-form">
+              <div className="modifier-editor-form-heading">
+                <span className="modifier-editor-form-icon">▤</span>
+                <div>
                 BATCH ADD MODIFIERS
+                  <div className="modifier-editor-form-subtitle">Paste one modifier per line.</div>
+                </div>
               </div>
               <textarea
                 value={batchText}
@@ -257,14 +291,18 @@ export const ModifierEditor: React.FC<Props> = ({ item, allMenuItems = [], onClo
                   Cancel
                 </button>
               </div>
-            </div>
-          ) : null}
+              </div>
+            ) : null}
 
-          {/* Add modifier form / button */}
-          {showAddForm ? (
-            <div className="border-[1.5px] border-erl-border-medium rounded-[10px] p-3 bg-erl-surface mb-2.5">
-              <div className="mb-2 text-[11px] font-bold text-erl-secondary tracking-wide">
+            {/* Add modifier form / button */}
+            {showAddForm ? (
+              <div className="modifier-editor-form">
+              <div className="modifier-editor-form-heading">
+                <span className="modifier-editor-form-icon">＋</span>
+                <div>
                 ADD NEW MODIFIER
+                  <div className="modifier-editor-form-subtitle">Create one option for this menu item.</div>
+                </div>
               </div>
               <input
                 value={form.name}
@@ -304,29 +342,30 @@ export const ModifierEditor: React.FC<Props> = ({ item, allMenuItems = [], onClo
                   Cancel
                 </button>
               </div>
-            </div>
-          ) : null}
+              </div>
+            ) : null}
+          </div>
 
           {/* Action buttons row */}
-          <div className="flex gap-2">
+          <div className="modifier-editor-actions flex gap-2 px-6 py-4 border-t border-erl-border-subtle flex-shrink-0">
             <button
               onClick={() => { setShowBatchAdd(true); setShowAddForm(false); setEditingId(null); }}
               className="btn btn-accent flex-1 py-2.5 text-[11px] min-h-[44px]"
             >
-              📋 Batch Add
+              ▤ Batch Add
             </button>
             <button
               onClick={() => { setShowAddForm(true); setShowBatchAdd(false); setEditingId(null); }}
-              className="flex-1 py-2.5 rounded-lg bg-erl-elevated text-erl-muted text-[11px] font-bold cursor-pointer border-[1.5px] border-erl-border-default min-h-[44px]"
+              className="modifier-editor-secondary-action flex-1 py-2.5 min-h-[44px]"
             >
               + Single
             </button>
             {allMenuItems.length > 0 && (
               <button
                 onClick={() => { setApplyModifier(null); setShowApplyModal(true); }}
-                className="flex-1 py-2.5 rounded-lg bg-erl-elevated text-erl-accent text-[11px] font-bold cursor-pointer border-[1.5px] border-erl-accent/30 hover:bg-erl-accent/10 min-h-[44px]"
+                className="modifier-editor-secondary-action modifier-editor-apply-action flex-1 py-2.5 min-h-[44px]"
               >
-                📋 Apply to Items
+                ⇢ Apply to Items
               </button>
             )}
           </div>

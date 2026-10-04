@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { MenuItem } from "../types";
 import { formatCurrency } from "../utils";
 import { getModifiers, createModifier, updateModifier, deleteModifier, Modifier } from "../utils/api";
@@ -121,8 +122,9 @@ export const ModifierEditor: React.FC<Props> = ({ item, allMenuItems = [], onClo
     setForm({ name: "", price: "", isDefault: false });
   };
 
-  return (
-    <>
+  return createPortal(
+    (
+      <>
       <div className="ingredient-editor-backdrop fixed inset-0 z-[998] animate-fade-in-overlay" onClick={onClose} />
       <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
         <div className="modifier-editor-modal bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl w-full max-w-[600px] max-h-[88vh] overflow-hidden animate-fade-in-up">
@@ -341,6 +343,8 @@ export const ModifierEditor: React.FC<Props> = ({ item, allMenuItems = [], onClo
           onClose={() => { setShowApplyModal(false); setApplyModifier(null); }}
         />
       )}
-    </>
+      </>
+    ),
+    document.body,
   );
 };

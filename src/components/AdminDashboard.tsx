@@ -36,7 +36,7 @@ interface Props {
   onLogout: () => void;
 }
 
-type AdminTab = 'dashboard' | 'insights' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'payroll' | 'audit' | 'customers' | 'locations' | 'transfers';
+type AdminTab = 'dashboard' | 'insights' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings-integrations' | 'settings-print' | 'settings-display' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'payroll' | 'audit' | 'customers' | 'locations' | 'transfers';
 
 const TABS: { label: string; value: AdminTab; icon: string }[] = [
   { label: 'Dashboard', value: 'dashboard', icon: 'dashboard' },
@@ -56,7 +56,6 @@ const TABS: { label: string; value: AdminTab; icon: string }[] = [
   { label: 'Supplier Invoices', value: 'suppliers', icon: 'suppliers' },
   { label: 'Locations', value: 'locations', icon: 'locations' },
   { label: 'Audit Log', value: 'audit', icon: 'audit' },
-  { label: 'Settings', value: 'settings', icon: 'settings' },
   { label: 'Backup', value: 'backup', icon: '💾' },
 ];
 
@@ -65,6 +64,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
   const { isMobile } = useViewport();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -203,7 +203,10 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
   useEffect(() => { syncData().finally(() => setLoading(false)); }, [syncData]);
   // Coming back from an OAuth redirect (QuickBooks connect) → land on Settings
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('accounting')) setActiveTab('settings');
+    if (new URLSearchParams(window.location.search).get('accounting')) {
+      setActiveTab('settings-integrations');
+      setSettingsOpen(true);
+    }
   }, []);
 
   useEffect(() => { if (activeTab === 'dashboard') syncData(); }, [activeTab, syncData]);
@@ -281,8 +284,17 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
 
   const handleTabChange = (value: AdminTab) => {
     setActiveTab(value);
+    if (value.startsWith('settings-')) setSettingsOpen(true);
     setMobileMenuOpen(false);
   };
+
+  const activeTabLabel = activeTab.startsWith('settings-')
+    ? ({
+        'settings-integrations': 'Integrations',
+        'settings-print': 'Print Settings',
+        'settings-display': 'Display Messages',
+      } as Record<string, string>)[activeTab] || 'Settings'
+    : TABS.find(t => t.value === activeTab)?.label || 'Admin';
 
   return (
     <div className="admin-shell flex h-screen bg-erl-base relative">
@@ -318,6 +330,40 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
               <span className="flex items-center justify-center w-[18px] h-[18px] shrink-0">{getNavIcon(icon)}</span> {label}
             </button>
           ))}
+          <div className="admin-settings-group">
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(open => !open)}
+              aria-expanded={settingsOpen}
+              className={`admin-nav-item w-full flex items-center gap-2.5 py-2.5 px-3 mb-1 rounded-xl border-none cursor-pointer text-[11px] text-left transition-all duration-200 ${
+                activeTab.startsWith('settings-')
+                  ? 'bg-erl-accent/8 text-erl-accent font-semibold shadow-[0_0_16px_rgba(196,149,106,0.06)]'
+                  : 'bg-transparent text-erl-text-muted hover:bg-white/[0.03] hover:text-erl-text-secondary'
+              }`}
+            >
+              <span className="flex items-center justify-center w-[18px] h-[18px] shrink-0">{getNavIcon('settings')}</span>
+              <span className="flex-1">Settings</span>
+              <span className={`admin-settings-chevron ${settingsOpen ? 'is-open' : ''}`} aria-hidden="true">⌄</span>
+            </button>
+            <div className={`admin-settings-submenu ${settingsOpen ? 'is-open' : ''}`} aria-hidden={!settingsOpen}>
+              {[
+                { label: 'Integrations', value: 'settings-integrations' as AdminTab },
+                { label: 'Print Settings', value: 'settings-print' as AdminTab },
+                { label: 'Display Messages', value: 'settings-display' as AdminTab },
+              ].map(({ label, value }) => (
+                <button
+                  key={value}
+                  type="button"
+                  tabIndex={settingsOpen ? 0 : -1}
+                  onClick={() => handleTabChange(value)}
+                  className={`admin-settings-subitem ${activeTab === value ? 'is-active' : ''}`}
+                >
+                  <span className="admin-settings-dot" aria-hidden="true" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </nav>
 
         <div className="p-3 border-t border-erl-border-default">
@@ -363,7 +409,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
               </svg>
             </button>
             <div>
-              <div className="text-sm font-bold text-erl-text-primary">{TABS.find(t => t.value === activeTab)?.label}</div>
+              <div className="text-sm font-bold text-erl-text-primary">{activeTabLabel}</div>
               <div className="text-[10px] text-erl-text-muted">{staff.name}</div>
             </div>
             <LocationSelector className="ml-auto" />
@@ -378,10 +424,10 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
         {activeTab === 'menu' && <AdminMenu />}
         {activeTab === 'staff' && <AdminStaff />}
         {activeTab === 'inventory' && <AdminInventory />}
-        {activeTab === 'settings' && (
+        {activeTab === 'settings-integrations' && (
           <div>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg text-erl-text-primary">Settings</h2>
+              <h2 className="text-lg text-erl-text-primary">Integrations</h2>
               <button onClick={toggleFullscreen} className="py-2 px-3 text-[10px] rounded-lg border border-erl-border-default bg-erl-surface text-erl-text-muted cursor-pointer hover:bg-white/[0.06] hover:text-erl-text-secondary transition-all duration-200">
                 {isFullscreen ? '✕ Exit Fullscreen' : '⛶ Fullscreen'}
               </button>
@@ -389,9 +435,19 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             <div className="bg-erl-surface rounded-xl border border-erl-border-subtle mb-4">
               <AdminIntegrations />
             </div>
+          </div>
+        )}
+        {activeTab === 'settings-print' && (
+          <div>
+            <h2 className="text-lg text-erl-text-primary mb-5">Print Settings</h2>
             <div className="bg-erl-surface rounded-xl border border-erl-border-subtle mb-4">
               <AdminPrintSettings />
             </div>
+          </div>
+        )}
+        {activeTab === 'settings-display' && (
+          <div>
+            <h2 className="text-lg text-erl-text-primary mb-5">Display Messages</h2>
             <div className="bg-erl-surface rounded-xl border border-erl-border-subtle">
               <AdminDisplayMessages />
             </div>

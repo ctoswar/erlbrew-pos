@@ -150,6 +150,16 @@ consolidated view.
 | `OLLAMA_MODEL` | No | Local model name used for briefings (default: `llama3.2:3b`) |
 | `OLLAMA_TIMEOUT_MS` | No | Briefing request timeout, bounded by the backend (default: `5000`) |
 
+`CORS_ORIGINS` must contain the exact browser origin used by each deployment,
+including the scheme and port when present. For example, a POS opened at
+`http://pos.lan` must include `http://pos.lan`; changing only the hostname in
+DNS does not update CORS automatically. When using `infra/docker-compose.yml`,
+recreate the API container after changing the value:
+
+```powershell
+docker compose -f infra/docker-compose.yml up -d --force-recreate erlbw-api
+```
+
 ### Frontend (.env)
 
 | Variable | Required | Description |

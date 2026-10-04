@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { lazy, Suspense, useState, useEffect } from "react";
 import { Staff } from "./types";
 import { LoginScreen } from "./components/LoginScreen";
 import { POSScreen } from "./components/POSScreen";
 import { CustomerDisplay } from "./components/CustomerDisplay";
-import { AdminDashboard } from "./components/AdminDashboard";
 import { OnlineStatus } from "./components/OnlineStatus";
 import { LocationProvider } from "./contexts/LocationContext";
 import { getStoredTheme } from "./hooks/useTheme";
@@ -11,6 +10,8 @@ import { getStoredFontSize, applyFontSize } from "./hooks/useFontSize";
 import { apiAdminGet, getAuthToken, clearAuthToken } from "./utils/api";
 import { installAudioUnlock } from "./utils/sound";
 import "./styles/global.css";
+
+const AdminDashboard = lazy(() => import("./components/AdminDashboard").then(({ AdminDashboard }) => ({ default: AdminDashboard })));
 
 // Apply stored theme on app load
 const storedTheme = getStoredTheme();
@@ -89,10 +90,12 @@ const App: React.FC = () => {
       ) : staff.role === 'Manager' ? (
         <>
           <OnlineStatus />
-          <AdminDashboard
-            staff={staff}
-            onLogout={() => setStaff(null)}
-          />
+          <Suspense fallback={<div className="flex h-screen items-center justify-center bg-erl-base text-sm text-erl-text-muted">Loading Admin workspace…</div>}>
+            <AdminDashboard
+              staff={staff}
+              onLogout={() => setStaff(null)}
+            />
+          </Suspense>
         </>
       ) : (
         <>

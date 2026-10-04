@@ -180,6 +180,112 @@
 }
 
 @layer components {
+  @keyframes admin-page-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.995); filter: blur(2px); }
+    to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+
+  @keyframes admin-nav-in {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes admin-scrim-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .admin-shell {
+    background:
+      radial-gradient(circle at 82% 0%, rgba(196,149,106,0.09), transparent 27rem),
+      radial-gradient(circle at 45% 100%, rgba(91,62,35,0.08), transparent 25rem),
+      rgb(var(--color-base));
+  }
+
+  .admin-sidebar {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.025), transparent 18rem),
+      rgb(var(--color-sidebar));
+    box-shadow: 10px 0 40px rgba(0,0,0,0.16);
+    z-index: 2;
+  }
+
+  .admin-brand {
+    position: relative;
+  }
+
+  .admin-brand::after {
+    content: "";
+    position: absolute;
+    right: 1.25rem;
+    bottom: -1px;
+    left: 1.25rem;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(196,149,106,0.45), transparent);
+  }
+
+  .admin-nav-item {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .admin-nav-item::before {
+    content: "";
+    position: absolute;
+    inset: 4px auto 4px 0;
+    width: 2px;
+    border-radius: 99px;
+    background: rgb(var(--color-accent));
+    transform: scaleY(0);
+    transition: transform var(--transition-spring);
+  }
+
+  .admin-nav-item:hover {
+    transform: translateX(3px);
+  }
+
+  .admin-nav-item.text-erl-accent::before {
+    transform: scaleY(1);
+    box-shadow: 0 0 14px rgba(196,149,106,0.7);
+  }
+
+  .admin-page-transition {
+    min-height: 100%;
+    animation: admin-page-in 420ms var(--ease-out) both;
+  }
+
+  .admin-mobile-scrim {
+    animation: admin-scrim-in 220ms var(--ease-out) both;
+    backdrop-filter: blur(4px);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .admin-nav-item {
+      animation: admin-nav-in 360ms var(--ease-out) both;
+    }
+    .admin-nav-item:nth-child(2) { animation-delay: 25ms; }
+    .admin-nav-item:nth-child(3) { animation-delay: 50ms; }
+    .admin-nav-item:nth-child(4) { animation-delay: 75ms; }
+    .admin-nav-item:nth-child(5) { animation-delay: 100ms; }
+    .admin-nav-item:nth-child(6) { animation-delay: 125ms; }
+    .admin-nav-item:nth-child(7) { animation-delay: 150ms; }
+    .admin-nav-item:nth-child(8) { animation-delay: 175ms; }
+    .admin-nav-item:nth-child(9) { animation-delay: 200ms; }
+    .admin-nav-item:nth-child(10) { animation-delay: 225ms; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .admin-page-transition,
+    .admin-mobile-scrim,
+    .admin-nav-item {
+      animation: none;
+    }
+    .admin-nav-item,
+    .admin-nav-item:hover {
+      transform: none;
+    }
+  }
+
   @keyframes branch-menu-in {
     from { opacity: 0; transform: translateY(-6px) scale(0.98); }
     to { opacity: 1; transform: translateY(0) scale(1); }

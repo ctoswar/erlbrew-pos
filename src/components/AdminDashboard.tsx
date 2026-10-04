@@ -284,19 +284,20 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
   };
 
   return (
-    <div className="flex h-screen bg-erl-base relative">
+    <div className="admin-shell flex h-screen bg-erl-base relative">
       {/* Mobile overlay */}
       {isMobile && mobileMenuOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setMobileMenuOpen(false)} />
+        <div className="admin-mobile-scrim fixed inset-0 bg-black/60 z-40" onClick={() => setMobileMenuOpen(false)} />
       )}
 
       {/* Sidebar */}
       <div className={`
+        admin-sidebar
         ${isMobile ? 'fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 w-[220px]' : 'relative w-[220px]'}
         ${isMobile && !mobileMenuOpen ? '-translate-x-full' : 'translate-x-0'}
         bg-erl-sidebar border-r border-erl-border-default flex flex-col
       `}>
-        <div className="p-5 border-b border-erl-border-default">
+        <div className="admin-brand p-5 border-b border-erl-border-default">
           <div className="font-display text-base text-erl-accent mb-1">Admin Panel</div>
           <div className="text-[10px] text-erl-text-muted">{staff.name} ({staff.role})</div>
           {!isMobile && <LocationSelector className="mt-2" />}
@@ -307,7 +308,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             <button
               key={value}
               onClick={() => handleTabChange(value)}
-              className={`w-full flex items-center gap-2.5 py-2.5 px-3 mb-1 rounded-xl border-none cursor-pointer text-[11px] text-left transition-all duration-200 ${
+              className={`admin-nav-item w-full flex items-center gap-2.5 py-2.5 px-3 mb-1 rounded-xl border-none cursor-pointer text-[11px] text-left transition-all duration-200 ${
                 activeTab === value
                   ? 'bg-erl-accent/8 text-erl-accent font-semibold shadow-[0_0_16px_rgba(196,149,106,0.06)]'
                   : 'bg-transparent text-erl-text-muted hover:bg-white/[0.03] hover:text-erl-text-secondary'
@@ -345,7 +346,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 min-w-0">
+      <div className="admin-main flex-1 overflow-y-auto p-4 md:p-6 min-w-0">
         {/* Mobile header */}
         {isMobile && (
           <div className="flex items-center gap-3 mb-4 pb-3 border-b border-erl-border-default">
@@ -367,6 +368,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             <LocationSelector className="ml-auto" />
           </div>
         )}
+        <div key={activeTab} className="admin-page-transition">
         {activeTab === 'dashboard' && <Dashboard orders={orders} staffName={staff.name} />}
         {activeTab === 'insights' && <AdminInsights />}
         {activeTab === 'reports' && <AdminReports />}
@@ -513,6 +515,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

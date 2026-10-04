@@ -1,30 +1,31 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { lazy, Suspense, useState, useEffect, useCallback } from "react";
 import { Order, Staff, InventoryItem, DiscountType } from "../types";
 import { formatCurrency, parseServerDatetime } from "../utils";
 import { apiGet, apiAdminGet, clearAllOrders } from "../utils/api";
 import { useViewport } from "../hooks/useViewport";
-import { AdminStaff } from "./AdminStaff";
-import { AdminMenu } from "./AdminMenu";
-import { AdminPrintSettings } from "./AdminPrintSettings";
-import { AdminIntegrations } from "./AdminIntegrations";
-import { AdminDisplayMessages } from "./AdminDisplayMessages";
-import { AdminInventory } from "./AdminInventory";
-import { Dashboard } from "./Dashboard";
-import { AdminReports } from "./AdminReports";
-import { AdminInsights } from "./AdminInsights";
-import { AdminSupplierInvoices } from "./AdminSupplierInvoices";
-import { ZReportScreen } from "./ZReportScreen";
-import { CashDrawerScreen } from "./CashDrawerScreen";
-import { TimeKeeping } from "./TimeKeeping";
-import { AdminPayroll } from "./AdminPayroll";
-import { OrderHistory } from "./OrderHistory";
-import { AdminAuditLog } from "./AdminAuditLog";
-import { AdminCustomers } from "./AdminCustomers";
-import { AdminLocations } from "./AdminLocations";
-import { AdminTransfers } from "./AdminTransfers";
 import { LocationSelector } from "./LocationSelector";
 import { getNavIcon } from "./NavIcons";
 import { useLocation } from "../contexts/LocationContext";
+
+const Dashboard = lazy(() => import("./Dashboard").then(({ Dashboard }) => ({ default: Dashboard })));
+const AdminInsights = lazy(() => import("./AdminInsights").then(({ AdminInsights }) => ({ default: AdminInsights })));
+const AdminReports = lazy(() => import("./AdminReports").then(({ AdminReports }) => ({ default: AdminReports })));
+const OrderHistory = lazy(() => import("./OrderHistory").then(({ OrderHistory }) => ({ default: OrderHistory })));
+const AdminMenu = lazy(() => import("./AdminMenu").then(({ AdminMenu }) => ({ default: AdminMenu })));
+const AdminStaff = lazy(() => import("./AdminStaff").then(({ AdminStaff }) => ({ default: AdminStaff })));
+const AdminInventory = lazy(() => import("./AdminInventory").then(({ AdminInventory }) => ({ default: AdminInventory })));
+const AdminIntegrations = lazy(() => import("./AdminIntegrations").then(({ AdminIntegrations }) => ({ default: AdminIntegrations })));
+const AdminPrintSettings = lazy(() => import("./AdminPrintSettings").then(({ AdminPrintSettings }) => ({ default: AdminPrintSettings })));
+const AdminDisplayMessages = lazy(() => import("./AdminDisplayMessages").then(({ AdminDisplayMessages }) => ({ default: AdminDisplayMessages })));
+const ZReportScreen = lazy(() => import("./ZReportScreen").then(({ ZReportScreen }) => ({ default: ZReportScreen })));
+const CashDrawerScreen = lazy(() => import("./CashDrawerScreen").then(({ CashDrawerScreen }) => ({ default: CashDrawerScreen })));
+const TimeKeeping = lazy(() => import("./TimeKeeping").then(({ TimeKeeping }) => ({ default: TimeKeeping })));
+const AdminPayroll = lazy(() => import("./AdminPayroll").then(({ AdminPayroll }) => ({ default: AdminPayroll })));
+const AdminSupplierInvoices = lazy(() => import("./AdminSupplierInvoices").then(({ AdminSupplierInvoices }) => ({ default: AdminSupplierInvoices })));
+const AdminAuditLog = lazy(() => import("./AdminAuditLog").then(({ AdminAuditLog }) => ({ default: AdminAuditLog })));
+const AdminCustomers = lazy(() => import("./AdminCustomers").then(({ AdminCustomers }) => ({ default: AdminCustomers })));
+const AdminLocations = lazy(() => import("./AdminLocations").then(({ AdminLocations }) => ({ default: AdminLocations })));
+const AdminTransfers = lazy(() => import("./AdminTransfers").then(({ AdminTransfers }) => ({ default: AdminTransfers })));
 
 const STORAGE_KEY_ORDERS = 'erlbrew_admin_orders';
 const STORAGE_KEY_INVENTORY = 'erlbrew_admin_inventory';
@@ -368,6 +369,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             <LocationSelector className="ml-auto" />
           </div>
         )}
+        <Suspense fallback={<div className="admin-tab-loading" role="status">Loading workspace…</div>}>
         <div key={activeTab} className="admin-page-transition">
         {activeTab === 'dashboard' && <Dashboard orders={orders} staffName={staff.name} />}
         {activeTab === 'insights' && <AdminInsights />}
@@ -516,6 +518,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
           </div>
         )}
       </div>
+        </Suspense>
       </div>
     </div>
   );

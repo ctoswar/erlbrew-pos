@@ -365,6 +365,54 @@
     box-shadow: 0 8px 22px rgb(var(--color-accent) / 0.08);
   }
 
+  .ingredient-editor-backdrop {
+    background: rgba(8, 5, 3, 0.68);
+  }
+
+  .ingredient-editor-modal,
+  .modifier-editor-modal {
+    position: relative;
+    isolation: isolate;
+    background: rgb(var(--color-elevated));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid rgb(var(--color-border-medium));
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34), 0 8px 22px rgba(0, 0, 0, 0.18);
+  }
+
+  .ingredient-editor-modal {
+    height: min(90dvh, 760px);
+  }
+
+  .modifier-editor-modal {
+    height: min(88dvh, 680px);
+  }
+
+  .ingredient-editor-modal input,
+  .ingredient-editor-modal select,
+  .modifier-editor-modal input,
+  .modifier-editor-modal textarea {
+    color: rgb(var(--color-text-primary));
+  }
+
+  .ingredient-editor-modal .scroll-area,
+  .modifier-editor-modal .scroll-area {
+    scrollbar-gutter: stable;
+  }
+
+  html[data-theme="white"] .ingredient-editor-backdrop,
+  :root[data-theme="white"] .ingredient-editor-backdrop {
+    background: rgba(28, 20, 14, 0.55);
+  }
+
+  html[data-theme="white"] .ingredient-editor-modal,
+  :root[data-theme="white"] .ingredient-editor-modal,
+  html[data-theme="white"] .modifier-editor-modal,
+  :root[data-theme="white"] .modifier-editor-modal {
+    background: #fffdfb;
+    border-color: #d8cfc5;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .ingredient-size-tab,
     .ingredient-size-tab:hover {

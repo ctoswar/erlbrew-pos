@@ -194,6 +194,10 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
     () => Object.values(selected).filter((q) => q && parseFloat(q) > 0).length,
     [selected]
   );
+  const stockSummary = useMemo(() => ({
+    low: inventory.filter((item) => item.stock > 0 && item.stock <= (item.low_stock_threshold || 10)).length,
+    out: inventory.filter((item) => item.stock <= 0).length,
+  }), [inventory]);
 
   // Group and filter inventory
   const { grouped, filteredTotal } = useMemo(() => {
@@ -224,9 +228,9 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
   return createPortal(
     (
     <div className="ingredient-editor-backdrop fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-5">
-      <div className="ingredient-editor-modal relative z-[1001] animate-scale-in card-glass w-full max-w-[920px] max-h-[94dvh] flex flex-col overflow-hidden rounded-2xl">
+      <div className="ingredient-editor-modal relative z-[1001] animate-scale-in card-glass w-full max-w-[1000px] max-h-[90dvh] flex flex-col overflow-hidden rounded-2xl">
         {/* ── Header ─────────────────────────────────────────── */}
-        <div className="flex justify-between items-start px-5 py-3.5 border-b border-erl-border-subtle flex-shrink-0">
+        <div className="ingredient-editor-header flex justify-between items-start px-6 py-4 border-b border-erl-border-subtle flex-shrink-0">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5">
               <span className="w-6 h-6 flex items-center justify-center text-erl-text-secondary">{getIconByEmoji(menuItem.emoji)}</span>
@@ -239,11 +243,11 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                 </div>
               </div>
             </div>
-            <div className="mt-1.5 flex items-center gap-2">
-              <span className="pill text-[10px] px-2 py-0.5 bg-erl-accent/10 text-erl-accent border border-erl-accent/20">
-                {selectedCount} ingredient{selectedCount !== 1 ? "s" : ""}
-              </span>
-              <span className="text-[10px] text-erl-text-faint">Recipe profile</span>
+            <div className="ingredient-editor-meta">
+              <span className="ingredient-editor-count">{selectedCount}</span>
+              <span>selected ingredient{selectedCount !== 1 ? "s" : ""}</span>
+              <span className="ingredient-editor-meta-divider">·</span>
+              <span>{inventory.length} available</span>
             </div>
           </div>
           <button
@@ -255,10 +259,8 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
         </div>
 
         {sizeOptions.length > 1 && (
-          <div className="px-6 pt-4 flex-shrink-0">
-            <div className="text-[10px] text-erl-text-faint uppercase tracking-[0.14em] font-bold mb-2">
-              Ingredient profile
-            </div>
+          <div className="ingredient-profile-bar px-6 pt-3.5 flex-shrink-0">
+            <div className="ingredient-section-label">Recipe profile</div>
             <div className="ingredient-size-tabs">
               {sizeOptions.map((size) => (
                 <button
@@ -276,8 +278,8 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
         )}
 
         {/* ── Search ──────────────────────────────────────────── */}
-        <div className="px-5 pt-3 flex-shrink-0">
-          <div className="relative">
+        <div className="ingredient-editor-toolbar px-6 pt-3 flex-shrink-0">
+          <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-erl-text-faint text-sm pointer-events-none">⌕</span>
             <input
               type="text"
@@ -295,14 +297,16 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
               </button>
             )}
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <div className="text-[11px] text-erl-text-faint">
-              {searchQuery ? `${filteredTotal} result${filteredTotal !== 1 ? "s" : ""}` : `${inventory.length} inventory items`}
+          <div className="ingredient-toolbar-footer mt-2">
+            <div className="ingredient-inventory-summary">
+              <span>{searchQuery ? `${filteredTotal} result${filteredTotal !== 1 ? "s" : ""}` : `${inventory.length} inventory items`}</span>
+              {stockSummary.low > 0 && <span className="ingredient-stock-warning">{stockSummary.low} low</span>}
+              {stockSummary.out > 0 && <span className="ingredient-stock-danger">{stockSummary.out} out</span>}
             </div>
             {filteredTotal > 0 && (
-              <div className="flex items-center gap-2">
+              <div className="ingredient-bulk-controls">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-erl-text-faint">Qty</span>
+                  <span className="text-[10px] text-erl-text-muted">Default qty</span>
                   <input
                     type="number"
                     value={defaultQty}
@@ -315,7 +319,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                 </div>
                 <button
                   onClick={handleSelectAll}
-                  className="text-[11px] text-erl-accent hover:text-erl-accent/80 font-semibold cursor-pointer bg-transparent border-none transition-colors"
+                  className="ingredient-select-all"
                 >
                   {allVisibleSelected ? "Deselect All" : "Select All"}
                 </button>
@@ -325,7 +329,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
         </div>
 
         {/* ── Scrollable body ──────────────────────────────── */}
-        <div className="scroll-area flex-1 px-5 py-2.5 overflow-y-auto min-h-0">
+        <div className="scroll-area ingredient-editor-body flex-1 px-6 py-3 overflow-y-auto min-h-0">
           {loading ? (
             <div className="flex flex-col items-center py-12 gap-3">
               <div className="animate-shimmer w-28 h-4 rounded-md" />
@@ -340,13 +344,17 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
             </div>
           ) : (
             grouped.map(({ cat, items }) => (
-              <div key={cat} className="mb-5 last:mb-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="text-[11px] text-erl-text-faint tracking-wider uppercase font-bold">{cat}</div>
+              <div key={cat} className="ingredient-category mb-4 last:mb-0">
+                <div className="ingredient-category-header">
+                  <div className="ingredient-category-title">
+                    <span className="ingredient-category-dot" />
+                    <span>{cat}</span>
+                    <span className="ingredient-category-count">{items.length}</span>
+                  </div>
                   <div className="flex-1 h-px bg-erl-border-subtle" />
                   <button
                     onClick={() => handleSelectCategory(items)}
-                    className="text-[10px] text-erl-accent hover:text-erl-accent/80 font-semibold cursor-pointer bg-transparent border-none transition-colors"
+                    className="ingredient-category-action"
                   >
                     {items.every((i) => selected[i.id]) ? "Deselect" : "Select"}
                   </button>
@@ -363,10 +371,10 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                       <div
                         key={inv.id}
                         className={`
-                          flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-150 cursor-pointer
+                          ingredient-item-row flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-150 cursor-pointer
                           ${isChecked
-                            ? "bg-erl-accent/10 border border-erl-accent/25"
-                            : "border border-transparent hover:bg-erl-surface/80 hover:border-erl-border-subtle"
+                            ? "is-selected"
+                            : ""
                           }
                         `}
                         onClick={() => handleToggle(inv.id)}
@@ -375,7 +383,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleToggle(inv.id)}
-                          className="w-4 h-4 accent-erl-accent flex-shrink-0 cursor-pointer"
+                          className="ingredient-checkbox w-4 h-4 accent-erl-accent flex-shrink-0 cursor-pointer"
                           onClick={(e) => e.stopPropagation()}
                         />
                         <div className="flex-1 min-w-0">

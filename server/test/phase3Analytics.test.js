@@ -31,6 +31,19 @@ test('forecastSales is deterministic and zero-fills missing days', () => {
   assert.ok(first[0].forecastUnits > 0);
 });
 
+test('forecastSales uses the explicit current date when history is stale', () => {
+  const [forecast] = forecastSales({
+    items: [{ id: 'coffee', name: 'Coffee', price: 100 }],
+    dailyRows: [{ sale_date: '2026-09-20', menu_item_id: 'coffee', qty: 4, revenue: 400 }],
+    historyDays: 14,
+    horizonDays: 7,
+    asOfDate: '2026-10-04',
+  });
+  assert.equal(forecast.asOfDate, '2026-10-04');
+  assert.equal(forecast.forecastStartDate, '2026-10-05');
+  assert.equal(forecast.forecastEndDate, '2026-10-11');
+});
+
 test('calculateInventoryActions scopes advice to recipe demand and flags stockout', () => {
   const actions = calculateInventoryActions({
     inventory: [

@@ -345,15 +345,35 @@ export const AdminInsights: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [menuResult, optimizationResult, briefingResult] = await Promise.all([
+      const [menuResult, optimizationResult, briefingResult] = await Promise.allSettled([
         getMenuInsights(days, currentLocationId),
         getInsightsOptimization(days, currentLocationId, horizonDays),
         getInsightsBriefing(days, currentLocationId, horizonDays),
       ]);
       if (requestId !== requestIdRef.current) return;
-      setMenu(menuResult);
-      setOptimization(optimizationResult);
-      setBriefing(briefingResult);
+      if (menuResult.status === "rejected" || optimizationResult.status === "rejected") {
+        const failure = menuResult.status === "rejected"
+          ? menuResult.reason
+          : optimizationResult.status === "rejected"
+            ? optimizationResult.reason
+            : new Error("Failed to load analytics");
+        throw failure;
+      }
+      setMenu(menuResult.value);
+      setOptimization(optimizationResult.value);
+      if (briefingResult.status === "fulfilled") {
+        setBriefing(briefingResult.value);
+      } else {
+        setBriefing({
+          locationId: optimizationResult.value.locationId,
+          windowDays: days,
+          horizonDays,
+          summary: "The deterministic analytics are available, but the AI briefing could not be reached.",
+          actions: [],
+          source: "deterministic-fallback",
+          advisoryOnly: true,
+        });
+      }
     } catch (loadError: unknown) {
       if (requestId !== requestIdRef.current) return;
       setError(getErrorMessage(loadError, "Failed to load analytics"));

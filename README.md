@@ -147,7 +147,7 @@ consolidated view.
 | `PRINT_SERVER_URL` | No | Raspberry Pi print server URL |
 | `OLLAMA_ENABLED` | No | Set `true` to enable optional Manager AI briefings; deterministic analytics do not require it |
 | `OLLAMA_BASE_URL` | No | Ollama service URL (Docker default: `http://ollama:11434`) |
-| `OLLAMA_MODEL` | No | Local model name used for briefings (default: `llama3.2:3b`) |
+| `OLLAMA_MODEL` | No | Installed local model name used for briefings (example: `qwen3.5:2b`) |
 | `OLLAMA_TIMEOUT_MS` | No | Briefing request timeout, bounded by the backend (default: `5000`) |
 
 `CORS_ORIGINS` must contain the exact browser origin used by each deployment,

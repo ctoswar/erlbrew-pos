@@ -32,7 +32,7 @@ Copy `server/.env.example` to the deployment environment and set:
 ```dotenv
 OLLAMA_ENABLED=false
 OLLAMA_BASE_URL=http://ollama:11434
-OLLAMA_MODEL=llama3.2:3b
+OLLAMA_MODEL=qwen3.5:2b
 OLLAMA_TIMEOUT_MS=5000
 ```
 
@@ -42,3 +42,8 @@ The optional Compose service is in `infra/docker-compose.yml`. Enable it with
 is not required for forecasting or inventory safety. The model output is constrained to a small
 JSON schema and is treated as untrusted text; only the validated summary is
 returned.
+
+If Ollama runs on another LAN host, use that host's private address, for
+example `OLLAMA_BASE_URL=http://192.168.5.115:11434`, and set `OLLAMA_MODEL`
+to a model installed there. The API container must be able to reach that
+address; the browser never calls Ollama directly.

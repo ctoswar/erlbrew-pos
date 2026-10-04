@@ -390,25 +390,36 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       const conn = await pool.getConnection();
       await conn.beginTransaction();
       try {
-        // Collect all menu_item_ids and their ordered quantities
-        const itemQtyMap = {};
-        for (const it of itemsOut) { itemQtyMap[it.id] = (itemQtyMap[it.id] || 0) + (Number(it.qty) || 0); }
-        const menuItemIds = Object.keys(itemQtyMap);
-
-        if (menuItemIds.length > 0) {
-          // Fetch all recipes for ordered menu items in one query
+        if (itemsOut.length > 0) {
+          // Use a size-specific recipe when one exists; otherwise fall back to
+          // the legacy/base recipe (size_id = 0).
           const [recipes] = await conn.query(
-            `SELECT r.menu_item_id, r.inventory_item_id, r.quantity,
+            `SELECT r.menu_item_id, r.inventory_item_id, r.quantity, oi.qty,
                     i.stock, i.low_stock_threshold, i.location_id
-             FROM recipes r
+             FROM order_items oi
+             JOIN recipes r ON r.menu_item_id = oi.menu_item_id
+             LEFT JOIN menu_item_sizes ms
+               ON ms.menu_item_id = oi.menu_item_id AND ms.label = oi.size
              JOIN inventory i ON i.id = r.inventory_item_id
-             WHERE r.menu_item_id IN (?) AND i.location_id = ?`,
-            [menuItemIds, req.locationId]
+             WHERE oi.order_id = ? AND i.location_id = ?
+               AND (
+                 r.size_id = COALESCE(ms.id, 0)
+                 OR (
+                   COALESCE(ms.id, 0) > 0
+                   AND r.size_id = 0
+                   AND NOT EXISTS (
+                     SELECT 1 FROM recipes specific
+                     WHERE specific.menu_item_id = oi.menu_item_id
+                       AND specific.size_id = ms.id
+                   )
+                 )
+               )`,
+            [id, req.locationId]
           );
 
           // Deduct stock — skip if not enough stock (log warning, don't fail order)
           for (const recipe of recipes) {
-            const qtyOrdered = itemQtyMap[recipe.menu_item_id] || 0;
+            const qtyOrdered = Number(recipe.qty) || 0;
             const deduction = recipe.quantity * qtyOrdered;
             if (deduction > 0) {
               const stockBefore = Number(recipe.stock);
@@ -705,8 +716,11 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         FROM orders o
         JOIN order_items oi ON o.id = oi.order_id
         JOIN recipes r ON oi.menu_item_id = r.menu_item_id
+        LEFT JOIN menu_item_sizes ms ON ms.menu_item_id = oi.menu_item_id AND ms.label = oi.size
         JOIN inventory i ON r.inventory_item_id = i.id AND i.location_id = o.location_id
-        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)${locationCondition}`;
+        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)${locationCondition}
+          AND (r.size_id = COALESCE(ms.id, 0) OR (COALESCE(ms.id, 0) > 0 AND r.size_id = 0
+            AND NOT EXISTS (SELECT 1 FROM recipes specific WHERE specific.menu_item_id = oi.menu_item_id AND specific.size_id = ms.id)))`;
       const [tot] = await pool.query(sqlCogs, [startStr, endStr, ...locationParams]);
       const cogs = Number((tot && tot[0] && tot[0].cogs) || 0);
 
@@ -723,8 +737,11 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         FROM orders o
         JOIN order_items oi ON o.id = oi.order_id
         JOIN recipes r ON oi.menu_item_id = r.menu_item_id
+        LEFT JOIN menu_item_sizes ms ON ms.menu_item_id = oi.menu_item_id AND ms.label = oi.size
         JOIN inventory i ON r.inventory_item_id = i.id AND i.location_id = o.location_id
         WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)${locationCondition}
+          AND (r.size_id = COALESCE(ms.id, 0) OR (COALESCE(ms.id, 0) > 0 AND r.size_id = 0
+            AND NOT EXISTS (SELECT 1 FROM recipes specific WHERE specific.menu_item_id = oi.menu_item_id AND specific.size_id = ms.id)))
         GROUP BY o.id`;
       const [detailsRows] = await pool.query(sqlDetails, [startStr, endStr, ...locationParams]);
       const details = (detailsRows || []).map(r => {
@@ -996,21 +1013,34 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       // would incorrectly ADD stock.
       if (order && (order.pay_status || 'paid') === 'paid') try {
         const [orderItems] = await conn.query(
-          'SELECT menu_item_id, qty FROM order_items WHERE order_id = ?', [id]
+          'SELECT menu_item_id, qty, size FROM order_items WHERE order_id = ?', [id]
         );
         if (orderItems.length > 0) {
-          const itemQtyMap = {};
-          for (const oi of orderItems) { itemQtyMap[oi.menu_item_id] = (itemQtyMap[oi.menu_item_id] || 0) + Number(oi.qty); }
-          const menuItemIds = Object.keys(itemQtyMap);
-
           const [recipes] = await conn.query(
-            `SELECT r.menu_item_id, r.inventory_item_id, r.quantity, i.stock, i.location_id
-             FROM recipes r JOIN inventory i ON i.id = r.inventory_item_id AND i.location_id = ?
-             WHERE r.menu_item_id IN (?)`, [order.location_id, menuItemIds]
+            `SELECT r.menu_item_id, r.inventory_item_id, r.quantity, oi.qty, i.stock, i.location_id
+             FROM order_items oi
+             JOIN recipes r ON r.menu_item_id = oi.menu_item_id
+             LEFT JOIN menu_item_sizes ms
+               ON ms.menu_item_id = oi.menu_item_id AND ms.label = oi.size
+             JOIN inventory i ON i.id = r.inventory_item_id AND i.location_id = ?
+             WHERE oi.order_id = ?
+               AND (
+                 r.size_id = COALESCE(ms.id, 0)
+                 OR (
+                   COALESCE(ms.id, 0) > 0
+                   AND r.size_id = 0
+                   AND NOT EXISTS (
+                     SELECT 1 FROM recipes specific
+                     WHERE specific.menu_item_id = oi.menu_item_id
+                       AND specific.size_id = ms.id
+                   )
+                 )
+               )`,
+            [order.location_id, id]
           );
 
           for (const recipe of recipes) {
-            const qtyOrdered = itemQtyMap[recipe.menu_item_id] || 0;
+            const qtyOrdered = Number(recipe.qty) || 0;
             const restoreQty = recipe.quantity * qtyOrdered;
             if (restoreQty > 0) {
               const stockBefore = Number(recipe.stock);

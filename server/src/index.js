@@ -551,6 +551,10 @@ await pool.query(`
       )
     `).catch(e => console.error('[migration] menu_item_sizes create failed:', e.message));
     console.log('menu_item_sizes table ready');
+    await pool.query('ALTER TABLE recipes ADD COLUMN size_id INT NOT NULL DEFAULT 0 AFTER menu_item_id').catch(() => {});
+    await pool.query('ALTER TABLE recipes DROP INDEX unique_recipe').catch(() => {});
+    await pool.query('ALTER TABLE recipes ADD UNIQUE KEY unique_recipe (menu_item_id, size_id, inventory_item_id)').catch(() => {});
+    await pool.query('ALTER TABLE recipes ADD INDEX idx_recipe_size (menu_item_id, size_id)').catch(() => {});
     await pool.query(`ALTER TABLE order_items ADD COLUMN size VARCHAR(64) DEFAULT NULL AFTER price`).catch(() => {});
 
     // ── Accounting integration (Roadmap → Phase 2) ─────────────────────────
@@ -585,7 +589,7 @@ async function validateSchema() {
     order_items: ['id', 'order_id', 'menu_item_id', 'qty', 'notes', 'price', 'size'],
     order_item_modifiers: ['id', 'order_item_id', 'modifier_name', 'modifier_price'],
     inventory: ['id', 'location_id', 'name', 'category', 'unit', 'stock', 'low_stock_threshold'],
-    recipes: ['menu_item_id', 'inventory_item_id', 'quantity'],
+    recipes: ['menu_item_id', 'size_id', 'inventory_item_id', 'quantity'],
     staff: ['id', 'rfid', 'name', 'role', 'initials', 'color', 'location_id'],
   };
   const missing = [];
@@ -773,8 +777,11 @@ o.customer_name, o.table_name, o.type, o.pay_method,
         FROM orders o
         JOIN order_items oi ON o.id = oi.order_id
         JOIN recipes r ON oi.menu_item_id = r.menu_item_id
+        LEFT JOIN menu_item_sizes ms ON ms.menu_item_id = oi.menu_item_id AND ms.label = oi.size
         JOIN inventory i ON r.inventory_item_id = i.id AND i.location_id = o.location_id
-        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)${orderScope.sql}`,
+        WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)${orderScope.sql}
+          AND (r.size_id = COALESCE(ms.id, 0) OR (COALESCE(ms.id, 0) > 0 AND r.size_id = 0
+            AND NOT EXISTS (SELECT 1 FROM recipes specific WHERE specific.menu_item_id = oi.menu_item_id AND specific.size_id = ms.id)))`,
         [today, today, ...orderScope.params]
       );
       const cogs = Number((tot && tot[0] && tot[0].cogs) || 0);
@@ -784,8 +791,11 @@ o.customer_name, o.table_name, o.type, o.pay_method,
         FROM orders o
         JOIN order_items oi ON o.id = oi.order_id
         JOIN recipes r ON oi.menu_item_id = r.menu_item_id
+        LEFT JOIN menu_item_sizes ms ON ms.menu_item_id = oi.menu_item_id AND ms.label = oi.size
         JOIN inventory i ON r.inventory_item_id = i.id AND i.location_id = o.location_id
         WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)${orderScope.sql}
+          AND (r.size_id = COALESCE(ms.id, 0) OR (COALESCE(ms.id, 0) > 0 AND r.size_id = 0
+            AND NOT EXISTS (SELECT 1 FROM recipes specific WHERE specific.menu_item_id = oi.menu_item_id AND specific.size_id = ms.id)))
         GROUP BY o.id`,
         [today, today, ...orderScope.params]
       );

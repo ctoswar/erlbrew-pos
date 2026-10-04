@@ -139,16 +139,14 @@ async function loadForecast(pool, req, days, horizonDays, menuItems) {
      ORDER BY sale_date ASC, oi.menu_item_id ASC`,
     [days, ...scope.params],
   );
-  const latestDate = (dailyRows || [])
-    .map((row) => String(row.sale_date).slice(0, 10))
-    .sort()
-    .pop();
+  const [[todayRow]] = await pool.query('SELECT CURDATE() AS today');
+  const asOfDate = String(todayRow?.today || new Date().toISOString().slice(0, 10)).slice(0, 10);
   return forecastSales({
     items: menuItems,
     dailyRows: dailyRows || [],
     historyDays: days,
     horizonDays,
-    asOfDate: latestDate || new Date().toISOString().slice(0, 10),
+    asOfDate,
   });
 }
 

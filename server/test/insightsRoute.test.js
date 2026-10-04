@@ -29,6 +29,7 @@ function createPool(calls) {
           unit_cogs: null,
         }], []];
       }
+      if (sql.includes('SELECT CURDATE() AS today')) return [[{ today: '2026-10-04' }], []];
       if (sql.includes('TIMESTAMPDIFF(WEEK')) return [[{ weeks: 4 }], []];
       if (sql.includes('COUNT(*) AS cnt')) return [[{ cnt: 1 }], []];
       return [[], []];
@@ -91,6 +92,8 @@ test('menu insights enforce Manager role and scope selected location', async () 
   assert.equal(forecastResponse.body.forecasts[0].forecastStartDate, tomorrow.toISOString().slice(0, 10));
   const dailyQuery = calls.find((call) => call.sql.includes('DATE(o.created_at) AS sale_date'));
   assert.deepEqual(dailyQuery.params, [90, 2]);
+  assert.equal(forecastResponse.body.forecasts[0].asOfDate, '2026-10-04');
+  assert.equal(forecastResponse.body.forecasts[0].forecastStartDate, '2026-10-05');
 
   const staffToken = jwt.sign({ sub: 11, role: 'Barista', location_id: 2 }, process.env.JWT_SECRET);
   const staffResponse = await request(app, '/api/insights/menu?location_id=2', staffToken);

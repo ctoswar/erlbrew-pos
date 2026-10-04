@@ -125,14 +125,14 @@ export const ModifierEditor: React.FC<Props> = ({ item, allMenuItems = [], onClo
     <>
       <div className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay" onClick={onClose} />
       <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-        <div className="bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl p-6 w-full max-w-[420px] max-h-[90vh] overflow-y-auto animate-fade-in-up">
+        <div className="modifier-editor-modal bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl w-full max-w-[600px] max-h-[88vh] overflow-hidden animate-fade-in-up">
           {/* Header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-erl-border-subtle">
             <div>
-              <div className="font-display text-[15px] font-bold text-erl-text-primary">
+              <div className="font-display text-[17px] font-bold text-erl-text-primary flex items-center gap-2">
                 <span className="w-4 h-4 flex items-center justify-center">{getIconByEmoji(item.emoji)}</span> {item.name} — Modifiers
               </div>
-              <div className="text-[10px] text-erl-muted mt-0.5">
+              <div className="text-[11px] text-erl-muted mt-1">
                 Add-ons & customizations for this item
               </div>
             </div>
@@ -155,9 +155,9 @@ export const ModifierEditor: React.FC<Props> = ({ item, allMenuItems = [], onClo
               No modifiers yet. Add some below.
             </div>
           ) : (
-            <div className="flex flex-col gap-2 mb-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3.5">
               {modifiers.map((mod) => (
-                <div key={mod.id} className="flex items-center gap-2 px-2.5 py-2 rounded-lg border-[1.5px] border-erl-border-default bg-erl-surface">
+                <div key={mod.id} className="flex items-center gap-2.5 px-3 py-3 rounded-xl border-[1.5px] border-erl-border-default bg-erl-surface/80 hover:border-erl-border-medium transition-colors">
                   {editingId === mod.id ? (
                     <div className="flex-1 flex flex-col gap-1.5">
                       <input
@@ -205,10 +205,10 @@ export const ModifierEditor: React.FC<Props> = ({ item, allMenuItems = [], onClo
                           {mod.price > 0 ? `+${formatCurrency(mod.price)}` : "Free"}
                         </div>
                       </div>
-                      <button onClick={() => startEdit(mod)} className="bg-none border border-erl-border-default rounded-md px-2 py-1.5 text-[9px] font-bold text-erl-muted cursor-pointer tracking-wide min-h-[44px]">
+                      <button onClick={() => startEdit(mod)} className="bg-none border border-erl-border-default rounded-lg px-3 py-2 text-[10px] font-bold text-erl-muted cursor-pointer tracking-wide">
                         Edit
                       </button>
-                      <button onClick={() => handleDelete(mod.id!)} className="bg-none border border-red-500/30 rounded-md px-2 py-1.5 text-[9px] font-bold text-erl-danger cursor-pointer tracking-wide min-h-[44px]">
+                      <button onClick={() => handleDelete(mod.id!)} className="bg-none border border-red-500/30 rounded-lg px-3 py-2 text-[10px] font-bold text-erl-danger cursor-pointer tracking-wide">
                         Del
                       </button>
                     </>
@@ -328,7 +328,7 @@ export const ModifierEditor: React.FC<Props> = ({ item, allMenuItems = [], onClo
               </button>
             )}
           </div>
-        </div>
+      </div>
       </div>
 
       {/* Apply to Other Items Modal */}

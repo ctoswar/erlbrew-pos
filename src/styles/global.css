@@ -336,6 +336,43 @@
     text-transform: uppercase;
   }
 
+  .ingredient-size-tab {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    border: 1px solid rgb(var(--color-border-subtle));
+    border-radius: 0.8rem;
+    background: rgb(var(--color-surface) / 0.55);
+    color: rgb(var(--color-text-muted));
+    cursor: pointer;
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 180ms ease;
+  }
+
+  .ingredient-size-tab:hover {
+    border-color: rgb(var(--color-accent) / 0.4);
+    color: rgb(var(--color-text-primary));
+    transform: translateY(-1px);
+  }
+
+  .ingredient-size-tab.is-active {
+    border-color: rgb(var(--color-accent) / 0.65);
+    background: linear-gradient(135deg, rgb(var(--color-accent) / 0.18), rgb(var(--color-accent) / 0.05));
+    color: rgb(var(--color-accent));
+    box-shadow: 0 8px 22px rgb(var(--color-accent) / 0.08);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ingredient-size-tab,
+    .ingredient-size-tab:hover {
+      transform: none;
+      transition: none;
+    }
+  }
+
   .admin-mobile-scrim {
     animation: admin-scrim-in 220ms var(--ease-out) both;
     backdrop-filter: blur(4px);

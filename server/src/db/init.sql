@@ -118,11 +118,13 @@ CREATE TABLE IF NOT EXISTS time_adjustments (
 CREATE TABLE IF NOT EXISTS recipes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   menu_item_id VARCHAR(64) NOT NULL,
+  size_id INT NOT NULL DEFAULT 0,
   inventory_item_id VARCHAR(32) NOT NULL,
   quantity DECIMAL(10,4) NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,
-  UNIQUE KEY unique_recipe (menu_item_id, inventory_item_id)
+  UNIQUE KEY unique_recipe (menu_item_id, size_id, inventory_item_id),
+  INDEX idx_recipe_size (menu_item_id, size_id)
 );
 
 CREATE TABLE IF NOT EXISTS inventory (

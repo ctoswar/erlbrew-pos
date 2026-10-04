@@ -9,14 +9,15 @@ export default function recipesRouter(pool) {
   // GET /api/recipes/:menuItemId — get all ingredients for a menu item
   router.get('/:menuItemId', authMiddleware, locationScope, async (req, res) => {
     try {
+      const sizeId = Number.isInteger(Number(req.query.size_id)) ? Number(req.query.size_id) : 0;
       const scope = scopedLocationCondition(req, 'i.location_id');
       const [rows] = await pool.query(
-        `SELECT r.id, r.inventory_item_id, r.quantity,
+        `SELECT r.id, r.size_id, r.inventory_item_id, r.quantity,
                 i.name AS inventory_name, i.category, i.unit, i.stock, i.low_stock_threshold
          FROM recipes r
          JOIN inventory i ON i.id = r.inventory_item_id
-         WHERE r.menu_item_id = ?${scope.sql}`,
-        [req.params.menuItemId, ...scope.params]
+         WHERE r.menu_item_id = ? AND r.size_id = ?${scope.sql}`,
+        [req.params.menuItemId, sizeId, ...scope.params]
       );
       res.json(rows);
     } catch (err) {
@@ -30,17 +31,18 @@ export default function recipesRouter(pool) {
     const conn = await pool.getConnection();
     try {
       const { items } = req.body;
+      const sizeId = Number.isInteger(Number(req.body?.size_id)) ? Number(req.body.size_id) : 0;
       if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be an array' });
 
       await conn.beginTransaction();
-      await conn.query('DELETE FROM recipes WHERE menu_item_id = ?', [req.params.menuItemId]);
+      await conn.query('DELETE FROM recipes WHERE menu_item_id = ? AND size_id = ?', [req.params.menuItemId, sizeId]);
 
       if (items.length > 0) {
         const vals = items
           .filter((it) => it.inventory_item_id && it.quantity > 0)
-          .map((it) => [req.params.menuItemId, it.inventory_item_id, Number(it.quantity)]);
+          .map((it) => [req.params.menuItemId, sizeId, it.inventory_item_id, Number(it.quantity)]);
         if (vals.length > 0) {
-          await conn.query('INSERT INTO recipes (menu_item_id, inventory_item_id, quantity) VALUES ?', [vals]);
+          await conn.query('INSERT INTO recipes (menu_item_id, size_id, inventory_item_id, quantity) VALUES ?', [vals]);
         }
       }
 
@@ -51,12 +53,12 @@ export default function recipesRouter(pool) {
 
       const scope = scopedLocationCondition(req, 'i.location_id');
       const [rows] = await pool.query(
-        `SELECT r.id, r.inventory_item_id, r.quantity,
+        `SELECT r.id, r.size_id, r.inventory_item_id, r.quantity,
                 i.name AS inventory_name, i.category, i.unit, i.stock, i.low_stock_threshold
          FROM recipes r
          JOIN inventory i ON i.id = r.inventory_item_id
-         WHERE r.menu_item_id = ?${scope.sql}`,
-        [req.params.menuItemId, ...scope.params]
+         WHERE r.menu_item_id = ? AND r.size_id = ?${scope.sql}`,
+        [req.params.menuItemId, sizeId, ...scope.params]
       );
       res.json(rows);
     } catch (err) {

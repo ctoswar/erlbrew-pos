@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { MenuItem } from "../types";
+import { MenuItem, MenuItemSize } from "../types";
 import { apiAdminGet, apiAdminPut } from "../utils/api";
 import { getIconByEmoji } from "./FoodIcons";
 import { useLocation } from "../contexts/LocationContext";
@@ -47,10 +47,22 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
   // Track the display unit per inventory item (what the user sees/edits in)
   const [selectedUnits, setSelectedUnits] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeSizeId, setActiveSizeId] = useState(0);
+
+  const sizeOptions: { id: number; label: string }[] = [
+    { id: 0, label: "Base recipe" },
+    ...((menuItem.sizes || []) as MenuItemSize[])
+      .filter((size): size is MenuItemSize & { id: number } => Number.isInteger(size.id))
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      .map((size) => ({ id: size.id, label: size.label })),
+  ];
 
   useEffect(() => {
+    setLoading(true);
+    setSelected({});
+    setSelectedUnits({});
     Promise.all([
-      apiAdminGet<RecipeIngredient[]>(`/recipes/${menuItem.id}`),
+      apiAdminGet<RecipeIngredient[]>(`/recipes/${menuItem.id}?size_id=${activeSizeId}`),
       apiAdminGet<InventoryItem[]>("/inventory"),
     ])
       .then(([r, inv]) => {
@@ -77,7 +89,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
         setError("Failed to load data");
       })
       .finally(() => setLoading(false));
-  }, [menuItem.id, currentLocationId]);
+  }, [menuItem.id, currentLocationId, activeSizeId]);
 
   const [defaultQty, setDefaultQty] = useState("1");
 
@@ -166,7 +178,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
           return { inventory_item_id, quantity: dbQty };
         });
 
-      await apiAdminPut(`/recipes/${menuItem.id}`, { items, location_id: currentLocationId });
+      await apiAdminPut(`/recipes/${menuItem.id}`, { items, size_id: activeSizeId, location_id: currentLocationId });
       onClose();
     } catch (err) {
       setError("Failed to save ingredients");
@@ -210,7 +222,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="animate-scale-in card-glass w-full max-w-[580px] max-h-[88vh] flex flex-col overflow-hidden rounded-2xl">
+      <div className="ingredient-editor-modal animate-scale-in card-glass w-full max-w-[680px] max-h-[90vh] flex flex-col overflow-hidden rounded-2xl">
         {/* ── Header ─────────────────────────────────────────── */}
         <div className="flex justify-between items-start px-6 py-5 border-b border-erl-border-subtle flex-shrink-0">
           <div className="flex-1 min-w-0">
@@ -221,7 +233,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                   {menuItem.name}
                 </div>
                 <div className="text-[12px] text-erl-text-muted mt-0.5">
-                  {menuItem.category} · {menuItem.price > 0 ? `₱${menuItem.price.toFixed(2)}` : ""}
+                  {menuItem.category} · {menuItem.price > 0 ? `₱${menuItem.price.toFixed(2)}` : ""} · {sizeOptions.find((size) => size.id === activeSizeId)?.label}
                 </div>
               </div>
             </div>
@@ -229,6 +241,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
               <span className="pill text-[10px] px-2 py-0.5 bg-erl-accent/10 text-erl-accent border border-erl-accent/20">
                 {selectedCount} ingredient{selectedCount !== 1 ? "s" : ""}
               </span>
+              <span className="text-[10px] text-erl-text-faint">Recipe profile</span>
             </div>
           </div>
           <button
@@ -238,6 +251,27 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
             ✕
           </button>
         </div>
+
+        {sizeOptions.length > 1 && (
+          <div className="px-6 pt-4 flex-shrink-0">
+            <div className="text-[10px] text-erl-text-faint uppercase tracking-[0.14em] font-bold mb-2">
+              Ingredient profile
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {sizeOptions.map((size) => (
+                <button
+                  key={size.id}
+                  type="button"
+                  onClick={() => setActiveSizeId(size.id)}
+                  className={`ingredient-size-tab ${activeSizeId === size.id ? "is-active" : ""}`}
+                >
+                  <span>{size.label}</span>
+                  {size.id === 0 && <span className="text-[9px] opacity-60">fallback</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── Search ──────────────────────────────────────────── */}
         <div className="px-6 pt-4 flex-shrink-0">

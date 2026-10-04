@@ -70,6 +70,7 @@ async function loadMenuInsights(pool, req, days) {
            ${costScope.sql ? `WHERE 1 = 1${costScope.sql}` : ''}
            GROUP BY id
          ) ic ON ic.id = r.inventory_item_id
+         WHERE r.size_id = 0
          GROUP BY r.menu_item_id
        ) c ON c.mid = m.id`
     : '';
@@ -162,6 +163,7 @@ async function loadInventoryActions(pool, req, forecasts) {
   const [recipes] = await pool.query(
     `SELECT menu_item_id, inventory_item_id, quantity
      FROM recipes
+     WHERE size_id = 0
      ORDER BY menu_item_id ASC, inventory_item_id ASC`,
   );
   return calculateInventoryActions({

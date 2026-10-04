@@ -95,6 +95,12 @@ test('menu insights enforce Manager role and scope selected location', async () 
   assert.equal(forecastResponse.body.forecasts[0].asOfDate, '2026-10-04');
   assert.equal(forecastResponse.body.forecasts[0].forecastStartDate, '2026-10-05');
 
+  const optimizationResponse = await request(app, '/api/insights/optimization?location_id=2', managerToken);
+  assert.equal(optimizationResponse.statusCode, 200);
+  const comboCountQuery = calls.find((call) => call.sql.includes('SELECT COUNT(*) AS cnt') && call.sql.includes('FROM orders o'));
+  assert.ok(comboCountQuery);
+  assert.match(comboCountQuery.sql, /o\.location_id = \?/);
+
   const staffToken = jwt.sign({ sub: 11, role: 'Barista', location_id: 2 }, process.env.JWT_SECRET);
   const staffResponse = await request(app, '/api/insights/menu?location_id=2', staffToken);
   assert.equal(staffResponse.statusCode, 403);

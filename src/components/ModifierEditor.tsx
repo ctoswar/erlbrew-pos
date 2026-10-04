@@ -123,7 +123,7 @@ export const ModifierEditor: React.FC<Props> = ({ item, allMenuItems = [], onClo
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay" onClick={onClose} />
+      <div className="ingredient-editor-backdrop fixed inset-0 z-[998] animate-fade-in-overlay" onClick={onClose} />
       <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
         <div className="modifier-editor-modal bg-erl-elevated border-[1.5px] border-erl-border-medium rounded-2xl w-full max-w-[600px] max-h-[88vh] overflow-hidden animate-fade-in-up">
           {/* Header */}

@@ -221,7 +221,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="ingredient-editor-backdrop fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-5">
       <div className="ingredient-editor-modal animate-scale-in card-glass w-full max-w-[680px] max-h-[90vh] flex flex-col overflow-hidden rounded-2xl">
         {/* ── Header ─────────────────────────────────────────── */}
         <div className="flex justify-between items-start px-6 py-5 border-b border-erl-border-subtle flex-shrink-0">

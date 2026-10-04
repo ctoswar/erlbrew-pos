@@ -202,9 +202,10 @@ async function loadCombos(pool, req, days) {
     [days, ...scope.params],
   );
   const [[orderCount]] = await pool.query(
-    `SELECT COUNT(*) AS cnt FROM orders
-     WHERE status = 'completed'
-       AND created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)${scope.sql}`,
+    `SELECT COUNT(*) AS cnt
+     FROM orders o
+     WHERE o.status = 'completed'
+       AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)${scope.sql}`,
     [days, ...scope.params],
   );
   return recommendCombos({

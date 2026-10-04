@@ -1,0 +1,48 @@
+# ── Erlbrew POS root .dockerignore ───────────────────────────────────────────
+# Keeps Docker build contexts small and avoids leaking local secrets.
+
+# Dependencies
+node_modules/
+server/node_modules/
+print-server/venv/
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.local
+.env.production
+server/.env
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+server/server.log
+server/server.err
+
+# TLS certificates and keys
+server.pfx
+server.pem
+server.key
+server.cer
+
+# Git
+.git/
+.gitignore
+
+# Misc
+*.tgz
+tmp/
+test-screenshots/
+test-results/

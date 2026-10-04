@@ -67,16 +67,14 @@ Backend API: http://localhost:3001
 ### Docker Deployment
 
 ```bash
-cd infra
-
-# Start all services
-docker compose up -d
+# Start all services from the repository root
+docker compose -f infra/docker-compose.yml up -d
 
 # View logs
-docker compose logs -f
+docker compose -f infra/docker-compose.yml logs -f
 
 # Stop services
-docker compose down
+docker compose -f infra/docker-compose.yml down
 ```
 
 Services:
@@ -98,7 +96,7 @@ Branch C tablet ─┘
 ```
 
 1. Install Tailscale on the server running Docker, and on every branch tablet or computer.
-2. Start the stack from `infra/` with `docker compose up -d`.
+2. Start the stack from the repository root with `docker compose -f infra/docker-compose.yml up -d`.
 3. Allow the Tailscale network to reach the frontend port (`3004`) on the POS server.
 4. Open the POS from each branch using the server's Tailscale IP or MagicDNS hostname:
 

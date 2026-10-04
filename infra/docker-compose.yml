@@ -1,7 +1,13 @@
+# Run this file from the repository root:
+#   docker compose -f infra/docker-compose.yml up --build
+# Paths below are relative to the repository root.
+
 services:
   # ── Backend API ─────────────────────────────────────────────────────────────
   erlbw-api:
-    build: ./server
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     container_name: erlbw-api
     restart: unless-stopped
     expose:
@@ -50,7 +56,7 @@ services:
   erlbrew-pos:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: infra/Dockerfile
       args:
         # VITE_API_URL empty → nginx proxies /api to backend (see nginx.conf)
         VITE_API_URL: ""

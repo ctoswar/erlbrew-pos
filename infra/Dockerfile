@@ -22,7 +22,7 @@ RUN rm /etc/nginx/conf.d/default.conf
 RUN apk add --no-cache curl
 
 # Copy custom nginx config (proxies /api → erlbw-api:3001)
-COPY nginx.conf /etc/nginx/conf.d/erlbrew.conf
+COPY infra/nginx.conf /etc/nginx/conf.d/erlbrew.conf
 
 # Copy built frontend assets
 COPY --from=builder /app/dist /usr/share/nginx/html

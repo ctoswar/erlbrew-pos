@@ -249,6 +249,77 @@
     box-shadow: 0 0 14px rgba(196,149,106,0.7);
   }
 
+  .admin-settings-chevron {
+    display: inline-block;
+    color: currentColor;
+    font-size: 14px;
+    line-height: 1;
+    transform: rotate(0deg) translateY(-1px);
+    transition: transform var(--transition-spring);
+  }
+
+  .admin-settings-chevron.is-open {
+    transform: rotate(180deg) translateY(1px);
+  }
+
+  .admin-settings-submenu {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    margin: 0 0 0.25rem 1.9rem;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 240ms var(--ease-out), opacity 180ms var(--ease-out), margin 240ms var(--ease-out);
+  }
+
+  .admin-settings-submenu.is-open {
+    max-height: 10rem;
+    margin-bottom: 0.5rem;
+    opacity: 1;
+  }
+
+  .admin-settings-submenu::before {
+    content: "";
+    position: absolute;
+    width: 1px;
+    margin: 0.35rem 0 0.35rem 0.45rem;
+    background: linear-gradient(rgb(var(--color-accent) / 0.5), transparent);
+  }
+
+  .admin-settings-subitem {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+    padding: 0.55rem 0.6rem;
+    border: 0;
+    border-radius: 0.65rem;
+    background: transparent;
+    color: rgb(var(--color-text-muted));
+    cursor: pointer;
+    font-size: 0.68rem;
+    text-align: left;
+    transition: color 180ms ease, background-color 180ms ease, transform 180ms ease;
+  }
+
+  .admin-settings-subitem:hover,
+  .admin-settings-subitem.is-active {
+    background: rgb(var(--color-accent) / 0.08);
+    color: rgb(var(--color-accent));
+    transform: translateX(2px);
+  }
+
+  .admin-settings-dot {
+    width: 0.3rem;
+    height: 0.3rem;
+    flex: 0 0 auto;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+  }
+
   .admin-page-transition {
     min-height: 100%;
     contain: layout paint;
@@ -293,6 +364,15 @@
     }
     .admin-nav-item,
     .admin-nav-item:hover {
+      transform: none;
+    }
+    .admin-settings-chevron,
+    .admin-settings-submenu,
+    .admin-settings-subitem {
+      transition: none;
+    }
+    .admin-settings-subitem:hover,
+    .admin-settings-subitem.is-active {
       transform: none;
     }
   }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { MenuItem } from "../types";
 import { apiAdminGet, batchApplyIngredients } from "../utils/api";
 import { getIconByEmoji } from "./FoodIcons";
@@ -209,7 +210,8 @@ export const ApplyIngredientModal: React.FC<Props> = ({
 
   // Show result
   if (result) {
-    return (
+    return createPortal(
+      (
       <>
         <div className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay" onClick={onClose} />
         <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
@@ -235,10 +237,13 @@ export const ApplyIngredientModal: React.FC<Props> = ({
           </div>
         </div>
       </>
+      ),
+      document.body,
     );
   }
 
-  return (
+  return createPortal(
+    (
     <>
       <div className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay" onClick={onClose} />
       <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
@@ -447,5 +452,7 @@ export const ApplyIngredientModal: React.FC<Props> = ({
         </div>
       </div>
     </>
+    ),
+    document.body,
   );
 };

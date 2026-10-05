@@ -17,7 +17,7 @@ const todayDateStr = new Date().toLocaleDateString("en-PH", {
 
 const TimeKeepingHeader: React.FC<Props> = ({ isAdmin, activeTab, onTabChange, onExportClick }) => {
   return (
-    <div className="glass-panel px-4 md:px-5 py-3.5 border-b border-erl-accent/[0.08] flex flex-col sm:flex-row items-start sm:items-center justify-between flex-shrink-0 rounded-none gap-2">
+    <div className="timekeeping-header glass-panel px-4 md:px-5 py-3.5 border-b border-erl-accent/[0.08] flex flex-col sm:flex-row items-start sm:items-center justify-between flex-shrink-0 rounded-none gap-2">
       <div className="flex items-center gap-3 md:gap-4 flex-wrap">
         <div className="w-8 h-8 rounded-xl bg-erl-accent/10 flex items-center justify-center flex-shrink-0">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-erl-accent">

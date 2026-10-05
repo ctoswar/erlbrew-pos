@@ -193,9 +193,9 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
   const marginColor = (summary.profitMargin ?? 0) >= 30 ? "text-erl-success" : (summary.profitMargin ?? 0) >= 15 ? "text-erl-accent" : "text-erl-danger";
 
   return (
-    <div className="scroll-area flex-1 p-3 sm:p-5 flex flex-col gap-3.5 overflow-y-auto min-h-0">
+    <div className="dashboard-screen scroll-area flex-1 p-3 sm:p-5 flex flex-col gap-3.5 overflow-y-auto min-h-0">
       {/* Page header */}
-      <div className="flex items-baseline justify-between flex-wrap gap-1.5">
+      <div className="dashboard-hero flex items-baseline justify-between flex-wrap gap-1.5">
         <div>
           <div className="font-display text-lg font-bold text-erl-text-primary">Daily Dashboard</div>
            <div className="text-[9px] text-erl-text-muted mt-px">{startDate} → {endDate}</div>
@@ -204,7 +204,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
       </div>
 
       {/* Date Range Selector */}
-      <div className="card-glass py-3 px-3.5 rounded-xl">
+      <div className="dashboard-period card-glass py-3 px-3.5 rounded-xl">
         <div className="flex items-center justify-between gap-2.5 flex-wrap">
           <div className="text-[8px] text-erl-text-muted tracking-[1.5px] uppercase font-bold">Period</div>
           <div className="flex gap-1 flex-wrap">
@@ -229,7 +229,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
 
       {/* Low Inventory Alert */}
       {lowStockItems.length > 0 && (
-        <div className="card-glass py-2.5 px-3.5 rounded-xl border border-erl-danger">
+        <div className="dashboard-alert card-glass py-2.5 px-3.5 rounded-xl border border-erl-danger">
           <div className="flex items-center gap-2.5 flex-wrap">
             <span className="text-erl-danger text-[10px]">⚠</span>
             <span className="text-[9px] text-erl-text-primary font-bold tracking-wide uppercase">Low Inventory ({lowStockItems.length})</span>
@@ -242,7 +242,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
       )}
 
       {/* Reset Options */}
-      <div className="card-glass py-3 px-3.5 rounded-xl">
+      <div className="dashboard-reset card-glass py-3 px-3.5 rounded-xl">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="text-[9px] text-erl-text-muted tracking-[1.5px] uppercase font-bold">Reset Data</div>
           <div className="flex gap-2 flex-wrap">
@@ -265,7 +265,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
           const isPositive = delta >= 0;
           const showDelta = label !== "Active" && yesterdaySummary;
           return (
-            <div key={label} className="stat-card py-4 px-3.5 rounded-[14px] relative">
+            <div key={label} className="dashboard-kpi stat-card py-4 px-3.5 rounded-[14px] relative">
               <div className="text-[9px] text-erl-text-muted tracking-[1.5px] uppercase font-bold mb-1.5">{label}</div>
               <div className="font-display text-2xl font-bold text-erl-accent mb-0.5">{value}</div>
               <div className="text-[9px] text-erl-text-disabled tracking-wide flex items-center gap-1">
@@ -288,7 +288,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
           { label: "Profit", value: formatCurrency(summary.grossProfit ?? 0), sub: "Revenue − COGS", color: (summary.grossProfit ?? 0) >= 0 ? "text-erl-success" : "text-erl-danger" },
           { label: "Margin", value: `${(summary.profitMargin ?? 0).toFixed(1)}%`, sub: "Profit ÷ Revenue", color: marginColor },
         ].map(({ label, value, sub, color }) => (
-          <div key={label} className="stat-card py-3 px-3 rounded-[10px]">
+          <div key={label} className="dashboard-secondary-kpi stat-card py-3 px-3 rounded-[10px]">
             <div className="text-[8px] text-erl-text-muted tracking-[1.5px] uppercase mb-1">{label}</div>
             <div className={`font-display text-xl font-bold ${color} mb-px`}>{value}</div>
             <div className="text-[8px] text-erl-text-disabled tracking-wide">{sub}</div>
@@ -300,7 +300,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
       {hourlyData.length > 0 && (() => {
         const maxRev = Math.max(...hourlyData.map(h => h.revenue), 1);
         return (
-          <div className="card-glass py-3 px-3.5 rounded-xl">
+          <div className="dashboard-chart card-glass py-3 px-3.5 rounded-xl">
             <div className="text-[8px] text-erl-text-muted tracking-[1.5px] uppercase font-bold mb-2.5">Hourly Sales</div>
             <div className="flex items-end gap-[3px] h-[70px]">
               {hourlyData.map((h) => (
@@ -319,7 +319,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
         {/* Top Items */}
-        <div className="stat-card py-3 px-3 rounded-[10px]">
+        <div className="dashboard-panel stat-card py-3 px-3 rounded-[10px]">
           <div className="text-[8px] text-erl-text-muted tracking-[1.5px] uppercase mb-2.5">Top Items</div>
           {summary.topItems.length === 0 ? (
             <div className="text-[10px] text-erl-text-disabled text-center py-3">No data yet</div>
@@ -336,7 +336,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
         </div>
 
         {/* By Category */}
-        <div className="stat-card py-3 px-3 rounded-[10px]">
+        <div className="dashboard-panel stat-card py-3 px-3 rounded-[10px]">
           <div className="text-[8px] text-erl-text-muted tracking-[1.5px] uppercase mb-2.5">Revenue by Category</div>
           {summary.byCategory.length === 0 ? (
             <div className="text-[10px] text-erl-text-disabled text-center py-3">No data yet</div>
@@ -359,7 +359,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
 
       {/* Payment Methods */}
       {summary.byPayMethod.length > 0 && (
-        <div className="stat-card py-3 px-3 rounded-[10px]">
+        <div className="dashboard-panel dashboard-payments stat-card py-3 px-3 rounded-[10px]">
           <div className="text-[8px] text-erl-text-muted tracking-[1.5px] uppercase mb-2.5">Payment Methods</div>
           <div className="flex flex-wrap gap-2">
             {summary.byPayMethod.map((pm) => (
@@ -375,7 +375,7 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
       )}
 
       {/* Recent Orders */}
-      <div className="stat-card py-3 px-3 rounded-[10px]">
+      <div className="dashboard-panel dashboard-orders stat-card py-3 px-3 rounded-[10px]">
         <div className="text-[8px] text-erl-text-muted tracking-[1.5px] uppercase mb-2">Recent Orders</div>
         {recentOrders.length === 0 ? (
           <div className="text-[10px] text-erl-text-disabled text-center py-3">No orders yet</div>

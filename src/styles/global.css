@@ -320,10 +320,12 @@
     border-radius: 999px;
   }
 
+  /* No `contain` and no lingering `transform` here on purpose: both make this
+     element the containing block for `position: fixed` descendants, which traps
+     every admin modal inside this wrapper instead of letting it cover the viewport. */
   .admin-page-transition {
     min-height: 100%;
-    contain: layout paint;
-    animation: admin-page-in 420ms var(--ease-out) both;
+    animation: admin-page-in 420ms var(--ease-out) backwards;
   }
 
   .admin-tab-loading {

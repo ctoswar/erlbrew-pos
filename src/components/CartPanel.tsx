@@ -56,19 +56,23 @@ export const CartPanel: React.FC<Props> = ({
   const canCheckout = !isEmpty && (orderType !== "takeout" || customerName.trim().length > 0);
 
   return (
-    <aside className="glass-panel w-full flex flex-col h-full border-l border-erl-accent/[0.06] rounded-none">
+    <aside className="pos-cart-panel glass-panel w-full flex flex-col h-full border-l border-erl-accent/[0.06] rounded-none">
       {/* Header */}
-      <div className="px-4 md:px-5 lg:px-6 pt-3 pb-2 border-b border-erl-accent/[0.06] flex-shrink-0">
+      <div className="pos-cart-header px-4 md:px-5 lg:px-6 pt-3 pb-2 border-b border-erl-accent/[0.06] flex-shrink-0">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-erl-accent/10 flex items-center justify-center">
+            <div className="pos-cart-icon w-6 h-6 rounded-lg bg-erl-accent/10 flex items-center justify-center">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-erl-accent">
                 <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
               </svg>
             </div>
-            <span className="font-display text-sm font-bold text-erl-text-primary tracking-wide">
-              Order
-            </span>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-display text-sm font-bold text-erl-text-primary tracking-wide">Order</span>
+                {!isEmpty && <span className="pos-cart-count">{cart.reduce((total, item) => total + item.qty, 0)}</span>}
+              </div>
+              <span className="pos-cart-caption">{isEmpty ? "Ready for your next order" : "Review before checkout"}</span>
+            </div>
           </div>
           {!isEmpty && (
             <button onClick={onClearCart} className="text-[11px] md:text-[9px] text-erl-danger font-semibold tracking-wide uppercase hover:opacity-80 transition-opacity px-3 py-2 md:px-2 md:py-1 rounded-lg hover:bg-erl-danger/5 min-h-[44px] md:min-h-0 flex items-center">
@@ -146,18 +150,16 @@ export const CartPanel: React.FC<Props> = ({
       </div>
 
       {/* Items List */}
-      <div className="scroll-area flex-1 py-2 overflow-y-auto min-h-0">
+      <div className="pos-cart-items scroll-area flex-1 py-2 overflow-y-auto min-h-0">
         {isEmpty ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 md:px-5 lg:px-6 gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-erl-accent/[0.04] border border-erl-accent/[0.08] flex items-center justify-center">
-              <span className="text-3xl opacity-30">🛒</span>
+          <div className="pos-cart-empty flex flex-col items-center justify-center py-16 px-4 md:px-5 lg:px-6 gap-4">
+            <div className="pos-cart-empty-icon w-16 h-16 rounded-2xl bg-erl-accent/[0.04] border border-erl-accent/[0.08] flex items-center justify-center">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
             </div>
-            <span className="text-sm text-erl-text-disabled tracking-wide font-medium">
-              No items yet
-            </span>
+            <div className="text-center"><span className="block text-sm text-erl-text-secondary tracking-wide font-semibold">Your order is empty</span>
             <span className="text-xs text-erl-text-faint tracking-wide text-center max-w-[180px] md:max-w-[200px] lg:max-w-[220px] leading-relaxed">
-              Tap menu items to add them to this order
-            </span>
+              Choose a category and tap any item to begin.
+            </span></div>
           </div>
         ) : (
           <>
@@ -214,7 +216,7 @@ export const CartPanel: React.FC<Props> = ({
       </div>
 
       {/* Footer — Totals + Checkout */}
-      <div className="px-4 md:px-5 lg:px-6 pt-4 md:pt-5 pb-4 md:pb-6 border-t border-erl-accent/[0.06] flex-shrink-0">
+      <div className="pos-cart-footer px-4 md:px-5 lg:px-6 pt-4 md:pt-5 pb-4 md:pb-6 border-t border-erl-accent/[0.06] flex-shrink-0">
         <div className="mb-4">
           <TotalRow label="Subtotal" value={formatCurrency(subtotal)} />
           {discount && (
@@ -260,7 +262,7 @@ export const CartPanel: React.FC<Props> = ({
         {/* Discount button */}
         <button
           onClick={onOpenDiscount}
-          className={`
+          className={`pos-discount-button
             w-full mb-3 py-3 rounded-xl text-[11px] md:text-[10px] font-bold tracking-[0.12em] uppercase transition-all duration-200 min-h-[44px] md:min-h-0 flex items-center justify-center
             ${discount
               ? "bg-erl-success/5 border-2 border-erl-success/20 text-erl-success hover:bg-erl-success/10"
@@ -272,7 +274,7 @@ export const CartPanel: React.FC<Props> = ({
         </button>
 
         <button
-          className={`
+          className={`pos-checkout-button
             btn w-full text-xs md:text-[11px] py-4 rounded-2xl tracking-[0.15em] font-bold
             transition-all duration-300 ease-out
             ${canCheckout

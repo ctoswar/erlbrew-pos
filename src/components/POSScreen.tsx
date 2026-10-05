@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { lazy, Suspense, useState, useCallback, useEffect } from "react";
 import { Staff, Screen, OrderType, PayMethod, Order, CartItem } from "../types";
 import { useCart } from "../hooks/useCart";
 import { useOrders } from "../hooks/useOrders";
@@ -6,19 +6,20 @@ import { useKitchenEvents } from "../hooks/useKitchenEvents";
 import { Topbar } from "./Topbar";
 import { MenuGrid } from "./MenuGrid";
 import { CartPanel } from "./CartPanel";
-import { CheckoutScreen } from "./CheckoutScreen";
-import { PaymentScreen } from "./PaymentScreen";
-import { SuccessScreen } from "./SuccessScreen";
-import { KitchenBoard } from "./KitchenBoard";
-import { Dashboard } from "./Dashboard";
-import { AdminScreen } from "./AdminScreen";
-import { TimeKeeping } from "./TimeKeeping";
-import { DiscountModal } from "./DiscountModal";
 import { useViewport } from "../hooks/useViewport";
 import { installKioskFullscreen } from "../hooks/useFullscreen";
 import { openCashDrawer } from "../utils/receiptUtils";
 import { calcGrand } from "../utils";
 import { apiGet } from "../utils/api";
+
+const CheckoutScreen = lazy(() => import("./CheckoutScreen").then(({ CheckoutScreen }) => ({ default: CheckoutScreen })));
+const PaymentScreen = lazy(() => import("./PaymentScreen").then(({ PaymentScreen }) => ({ default: PaymentScreen })));
+const SuccessScreen = lazy(() => import("./SuccessScreen").then(({ SuccessScreen }) => ({ default: SuccessScreen })));
+const KitchenBoard = lazy(() => import("./KitchenBoard").then(({ KitchenBoard }) => ({ default: KitchenBoard })));
+const Dashboard = lazy(() => import("./Dashboard").then(({ Dashboard }) => ({ default: Dashboard })));
+const AdminScreen = lazy(() => import("./AdminScreen").then(({ AdminScreen }) => ({ default: AdminScreen })));
+const TimeKeeping = lazy(() => import("./TimeKeeping").then(({ TimeKeeping }) => ({ default: TimeKeeping })));
+const DiscountModal = lazy(() => import("./DiscountModal").then(({ DiscountModal }) => ({ default: DiscountModal })));
 
 interface Props {
   staff: Staff;
@@ -246,10 +247,10 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
   const renderMobileCartButton = () => (
     <button
       onClick={() => setMobileCartOpen(true)}
-      className="fixed bottom-5 right-5 z-[900] w-[60px] h-[60px] rounded-full bg-erl-accent text-erl-sidebar border-none flex flex-col items-center justify-center cursor-pointer text-[10px] font-bold tracking-wide gap-0.5 shadow-[0_4px_20px_rgba(201,135,58,0.5)]"
+      className="pos-mobile-cart-fab fixed bottom-5 right-5 z-[900] w-[60px] h-[60px] rounded-full bg-erl-accent text-erl-sidebar border-none flex flex-col items-center justify-center cursor-pointer text-[10px] font-bold tracking-wide gap-0.5 shadow-[0_4px_20px_rgba(201,135,58,0.5)]"
     >
-      <span className="text-lg">🛒</span>
-      <span>{cartCount}</span>
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      <span>{cartCount} {cartCount === 1 ? "item" : "items"}</span>
     </button>
   );
 
@@ -350,7 +351,9 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
           />
         )}
         <div className="flex-1 flex overflow-hidden min-h-0">
-          {renderMainScreen()}
+          <Suspense fallback={<div className="pos-screen-loading" role="status"><span /> Loading workspace…</div>}>
+            {renderMainScreen()}
+          </Suspense>
         </div>
       </div>
 
@@ -373,16 +376,18 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
 
       {/* Discount modal */}
       {showDiscountModal && (
-        <DiscountModal
-          subtotal={cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0)}
-          currentDiscount={discount}
-          onApply={(type, label, value) => {
-            const sub = cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0);
-            applyDiscount(type, label, value, sub);
-          }}
-          onRemove={removeDiscount}
-          onClose={() => setShowDiscountModal(false)}
-        />
+        <Suspense fallback={null}>
+          <DiscountModal
+            subtotal={cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0)}
+            currentDiscount={discount}
+            onApply={(type, label, value) => {
+              const sub = cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0);
+              applyDiscount(type, label, value, sub);
+            }}
+            onRemove={removeDiscount}
+            onClose={() => setShowDiscountModal(false)}
+          />
+        </Suspense>
       )}
     </div>
   );

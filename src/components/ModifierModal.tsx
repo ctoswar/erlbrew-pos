@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { MenuItem, Modifier, CartItemModifier, MenuItemSize } from "../types";
 import { formatCurrency } from "../utils";
 import { getIconByEmoji } from "./FoodIcons";
@@ -12,136 +13,95 @@ interface Props {
 
 export const ModifierModal: React.FC<Props> = ({ item, selectedSize, onAdd, onClose }) => {
   const [selected, setSelected] = useState<CartItemModifier[]>([]);
-
   const modifiers = item.modifiers || [];
+  const addOnTotal = selected.reduce((sum, modifier) => sum + modifier.price * (modifier.qty || 1), 0);
+  const totalPrice = item.price + addOnTotal;
+  const selectedCount = selected.reduce((sum, modifier) => sum + (modifier.qty || 1), 0);
 
-  const updateModifierQty = (mod: Modifier, delta: number) => {
-    const existing = selected.find(m => m.name === mod.name);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose]);
+
+  const getModifierQty = (modifier: Modifier): number => selected.find((entry) => entry.name === modifier.name)?.qty || 0;
+
+  const updateModifierQty = (modifier: Modifier, delta: number) => {
+    const existing = selected.find((entry) => entry.name === modifier.name);
     if (existing) {
-      const newQty = (existing.qty || 1) + delta;
-      if (newQty <= 0) {
-        // Remove modifier if qty reaches 0
-        setSelected(prev => prev.filter(m => m.name !== mod.name));
-      } else {
-        // Update quantity
-        setSelected(prev =>
-          prev.map(m => m.name === mod.name ? { ...m, qty: newQty } : m)
-        );
-      }
+      const nextQty = (existing.qty || 1) + delta;
+      setSelected((current) => nextQty <= 0
+        ? current.filter((entry) => entry.name !== modifier.name)
+        : current.map((entry) => entry.name === modifier.name ? { ...entry, qty: nextQty } : entry));
     } else if (delta > 0) {
-      // Add new modifier with qty 1
-      setSelected(prev => [...prev, { name: mod.name, price: mod.price, qty: 1 }]);
+      setSelected((current) => [...current, { name: modifier.name, price: modifier.price, qty: 1 }]);
     }
   };
-
-  const getModifierQty = (mod: Modifier): number => {
-    const existing = selected.find(m => m.name === mod.name);
-    return existing?.qty || 0;
-  };
-
-  const totalPrice = item.price + selected.reduce((s, m) => s + (m.price * (m.qty || 1)), 0);
 
   const handleAdd = () => {
     onAdd(item, selected, selectedSize);
     onClose();
   };
 
-  return (
-    <>
-      <div
-        className="fixed inset-0 bg-black/65 z-[998] animate-fade-in-overlay"
-        onClick={onClose}
-      />
-      <div className="fixed inset-0 flex items-center justify-center z-[999] p-4">
-        <div className="animate-scale-in card-glass p-6 w-full max-w-[360px] max-h-[90vh] overflow-y-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="font-display text-base font-bold text-erl-text-primary">
-                <span className="w-4 h-4 flex items-center justify-center">{getIconByEmoji(item.emoji)}</span> {item.name}
-              </div>
-              <div className="text-[11px] text-erl-accent mt-0.5 font-semibold">
-                {formatCurrency(item.price)} base
-              </div>
+  return createPortal(
+    <div className="pos-option-layer">
+      <button className="pos-option-backdrop" onClick={onClose} aria-label="Close customization" />
+      <section className="pos-option-modal" role="dialog" aria-modal="true" aria-labelledby="modifier-modal-title">
+        <div className="pos-option-topline" />
+        <header className="pos-option-header">
+          <div className="pos-option-title-row">
+            <span className="pos-option-item-icon">{getIconByEmoji(item.emoji)}</span>
+            <div className="min-w-0">
+              <span className="pos-option-kicker">Customize your drink</span>
+              <h2 id="modifier-modal-title">{item.name}</h2>
+              <div className="pos-option-subtitle">{selectedSize ? `${selectedSize.label} · ` : ""}{formatCurrency(item.price)} base</div>
             </div>
-            <button onClick={onClose} className="btn-ghost text-base min-w-[44px] min-h-[44px] flex items-center justify-center text-erl-muted">✕</button>
+          </div>
+          <button onClick={onClose} className="pos-option-close" aria-label="Close customization">×</button>
+        </header>
+
+        <div className="pos-option-body">
+          <div className="pos-option-section-heading">
+            <div><span>Extras</span><small>{modifiers.length ? "Add as many as you like" : "No extras available"}</small></div>
+            {selectedCount > 0 && <b>{selectedCount} selected</b>}
           </div>
 
-          {/* Modifier list */}
           {modifiers.length === 0 ? (
-            <div className="text-center text-erl-muted text-xs py-4">
-              No modifiers available for this item.
-            </div>
+            <div className="pos-option-empty">This item has no additional options.</div>
           ) : (
-            <div className="flex flex-col gap-2 mb-4">
-              {modifiers.map((mod) => {
-                const qty = getModifierQty(mod);
+            <div className="pos-option-list">
+              {modifiers.map((modifier) => {
+                const quantity = getModifierQty(modifier);
                 return (
-                  <div key={mod.id}
-                    className={`
-                      flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all duration-150
-                      ${qty > 0 ? "bg-erl-accent/10 border-[1.5px] border-erl-accent" : "bg-erl-surface border-[1.5px] border-erl-border-default"}
-                    `}>
-                    {/* Modifier info */}
-                    <div className="flex-1">
-                      <div className="text-xs font-semibold text-erl-text-primary">
-                        {mod.name}
-                        {mod.isDefault && (
-                          <span className="pill pill-gold ml-1.5 text-[7px] px-1 py-px tracking-wide">DEFAULT</span>
-                        )}
-                      </div>
-                      <div className="text-[11px] font-semibold text-erl-accent">
-                        {mod.price > 0 ? `+${formatCurrency(mod.price)}` : "Free"}
-                      </div>
+                  <div key={modifier.id ?? modifier.name} className={`pos-option-row ${quantity > 0 ? "is-selected" : ""}`}>
+                    <div className="min-w-0">
+                      <div className="pos-option-row-name">{modifier.name}{modifier.isDefault && <span>Recommended</span>}</div>
+                      <div className="pos-option-row-price">{modifier.price > 0 ? `+${formatCurrency(modifier.price)}` : "Included"}</div>
                     </div>
-
-                    {/* Quantity stepper */}
-                    <div className="flex items-center gap-1">
-                      {qty > 0 && (
-                        <>
-                          <button
-                            onClick={() => updateModifierQty(mod, -1)}
-                            className="w-7 h-7 rounded-lg bg-erl-surface border border-erl-border-default flex items-center justify-center text-erl-text-secondary hover:bg-erl-border-subtle transition-colors"
-                          >
-                            −
-                          </button>
-                          <span className="w-8 text-center text-sm font-semibold text-erl-text-primary">
-                            {qty}
-                          </span>
-                        </>
-                      )}
-                      <button
-                        onClick={() => updateModifierQty(mod, 1)}
-                        className="w-7 h-7 rounded-lg bg-erl-accent text-erl-base flex items-center justify-center font-bold hover:bg-erl-accent/90 transition-colors"
-                      >
-                        +
-                      </button>
+                    <div className="pos-option-stepper">
+                      {quantity > 0 && <button onClick={() => updateModifierQty(modifier, -1)} aria-label={`Remove ${modifier.name}`}>−</button>}
+                      {quantity > 0 && <strong>{quantity}</strong>}
+                      <button onClick={() => updateModifierQty(modifier, 1)} aria-label={`Add ${modifier.name}`}>+</button>
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
-
-          {/* Total + Add button */}
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-baseline py-2 border-t border-erl-border-subtle">
-              <span className="text-[10px] text-erl-secondary tracking-wider uppercase font-bold">
-                Item Total
-              </span>
-              <span className="font-display text-lg font-bold text-erl-accent">
-                {formatCurrency(totalPrice)}
-              </span>
-            </div>
-            <button className="btn btn-accent w-full py-2.5" onClick={handleAdd}>
-              Add to Cart
-            </button>
-            <button onClick={onClose} className="btn btn-outline w-full text-[10px] py-2.5">
-              Cancel
-            </button>
-          </div>
         </div>
-      </div>
-    </>
+
+        <footer className="pos-option-footer">
+          <div className="pos-option-total"><span>Item total</span><strong>{formatCurrency(totalPrice)}</strong></div>
+          <button className="pos-option-primary" onClick={handleAdd}>Add to cart <span aria-hidden="true">→</span></button>
+          <button className="pos-option-secondary" onClick={onClose}>Cancel</button>
+        </footer>
+      </section>
+    </div>,
+    document.body,
   );
 };

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { MenuItem, CartItem, CartItemModifier, MenuItemSize } from "../types";
+import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { CartItem, CartItemModifier, MenuItem, MenuItemSize } from "../types";
 import { formatCurrency } from "../utils";
 import { apiGet } from "../utils/api";
 import { cacheMenuItems, getCachedMenuItems } from "../utils/offlineDb";
@@ -12,28 +12,22 @@ interface Props {
   onAddItem: (item: MenuItem, modifiers?: CartItemModifier[], selectedSize?: MenuItemSize) => void;
 }
 
+const normalizeMenuItems = (items: MenuItem[]): MenuItem[] => items.map((item) => ({
+  ...item,
+  price: Number(item.price) || 0,
+  popular: Boolean(item.popular),
+  modifiers: (item.modifiers || []).map((modifier) => ({
+    ...modifier,
+    price: Number(modifier.price) || 0,
+  })),
+}));
+
 export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<string>("");
-
-  const handleItemTap = (item: MenuItem, mods?: CartItemModifier[]) => {
-    onAddItem(item, mods);
-  };
-
-  const openModifierModal = (item: MenuItem) => {
-    if (item.sizes && item.sizes.length > 0) {
-      // Has sizes → open size picker first
-      setSizeItem(item);
-    } else if (item.modifiers && item.modifiers.length > 0) {
-      // Has modifiers → open modifier modal
-      setModifierItem(item);
-    } else {
-      // Simple item → add directly
-      handleItemTap(item);
-    }
-  };
-
+  const [activeCategory, setActiveCategory] = useState("");
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
   const [modifierItem, setModifierItem] = useState<MenuItem | null>(null);
   const [sizeItem, setSizeItem] = useState<MenuItem | null>(null);
   const [pendingSize, setPendingSize] = useState<MenuItemSize | null>(null);
@@ -41,34 +35,20 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
 
   useEffect(() => {
     if (activeCategory && tabRefs.current.has(activeCategory)) {
-      tabRefs.current.get(activeCategory)?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center',
-      });
+      tabRefs.current.get(activeCategory)?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
     }
   }, [activeCategory]);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    apiGet<any[]>("/menu")
+    apiGet<MenuItem[]>("/menu")
       .then((data) => {
-        const items: MenuItem[] = data.map((d: any) => ({
-          ...d,
-          price: Number(d.price) || 0,
-          popular: !!d.popular,
-          modifiers: (d.modifiers || []).map((m: any) => ({
-            ...m,
-            price: Number(m.price) || 0,
-          })),
-        }));
+        if (cancelled) return;
+        const items = normalizeMenuItems(data);
         setMenuItems(items);
-        const cats = [...new Set(items.map((i) => i.category))];
-        if (cats.length > 0 && !activeCategory) {
-          setActiveCategory(cats[0]);
-        }
-        // Cache menu items in IndexedDB for offline use
-        cacheMenuItems(items.map(item => ({
+        setActiveCategory((current) => current || items[0]?.category || "");
+        cacheMenuItems(items.map((item) => ({
           id: item.id,
           name: item.name,
           category: item.category,
@@ -77,85 +57,92 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
           description: item.description,
           emoji: item.emoji,
           available: true,
-        }))).catch(console.error);
+        }))).catch(() => undefined);
       })
       .catch(async () => {
-        // Fallback to cached menu items when offline
         const cached = await getCachedMenuItems();
-        if (cached.length > 0) {
-          const items: MenuItem[] = cached.map((d) => ({
-            ...d,
-            price: Number(d.price) || 0,
-            popular: false,
-            modifiers: [],
-          }));
-          setMenuItems(items);
-          const cats = [...new Set(items.map((i) => i.category))];
-          if (cats.length > 0 && !activeCategory) {
-            setActiveCategory(cats[0]);
-          }
-        } else {
-          setMenuItems([]);
-        }
+        if (cancelled) return;
+        const items: MenuItem[] = cached.map((item) => ({ ...item, popular: false, modifiers: [] }));
+        setMenuItems(items);
+        setActiveCategory((current) => current || items[0]?.category || "");
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
   }, []);
 
-  const categories = [...new Set(menuItems.map((i) => i.category))];
-  const items = menuItems.filter((m) => m.category === activeCategory);
+  const categories = useMemo(() => [...new Set(menuItems.map((item) => item.category))], [menuItems]);
+  const visibleItems = useMemo(() => {
+    const query = deferredSearch.trim().toLowerCase();
+    return menuItems.filter((item) => {
+      const matchesCategory = Boolean(query) || !activeCategory || item.category === activeCategory;
+      const matchesSearch = !query || [item.name, item.category, item.description].some((value) => value.toLowerCase().includes(query));
+      return matchesCategory && matchesSearch;
+    });
+  }, [activeCategory, deferredSearch, menuItems]);
+
+  const cartById = useMemo(() => new Map(cart.map((item) => [item.item.id, item])), [cart]);
+  const categoryCount = (category: string) => menuItems.filter((item) => item.category === category).length;
+
+  const openItem = (item: MenuItem) => {
+    if (item.sizes && item.sizes.length > 0) setSizeItem(item);
+    else if (item.modifiers && item.modifiers.length > 0) setModifierItem(item);
+    else onAddItem(item);
+  };
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden min-h-0">
-      {/* Category Tabs */}
-      <div
-        className="hide-scrollbar flex gap-2 px-3 md:px-6 pt-4 md:pt-5 pb-2 md:pb-3 flex-shrink-0 overflow-x-auto snap-x"
-        style={{ WebkitOverflowScrolling: 'touch' }}
-      >
-        {categories.map((cat: string) => (
+    <div className="pos-menu-browser">
+      <div className="pos-menu-toolbar">
+        <div className="pos-menu-heading">
+          <span className="pos-menu-eyebrow">Quick service</span>
+          <div className="flex items-baseline gap-2.5">
+            <h1>Build an order</h1>
+            <span className="pos-menu-result-count">{visibleItems.length} items</span>
+          </div>
+        </div>
+        <label className="pos-menu-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 5 5" /></svg>
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search menu…" aria-label="Search menu" />
+          {search && <button type="button" onClick={() => setSearch("")} aria-label="Clear menu search">×</button>}
+        </label>
+      </div>
+
+      <div className="pos-category-rail hide-scrollbar" role="tablist" aria-label="Menu categories">
+        {categories.map((category) => (
           <button
-            key={cat}
-            ref={(el) => {
-              if (el) tabRefs.current.set(cat, el);
-              else tabRefs.current.delete(cat);
-            }}
-            onClick={() => setActiveCategory(cat)}
-            className={`
-              px-4 md:px-5 py-2.5 md:py-2.5 min-h-[44px] md:min-h-0 rounded-full text-[11px] md:text-[10px] font-bold tracking-[0.15em] uppercase
-              whitespace-nowrap flex-shrink-0 cursor-pointer transition-all duration-250 ease-out snap-start
-              ${
-                activeCategory === cat
-                  ? "bg-erl-accent text-erl-base shadow-[0_4px_16px_rgba(196,149,106,0.3)]"
-                  : "bg-transparent text-erl-text-muted border border-erl-border-default hover:border-erl-border-medium hover:text-erl-text-secondary hover:bg-erl-accent/[0.03]"
-              }
-            `}
+            key={category}
+            ref={(element) => { if (element) tabRefs.current.set(category, element); else tabRefs.current.delete(category); }}
+            onClick={() => { setActiveCategory(category); setSearch(""); }}
+            className={`pos-category-pill ${activeCategory === category && !search ? "is-active" : ""}`}
+            role="tab"
+            aria-selected={activeCategory === category && !search}
           >
-            {cat}
+            {category}<span>{categoryCount(category)}</span>
           </button>
         ))}
       </div>
 
-      {/* Grid */}
-      <div className="scroll-area flex-1 px-3 md:px-6 pb-4 md:pb-6 pt-2 md:pt-3 overflow-y-auto min-h-0">
+      <div className="pos-menu-scroll scroll-area">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-10 h-10 border-2 border-erl-accent/20 border-t-erl-accent rounded-full animate-spin" />
-            <span className="text-sm text-erl-text-muted tracking-wide">Loading menu...</span>
+          <div className="pos-menu-grid" aria-label="Loading menu" aria-busy="true">
+            {[0, 1, 2, 3, 4, 5].map((item) => <div key={item} className="pos-menu-skeleton"><span /><span /><span /></div>)}
           </div>
-        ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-erl-accent/[0.04] border border-erl-accent/[0.08] flex items-center justify-center">
-              <span className="text-3xl opacity-30">☕</span>
-            </div>
-            <span className="text-sm text-erl-text-muted tracking-wide">No items in this category</span>
+        ) : visibleItems.length === 0 ? (
+          <div className="pos-menu-empty">
+            <div className="pos-menu-empty-icon">⌕</div>
+            <h2>No menu items found</h2>
+            <p>{search ? `Nothing matches “${search}”.` : "There are no items in this category yet."}</p>
+            {search && <button onClick={() => setSearch("")} className="btn btn-ghost mt-2 px-4 py-2 text-[11px]">Clear search</button>}
           </div>
         ) : (
-          <div className="menu-grid-root grid grid-cols-2 gap-3 md:gap-4">
-            {items.map((item) => (
+          <div className="pos-menu-grid" aria-live="polite">
+            {visibleItems.map((item, index) => (
               <MenuCard
-                key={`${item.id}-${(item.modifiers || []).map((m) => m.id || m.name).join("-")}`}
+                key={item.id}
                 item={item}
-                cartItem={cart.find((ci) => ci.item.id === item.id)}
-                onOpenModal={openModifierModal}
+                cartItem={cartById.get(item.id)}
+                index={index}
+                onOpenModal={openItem}
               />
             ))}
           </div>
@@ -166,28 +153,17 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
         <ModifierModal
           item={modifierItem}
           selectedSize={pendingSize || undefined}
-          onAdd={(item, modifiers, selectedSize) => {
-            onAddItem(item, modifiers, selectedSize);
-            setModifierItem(null);
-            setPendingSize(null);
-          }}
+          onAdd={(item, modifiers, selectedSize) => { onAddItem(item, modifiers, selectedSize); setModifierItem(null); setPendingSize(null); }}
           onClose={() => { setModifierItem(null); setPendingSize(null); }}
         />
       )}
-
       {sizeItem && (
         <SizePickerModal
           item={sizeItem}
           onSelect={(sizedItem, size) => {
             setSizeItem(null);
-            if (sizedItem.modifiers && sizedItem.modifiers.length > 0) {
-              // Has modifiers → open modifier modal with the sized item + size
-              setPendingSize(size);
-              setModifierItem(sizedItem);
-            } else {
-              // No modifiers → add directly with size
-              onAddItem(sizedItem, undefined, size);
-            }
+            if (sizedItem.modifiers && sizedItem.modifiers.length > 0) { setPendingSize(size); setModifierItem(sizedItem); }
+            else onAddItem(sizedItem, undefined, size);
           }}
           onClose={() => setSizeItem(null)}
         />
@@ -196,123 +172,44 @@ export const MenuGrid: React.FC<Props> = ({ cart, onAddItem }) => {
   );
 };
 
-/* Menu Card */
-
 interface MenuCardProps {
   item: MenuItem;
   cartItem?: CartItem;
+  index: number;
   onOpenModal: (item: MenuItem) => void;
 }
 
-const MenuCard: React.FC<MenuCardProps> = ({ item, cartItem, onOpenModal }) => {
-  const [hovered, setHovered] = useState(false);
-  const [pressed, setPressed] = useState(false);
-  const hasImage = !!item.image;
+const MenuCard: React.FC<MenuCardProps> = React.memo(({ item, cartItem, index, onOpenModal }) => {
+  const hasImage = Boolean(item.image);
   const modifiers = item.modifiers || [];
   const sizes = item.sizes || [];
-
-  const handleCardClick = () => {
-    onOpenModal(item);  // MenuGrid handles sizes vs modifiers vs direct add
-  };
+  const hasOptions = modifiers.length > 0 || sizes.length > 0;
+  const priceLabel = sizes.length > 1
+    ? `${formatCurrency(Math.min(...sizes.map((size) => size.price)))} – ${formatCurrency(Math.max(...sizes.map((size) => size.price)))}`
+    : formatCurrency(sizes[0]?.price ?? item.price);
 
   return (
-    <div
-      onClick={handleCardClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); setPressed(false); }}
-      onMouseDown={() => setPressed(true)}
-      onMouseUp={() => setPressed(false)}
-      className={`
-        group flex flex-col overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 ease-out
-        ${
-          cartItem
-            ? "border-2 border-erl-accent/30 shadow-[0_0_0_1px_rgba(196,149,106,0.08),0_4px_20px_rgba(196,149,106,0.12)]"
-            : hovered
-            ? "border-2 border-erl-border-medium -translate-y-1 shadow-[0_12px_36px_rgba(0,0,0,0.45)]"
-            : "border-2 border-erl-border-subtle shadow-[0_2px_8px_rgba(0,0,0,0.25)]"
-        }
-        ${pressed ? "scale-[0.97]" : ""}
-        ${hovered ? "bg-erl-elevated" : "bg-erl-surface"}
-      `}
-    >
-      {/* Image */}
-      {hasImage && (
-        <div className="w-full h-[100px] md:h-[120px] overflow-hidden bg-erl-base relative">
-          <img
-            src={item.image}
-            alt={item.name}
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.1]"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-erl-surface/90 via-erl-surface/30 to-transparent pointer-events-none" />
-          {/* Hover overlay */}
-          <div className="absolute inset-0 bg-erl-accent/[0.03] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-          {/* Popular badge on image */}
-          {item.popular && (
-            <div className="absolute top-2.5 right-2.5">
-              <span className="pill pill-accent text-[8px] md:text-[7px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-erl-accent animate-pulse mr-1" />
-                Popular
-              </span>
-            </div>
-          )}
+    <article className={`pos-menu-card ${cartItem ? "is-in-cart" : ""}`} style={{ animationDelay: `${Math.min(index, 10) * 28}ms` }} onClick={() => onOpenModal(item)}>
+      {hasImage && <div className="pos-menu-image"><img src={item.image} alt="" loading="lazy" decoding="async" /><div className="pos-menu-image-shade" /></div>}
+      <div className="pos-menu-card-body">
+        <div className="pos-menu-card-topline">
+          <span className="pos-menu-item-icon">{getIconByEmoji(item.emoji)}</span>
+          {item.popular && <span className="pos-menu-popular"><i /> Popular</span>}
         </div>
-      )}
-
-      <div className="px-3 md:px-4 py-3 md:py-3.5 flex flex-col gap-2 flex-1">
-        {/* Top row: emoji + name */}
-        {!hasImage && (
-          <div className="flex items-start justify-between">
-            <span className="w-[22px] h-[22px] md:w-[26px] md:h-[26px] flex items-center justify-center text-erl-text-secondary filter drop-shadow-sm">{getIconByEmoji(item.emoji)}</span>
-            {item.popular && (
-              <span className="pill pill-accent text-[8px] md:text-[7px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-erl-accent animate-pulse mr-1" />
-                Popular
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Name */}
-        <div className="text-[13px] md:text-[14px] font-bold text-erl-text-primary leading-snug flex-1 font-display">
-          {item.name}
+        <div className="pos-menu-card-name">{item.name}</div>
+        <div className="pos-menu-card-meta">
+          {item.description ? item.description : sizes.length > 0 ? `${sizes.length} size option${sizes.length > 1 ? "s" : ""}` : "Ready to serve"}
         </div>
-
-        {/* Description */}
-        {item.description && (
-          <div className="text-[11px] md:text-[10px] text-erl-text-secondary leading-relaxed line-clamp-2">
-            {item.description}
-          </div>
-        )}
-
-        {/* Bottom: price + qty */}
-        <div className="flex items-center justify-between mt-auto pt-1.5">
-          {sizes.length > 0 ? (
-            <span className="font-display text-[13px] md:text-[14px] font-bold text-erl-accent tracking-tight">
-              {sizes.length === 1
-                ? formatCurrency(sizes[0].price)
-                : `${formatCurrency(Math.min(...sizes.map(s => s.price)))} – ${formatCurrency(Math.max(...sizes.map(s => s.price)))}`
-              }
-              <span className="text-[9px] font-normal text-erl-text-faint ml-1">{sizes.length} size{sizes.length !== 1 ? "s" : ""}</span>
-            </span>
-          ) : (
-            <span className="font-display text-[15px] md:text-[16px] font-bold text-erl-accent tracking-tight">
-              {formatCurrency(item.price)}
-            </span>
-          )}
-          {cartItem && cartItem.qty > 0 && (
-            <div className="bg-erl-accent text-erl-base rounded-xl min-w-[28px] h-8 md:min-w-[26px] md:h-7 flex items-center justify-center text-xs md:text-[11px] font-bold px-2 shadow-[0_2px_10px_rgba(196,149,106,0.3)]">
-              {cartItem.qty}
-            </div>
-          )}
+        <div className="pos-menu-card-bottom">
+          <div><span className="pos-menu-price">{priceLabel}</span>{sizes.length > 1 && <span className="pos-menu-size-note">sizes</span>}</div>
+          <button className="pos-menu-add" onClick={(event) => { event.stopPropagation(); onOpenModal(item); }} aria-label={`${hasOptions ? "Customize" : "Add"} ${item.name}`}>
+            {cartItem && <b>{cartItem.qty}</b>}
+            <span>{hasOptions ? "Customize" : "Add"}</span><span aria-hidden="true">+</span>
+          </button>
         </div>
-
-        {/* Modifier indicator */}
-        {modifiers.length > 0 && !cartItem && (
-          <div className="text-[10px] md:text-[9px] text-erl-accent-dim tracking-wide font-medium">
-            {modifiers.length} option{modifiers.length > 1 ? 's' : ''} available
-          </div>
-        )}
       </div>
-    </div>
+    </article>
   );
-};
+});
+
+MenuCard.displayName = "MenuCard";

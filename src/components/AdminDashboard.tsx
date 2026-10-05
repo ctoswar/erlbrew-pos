@@ -56,7 +56,7 @@ const TABS: { label: string; value: AdminTab; icon: string }[] = [
   { label: 'Supplier Invoices', value: 'suppliers', icon: 'suppliers' },
   { label: 'Locations', value: 'locations', icon: 'locations' },
   { label: 'Audit Log', value: 'audit', icon: 'audit' },
-  { label: 'Backup', value: 'backup', icon: '💾' },
+  { label: 'Backup', value: 'backup', icon: 'backup' },
 ];
 
 export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {

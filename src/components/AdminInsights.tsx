@@ -16,6 +16,7 @@ import {
   StaffingSuggestion,
 } from "../utils/api";
 import { useLocation } from "../contexts/LocationContext";
+import { getIconByEmoji } from "./FoodIcons";
 
 const RANGES: Array<{ label: string; days: number }> = [
   { label: "7D", days: 7 },
@@ -225,7 +226,10 @@ function InventoryTable({ actions }: { actions: InventoryAction[] }) {
 function MenuItemLine({ item }: { item: MenuItemInsight }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-erl-border-subtle py-2 last:border-b-0">
-      <span className="min-w-0 truncate text-[11px] text-erl-secondary">{item.emoji} {item.name}</span>
+      <span className="flex min-w-0 items-center gap-1.5 truncate text-[11px] text-erl-secondary">
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center">{getIconByEmoji(item.emoji)}</span>
+        <span className="truncate">{item.name}</span>
+      </span>
       <span className="shrink-0 text-[10px] text-erl-muted">{formatCurrency(item.revenue)}</span>
     </div>
   );

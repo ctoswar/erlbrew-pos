@@ -8,7 +8,7 @@ import { ModifierEditor } from "./ModifierEditor";
 import { ApplyModifierModal } from "./ApplyModifierModal";
 import { ApplyIngredientModal } from "./ApplyIngredientModal";
 import { AnimatedSelect } from "./AnimatedSelect";
-import { FOOD_ICONS, getIconByEmoji } from "./FoodIcons";
+import { FOOD_ICONS, getEmojiIconKey, getIconByEmoji } from "./FoodIcons";
 
 const EMPTY_FORM = {
   id: "",
@@ -495,7 +495,7 @@ export const AdminMenu: React.FC = () => {
                       {FOOD_ICONS.map((f) => (
                         <button key={f.emoji} onClick={() => setField("emoji", f.emoji)} title={f.label} className={`
                           w-[44px] h-[44px] rounded-xl cursor-pointer transition-all duration-150 flex items-center justify-center
-                          ${form.emoji === f.emoji
+                          ${getEmojiIconKey(form.emoji) === f.emoji
                             ? "bg-erl-accent/20 border-2 border-erl-accent scale-110 text-erl-accent"
                             : "bg-erl-base border border-erl-border-default text-erl-text-secondary hover:border-erl-border-medium hover:scale-105 hover:text-erl-text-primary"
                           }

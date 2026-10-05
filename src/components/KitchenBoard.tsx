@@ -185,11 +185,12 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
   };
 
   return (
-    <div className={`flex-1 min-h-0 ${isMobile ? 'overflow-hidden' : 'flex flex-col'}`}>
+    <div className={`kitchen-screen flex-1 min-h-0 ${isMobile ? 'overflow-hidden' : 'flex flex-col'}`}>
       {isMobile ? (
         <div className="flex flex-col flex-1 overflow-hidden min-h-0 h-full">
           {/* Mobile tabs: status lanes + delivery/counter lanes */}
-          <div className="flex items-center gap-1.5 p-3 shrink-0">
+          <div className="kitchen-mobile-toolbar flex items-center gap-1.5 p-3 shrink-0">
+            <div className="kitchen-toolbar-title"><span>Kitchen flow</span><strong>{visibleOrders.length} tickets</strong></div>
             <div className="flex gap-1.5 overflow-x-auto flex-1 min-w-0">
               <button
                 onClick={() => setMobileFilter('all')}
@@ -232,9 +233,9 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
             <FullscreenButton compact />
           </div>
           {/* Mobile list */}
-          <div className="scroll-area flex-1 overflow-y-auto p-3">
+          <div className="kitchen-mobile-list scroll-area flex-1 overflow-y-auto p-3">
             {mobileOrders.length === 0 && (
-              <div className="text-center py-8 text-erl-text-disabled text-sm tracking-wide">Empty</div>
+              <div className="kitchen-empty"><span>✓</span><strong>All caught up</strong><small>No tickets in this view</small></div>
             )}
             {mobileOrders.map((order) => (
               <div key={order.id} className="mb-3">
@@ -255,7 +256,8 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
       ) : (
         <>
           {/* KDS toolbar: delivery/counter lane filter + fullscreen (#163/#172) */}
-          <div className="flex items-center gap-1.5 px-4 pt-3 pb-2 shrink-0">
+          <div className="kitchen-toolbar flex items-center gap-1.5 px-4 pt-3 pb-2 shrink-0">
+            <div className="kitchen-toolbar-title"><span>Kitchen flow</span><strong>{visibleOrders.length} tickets</strong></div>
             <div className="flex gap-1.5 overflow-x-auto">
               {CHANNEL_TABS.map((tab) => {
                 const count = tab.key === 'all' ? visibleOrders.length
@@ -278,15 +280,15 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
           </div>
 
           {/* Status columns */}
-          <div className="flex gap-3 px-4 pb-4 flex-1 min-h-0 overflow-x-auto">
+          <div className="kitchen-columns flex gap-3 px-4 pb-4 flex-1 min-h-0 overflow-x-auto">
             {COLUMNS.map((col) => {
               const colOrders = channelOrders.filter((o) => o.status === col.status).sort(byPriority);
               const colDelivery = colOrders.filter(isDelivery).length;
               const showDeliveryCount = channelFilter === 'all' && colDelivery > 0;
               return (
-                <div key={col.status} className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-[200px]">
+                <div key={col.status} className="kitchen-column flex-1 flex flex-col overflow-hidden min-h-0 min-w-[200px]">
                   {/* Column header */}
-                  <div className="card-glass flex items-center gap-1.5 mb-2.5 shrink-0 py-2 px-3 rounded-[10px]">
+                  <div className="kitchen-column-header card-glass flex items-center gap-1.5 mb-2.5 shrink-0 py-2 px-3 rounded-[10px]">
                     <div className="w-[7px] h-[7px] rounded-full" style={{ background: col.color, boxShadow: `0 0 5px ${col.color}44` }} />
                     <div className="text-[8.5px] tracking-[1.5px] uppercase font-bold" style={{ color: col.color }}>{col.label}</div>
                     {showDeliveryCount && (
@@ -298,7 +300,7 @@ export const KitchenBoard: React.FC<Props> = ({ orders, onUpdateStatus, onVoidOr
                   {/* Orders */}
                   <div className="scroll-area flex-1 flex flex-col gap-1.5 overflow-y-auto min-h-0">
                     {colOrders.length === 0 && (
-                      <div className="text-center py-8 text-erl-text-disabled text-[9px] tracking-wide">Empty</div>
+                    <div className="kitchen-empty"><span>✓</span><strong>All clear</strong><small>No tickets here</small></div>
                     )}
                     {colOrders.map((order) => (
                       <KitchenCard key={order.id} order={order} nowMs={nowMs} colColor={col.color}
@@ -345,7 +347,7 @@ const KitchenCard: React.FC<KitchenCardProps> = ({ order, nowMs, colColor, onUpd
   const isLate = order.status === "preparing" && elapsed >= LATE_AFTER_MINUTES;
 
   return (
-    <div className="animate-scale-in bg-erl-surface rounded-xl p-4 sm:p-3 transition-fast"
+    <div className="kitchen-ticket animate-scale-in bg-erl-surface rounded-xl p-4 sm:p-3 transition-fast"
       style={{
         border: `1.5px solid ${isLate ? "var(--danger-border)" : "var(--border-subtle)"}`,
         borderLeft: `3px solid ${isLate ? "var(--danger)" : colColor}`,

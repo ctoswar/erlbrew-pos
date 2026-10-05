@@ -392,7 +392,7 @@ export const TimeKeeping: React.FC<TimeKeepingProps> = ({ staff }) => {
   };
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden min-h-0">
+    <div className="timekeeping-screen flex flex-col flex-1 overflow-hidden min-h-0">
       <TimeKeepingHeader
         isAdmin={isAdmin}
         activeTab={tab}
@@ -419,7 +419,7 @@ export const TimeKeeping: React.FC<TimeKeepingProps> = ({ staff }) => {
       />
 
       {/* Body */}
-      <div className="scroll-area flex-1 p-5 flex flex-col gap-5 overflow-y-auto min-h-0">
+      <div className="timekeeping-body scroll-area flex-1 p-5 flex flex-col gap-5 overflow-y-auto min-h-0">
         {tab === "today" && (
           <TimeKeepingToday
             staff={staff}

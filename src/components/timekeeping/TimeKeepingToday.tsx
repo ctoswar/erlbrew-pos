@@ -18,7 +18,7 @@ const TimeKeepingToday: React.FC<Props> = ({ records, loading, lastTap, tapError
   const notIn = records.filter((r) => r.status === "not_in");
 
   return (
-    <>
+    <div className="timekeeping-today">
       {/* Last tap feedback */}
       {lastTap && (
         <div className={`animate-scale-in rounded-2xl overflow-hidden transition-all duration-500 ${
@@ -70,7 +70,7 @@ const TimeKeepingToday: React.FC<Props> = ({ records, loading, lastTap, tapError
       )}
 
       {/* RFID Scan Box */}
-      <div className="card-glass w-full max-w-[440px] mx-auto px-5 py-6 text-center relative">
+      <div className="timekeeping-scan card-glass w-full max-w-[440px] mx-auto px-5 py-6 text-center relative">
         <div className="relative z-10 flex flex-col items-center">
           <div className="font-display text-sm text-erl-text-primary font-bold tracking-wide">Scan Your Card</div>
           <div className="text-[10px] text-erl-text-faint mt-0.5 tracking-wide">Tap to clock in or out</div>
@@ -91,7 +91,7 @@ const TimeKeepingToday: React.FC<Props> = ({ records, loading, lastTap, tapError
           <StaffGroup label="Clocked Out" count={clockedOut.length} color="rgb(196,149,106)" records={clockedOut} />
         </div>
       )}
-    </>
+    </div>
   );
 };
 

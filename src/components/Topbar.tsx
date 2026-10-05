@@ -25,6 +25,18 @@ const NAV_ITEMS: { screen: Screen; label: string; adminOnly?: boolean }[] = [
   { screen: "admin", label: "Admin", adminOnly: true },
 ];
 
+const ScreenIcon: React.FC<{ screen: Screen }> = ({ screen }) => {
+  const common = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+  switch (screen) {
+    case "pos": return <svg {...common}><path d="M3 5h18M5 5v14h14V5M8 9h8M8 13h5" /></svg>;
+    case "time": return <svg {...common}><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 1.5M12 5V2M10 2h4" /></svg>;
+    case "kitchen": return <svg {...common}><path d="M4 10h16M5 10v9h14v-9M8 6v4M12 4v6M16 6v4M7 19v2M17 19v2" /></svg>;
+    case "dashboard": return <svg {...common}><rect x="3" y="3" width="7" height="8" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="15" width="7" height="6" rx="1" /></svg>;
+    case "admin": return <svg {...common}><path d="M12 3 19 6v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z" /><path d="M9 12h6M12 9v6" /></svg>;
+    default: return null;
+  }
+};
+
 export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNavigate, onLogout }) => {
   const time = useClock();
   const { theme, setThemeByName } = useTheme();
@@ -63,10 +75,10 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
 
   return (
     <>
-      <header className="glass-panel h-[56px] flex items-center px-3 md:px-4 lg:px-5 gap-2 md:gap-2.5 lg:gap-3 shrink-0 border-b border-erl-accent/[0.06] relative z-[100]">
+      <header className="pos-topbar glass-panel h-[56px] flex items-center px-3 md:px-4 lg:px-5 gap-2 md:gap-2.5 lg:gap-3 shrink-0 border-b border-erl-accent/[0.06] relative z-[100]">
         {/* Brand mark */}
-        <div className="flex items-center gap-2 md:gap-2.5 shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-erl-accent/10 flex items-center justify-center">
+        <div className="pos-brand flex items-center gap-2 md:gap-2.5 shrink-0">
+          <div className="pos-brand-mark w-8 h-8 rounded-xl bg-erl-accent/10 flex items-center justify-center">
             <span className="text-erl-accent text-lg leading-none">☕</span>
           </div>
           {!isMobile && (
@@ -79,7 +91,7 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
 
         {/* Desktop + Tablet Nav */}
         {!isMobile && (
-          <nav className="hide-scrollbar flex items-center gap-1 overflow-x-auto whitespace-nowrap flex-1 min-w-0 ml-1 md:ml-2">
+          <nav className="pos-primary-nav hide-scrollbar flex items-center gap-1 overflow-x-auto whitespace-nowrap flex-1 min-w-0 ml-1 md:ml-2" aria-label="Primary navigation">
             {visibleNavItems.map(({ screen: s, label }) => {
               const isActive = s === "pos" ? isOrderRelated : screen === s;
               const badge = s === "kitchen" ? activeOrderCount : undefined;
@@ -87,13 +99,14 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
                 <button
                   key={s}
                   onClick={() => onNavigate(s)}
-                  className={`relative flex items-center gap-1.5 border-none rounded-xl text-xs font-semibold tracking-wide py-2 px-2.5 md:px-3 lg:px-3.5 cursor-pointer transition-all duration-250 ease-out shrink-0 touch-target ${
-                    isActive
-                      ? "bg-erl-accent/10 text-erl-accent shadow-[0_0_16px_rgba(196,149,106,0.08)]"
-                      : "bg-transparent text-erl-text-faint hover:text-erl-text-secondary hover:bg-white/[0.03]"
-                  }`}
-                >
-                  <span className="text-[13px] leading-none">{label}</span>
+                    className={`pos-nav-item relative flex items-center gap-1.5 border-none rounded-xl text-xs font-semibold tracking-wide py-2 px-2.5 md:px-3 lg:px-3.5 cursor-pointer transition-all duration-250 ease-out shrink-0 touch-target ${
+                      isActive
+                       ? "is-active bg-erl-accent/10 text-erl-accent shadow-[0_0_16px_rgba(196,149,106,0.08)]"
+                       : "bg-transparent text-erl-text-faint hover:text-erl-text-secondary hover:bg-white/[0.03]"
+                    }`}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                  <ScreenIcon screen={s} /><span className="text-[13px] leading-none">{label}</span>
                   {badge != null && badge > 0 ? (
                     <span className={`inline-flex items-center justify-center min-w-[20px] h-5 rounded-lg px-1 text-[9px] font-bold ${
                       isActive ? "bg-erl-accent text-erl-base" : "bg-erl-accent/15 text-erl-accent"
@@ -108,7 +121,7 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
         )}
 
         {/* Right side */}
-        <div className="flex items-center gap-1.5 md:gap-2 lg:gap-2.5 shrink-0 ml-auto">
+        <div className="pos-topbar-actions flex items-center gap-1.5 md:gap-2 lg:gap-2.5 shrink-0 ml-auto">
           {/* Font size - desktop only */}
           {isDesktop && (
             <button
@@ -167,7 +180,7 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
           )}
 
           {/* Staff pill */}
-          <div className="flex items-center gap-2 md:gap-2.5 ml-0.5">
+          <div className="pos-staff-pill flex items-center gap-2 md:gap-2.5 ml-0.5">
             {!isMobile && currentLocation && (
               <div className="text-[9px] text-erl-accent-dim tracking-wide max-w-[90px] truncate" title={currentLocation.name}>
                 {currentLocation.name}
@@ -194,7 +207,7 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
 
           {/* Clock - desktop + tablet */}
           {!isMobile && (
-            <div className="text-[11px] text-erl-accent-dim tracking-wide tabular-nums shrink-0 font-medium">
+            <div className="pos-clock text-[11px] text-erl-accent-dim tracking-wide tabular-nums shrink-0 font-medium">
               {formatTime(time)}
             </div>
           )}
@@ -242,7 +255,7 @@ export const Topbar: React.FC<Props> = ({ staff, screen, activeOrderCount, onNav
                         : "bg-transparent text-erl-text-faint hover:text-erl-text-secondary hover:bg-white/[0.03]"
                     }`}
                   >
-                    <span className="leading-none">{label}</span>
+                    <span className="flex items-center gap-2 leading-none"><ScreenIcon screen={s} />{label}</span>
                     {badge != null && badge > 0 ? (
                       <span className={`inline-flex items-center justify-center min-w-[24px] h-6 rounded-lg px-1.5 text-xs font-bold ${
                         isActive ? "bg-erl-accent text-erl-base" : "bg-erl-accent/15 text-erl-accent"

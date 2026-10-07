@@ -408,9 +408,9 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
                    COALESCE(ms.id, 0) > 0
                    AND r.size_id = 0
                    AND NOT EXISTS (
-                     SELECT 1 FROM recipes specific
-                     WHERE specific.menu_item_id = oi.menu_item_id
-                       AND specific.size_id = ms.id
+                     SELECT 1 FROM recipes specific_recipe
+                     WHERE specific_recipe.menu_item_id = oi.menu_item_id
+                       AND specific_recipe.size_id = ms.id
                    )
                  )
                )`,
@@ -720,7 +720,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         JOIN inventory i ON r.inventory_item_id = i.id AND i.location_id = o.location_id
         WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)${locationCondition}
           AND (r.size_id = COALESCE(ms.id, 0) OR (COALESCE(ms.id, 0) > 0 AND r.size_id = 0
-            AND NOT EXISTS (SELECT 1 FROM recipes specific WHERE specific.menu_item_id = oi.menu_item_id AND specific.size_id = ms.id)))`;
+            AND NOT EXISTS (SELECT 1 FROM recipes specific_recipe WHERE specific_recipe.menu_item_id = oi.menu_item_id AND specific_recipe.size_id = ms.id)))`;
       const [tot] = await pool.query(sqlCogs, [startStr, endStr, ...locationParams]);
       const cogs = Number((tot && tot[0] && tot[0].cogs) || 0);
 
@@ -741,7 +741,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         JOIN inventory i ON r.inventory_item_id = i.id AND i.location_id = o.location_id
         WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)${locationCondition}
           AND (r.size_id = COALESCE(ms.id, 0) OR (COALESCE(ms.id, 0) > 0 AND r.size_id = 0
-            AND NOT EXISTS (SELECT 1 FROM recipes specific WHERE specific.menu_item_id = oi.menu_item_id AND specific.size_id = ms.id)))
+            AND NOT EXISTS (SELECT 1 FROM recipes specific_recipe WHERE specific_recipe.menu_item_id = oi.menu_item_id AND specific_recipe.size_id = ms.id)))
         GROUP BY o.id`;
       const [detailsRows] = await pool.query(sqlDetails, [startStr, endStr, ...locationParams]);
       const details = (detailsRows || []).map(r => {
@@ -1030,9 +1030,9 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
                    COALESCE(ms.id, 0) > 0
                    AND r.size_id = 0
                    AND NOT EXISTS (
-                     SELECT 1 FROM recipes specific
-                     WHERE specific.menu_item_id = oi.menu_item_id
-                       AND specific.size_id = ms.id
+                     SELECT 1 FROM recipes specific_recipe
+                     WHERE specific_recipe.menu_item_id = oi.menu_item_id
+                       AND specific_recipe.size_id = ms.id
                    )
                  )
                )`,

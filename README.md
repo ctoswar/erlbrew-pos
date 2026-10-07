@@ -78,8 +78,49 @@ docker compose -f infra/docker-compose.yml down
 ```
 
 Services:
-- Frontend: http://localhost:3004
+- Frontend: https://localhost (port 80 → 3004 redirects to HTTPS on 443)
 - Backend API: http://localhost:3001
+
+### Install as an Android app (PWA)
+
+Chrome only offers **Install app** when the POS is served over HTTPS (a secure
+context is required for service-worker registration and the install prompt).
+TLS is terminated by nginx using the certs in `infra/certs/` — that directory
+is git-ignored, so generate the certs once on the machine that runs Docker:
+
+```powershell
+# One-time per machine (Windows; on Linux/macOS: brew/curl see mkcert.dev)
+winget install FiloSottile.mkcert
+
+# Generate the LAN certificate (SANs: localhost, pos.lan, this machine's IPs)
+New-Item -ItemType Directory -Force infra\certs
+mkcert -cert-file infra\certs\cert.pem -key-file infra\certs\key.pem `
+  localhost 127.0.0.1 pos.lan <your-server-LAN-IP> <your-tailscale-IP>
+
+# Export the root CA — copy rootCA.pem to every tablet (email/drive/USB)
+Copy-Item "$env:LOCALAPPDATA\mkcert\rootCA.pem" infra\certs\rootCA.pem
+```
+
+If tablets reach the stack at an address not listed above, add it and re-run
+the `mkcert` line (`mkcert -CAROOT` shows where the CA lives).
+
+Then start the stack and install the app:
+
+1. `docker compose -f infra/docker-compose.yml up -d --build` — requires
+   `infra/certs/cert.pem` + `key.pem` to exist, nginx will not start without them.
+   (If host port `443` is already taken, replace **both** frontend port entries
+   with `- "3004:443"` and open `https://<server>:3004` instead.)
+2. On the tablet, install the CA once: **Settings → Security → Encryption &
+   credentials → Install a certificate → CA certificate** → select `rootCA.pem`.
+3. Open `https://<server>/` in Chrome → ⋮ menu → **Install app**.
+4. The app appears in the launcher/app drawer with its own icon and opens
+   standalone (no URL bar). HTTP on port `3004` now 301-redirects to HTTPS, so
+   old bookmarks keep working.
+
+To change the cert later, regenerate `infra/certs/*.pem` and
+`docker compose -f infra/docker-compose.yml restart erlbrew-pos`. Never commit
+`infra/certs/` — the key must not enter git or the Docker build context
+(already excluded in `.gitignore` / `.dockerignore`).
 
 ### Tailscale Deployment for Multiple Locations
 

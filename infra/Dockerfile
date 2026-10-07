@@ -27,5 +27,5 @@ COPY infra/nginx.conf /etc/nginx/conf.d/erlbrew.conf
 # Copy built frontend assets
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 80 443
 CMD ["nginx", "-g", "daemon off;"]

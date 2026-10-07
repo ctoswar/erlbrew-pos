@@ -78,7 +78,7 @@ docker compose -f infra/docker-compose.yml down
 ```
 
 Services:
-- Frontend: https://localhost (port 80 → 3004 redirects to HTTPS on 443)
+- Frontend: https://localhost:3004 (TLS, host port → container 443)
 - Backend API: http://localhost:3001
 
 ### Install as an Android app (PWA)
@@ -86,20 +86,26 @@ Services:
 Chrome only offers **Install app** when the POS is served over HTTPS (a secure
 context is required for service-worker registration and the install prompt).
 TLS is terminated by nginx using the certs in `infra/certs/` — that directory
-is git-ignored, so generate the certs once on the machine that runs Docker:
+is git-ignored, so generate the certs once on the machine that runs Docker
+(the Linux POS server):
 
-```powershell
-# One-time per machine (Windows; on Linux/macOS: brew/curl see mkcert.dev)
-winget install FiloSottile.mkcert
+```bash
+# One-time: install mkcert (Linux x86_64 — other platforms: mkcert.dev)
+curl -fsSL "https://dl.filippo.io/mkcert/latest?for=linux/amd64" -o mkcert
+chmod +x mkcert && sudo mv mkcert /usr/local/bin/
 
 # Generate the LAN certificate (SANs: localhost, pos.lan, this machine's IPs)
-New-Item -ItemType Directory -Force infra\certs
-mkcert -cert-file infra\certs\cert.pem -key-file infra\certs\key.pem `
+mkdir -p infra/certs
+mkcert -cert-file infra/certs/cert.pem -key-file infra/certs/key.pem \
   localhost 127.0.0.1 pos.lan <your-server-LAN-IP> <your-tailscale-IP>
 
 # Export the root CA — copy rootCA.pem to every tablet (email/drive/USB)
-Copy-Item "$env:LOCALAPPDATA\mkcert\rootCA.pem" infra\certs\rootCA.pem
+cp "$(mkcert -CAROOT)/rootCA.pem" infra/certs/rootCA.pem
 ```
+
+Only the tablets need to trust the CA, so skip `mkcert -install` on a headless
+server. Windows Docker host? `winget install FiloSottile.mkcert` and use the
+`infra\certs\…` equivalents (`$env:LOCALAPPDATA\mkcert\rootCA.pem` is the CA).
 
 If tablets reach the stack at an address not listed above, add it and re-run
 the `mkcert` line (`mkcert -CAROOT` shows where the CA lives).
@@ -108,14 +114,19 @@ Then start the stack and install the app:
 
 1. `docker compose -f infra/docker-compose.yml up -d --build` — requires
    `infra/certs/cert.pem` + `key.pem` to exist, nginx will not start without them.
-   (If host port `443` is already taken, replace **both** frontend port entries
-   with `- "3004:443"` and open `https://<server>:3004` instead.)
 2. On the tablet, install the CA once: **Settings → Security → Encryption &
    credentials → Install a certificate → CA certificate** → select `rootCA.pem`.
-3. Open `https://<server>/` in Chrome → ⋮ menu → **Install app**.
+3. Open `https://<server>:3004/` in Chrome → ⋮ menu → **Install app**.
 4. The app appears in the launcher/app drawer with its own icon and opens
-   standalone (no URL bar). HTTP on port `3004` now 301-redirects to HTTPS, so
-   old bookmarks keep working.
+   standalone (no URL bar).
+
+The compose file publishes HTTPS as `3004:443` because host port `443` was
+already taken (nginx-proxy-manager) on the reference server. If your host `443`
+is free, change the mapping to `- "443:443"` and open `https://<server>/`.
+The frontend is HTTPS-only: old `http://…:3004` bookmarks show a connection
+error — open the `https://` URL once and re-bookmark. If nginx-proxy-manager
+proxies the POS (e.g. `pos.lan`), point its upstream at `https://<server>:3004`
+with TLS verification disabled.
 
 To change the cert later, regenerate `infra/certs/*.pem` and
 `docker compose -f infra/docker-compose.yml restart erlbrew-pos`. Never commit
@@ -142,19 +153,21 @@ Branch C tablet ─┘
 4. Open the POS from each branch using the server's Tailscale IP or MagicDNS hostname:
 
    ```text
-   http://100.x.x.x:3004
+   https://100.x.x.x:3004
    # or
-   http://pos-server.your-tailnet.ts.net:3004
+   https://pos-server.your-tailnet.ts.net:3004
    ```
 
 5. Create the branches in **Admin → Locations**. Use the same central URL at every branch.
 6. Configure Tailscale ACLs so only approved POS devices and staff devices can access the
    server.
 
-For HTTPS, use a Tailscale MagicDNS hostname and Tailscale certificates, then terminate TLS
-at Nginx. Keep port `3001` private to Docker/Nginx; branch devices should access the frontend
-URL rather than the backend directly. With the frontend and `/api` served by the same Nginx
-host, leave `VITE_API_URL` empty.
+TLS is already terminated at Nginx with the mkcert certs (see the PWA section
+above); for certificates browsers trust without a manual CA install, use a
+Tailscale MagicDNS hostname and Tailscale certificates instead. Keep port
+`3001` private to Docker/Nginx; branch devices should access the frontend
+URL rather than the backend directly. With the frontend and `/api` served by
+the same Nginx host, leave `VITE_API_URL` empty.
 
 For branch-local receipt printing, install Tailscale on each Raspberry Pi print server and
 assign each branch its own print-server hostname, for example:

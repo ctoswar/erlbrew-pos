@@ -27,7 +27,7 @@ services:
       # CORS: allow the frontend container by Docker DNS name
       # Also allow by IP range for direct tablet access on LAN
       # Override or append in your .env as needed
-      CORS_ORIGINS: http://erlbrew-pos,http://localhost:3000,http://localhost:3004,http://pos.lan,http://192.168.*,http://172.*,http://100.*,https://pos.tirona.site,https://localhost,https://pos.lan,https://192.168.*,https://172.*,https://100.*
+      CORS_ORIGINS: http://erlbrew-pos,http://localhost:3000,http://localhost:3004,http://pos.lan,http://192.168.*,http://172.*,http://100.*,https://pos.tirona.site,https://localhost,https://localhost:3004,https://pos.lan,https://pos.lan:3004,https://192.168.*,https://172.*,https://100.*
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/menu"]
       interval: 30s
@@ -63,8 +63,9 @@ services:
     container_name: erlbrew-pos
     restart: unless-stopped
     ports:
-      - "3004:80"                   # HTTP — redirects to HTTPS (see nginx.conf)
-      - "443:443"                   # HTTPS — required for PWA install on tablets
+      # HTTPS on host port 3004 (host 443 is often taken — e.g. nginx-proxy-manager).
+      # Prefer "443:443" if your host 443 is free, then open https://<server>/.
+      - "3004:443"                  # TLS — required for PWA install on tablets
     volumes:
       - ./infra/certs:/etc/nginx/certs:ro   # mkcert TLS certs (git-ignored)
     depends_on:

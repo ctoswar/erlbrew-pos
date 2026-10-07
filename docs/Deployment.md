@@ -30,7 +30,7 @@ docker compose down
 ```
 
 **Access:**
-- Frontend: http://localhost:3004
+- Frontend: https://localhost:3004
 - Backend API: http://localhost:3001
 
 ---
@@ -94,8 +94,9 @@ services:
     build: .
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "3004:443"            # TLS — see infra/docker-compose.yml (use "443:443" if host 443 is free)
+    volumes:
+      - ./infra/certs:/etc/nginx/certs:ro   # mkcert certs — see README "Install as an Android app"
     depends_on:
       erlbw-api:
         condition: service_healthy
@@ -126,9 +127,10 @@ apt install certbot
 # Get certificate
 certbot certonly --standalone -d pos.yourdomain.com
 
-# Copy to nginx
-cp /etc/letsencrypt/live/pos.yourdomain.com/fullchain.pem ./ssl/cert.pem
-cp /etc/letsencrypt/live/pos.yourdomain.com/privkey.pem ./ssl/key.pem
+# Copy to nginx (mounted read-only at /etc/nginx/certs)
+cp /etc/letsencrypt/live/pos.yourdomain.com/fullchain.pem ./infra/certs/cert.pem
+cp /etc/letsencrypt/live/pos.yourdomain.com/privkey.pem ./infra/certs/key.pem
+docker compose -f infra/docker-compose.yml restart erlbrew-pos
 ```
 
 ### 5. Start Production

@@ -6,7 +6,7 @@ services:
   # ── Backend API ─────────────────────────────────────────────────────────────
   erlbw-api:
     build:
-      context: ./server
+      context: ../server
       dockerfile: Dockerfile
     container_name: erlbw-api
     restart: unless-stopped
@@ -15,7 +15,7 @@ services:
     ports:
       - "3001:3001"                # Still accessible on host for dev/debug
     env_file:
-      - ./server/.env              # All secrets come from .env — no hardcoded credentials
+      - ../server/.env             # All secrets come from .env — no hardcoded credentials
     environment:
       PORT: 3001
       # Optional AI briefing service. Start it with:
@@ -55,7 +55,7 @@ services:
   # ── Frontend (React → nginx) ────────────────────────────────────────────────
   erlbrew-pos:
     build:
-      context: .
+      context: ..
       dockerfile: infra/Dockerfile
       args:
         # VITE_API_URL empty → nginx proxies /api to backend (see nginx.conf)
@@ -67,7 +67,7 @@ services:
       # Prefer "443:443" if your host 443 is free, then open https://<server>/.
       - "3004:443"                  # TLS — required for PWA install on tablets
     volumes:
-      - ./infra/certs:/etc/nginx/certs:ro   # mkcert TLS certs (git-ignored)
+      - ./certs:/etc/nginx/certs:ro         # mkcert TLS certs (git-ignored)
     depends_on:
       erlbw-api:
         condition: service_healthy  # Don't start frontend until API is up

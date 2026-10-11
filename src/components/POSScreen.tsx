@@ -9,7 +9,7 @@ import { CartPanel } from "./CartPanel";
 import { useViewport } from "../hooks/useViewport";
 import { installKioskFullscreen } from "../hooks/useFullscreen";
 import { openCashDrawer } from "../utils/receiptUtils";
-import { calcGrand } from "../utils";
+import { calcSubtotal, calcGrand } from "../utils";
 import { apiGet } from "../utils/api";
 
 const CheckoutScreen = lazy(() => import("./CheckoutScreen").then(({ CheckoutScreen }) => ({ default: CheckoutScreen })));
@@ -304,7 +304,7 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
       case "payment":
         return (
           <PaymentScreen
-            total={calcGrand(cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0), discount)}
+            total={calcGrand(calcSubtotal(cart), discount)}
             discountLabel={discount?.label}
             discountAmount={discount?.amount}
             onBack={handleBack}
@@ -378,10 +378,10 @@ export const POSScreen: React.FC<Props> = ({ staff, onLogout }) => {
       {showDiscountModal && (
         <Suspense fallback={null}>
           <DiscountModal
-            subtotal={cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0)}
+            subtotal={calcSubtotal(cart)}
             currentDiscount={discount}
             onApply={(type, label, value) => {
-              const sub = cart.reduce((s, ci) => s + ci.item.price * ci.qty, 0);
+              const sub = calcSubtotal(cart);
               applyDiscount(type, label, value, sub);
             }}
             onRemove={removeDiscount}

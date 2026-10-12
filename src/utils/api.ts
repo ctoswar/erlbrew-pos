@@ -721,7 +721,26 @@ export async function batchApplyModifier(modifier: { name: string; price: number
   return res.json();
 }
 
-export async function batchApplyIngredients(items: { inventory_item_id: string; quantity: number }[], menuItemIds: string[], locationId?: number | null): Promise<{ ok: boolean; applied: number }> {
+export interface BatchApplyResult {
+  ok: boolean;
+  applied: number;
+  /** Profile the recipe was written to ('base' or a size label like "8OZ") */
+  sizeLabel?: string;
+  /** Items that received the recipe in their matching size profile */
+  toSize?: number;
+  /** Items that received it in their base profile (no matching size / no sizes) */
+  toBase?: number;
+  /** Items skipped because they have sizes but not the requested one */
+  skipped?: number;
+  skippedItems?: string[];
+}
+
+export async function batchApplyIngredients(
+  items: { inventory_item_id: string; quantity: number }[],
+  menuItemIds: string[],
+  locationId?: number | null,
+  sizeLabel?: string,
+): Promise<BatchApplyResult> {
   const token = getAuthToken();
   const res = await fetch(getApiUrl('/recipes/batch'), {
     method: 'POST',
@@ -730,7 +749,12 @@ export async function batchApplyIngredients(items: { inventory_item_id: string; 
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     credentials: 'include',
-    body: JSON.stringify({ items, menuItemIds, ...(locationId == null ? {} : { location_id: locationId }) }),
+    body: JSON.stringify({
+      items,
+      menuItemIds,
+      size_label: sizeLabel || null,
+      ...(locationId == null ? {} : { location_id: locationId }),
+    }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

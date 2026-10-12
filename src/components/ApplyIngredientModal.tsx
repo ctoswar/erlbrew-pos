@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { MenuItem } from "../types";
-import { apiAdminGet, batchApplyIngredients } from "../utils/api";
+import { MenuItem, MenuItemSize } from "../types";
+import { apiAdminGet, batchApplyIngredients, BatchApplyResult } from "../utils/api";
 import { getIconByEmoji } from "./FoodIcons";
 import { useLocation } from "../contexts/LocationContext";
 import {
@@ -56,17 +56,24 @@ export const ApplyIngredientModal: React.FC<Props> = ({
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [result, setResult] = useState<{ applied: number } | null>(null);
+  const [result, setResult] = useState<BatchApplyResult | null>(null);
+  // Which recipe profile we're copying/applying: id is only used to fetch the
+  // source recipe (size rows are per-item), label is what targets are matched
+  // on. label === "" means the base (fallback) profile.
+  const [profile, setProfile] = useState<{ id: number; label: string }>({ id: 0, label: "" });
 
-  // Load inventory + source item's recipe if provided
+  // Load inventory + source item's recipe for the selected profile
   useEffect(() => {
     const load = async () => {
       try {
+        if (sourceItemId) setLoading(true);
         const inv = await apiAdminGet<InventoryItem[]>("/inventory");
         setInventory(inv);
 
         if (sourceItemId) {
-          const recipe = await apiAdminGet<{ inventory_item_id: string; quantity: number }[]>(`/recipes/${sourceItemId}`);
+          const recipe = await apiAdminGet<{ inventory_item_id: string; quantity: number }[]>(
+            `/recipes/${sourceItemId}?size_id=${profile.id}`,
+          );
           const init: Record<string, string> = {};
           const units: Record<string, string> = {};
           recipe.forEach((r) => {
@@ -88,7 +95,33 @@ export const ApplyIngredientModal: React.FC<Props> = ({
       }
     };
     load();
-  }, [sourceItemId, currentLocationId]);
+  }, [sourceItemId, currentLocationId, profile.id]);
+
+  // Recipe profiles to offer: base + the size profiles available.
+  // Copy mode → the source item's sizes (used to fetch its recipe).
+  // Batch mode → the union of size labels across all menu items (applied by label).
+  const profileOptions = useMemo(() => {
+    const bySort = (a: MenuItemSize, b: MenuItemSize) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    const options: { id: number; label: string }[] = [{ id: 0, label: "" }]; // "" = base recipe
+    if (sourceItemId) {
+      const src = menuItems.find((i) => i.id === sourceItemId);
+      (src?.sizes || [])
+        .filter((s): s is MenuItemSize & { id: number } => Number.isInteger(s.id))
+        .sort(bySort)
+        .forEach((s) => options.push({ id: s.id, label: s.label }));
+      return options;
+    }
+    const seen = new Set<string>();
+    menuItems.forEach((i) =>
+      [...(i.sizes || [])].sort(bySort).forEach((s) => {
+        if (!seen.has(s.label)) {
+          seen.add(s.label);
+          options.push({ id: 0, label: s.label });
+        }
+      }),
+    );
+    return options;
+  }, [menuItems, sourceItemId]);
 
   // Derive categories for menu items
   const categories = useMemo(() => {
@@ -205,7 +238,12 @@ export const ApplyIngredientModal: React.FC<Props> = ({
           return { inventory_item_id, quantity: dbQty };
         });
 
-      const res = await batchApplyIngredients(items, Array.from(selectedIds), currentLocationId);
+      const res = await batchApplyIngredients(
+        items,
+        Array.from(selectedIds),
+        currentLocationId,
+        profile.label || undefined,
+      );
       setResult(res);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -236,6 +274,30 @@ export const ApplyIngredientModal: React.FC<Props> = ({
               <div className="text-center">
                 <div className="text-xl font-bold text-erl-accent">{result.applied}</div>
                 <div className="text-[10px] text-erl-text-faint">menu item{result.applied !== 1 ? "s" : ""}</div>
+                <div className="text-[10px] text-erl-text-muted mt-1.5">
+                  profile:{" "}
+                  <span className="font-semibold text-erl-text-secondary">
+                    {result.sizeLabel === "base" || !result.sizeLabel ? "Base recipe" : result.sizeLabel}
+                  </span>
+                </div>
+                {!!result.toSize && (
+                  <div className="text-[10px] text-erl-text-faint">{result.toSize} in the {result.sizeLabel} size</div>
+                )}
+                {!!result.toBase && (
+                  <div className="text-[10px] text-erl-text-faint">
+                    {result.toBase} in base{result.sizeLabel !== "base" ? " (no matching size)" : ""}
+                  </div>
+                )}
+                {!!result.skipped && (
+                  <div className="text-[10px] text-erl-accent mt-1">
+                    {result.skipped} skipped — no “{result.sizeLabel}” size:{" "}
+                    {(result.skippedItems || [])
+                      .slice(0, 3)
+                      .map((id) => menuItems.find((m) => m.id === id)?.name || id)
+                      .join(", ")}
+                    {(result.skippedItems || []).length > 3 ? ` +${(result.skippedItems || []).length - 3} more` : ""}
+                  </div>
+                )}
               </div>
             </div>
             <button onClick={() => { onApplied(); onClose(); }} className="btn btn-accent w-full py-2.5">
@@ -282,6 +344,41 @@ export const ApplyIngredientModal: React.FC<Props> = ({
             <div className="text-[11px] font-bold text-erl-secondary tracking-wide mb-2">
               STEP 1: PICK INGREDIENTS ({recipeCount} selected)
             </div>
+
+            {/* Recipe profile (size) selector */}
+            {profileOptions.length > 1 && (
+              <div className="mb-2.5">
+                <div className="text-[9px] font-bold text-erl-text-faint tracking-wider uppercase mb-1.5">
+                  Recipe profile{sourceItemName ? ` · ${sourceItemName}` : ""}
+                </div>
+                <div className="flex gap-1.5 flex-wrap">
+                  {profileOptions.map((o) => {
+                    const isActive = o.id === profile.id && o.label === profile.label;
+                    return (
+                      <button
+                        key={`${o.id}:${o.label}`}
+                        onClick={() => setProfile(o)}
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-semibold cursor-pointer transition-all border
+                          ${isActive
+                            ? "bg-erl-accent text-erl-base border-erl-accent"
+                            : "bg-erl-surface/60 text-erl-text-secondary border-erl-border-default hover:bg-erl-elevated"}`}
+                      >
+                        {o.label || "Base recipe"}
+                        {!o.label && profileOptions.length > 1 && (
+                          <span className="ml-1 text-[8px] opacity-60">fallback</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {profile.label && (
+                  <div className="text-[9px] text-erl-text-faint mt-1">
+                    Applies the ingredients to the “{profile.label}” size of each selected item — items without that
+                    size are skipped.
+                  </div>
+                )}
+              </div>
+            )}
 
             {loading ? (
               <div className="flex flex-col items-center py-8 gap-3">

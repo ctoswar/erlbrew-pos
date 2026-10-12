@@ -53,6 +53,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
   const [selectedUnits, setSelectedUnits] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSizeId, setActiveSizeId] = useState(0);
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
 
   const sizeOptions: { id: number; label: string }[] = [
     { id: 0, label: "Base recipe" },
@@ -139,9 +140,9 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
   };
 
   const handleSelectCategory = (catItems: InventoryItem[]) => {
+    const allChecked = catItems.every((i) => selected[i.id]);
     setSelected((prev) => {
       const next = { ...prev };
-      const allChecked = catItems.every((i) => next[i.id]);
       if (allChecked) {
         catItems.forEach((i) => delete next[i.id]);
       } else {
@@ -149,13 +150,22 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
       }
       return next;
     });
+    if (!allChecked) {
+      setSelectedUnits((prev) => {
+        const next = { ...prev };
+        catItems.forEach((item) => {
+          if (!next[item.id]) next[item.id] = defaultRecipeUnit(item.unit, getPackInfo(item));
+        });
+        return next;
+      });
+    }
   };
 
   const handleSelectAll = () => {
     const allVisible = grouped.flatMap((g) => g.items);
+    const allChecked = allVisible.every((i) => selected[i.id]);
     setSelected((prev) => {
       const next = { ...prev };
-      const allChecked = allVisible.every((i) => next[i.id]);
       if (allChecked) {
         allVisible.forEach((i) => delete next[i.id]);
       } else {
@@ -163,6 +173,15 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
       }
       return next;
     });
+    if (!allChecked) {
+      setSelectedUnits((prev) => {
+        const next = { ...prev };
+        allVisible.forEach((item) => {
+          if (!next[item.id]) next[item.id] = defaultRecipeUnit(item.unit, getPackInfo(item));
+        });
+        return next;
+      });
+    }
   };
 
   const handleQtyChange = (invId: string, val: string) => {
@@ -213,13 +232,14 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
       const q = searchQuery.toLowerCase().trim();
       items = items.filter(i => i.name.toLowerCase().includes(q) || i.id.toLowerCase().includes(q));
     }
+    if (showSelectedOnly) items = items.filter((item) => selected[item.id]);
     const cats = [...new Set(items.map((i) => i.category))].sort();
     const groups = cats.map((cat) => ({
       cat,
       items: items.filter((i) => i.category === cat),
     }));
     return { grouped: groups, filteredTotal: items.length };
-  }, [inventory, searchQuery]);
+  }, [inventory, searchQuery, selected, showSelectedOnly]);
 
   const allVisibleSelected = useMemo(() => {
     const allVisible = grouped.flatMap((g) => g.items);
@@ -230,6 +250,11 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
     if (item.stock <= 0) return "out";
     if (item.stock <= (item.low_stock_threshold || 10)) return "low";
     return "ok";
+  };
+
+  const clearSelection = () => {
+    setSelected({});
+    setSelectedUnits({});
   };
 
   return createPortal(
@@ -252,9 +277,14 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
             </div>
             <div className="ingredient-editor-meta">
               <span className="ingredient-editor-count">{selectedCount}</span>
-              <span>selected ingredient{selectedCount !== 1 ? "s" : ""}</span>
+              <span>selected</span>
               <span className="ingredient-editor-meta-divider">·</span>
               <span>{inventory.length} available</span>
+              {selectedCount > 0 && (
+                <button type="button" onClick={clearSelection} className="ingredient-clear-selection">
+                  Clear
+                </button>
+              )}
             </div>
           </div>
           <button
@@ -267,7 +297,15 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
 
         {sizeOptions.length > 1 && (
           <div className="ingredient-profile-bar px-6 pt-3.5 flex-shrink-0">
-            <div className="ingredient-section-label">Recipe profile</div>
+            <div className="ingredient-profile-heading">
+              <div>
+                <div className="ingredient-section-label">Recipe profile</div>
+                <div className="ingredient-profile-help">Set ingredients separately for each size.</div>
+              </div>
+              <span className="ingredient-profile-current">
+                {sizeOptions.find((size) => size.id === activeSizeId)?.label}
+              </span>
+            </div>
             <div className="ingredient-size-tabs">
               {sizeOptions.map((size) => (
                 <button
@@ -285,14 +323,14 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
         )}
 
         {/* ── Search ──────────────────────────────────────────── */}
-        <div className="ingredient-editor-toolbar px-6 pt-3 flex-shrink-0">
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-erl-text-faint text-sm pointer-events-none">⌕</span>
-            <input
+          <div className="ingredient-editor-toolbar px-6 pt-3 flex-shrink-0">
+            <div className="relative flex-1">
+              <span className="ingredient-search-icon absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">⌕</span>
+              <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search inventory items…"
+              placeholder="Search ingredients by name or ID…"
               className="w-full box-border pl-9 !py-2.5 !text-[13px] !rounded-xl"
             />
             {searchQuery && (
@@ -306,14 +344,21 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
           </div>
           <div className="ingredient-toolbar-footer mt-2">
             <div className="ingredient-inventory-summary">
-              <span>{searchQuery ? `${filteredTotal} result${filteredTotal !== 1 ? "s" : ""}` : `${inventory.length} inventory items`}</span>
+              <span className="ingredient-result-count">{searchQuery || showSelectedOnly ? `${filteredTotal} match${filteredTotal !== 1 ? "es" : ""}` : `${inventory.length} inventory items`}</span>
               {stockSummary.low > 0 && <span className="ingredient-stock-warning">{stockSummary.low} low</span>}
               {stockSummary.out > 0 && <span className="ingredient-stock-danger">{stockSummary.out} out</span>}
             </div>
             {filteredTotal > 0 && (
               <div className="ingredient-bulk-controls">
+                <button
+                  type="button"
+                  onClick={() => setShowSelectedOnly((value) => !value)}
+                  className={`ingredient-filter-toggle ${showSelectedOnly ? "is-active" : ""}`}
+                >
+                  {showSelectedOnly ? "Showing selected" : "Selected only"}
+                </button>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-erl-text-muted">Default qty</span>
+                  <span className="text-[10px] text-erl-text-muted" title="Used when selecting ingredients in bulk">Default qty</span>
                   <input
                     type="number"
                     value={defaultQty}
@@ -325,6 +370,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                   />
                 </div>
                 <button
+                  type="button"
                   onClick={handleSelectAll}
                   className="ingredient-select-all"
                 >
@@ -344,10 +390,19 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
             </div>
           ) : grouped.length === 0 ? (
             <div className="flex flex-col items-center py-12 gap-2">
-              <span className="text-2xl">📭</span>
+              <span className="ingredient-empty-icon">{showSelectedOnly ? "✓" : searchQuery ? "⌕" : "📭"}</span>
               <div className="text-[13px] text-erl-text-disabled">
-                {searchQuery ? "No items match your search" : "No inventory items available"}
+                {showSelectedOnly
+                  ? "No ingredients selected for this profile"
+                  : searchQuery
+                    ? "No items match your search"
+                    : "No inventory items available"}
               </div>
+              {showSelectedOnly && selectedCount > 0 && (
+                <button type="button" onClick={() => setShowSelectedOnly(false)} className="ingredient-empty-action">
+                  Show all ingredients
+                </button>
+              )}
             </div>
           ) : (
             grouped.map(({ cat, items }) => (
@@ -377,14 +432,17 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                     return (
                       <div
                         key={inv.id}
-                        className={`
-                          ingredient-item-row flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-150 cursor-pointer
-                          ${isChecked
-                            ? "is-selected"
-                            : ""
-                          }
-                        `}
+                        role="checkbox"
+                        aria-checked={isChecked}
+                        tabIndex={0}
+                        className={`ingredient-item-row ${isChecked ? "is-selected" : ""}`}
                         onClick={() => handleToggle(inv.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            handleToggle(inv.id);
+                          }
+                        }}
                       >
                         <input
                           type="checkbox"
@@ -393,15 +451,19 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                           className="ingredient-checkbox w-4 h-4 accent-erl-accent flex-shrink-0 cursor-pointer"
                           onClick={(e) => e.stopPropagation()}
                         />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[13px] font-semibold text-erl-text-primary truncate">{inv.name}</div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className={`text-[11px] ${isOut ? "text-erl-danger font-semibold" : isLow ? "text-erl-accent font-medium" : "text-erl-text-faint"}`}>
-                              {inv.stock} {inv.unit}
-                              {isOut && <span className="ml-1">· OUT</span>}
-                              {isLow && !isOut && <span className="ml-1">· LOW</span>}
+                        <div className="ingredient-item-main">
+                          <div className="ingredient-item-name">{inv.name}</div>
+                          <div className="ingredient-item-subline">
+                            <span className="ingredient-item-id">{inv.id}</span>
+                            <span className={`ingredient-stock-label ${isOut ? "is-out" : isLow ? "is-low" : ""}`}>
+                              {isOut ? "Out of stock" : isLow ? "Low stock" : "In stock"} · {inv.stock} {inv.unit}
                             </span>
                           </div>
+                          {getPackInfo(inv) && (
+                            <span className="ingredient-pack-hint">
+                              1 {inv.unit} = {getPackInfo(inv)?.quantity} {getPackInfo(inv)?.unit}
+                            </span>
+                          )}
                         </div>
                         {isChecked && (() => {
                           const pack = getPackInfo(inv);
@@ -414,8 +476,9 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                               ? "No conversion set — add “1 pcs = …” on the item in Admin → Inventory"
                               : undefined;
                           return (
-                            <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                              <span className="text-[11px] text-erl-text-faint">Qty</span>
+                            <div className="ingredient-recipe-control" onClick={(e) => e.stopPropagation()}>
+                              <span className="ingredient-control-label">Recipe amount</span>
+                              <div className="ingredient-control-fields">
                               <input
                                 type="number"
                                 value={qty}
@@ -423,6 +486,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                                 min="0.01"
                                 step="0.1"
                                 className="w-[56px] !px-2 !py-1.5 !text-[13px] !text-center !rounded-lg"
+                                aria-label={`Recipe quantity for ${inv.name}`}
                               />
                               {showDropdown ? (
                                 <select
@@ -442,6 +506,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                                   ({inv.unit})
                                 </span>
                               )}
+                              </div>
                             </div>
                           );
                         })()}

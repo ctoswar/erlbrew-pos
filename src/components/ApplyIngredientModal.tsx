@@ -6,6 +6,7 @@ import { getIconByEmoji } from "./FoodIcons";
 import { useLocation } from "../contexts/LocationContext";
 import {
   getCompatibleUnits,
+  getPackInfo,
   defaultRecipeUnit,
   toInventoryUnit,
   fromInventoryUnit,
@@ -18,6 +19,9 @@ interface InventoryItem {
   unit: string;
   stock: number;
   low_stock_threshold: number;
+  /** Pack size: 1 pcs = pack_quantity pack_unit (e.g. 1000 ml) */
+  pack_quantity?: number | string | null;
+  pack_unit?: string | null;
 }
 
 interface Props {
@@ -68,8 +72,9 @@ export const ApplyIngredientModal: React.FC<Props> = ({
           recipe.forEach((r) => {
             const invItem = inv.find((i) => i.id === r.inventory_item_id);
             const invUnit = invItem?.unit || "pcs";
-            const displayUnit = defaultRecipeUnit(invUnit);
-            const displayQty = fromInventoryUnit(r.quantity, invUnit, displayUnit);
+            const pack = invItem ? getPackInfo(invItem) : null;
+            const displayUnit = defaultRecipeUnit(invUnit, pack);
+            const displayQty = fromInventoryUnit(r.quantity, invUnit, displayUnit, pack);
             init[r.inventory_item_id] = String(displayQty === r.quantity ? r.quantity : displayQty);
             units[r.inventory_item_id] = displayUnit;
           });
@@ -145,7 +150,7 @@ export const ApplyIngredientModal: React.FC<Props> = ({
       if (prev[invId]) return prev;
       const invItem = inventory.find((i) => i.id === invId);
       if (!invItem) return prev;
-      return { ...prev, [invId]: defaultRecipeUnit(invItem.unit) };
+      return { ...prev, [invId]: defaultRecipeUnit(invItem.unit, getPackInfo(invItem)) };
     });
   };
 
@@ -158,13 +163,14 @@ export const ApplyIngredientModal: React.FC<Props> = ({
     if (!invItem) return;
     const oldUnit = selectedUnits[invId] || invItem.unit;
     const oldQty = parseFloat(selectedRecipe[invId]) || 0;
+    const pack = getPackInfo(invItem);
     const converted = oldUnit === newUnit
       ? oldQty
       : (() => {
-          const inInvUnit = toInventoryUnit(oldQty, oldUnit, invItem.unit);
+          const inInvUnit = toInventoryUnit(oldQty, oldUnit, invItem.unit, pack);
           return oldUnit === invItem.unit
             ? oldQty
-            : fromInventoryUnit(inInvUnit, invItem.unit, newUnit);
+            : fromInventoryUnit(inInvUnit, invItem.unit, newUnit, pack);
         })();
     setSelectedRecipe(prev => ({ ...prev, [invId]: String(converted || oldQty) }));
     setSelectedUnits(prev => ({ ...prev, [invId]: newUnit }));
@@ -194,7 +200,8 @@ export const ApplyIngredientModal: React.FC<Props> = ({
           const displayUnit = selectedUnits[inventory_item_id];
           const invItem = inventory.find((i) => i.id === inventory_item_id);
           const invUnit = invItem?.unit || "pcs";
-          const dbQty = toInventoryUnit(displayQty, displayUnit || invUnit, invUnit);
+          const pack = invItem ? getPackInfo(invItem) : null;
+          const dbQty = toInventoryUnit(displayQty, displayUnit || invUnit, invUnit, pack);
           return { inventory_item_id, quantity: dbQty };
         });
 
@@ -310,9 +317,15 @@ export const ApplyIngredientModal: React.FC<Props> = ({
                             <div className="text-[9px] text-erl-text-faint">{inv.stock} {inv.unit}</div>
                           </div>
                           {isChecked && (() => {
-                            const compatUnits = getCompatibleUnits(inv.unit);
-                            const currentUnit = selectedUnits[inv.id] || defaultRecipeUnit(inv.unit);
+                            const pack = getPackInfo(inv);
+                            const compatUnits = getCompatibleUnits(inv.unit, pack);
+                            const currentUnit = selectedUnits[inv.id] || defaultRecipeUnit(inv.unit, pack);
                             const showDropdown = compatUnits.length > 1;
+                            const packHint = pack
+                              ? `1 ${inv.unit} = ${pack.quantity} ${pack.unit}`
+                              : inv.unit === "pcs"
+                                ? "No conversion set — add “1 pcs = …” on the item in Admin → Inventory"
+                                : undefined;
                             return (
                               <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                                 <input
@@ -328,13 +341,14 @@ export const ApplyIngredientModal: React.FC<Props> = ({
                                     value={currentUnit}
                                     onChange={(e) => handleUnitChange(inv.id, e.target.value)}
                                     className="!text-[9px] !py-1 !px-0.5 !rounded-md !bg-erl-surface border border-erl-border-subtle text-erl-text-secondary cursor-pointer min-w-[36px]"
+                                    title={packHint}
                                   >
                                     {compatUnits.map((u) => (
                                       <option key={u} value={u}>{u}</option>
                                     ))}
                                   </select>
                                 ) : (
-                                  <span className="text-[9px] text-erl-text-faint">{inv.unit}</span>
+                                  <span className="text-[9px] text-erl-text-faint" title={packHint}>{inv.unit}</span>
                                 )}
                               </div>
                             );

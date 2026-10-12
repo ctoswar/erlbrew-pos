@@ -109,6 +109,9 @@ export interface InventoryItem {
   low_stock_threshold: number;
   purchase_cost?: number;
   unit_cost?: number;
+  /** Pack size for pcs items: 1 pcs = pack_quantity pack_unit (e.g. 1000 ml) */
+  pack_quantity?: number | string | null;
+  pack_unit?: string | null;
   created_at?: string;
   location_id?: number;
 }

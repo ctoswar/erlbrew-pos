@@ -145,6 +145,12 @@ ALTER TABLE inventory
   ADD COLUMN purchase_cost DECIMAL(10,2) DEFAULT 0,
   ADD COLUMN unit_cost DECIMAL(10,2) DEFAULT 0;
 
+-- Pack conversion for pcs items (non-destructive migration): 1 pcs = pack_quantity pack_unit
+-- e.g. Emborg 1L → pack_quantity 1000, pack_unit 'ml'; Doreen → 1, 'kg'
+ALTER TABLE inventory
+  ADD COLUMN pack_quantity DECIMAL(10,3) DEFAULT NULL,
+  ADD COLUMN pack_unit VARCHAR(32) DEFAULT NULL;
+
 -- Reference number field for E-Wallet payments (non-destructive migration)
 ALTER TABLE orders
   ADD COLUMN reference_number VARCHAR(128) DEFAULT NULL;

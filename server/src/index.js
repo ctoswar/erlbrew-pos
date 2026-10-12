@@ -466,6 +466,10 @@ await pool.query(`
     await pool.query(`ALTER TABLE orders ADD INDEX idx_orders_location (location_id)`).catch(() => {});
     await pool.query(`ALTER TABLE inventory ADD COLUMN location_id INT DEFAULT 1 AFTER id`).catch(() => {});
     await pool.query(`ALTER TABLE inventory ADD INDEX idx_inventory_location (location_id)`).catch(() => {});
+    // Pack conversion for pcs inventory items: 1 pcs = pack_quantity pack_unit
+    // (e.g. Emborg 1L → 1000 ml, Doreen → 1 kg) so recipes can use ml/L/g/kg.
+    await pool.query(`ALTER TABLE inventory ADD COLUMN pack_quantity DECIMAL(10,3) DEFAULT NULL`).catch(() => {});
+    await pool.query(`ALTER TABLE inventory ADD COLUMN pack_unit VARCHAR(32) DEFAULT NULL`).catch(() => {});
     // Change inventory PK from single `id` to composite `(id, location_id)` for multi-location
     // First drop any FKs that reference inventory(id), then alter the PK
     const dropFkOnInventory = async (table) => {

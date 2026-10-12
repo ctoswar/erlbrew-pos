@@ -6,6 +6,7 @@ import { getIconByEmoji } from "./FoodIcons";
 import { useLocation } from "../contexts/LocationContext";
 import {
   getCompatibleUnits,
+  getPackInfo,
   defaultRecipeUnit,
   toInventoryUnit,
   fromInventoryUnit,
@@ -29,6 +30,9 @@ interface InventoryItem {
   unit: string;
   stock: number;
   low_stock_threshold: number;
+  /** Pack size: 1 pcs = pack_quantity pack_unit (e.g. 1000 ml) */
+  pack_quantity?: number | string | null;
+  pack_unit?: string | null;
 }
 
 interface Props {
@@ -74,9 +78,10 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
           // Determine a human-friendly display unit for this ingredient
           const invItem = inv.find((i) => i.id === rec.inventory_item_id);
           const invUnit = invItem?.unit || "pcs";
-          const displayUnit = defaultRecipeUnit(invUnit);
+          const pack = invItem ? getPackInfo(invItem) : null;
+          const displayUnit = defaultRecipeUnit(invUnit, pack);
           // Convert stored DB quantity (in inventory unit) to the display unit
-          const displayQty = fromInventoryUnit(rec.quantity, invUnit, displayUnit);
+          const displayQty = fromInventoryUnit(rec.quantity, invUnit, displayUnit, pack);
           init[rec.inventory_item_id] = String(
             displayQty === rec.quantity ? rec.quantity : displayQty,
           );
@@ -109,7 +114,7 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
       if (prev[invId]) return prev;
       const invItem = inventory.find((i) => i.id === invId);
       if (!invItem) return prev;
-      return { ...prev, [invId]: defaultRecipeUnit(invItem.unit) };
+      return { ...prev, [invId]: defaultRecipeUnit(invItem.unit, getPackInfo(invItem)) };
     });
   };
 
@@ -118,15 +123,16 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
     if (!invItem) return;
     const oldUnit = selectedUnits[invId] || invItem.unit;
     const oldQty = parseFloat(selected[invId]) || 0;
+    const pack = getPackInfo(invItem);
     // Convert the current quantity from old display unit to new display unit
     const converted = oldUnit === newUnit
       ? oldQty
       : (() => {
           // Convert oldUnit → inventoryUnit → newUnit
-          const inInvUnit = toInventoryUnit(oldQty, oldUnit, invItem.unit);
+          const inInvUnit = toInventoryUnit(oldQty, oldUnit, invItem.unit, pack);
           return oldUnit === invItem.unit
             ? oldQty // already in inventory unit
-            : fromInventoryUnit(inInvUnit, invItem.unit, newUnit);
+            : fromInventoryUnit(inInvUnit, invItem.unit, newUnit, pack);
         })();
     setSelected((prev) => ({ ...prev, [invId]: String(converted || oldQty) }));
     setSelectedUnits((prev) => ({ ...prev, [invId]: newUnit }));
@@ -174,8 +180,9 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
           const displayUnit = selectedUnits[inventory_item_id];
           const invItem = inventory.find((i) => i.id === inventory_item_id);
           const invUnit = invItem?.unit || "pcs";
+          const pack = invItem ? getPackInfo(invItem) : null;
           // Convert from display unit → inventory native unit for DB storage
-          const dbQty = toInventoryUnit(displayQty, displayUnit || invUnit, invUnit);
+          const dbQty = toInventoryUnit(displayQty, displayUnit || invUnit, invUnit, pack);
           return { inventory_item_id, quantity: dbQty };
         });
 
@@ -397,9 +404,15 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                           </div>
                         </div>
                         {isChecked && (() => {
-                          const compatUnits = getCompatibleUnits(inv.unit);
-                          const currentUnit = selectedUnits[inv.id] || defaultRecipeUnit(inv.unit);
+                          const pack = getPackInfo(inv);
+                          const compatUnits = getCompatibleUnits(inv.unit, pack);
+                          const currentUnit = selectedUnits[inv.id] || defaultRecipeUnit(inv.unit, pack);
                           const showDropdown = compatUnits.length > 1;
+                          const packHint = pack
+                            ? `1 ${inv.unit} = ${pack.quantity} ${pack.unit}`
+                            : inv.unit === "pcs"
+                              ? "No conversion set — add “1 pcs = …” on the item in Admin → Inventory"
+                              : undefined;
                           return (
                             <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                               <span className="text-[11px] text-erl-text-faint">Qty</span>
@@ -422,10 +435,10 @@ export const IngredientEditor: React.FC<Props> = ({ menuItem, onClose }) => {
                                   ))}
                                 </select>
                               ) : (
-                                <span className="text-[11px] text-erl-text-faint min-w-[28px]">{inv.unit}</span>
+                                <span className="text-[11px] text-erl-text-faint min-w-[28px]" title={packHint}>{inv.unit}</span>
                               )}
                               {showDropdown && inv.unit !== currentUnit && (
-                                <span className="text-[9px] text-erl-text-faint italic" title={`Stored in inventory as ${inv.unit}`}>
+                                <span className="text-[9px] text-erl-text-faint italic" title={packHint || `Stored in inventory as ${inv.unit}`}>
                                   ({inv.unit})
                                 </span>
                               )}

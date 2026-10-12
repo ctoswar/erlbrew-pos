@@ -4,9 +4,12 @@ import { apiAdminGet, apiAdminPost, apiAdminPut, apiAdminDelete } from "../utils
 import { cacheInventoryItems, getCachedInventoryItems } from "../utils/offlineDb";
 import { AnimatedSelect } from "./AnimatedSelect";
 import { useLocation } from "../contexts/LocationContext";
+import { getPackInfo } from "../utils/units";
 
 const CATEGORIES = ["Cups", "Lids", "Supplies", "Milk", "Coffee", "Syrups", "Powders", "Tea", "Other"];
 const UNITS = ["pcs", "kg", "g", "L", "ml", "boxes", "packs"];
+/** Units one single `pcs` can be converted into (pack size) */
+const PACK_UNITS = ["ml", "L", "g", "kg", "oz", "mg"];
 
 const MOVEMENT_LABELS: Record<MovementType, string> = {
   sale: 'Sold',
@@ -37,6 +40,8 @@ const EMPTY_FORM = {
   low_stock_threshold: "10",
   purchase_cost: "",
   unit_cost: "",
+  pack_quantity: "",
+  pack_unit: "ml",
 };
 
 export const AdminInventory: React.FC = () => {
@@ -89,6 +94,8 @@ export const AdminInventory: React.FC = () => {
           low_stock_threshold: item.low_stock_threshold,
           purchase_cost: item.purchase_cost,
           unit_cost: item.unit_cost,
+          pack_quantity: item.pack_quantity,
+          pack_unit: item.pack_unit,
         }))).catch(console.error);
       })
       .catch(async () => {
@@ -162,6 +169,8 @@ export const AdminInventory: React.FC = () => {
       low_stock_threshold: String(item.low_stock_threshold),
       purchase_cost: item.purchase_cost != null ? String(item.purchase_cost) : "",
       unit_cost: item.unit_cost != null ? String(item.unit_cost) : "",
+      pack_quantity: item.pack_quantity != null ? String(item.pack_quantity) : "",
+      pack_unit: item.pack_unit || "ml",
     });
     setEditingId(item.id);
     setShowForm(true);
@@ -193,6 +202,10 @@ export const AdminInventory: React.FC = () => {
       setError("Unit cost must be a number");
       return;
     }
+    if (form.pack_quantity && (isNaN(parseFloat(form.pack_quantity)) || parseFloat(form.pack_quantity) <= 0)) {
+      setError("Pack conversion must be a number greater than 0");
+      return;
+    }
 
     setSaving(true);
     setError("");
@@ -206,6 +219,14 @@ export const AdminInventory: React.FC = () => {
     };
     if (form.purchase_cost) payload.purchase_cost = parseFloat(form.purchase_cost);
     if (form.unit_cost) payload.unit_cost = parseFloat(form.unit_cost);
+    // Pack conversion: 1 pcs = pack_quantity pack_unit (only meaningful for pcs items)
+    if (form.unit === "pcs" && form.pack_quantity.trim()) {
+      payload.pack_quantity = parseFloat(form.pack_quantity);
+      payload.pack_unit = form.pack_unit;
+    } else {
+      payload.pack_quantity = null;
+      payload.pack_unit = null;
+    }
     payload.location_id = currentLocationId ?? (editingId ? locationForItem(editingId) : 1);
 
     try {
@@ -641,6 +662,35 @@ export const AdminInventory: React.FC = () => {
                     </FormSection>
                   </div>
 
+                  {form.unit === "pcs" && (
+                    <FormSection label="Pack conversion" hint="optional — 1 pcs = ?">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[12px] text-erl-text-muted whitespace-nowrap">1 pcs =</span>
+                        <input
+                          type="number"
+                          value={form.pack_quantity}
+                          onChange={(e) => setForm((f) => ({ ...f, pack_quantity: e.target.value }))}
+                          placeholder="1000"
+                          min="0"
+                          step="0.001"
+                          className="w-[90px] box-border text-erl-text-primary"
+                        />
+                        <div className="w-[92px]">
+                          <AnimatedSelect
+                            options={PACK_UNITS.map((u) => ({ value: u, label: u }))}
+                            value={form.pack_unit}
+                            onChange={(val) => setForm((f) => ({ ...f, pack_unit: val }))}
+                          />
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-erl-text-faint leading-snug">
+                        Lets recipes count this item in ml/L/g/kg instead of pcs.
+                        e.g. Emborg 1L → <span className="text-erl-text-muted">1 pcs = 1000 ml</span>, Doreen →{" "}
+                        <span className="text-erl-text-muted">1 pcs = 1 kg</span>. Leave empty to count strictly in pcs.
+                      </div>
+                    </FormSection>
+                  )}
+
                   <div className="h-px bg-erl-border-subtle" />
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -835,6 +885,17 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
             {item.stock}
           </span>
           <span className="text-[12px] text-erl-text-muted">{item.unit}</span>
+          {(() => {
+            const pack = getPackInfo(item);
+            return pack ? (
+              <span
+                className="text-[11px] text-erl-accent font-medium"
+                title={`Recipes can count this item as ${pack.unit} (1 ${item.unit} = ${pack.quantity} ${pack.unit})`}
+              >
+                · {pack.quantity} {pack.unit} each
+              </span>
+            ) : null;
+          })()}
           <span className="text-[11px] text-erl-text-faint ml-auto">
             Alert at {item.low_stock_threshold}
           </span>

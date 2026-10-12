@@ -20,6 +20,22 @@ export async function logInventoryMovement(pool, { inventory_item_id, location_i
 export default function inventoryRouter(pool, googleSheets) {
   const router = Router();
 
+  // Detect optional inventory columns (migrations may not be applied yet)
+  async function columnFlags() {
+    const flags = { hasCost: false, hasPack: false };
+    try {
+      const [cols] = await pool.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory'
+          AND COLUMN_NAME IN ('purchase_cost', 'unit_cost', 'pack_quantity', 'pack_unit')
+      `);
+      const names = Array.isArray(cols) ? cols.map((c) => c.COLUMN_NAME) : [];
+      flags.hasCost = names.includes('purchase_cost') && names.includes('unit_cost');
+      flags.hasPack = names.includes('pack_quantity') && names.includes('pack_unit');
+    } catch (_) { /* columns not migrated — leave flags false */ }
+    return flags;
+  }
+
   // Validation helper
   function validate(req, res, rules) {
     for (const [field, check] of Object.entries(rules || {})) {
@@ -46,22 +62,19 @@ export default function inventoryRouter(pool, googleSheets) {
       const scope = scopedLocationCondition(req, 'i.location_id');
       const locCondition = scope.sql ? `WHERE ${scope.sql.slice(5)}` : '';
       const locParams = scope.params;
-      // Check if cost columns exist before selecting them (graceful if migration not applied)
-      let hasCost = false;
-      try {
-        const [cols] = await pool.query(`
-          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory'
-            AND COLUMN_NAME IN ('purchase_cost', 'unit_cost')
-        `);
-        hasCost = Array.isArray(cols) && cols.length >= 2;
-      } catch (_) { hasCost = false; }
+      // Optional columns may not exist if migrations are not applied yet
+      const flags = await columnFlags();
 
       const baseCols = 'i.id, i.name, i.category, i.unit, i.stock, i.low_stock_threshold, i.created_at, i.location_id';
-      const sql = hasCost
-        ? `SELECT ${baseCols}, i.purchase_cost, i.unit_cost FROM inventory i ${locCondition} ORDER BY i.category, i.name`
-        : `SELECT ${baseCols} FROM inventory i ${locCondition} ORDER BY i.category, i.name`;
-      const [rows] = await pool.query(sql, locParams);
+      const extraCols = [
+        flags.hasCost ? 'i.purchase_cost, i.unit_cost' : '',
+        flags.hasPack ? 'i.pack_quantity, i.pack_unit' : '',
+      ].filter(Boolean).join(', ');
+      const selectCols = extraCols ? `${baseCols}, ${extraCols}` : baseCols;
+      const [rows] = await pool.query(
+        `SELECT ${selectCols} FROM inventory i ${locCondition} ORDER BY i.category, i.name`,
+        locParams
+      );
       res.json(rows);
     } catch (e) {
       console.error(e);
@@ -71,7 +84,7 @@ export default function inventoryRouter(pool, googleSheets) {
 
 // POST create inventory item (admin only)
 router.post('/', authMiddleware, adminMiddleware, locationScope, requireLocationId, async (req, res) => {
-    const { id, name, category, unit, stock, low_stock_threshold, purchase_cost, unit_cost } = req.body;
+    const { id, name, category, unit, stock, low_stock_threshold, purchase_cost, unit_cost, pack_quantity, pack_unit } = req.body;
     const err = validate(req, res, {
       id: { required: true, type: 'string', maxLen: 32 },
       name: { required: true, type: 'string', maxLen: 128 },
@@ -83,31 +96,31 @@ router.post('/', authMiddleware, adminMiddleware, locationScope, requireLocation
       unit_cost: { type: 'number', min: 0 },
     });
     if (err) return err;
+    // Pack conversion (optional): 1 pcs = pack_quantity pack_unit
+    if (pack_quantity !== undefined && pack_quantity !== null && (typeof pack_quantity !== 'number' || pack_quantity < 0)) {
+      return res.status(400).json({ error: 'pack_quantity must be a number >= 0' });
+    }
+    if (pack_unit !== undefined && pack_unit !== null && (typeof pack_unit !== 'string' || pack_unit.length > 32)) {
+      return res.status(400).json({ error: 'pack_unit must be a string of at most 32 characters' });
+    }
     try {
-      // Only insert cost columns if they exist in the DB (migration may not be applied yet)
-      const baseCols = '(id, name, category, unit, stock, low_stock_threshold, location_id)';
-      const baseVals = [id, name, category, unit || 'pcs', stock ?? 0, low_stock_threshold ?? 10, req.locationId];
-      const ph = baseVals.map(() => '?').join(', ');
-      let sql = `INSERT INTO inventory ${baseCols} VALUES (${ph})`;
-      let vals = baseVals;
+      // Only insert optional columns if they exist in the DB (migration may not be applied yet)
+      const flags = await columnFlags();
+      const cols = ['id', 'name', 'category', 'unit', 'stock', 'low_stock_threshold', 'location_id'];
+      const vals = [id, name, category, unit || 'pcs', stock ?? 0, low_stock_threshold ?? 10, req.locationId];
 
-      try {
-        const [cols] = await pool.query(`
-          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory'
-            AND COLUMN_NAME IN ('purchase_cost', 'unit_cost')
-        `);
-        // cols is [{ COLUMN_NAME: 'purchase_cost' }, { COLUMN_NAME: 'unit_cost' }]
-        const hasCost = Array.isArray(cols) && cols.length >= 2;
-        if (hasCost) {
-          const extendedCols = baseCols.replace(')', ', purchase_cost, unit_cost)');
-          const extendedPh = [...baseVals, purchase_cost ?? 0, unit_cost ?? 0].map(() => '?').join(', ');
-          sql = `INSERT INTO inventory ${extendedCols} VALUES (${extendedPh})`;
-          vals = [...baseVals, purchase_cost ?? 0, unit_cost ?? 0];
-        }
-      } catch (_) { /* migration not applied — skip cost columns */ }
+      if (flags.hasCost) {
+        cols.push('purchase_cost', 'unit_cost');
+        vals.push(purchase_cost ?? 0, unit_cost ?? 0);
+      }
+      // Both values together or neither — a lone value can't convert anything
+      if (flags.hasPack && pack_quantity != null && pack_unit) {
+        cols.push('pack_quantity', 'pack_unit');
+        vals.push(Number(pack_quantity), pack_unit);
+      }
 
-      await pool.query(sql, vals);
+      const ph = vals.map(() => '?').join(', ');
+      await pool.query(`INSERT INTO inventory (${cols.join(', ')}) VALUES (${ph})`, vals);
       await logAudit(pool, req, { action: 'inventory_create', entityType: 'inventory', entityId: id, details: { name, category, stock } });
       res.json({ ok: true });
     } catch (e) {
@@ -122,10 +135,17 @@ router.post('/', authMiddleware, adminMiddleware, locationScope, requireLocation
 // PUT update inventory item (including stock adjustment) (admin only)
 router.put('/:id', authMiddleware, adminMiddleware, locationScope, requireLocationId, async (req, res) => {
     const { id } = req.params;
-    const { name, category, unit, stock, low_stock_threshold, purchase_cost, unit_cost } = req.body;
+    const { name, category, unit, stock, low_stock_threshold, purchase_cost, unit_cost, pack_quantity, pack_unit } = req.body;
     const locationId = req.locationId;
     if (!id || typeof id !== 'string' || id.length > 32) {
       return res.status(400).json({ error: 'Invalid id' });
+    }
+    // Pack conversion (optional): 1 pcs = pack_quantity pack_unit
+    if (pack_quantity !== undefined && pack_quantity !== null && (typeof pack_quantity !== 'number' || pack_quantity < 0)) {
+      return res.status(400).json({ error: 'pack_quantity must be a number >= 0' });
+    }
+    if (pack_unit !== undefined && pack_unit !== null && (typeof pack_unit !== 'string' || pack_unit.length > 32)) {
+      return res.status(400).json({ error: 'pack_unit must be a string of at most 32 characters' });
     }
     try {
       const [existing] = await pool.query('SELECT id, stock, location_id FROM inventory WHERE id = ? AND location_id = ?', [id, locationId]);
@@ -140,20 +160,19 @@ router.put('/:id', authMiddleware, adminMiddleware, locationScope, requireLocati
       if (stock !== undefined) { fields.push('stock = ?'); values.push(Number(stock)); }
       if (low_stock_threshold !== undefined) { fields.push('low_stock_threshold = ?'); values.push(Number(low_stock_threshold)); }
 
-      // Only update cost columns if they exist in the DB (migration may not be applied yet)
-      let costFieldsExist = false;
-      try {
-        const [cols] = await pool.query(`
-          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory'
-            AND COLUMN_NAME IN ('purchase_cost', 'unit_cost')
-        `);
-        costFieldsExist = Array.isArray(cols) && cols.length >= 2;
-      } catch (_) { costFieldsExist = false; }
+      const flags = await columnFlags();
 
-      if (costFieldsExist) {
+      // Only update cost columns if they exist in the DB (migration may not be applied yet)
+      if (flags.hasCost) {
         if (purchase_cost !== undefined) { fields.push('purchase_cost = ?'); values.push(Number(purchase_cost)); }
         if (unit_cost !== undefined) { fields.push('unit_cost = ?'); values.push(Number(unit_cost)); }
+      }
+
+      // Pack conversion — both values together (null clears the conversion)
+      if (flags.hasPack && (pack_quantity !== undefined || pack_unit !== undefined)) {
+        const hasPack = pack_quantity != null && !!pack_unit;
+        fields.push('pack_quantity = ?', 'pack_unit = ?');
+        values.push(hasPack ? Number(pack_quantity) : null, hasPack ? pack_unit : null);
       }
 
       if (fields.length === 0) {

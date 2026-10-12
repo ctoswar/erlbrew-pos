@@ -813,6 +813,40 @@
     color: rgb(var(--color-border-medium));
   }
 
+  .ingredient-clear-selection {
+    margin-left: 0.25rem;
+    border: 0;
+    background: transparent;
+    color: rgb(var(--color-accent));
+    cursor: pointer;
+    font-size: 0.64rem;
+    font-weight: 700;
+  }
+
+  .ingredient-profile-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .ingredient-profile-help {
+    color: rgb(var(--color-text-faint));
+    font-size: 0.66rem;
+  }
+
+  .ingredient-profile-current {
+    border: 1px solid rgb(var(--color-accent) / 0.25);
+    border-radius: 999px;
+    background: rgb(var(--color-accent) / 0.08);
+    color: rgb(var(--color-accent));
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 0.28rem 0.55rem;
+    text-transform: uppercase;
+  }
+
   .ingredient-section-label {
     margin-bottom: 0.45rem;
     color: rgb(var(--color-text-muted));
@@ -844,6 +878,29 @@
   .ingredient-inventory-summary {
     color: rgb(var(--color-text-muted));
     font-size: 0.68rem;
+  }
+
+  .ingredient-result-count {
+    font-weight: 600;
+  }
+
+  .ingredient-filter-toggle {
+    border: 1px solid rgb(var(--color-border-subtle));
+    border-radius: 999px;
+    background: transparent;
+    color: rgb(var(--color-text-muted));
+    cursor: pointer;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.28rem 0.55rem;
+    transition: 160ms ease;
+  }
+
+  .ingredient-filter-toggle:hover,
+  .ingredient-filter-toggle.is-active {
+    border-color: rgb(var(--color-accent) / 0.45);
+    background: rgb(var(--color-accent) / 0.1);
+    color: rgb(var(--color-accent));
   }
 
   .ingredient-stock-warning,
@@ -915,9 +972,21 @@
   }
 
   .ingredient-item-row {
-    min-height: 3.15rem;
+    display: flex;
+    min-height: 4.15rem;
+    align-items: center;
+    gap: 0.7rem;
+    border-radius: 0.85rem;
     border: 1px solid transparent;
     background: rgb(var(--color-surface) / 0.34);
+    cursor: pointer;
+    padding: 0.65rem 0.75rem;
+    transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+
+  .ingredient-item-row:focus-visible {
+    outline: 2px solid rgb(var(--color-accent) / 0.7);
+    outline-offset: 2px;
   }
 
   .ingredient-item-row:hover {
@@ -931,12 +1000,117 @@
     box-shadow: inset 3px 0 0 rgb(var(--color-accent));
   }
 
+  .ingredient-item-main {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .ingredient-item-name {
+    overflow: hidden;
+    color: rgb(var(--color-text-primary));
+    font-size: 0.79rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ingredient-item-subline {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.22rem;
+    min-width: 0;
+  }
+
+  .ingredient-item-id {
+    overflow: hidden;
+    color: rgb(var(--color-text-faint));
+    font-size: 0.59rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ingredient-stock-label {
+    color: rgb(var(--color-text-muted));
+    font-size: 0.61rem;
+    white-space: nowrap;
+  }
+
+  .ingredient-stock-label.is-low {
+    color: rgb(var(--color-accent));
+    font-weight: 700;
+  }
+
+  .ingredient-stock-label.is-out {
+    color: rgb(var(--color-danger));
+    font-weight: 700;
+  }
+
+  .ingredient-pack-hint {
+    display: inline-block;
+    margin-top: 0.25rem;
+    border-radius: 0.3rem;
+    background: rgb(var(--color-accent) / 0.08);
+    color: rgb(var(--color-accent));
+    font-size: 0.57rem;
+    padding: 0.12rem 0.32rem;
+  }
+
+  .ingredient-recipe-control {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+  }
+
+  .ingredient-control-label {
+    color: rgb(var(--color-text-faint));
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .ingredient-control-fields {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .ingredient-control-fields input {
+    border-color: rgb(var(--color-accent) / 0.35);
+    background: rgb(var(--color-elevated) / 0.8);
+    font-weight: 700;
+  }
+
   .ingredient-item-row .ingredient-checkbox {
     accent-color: rgb(var(--color-accent));
   }
 
   .ingredient-editor-body {
     scrollbar-gutter: stable;
+  }
+
+  .ingredient-empty-icon {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border: 1px solid rgb(var(--color-border-subtle));
+    border-radius: 0.85rem;
+    background: rgb(var(--color-surface) / 0.65);
+    color: rgb(var(--color-accent));
+    font-size: 1.15rem;
+  }
+
+  .ingredient-empty-action {
+    border: 0;
+    background: transparent;
+    color: rgb(var(--color-accent));
+    cursor: pointer;
+    font-size: 0.68rem;
+    font-weight: 700;
   }
 
   .modifier-editor-close {
@@ -1196,9 +1370,31 @@
       flex-direction: column;
     }
 
+    .ingredient-profile-heading {
+      align-items: flex-start;
+    }
+
+    .ingredient-profile-help {
+      max-width: 15rem;
+    }
+
     .ingredient-bulk-controls {
       width: 100%;
       justify-content: space-between;
+    }
+
+    .ingredient-item-row {
+      align-items: flex-start;
+      padding: 0.7rem;
+    }
+
+    .ingredient-recipe-control {
+      align-items: flex-end;
+    }
+
+    .ingredient-control-label {
+      max-width: 5.5rem;
+      text-align: right;
     }
   }
 
@@ -1854,5 +2050,245 @@ html[data-app-scale="1.4"]   { zoom: 1.4; }
     color: #000 !important;
     text-shadow: none !important;
     border-color: #222 !important;
+  }
+}
+
+/* ── Ingredient editor: calm workbench treatment ─────────────────────────────
+ * This modal intentionally avoids the app-wide glass treatment. Ingredient
+ * editing is a focused, repetitive task: solid surfaces and one accent make
+ * quantities easier to scan, while motion is reserved for useful feedback.
+ */
+.ingredient-editor-backdrop {
+  background: rgba(10, 6, 3, 0.78) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.ingredient-editor-modal {
+  background: rgb(var(--color-elevated)) !important;
+  border-color: rgb(var(--color-border-medium)) !important;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.48) !important;
+  animation: ingredient-panel-in 220ms var(--ease-out) both;
+}
+
+.ingredient-editor-header {
+  background: rgb(var(--color-elevated)) !important;
+}
+
+.ingredient-profile-bar {
+  background: rgb(var(--color-surface));
+  border-bottom: 1px solid rgb(var(--color-border-subtle));
+  padding-bottom: 0.75rem;
+}
+
+.ingredient-size-tab {
+  background: rgb(var(--color-elevated)) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.ingredient-size-tab:hover {
+  background: rgb(var(--color-surface)) !important;
+  transform: translateY(-1px) !important;
+}
+
+.ingredient-size-tab.is-active {
+  background: rgb(var(--color-accent) / 0.12) !important;
+  border-color: rgb(var(--color-accent) / 0.72) !important;
+  box-shadow: inset 0 -2px 0 rgb(var(--color-accent)) !important;
+}
+
+.ingredient-editor-toolbar {
+  background: rgb(var(--color-elevated));
+  padding-bottom: 0.8rem;
+}
+
+.ingredient-search-icon {
+  color: rgb(var(--color-accent));
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.ingredient-editor-toolbar input:focus {
+  border-color: rgb(var(--color-accent) / 0.7) !important;
+  box-shadow: 0 0 0 3px rgb(var(--color-accent) / 0.1) !important;
+}
+
+.ingredient-editor-body {
+  background: rgb(var(--color-base));
+  padding-top: 1rem;
+}
+
+.ingredient-category {
+  animation: ingredient-section-in 180ms var(--ease-out) both;
+}
+
+.ingredient-category-header {
+  position: sticky;
+  top: -1rem;
+  z-index: 2;
+  margin: 0 -0.1rem 0.55rem;
+  padding: 0.55rem 0.1rem 0.45rem;
+  background: rgb(var(--color-base));
+}
+
+.ingredient-item-row {
+  background: rgb(var(--color-surface)) !important;
+  box-shadow: 0 1px 0 rgb(var(--color-border-subtle));
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.ingredient-item-row:hover {
+  background: rgb(var(--color-elevated)) !important;
+  border-color: rgb(var(--color-border-medium));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+  transform: translateY(-1px);
+}
+
+.ingredient-item-row:active {
+  transform: translateY(0) scale(0.997);
+}
+
+.ingredient-item-row.is-selected {
+  background: rgb(var(--color-accent) / 0.1) !important;
+  border-color: rgb(var(--color-accent) / 0.55);
+  box-shadow: inset 3px 0 0 rgb(var(--color-accent)), 0 3px 12px rgb(var(--color-accent) / 0.06);
+}
+
+/* Keep content readable while the row is selected. Do not rely on inherited
+ * color here: the selected background is intentionally different from the
+ * normal card surface, and some themes/utility classes can otherwise make
+ * the label look like it disappeared. */
+.ingredient-item-row.is-selected .ingredient-item-name {
+  color: rgb(var(--color-text-primary)) !important;
+}
+
+.ingredient-item-row.is-selected .ingredient-item-id,
+.ingredient-item-row.is-selected .ingredient-stock-label {
+  color: rgb(var(--color-text-secondary)) !important;
+}
+
+.ingredient-item-row.is-selected .ingredient-stock-label.is-low {
+  color: rgb(var(--color-accent)) !important;
+}
+
+.ingredient-item-row.is-selected .ingredient-stock-label.is-out {
+  color: rgb(var(--color-danger)) !important;
+}
+
+.ingredient-item-row.is-selected .ingredient-pack-hint {
+  color: rgb(var(--color-accent-light)) !important;
+}
+
+.ingredient-item-row.is-selected .ingredient-recipe-control input,
+.ingredient-item-row.is-selected .ingredient-recipe-control select {
+  color: rgb(var(--color-text-primary)) !important;
+  -webkit-text-fill-color: rgb(var(--color-text-primary));
+}
+
+.ingredient-item-row.is-selected .ingredient-control-label {
+  color: rgb(var(--color-text-secondary));
+}
+
+.ingredient-item-row .ingredient-checkbox {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+}
+
+.ingredient-recipe-control {
+  border-left: 1px solid rgb(var(--color-border-subtle));
+  padding-left: 0.7rem;
+}
+
+.ingredient-control-fields select,
+.ingredient-control-fields input {
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.ingredient-control-fields input:focus,
+.ingredient-control-fields select:focus {
+  border-color: rgb(var(--color-accent) / 0.7) !important;
+  box-shadow: 0 0 0 3px rgb(var(--color-accent) / 0.1) !important;
+  outline: none;
+}
+
+.ingredient-items-grid > .ingredient-item-row {
+  animation: ingredient-row-in 180ms var(--ease-out) both;
+}
+
+.ingredient-items-grid > .ingredient-item-row:nth-child(2) { animation-delay: 18ms; }
+.ingredient-items-grid > .ingredient-item-row:nth-child(3) { animation-delay: 36ms; }
+.ingredient-items-grid > .ingredient-item-row:nth-child(4) { animation-delay: 54ms; }
+.ingredient-items-grid > .ingredient-item-row:nth-child(5) { animation-delay: 72ms; }
+.ingredient-items-grid > .ingredient-item-row:nth-child(6) { animation-delay: 90ms; }
+
+/* Selection is a state change, not a new row entering the screen. */
+.ingredient-items-grid > .ingredient-item-row.is-selected {
+  animation: none;
+}
+
+@keyframes ingredient-panel-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes ingredient-section-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ingredient-row-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+html[data-theme="white"] .ingredient-editor-backdrop,
+:root[data-theme="white"] .ingredient-editor-backdrop {
+  background: rgba(28, 20, 14, 0.62) !important;
+}
+
+html[data-theme="white"] .ingredient-editor-body,
+:root[data-theme="white"] .ingredient-editor-body,
+html[data-theme="white"] .ingredient-category-header,
+:root[data-theme="white"] .ingredient-category-header {
+  background: #f6f1eb;
+}
+
+html[data-theme="white"] .ingredient-editor-modal,
+:root[data-theme="white"] .ingredient-editor-modal,
+html[data-theme="white"] .ingredient-editor-header,
+:root[data-theme="white"] .ingredient-editor-header,
+html[data-theme="white"] .ingredient-editor-toolbar,
+:root[data-theme="white"] .ingredient-editor-toolbar {
+  background: #fffdfb !important;
+}
+
+html[data-theme="white"] .ingredient-item-row,
+:root[data-theme="white"] .ingredient-item-row {
+  background: #fffdfb !important;
+}
+
+html[data-theme="white"] .ingredient-item-row:hover,
+:root[data-theme="white"] .ingredient-item-row:hover {
+  background: #f7eee5 !important;
+}
+
+html[data-theme="white"] .ingredient-item-row.is-selected,
+:root[data-theme="white"] .ingredient-item-row.is-selected {
+  background: #f4e8db !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ingredient-editor-modal,
+  .ingredient-category,
+  .ingredient-items-grid > .ingredient-item-row {
+    animation: none !important;
+  }
+
+  .ingredient-item-row,
+  .ingredient-item-row:hover {
+    transform: none !important;
+    transition: none !important;
   }
 }

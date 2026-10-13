@@ -82,12 +82,20 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       WHERE oi.order_id IN (?)
       GROUP BY oi.id
     `, [orderIds]);
-    // Parse modifiers JSON and filter out nulls
+    // mysql2 returns JSON_ARRAYAGG as an array for MySQL JSON results, but
+    // some drivers/configurations return the same value as a JSON string.
+    // Handle both forms so history/reprint retains the selected add-ons.
     const result = [];
     for (const item of items) {
       const modifiers = (() => {
-        try { const p = JSON.parse(item.modifiers); return Array.isArray(p) ? p.filter(Boolean) : []; }
-        catch { return []; }
+        if (Array.isArray(item.modifiers)) return item.modifiers.filter(Boolean);
+        if (typeof item.modifiers === 'string') {
+          try {
+            const parsed = JSON.parse(item.modifiers);
+            return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+          } catch { return []; }
+        }
+        return [];
       })();
       result.push({ ...item, modifiers });
     }

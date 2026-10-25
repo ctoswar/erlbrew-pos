@@ -30,6 +30,19 @@ function toDateOnly(d) {
 }
 
 export default function ordersRouter(pool, googleSheets, broadcastEvent) {
+  // Google Sheets sync is best-effort bookkeeping. It must never sit in front
+  // of a response: a stalled Sheets call makes the POS proxy time out (504),
+  // the till treats it as a failed order and retries → duplicate tickets.
+  function logToSheets(label, run) {
+    if (!googleSheets) return;
+    const timeout = new Promise((_, reject) => {
+      const timer = setTimeout(() => reject(new Error(`${label} timed out after 15s`)), 15000);
+      if (typeof timer.unref === 'function') timer.unref();
+    });
+    Promise.race([Promise.resolve().then(run), timeout])
+      .catch((e) => console.error(`[Sheets] ${label} failed (non-fatal):`, e && e.message));
+  }
+
   const router = express.Router();
 
   // Simple input-validation helper (per FIX 5)
@@ -308,7 +321,24 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       const orderSubtotal = typeof subtotal === 'number' && subtotal >= 0 ? subtotal : computedSubtotal;
       const orderTax = typeof tax === 'number' && tax >= 0 ? tax : 0;
       const orderTotal = typeof total === 'number' && total >= 0 ? total : orderSubtotal + orderTax;
-      const id = uuidv4();
+
+      // ── Idempotency ──────────────────────────────────────────────────────
+      // The POS retries a POST when the response times out (slow network, proxy
+      // 504, page reload). Without this, every retry inserts ANOTHER order and
+      // the kitchen board fills up with duplicates. The client sends a stable
+      // `client_order_id` per checkout; if we already stored it, return the
+      // existing order instead of creating a second one.
+      const clientOrderId = typeof req.body?.client_order_id === 'string'
+        ? req.body.client_order_id.trim()
+        : '';
+      // Gateway checkouts create a hosted PayMongo URL we cannot replay, so the
+      // duplicate short-circuit only applies to immediate (non-gateway) orders.
+      const idempotent = req.body?.use_gateway !== true;
+      const usableClientId = idempotent && /^[A-Za-z0-9_-]{1,64}$/.test(clientOrderId)
+        ? clientOrderId
+        : null;
+      const id = usableClientId || uuidv4();
+      const createdAt = Date.now();
 
       // Attribute the order to the authenticated staff member, never to a
       // client-supplied RFID that could belong to another employee.
@@ -344,6 +374,19 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
             // No order inserted yet — fail cleanly, frontend falls back to manual flow
             return res.status(502).json({ error: `PayMongo checkout failed: ${e.message}` });
           }
+        }
+      }
+
+      // Retried request? (proxy 504, offline queue, reload) — return the order
+      // we already stored instead of inserting a duplicate ticket.
+      if (usableClientId && !checkoutUrl) {
+        const [existing] = await pool.query(
+          'SELECT id, status, pay_status, subtotal, tax, total FROM orders WHERE id = ?',
+          [usableClientId]
+        );
+        if (existing[0]) {
+          console.log(`[orders:create] duplicate retry for ${usableClientId} — returning existing order`);
+          return res.json({ ...existing[0], duplicate: true });
         }
       }
 
@@ -383,13 +426,9 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         }
       }
 
-      if (googleSheets) {
-        try {
-          await googleSheets.appendOrder({ orderId: id, staffName: staff_name || '', items: itemsOut, subtotal: orderSubtotal, tax: orderTax, total: orderTotal, payMethod: pay_method, referenceNumber: reference_number, status: initialStatus });
-        } catch (e) {
-          console.error('Sheets write failed:', e.message, e.stack);
-        }
-      }
+      // Google Sheets sync is moved AFTER the response — a slow Sheets API call
+      // must never stall order creation (the POS treats a slow response as a
+      // failed order and retries it, which used to create duplicates).
 
     // Auto-deduct inventory based on recipes
     // Phase 2: gateway orders (pending_payment) are NOT deducted until the
@@ -470,7 +509,15 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       console.error('Inventory deduction error:', e);
     }
 
+    console.log(`[orders:create] ${id} ready in ${Date.now() - createdAt}ms (items=${itemsOut.length})`);
     res.json({ id, subtotal: orderSubtotal, tax: orderTax, total: orderTotal, status: initialStatus, pay_status: initialPayStatus, checkout_url: checkoutUrl });
+
+    // Sheets sync — fire-and-forget so it can never delay the POS response.
+    logToSheets('Order append', () => googleSheets.appendOrder({
+      orderId: id, staffName: staff_name || '', items: itemsOut,
+      subtotal: orderSubtotal, tax: orderTax, total: orderTotal,
+      payMethod: pay_method, referenceNumber: reference_number, status: initialStatus,
+    }));
 
     // Audit: order creation
     await logAudit(pool, req, { action: 'order_create', entityType: 'order', entityId: id, details: { type, pay_method, total: orderTotal, itemCount: itemsOut.length } });
@@ -1077,21 +1124,19 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       if (broadcastEvent) {
         broadcastEvent('order:voided', { id, reason: reason.trim(), location_id: order.location_id });
       }
-      // Log void to Google Sheets
-      if (googleSheets) {
-        try {
-          const [voidOrder] = await pool.query('SELECT total, staff_name FROM orders WHERE id = ?', [id]);
-          const [voidItems] = await pool.query('SELECT oi.menu_item_id, oi.qty, mi.name FROM order_items oi LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id WHERE oi.order_id = ?', [id]);
-          const itemList = voidItems.map(it => `${it.qty}× ${it.name || it.menu_item_id}`).join(', ') || '—';
-          await googleSheets.appendVoidRefund({
-            type: 'void', orderId: id, reason: reason.trim(),
-            staffName: voidOrder[0]?.staff_name || req.user?.name || '—',
-            total: Number(voidOrder[0]?.total || 0), items: itemList,
-          });
-        } catch (e2) { console.error('[Sheets] Void log failed (non-fatal):', e2.message); }
-      }
+      // Log void to Google Sheets — after the response, never before it
       await logAudit(pool, req, { action: 'order_void', entityType: 'order', entityId: id, details: { reason: reason.trim() } });
       res.json({ ok: true });
+      logToSheets('Void log', async () => {
+        const [voidOrder] = await pool.query('SELECT total, staff_name FROM orders WHERE id = ?', [id]);
+        const [voidItems] = await pool.query('SELECT oi.menu_item_id, oi.qty, mi.name FROM order_items oi LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id WHERE oi.order_id = ?', [id]);
+        const itemList = voidItems.map(it => `${it.qty}× ${it.name || it.menu_item_id}`).join(', ') || '—';
+        await googleSheets.appendVoidRefund({
+          type: 'void', orderId: id, reason: reason.trim(),
+          staffName: voidOrder[0]?.staff_name || req.user?.name || '—',
+          total: Number(voidOrder[0]?.total || 0), items: itemList,
+        });
+      });
     } catch (e) {
       try { await conn.rollback(); } catch (_) {}
       console.error('[order void]', e);
@@ -1141,21 +1186,19 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       if (broadcastEvent) {
         broadcastEvent('order:updated', { id, status: 'refunded', location_id: order.location_id });
       }
-      // Log refund to Google Sheets
-      if (googleSheets) {
-        try {
-          const [refundOrder] = await pool.query('SELECT total, staff_name FROM orders WHERE id = ?', [id]);
-          const [refundItems] = await pool.query('SELECT oi.menu_item_id, oi.qty, mi.name FROM order_items oi LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id WHERE oi.order_id = ?', [id]);
-          const itemList = refundItems.map(it => `${it.qty}× ${it.name || it.menu_item_id}`).join(', ') || '—';
-          await googleSheets.appendVoidRefund({
-            type: 'refund', orderId: id, reason: reason.trim(),
-            staffName: refundOrder[0]?.staff_name || req.user?.name || '—',
-            total: Number(refundOrder[0]?.total || 0), items: itemList,
-          });
-        } catch (e2) { console.error('[Sheets] Refund log failed (non-fatal):', e2.message); }
-      }
+      // Log refund to Google Sheets — after the response, never before it
       await logAudit(pool, req, { action: 'order_refund', entityType: 'order', entityId: id, details: { reason: reason.trim() } });
       res.json({ ok: true });
+      logToSheets('Refund log', async () => {
+        const [refundOrder] = await pool.query('SELECT total, staff_name FROM orders WHERE id = ?', [id]);
+        const [refundItems] = await pool.query('SELECT oi.menu_item_id, oi.qty, mi.name FROM order_items oi LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id WHERE oi.order_id = ?', [id]);
+        const itemList = refundItems.map(it => `${it.qty}× ${it.name || it.menu_item_id}`).join(', ') || '—';
+        await googleSheets.appendVoidRefund({
+          type: 'refund', orderId: id, reason: reason.trim(),
+          staffName: refundOrder[0]?.staff_name || req.user?.name || '—',
+          total: Number(refundOrder[0]?.total || 0), items: itemList,
+        });
+      });
     } catch (e) {
       try { await conn.rollback(); } catch (_) {}
       console.error('[order refund]', e);
@@ -1249,10 +1292,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       report.id = ins.insertId;
       // Audit: Z-Report generated
       await logAudit(pool, req, { action: 'z_report_generate', entityType: 'z_report', entityId: String(ins.insertId), details: { date: report.report_date, total_sales: report.total_sales } });
-      // Log Z-report to Google Sheets
-      if (googleSheets) {
-        try { await googleSheets.appendZReport(report); } catch (e2) { console.error('[Sheets] Z-report sync failed (non-fatal):', e2.message); }
-      }
+      // Log Z-report to Google Sheets (best effort — must not stall the response)
+      logToSheets('Z-report', () => googleSheets.appendZReport(report));
       // Accounting: push this day's sales summary to QuickBooks/Xero when enabled.
       // Fire-and-forget — an accounting failure must never fail the Z-Report.
       autoSyncDailySales(pool, String(report.report_date).slice(0, 10)).catch(() => {});
@@ -1345,9 +1386,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       const [rows] = await pool.query('SELECT * FROM cash_drawer WHERE id = ? AND location_id = ?', [ins.insertId, req.locationId]);
       // Audit: cash drawer opened
       await logAudit(pool, req, { action: 'cash_drawer_open', entityType: 'cash_drawer', entityId: String(ins.insertId), details: { shift_date: today, opening_float: Number(opening_float) } });
-      if (googleSheets) {
-        try { await googleSheets.appendCashDrawerEvent({ type: 'drawer_open', shiftDate: today, amount: opening_float, staffName: req.user?.name, reason: 'Shift opened', details: `Float: ₱${Number(opening_float).toFixed(2)}` }); } catch (e2) { console.error('[Sheets] Drawer open log failed (non-fatal):', e2.message); }
-      }
+      logToSheets('Drawer open', () => googleSheets.appendCashDrawerEvent({ type: 'drawer_open', shiftDate: today, amount: opening_float, staffName: req.user?.name, reason: 'Shift opened', details: `Float: ₱${Number(opening_float).toFixed(2)}` }));
       res.json(rows[0]);
     } catch (e) {
       console.error(e);
@@ -1382,8 +1421,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
       if (action === 'close') {
         await logAudit(pool, req, { action: 'cash_drawer_close', entityType: 'cash_drawer', entityId: id, details: { closing_amount: closing, expected, variance, shift_date: drawer.shift_date } });
       }
-      if (googleSheets && action === 'close') {
-        try { await googleSheets.appendCashDrawerEvent({ type: 'drawer_close', shiftDate: drawer.shift_date, amount: closing, staffName: req.user?.name, reason: notes || 'Shift closed', details: `Variance: ₱${variance.toFixed(2)}` }); } catch (e2) { console.error('[Sheets] Drawer close log failed (non-fatal):', e2.message); }
+      if (action === 'close') {
+        logToSheets('Drawer close', () => googleSheets.appendCashDrawerEvent({ type: 'drawer_close', shiftDate: drawer.shift_date, amount: closing, staffName: req.user?.name, reason: notes || 'Shift closed', details: `Variance: ₱${variance.toFixed(2)}` }));
       }
       res.json(updated[0]);
     } catch (e) {
@@ -1458,16 +1497,12 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         [drawer.id]
       );
 
-      // Log cash in/out to Google Sheets
-      if (googleSheets) {
-        try {
-          await googleSheets.appendCashDrawerEvent({
-            type: transaction_type === 'cash_in' ? 'cash_in' : 'cash_out',
-            shiftDate: today, amount, staffName: staff_name || req.user?.name,
-            reason: reason || '—', details: `Balance: ₱${balanceAfter.toFixed(2)}`,
-          });
-        } catch (e2) { console.error('[Sheets] Cash transaction log failed (non-fatal):', e2.message); }
-      }
+      // Log cash in/out to Google Sheets (best effort — must not stall the response)
+      logToSheets('Cash transaction', () => googleSheets.appendCashDrawerEvent({
+        type: transaction_type === 'cash_in' ? 'cash_in' : 'cash_out',
+        shiftDate: today, amount, staffName: staff_name || req.user?.name,
+        reason: reason || '—', details: `Balance: ₱${balanceAfter.toFixed(2)}`,
+      }));
 
       res.json(rows[0]);
     } catch (e) {

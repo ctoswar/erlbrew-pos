@@ -33,6 +33,31 @@ async function removeFromQueue(localId: string) {
   await removeOfflineOrder(localId);
 }
 
+/**
+ * Stable id for one checkout attempt. The backend uses it to make POST /orders
+ * idempotent, so a retried request (offline queue, timeout, page reload) returns
+ * the order that was already stored instead of creating another one.
+ */
+function newClientOrderId(): string {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch { /* unsupported — fall through */ }
+  return `co-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+/** Keep only the first order per id (remapping a local id can collide with a
+ *  copy that already arrived from the server sync). */
+function dedupeById(list: Order[]): Order[] {
+  const seen = new Set<string>();
+  return list.filter((o) => {
+    if (seen.has(o.id)) return false;
+    seen.add(o.id);
+    return true;
+  });
+}
+
 // Raw server order item shape (snake_case fields from DB/API)
 interface ServerOrderItem {
   menu_item_id?: string;
@@ -169,25 +194,34 @@ export function useOrders() {
   const pendingLocalRef = useRef<Map<string, { createdAt: number; items: string; total: number }>>(new Map());
 
   // Retry pending offline orders
+  const retryInFlightRef = useRef(false);
   const retryPending = useCallback(async () => {
-    const queue = await readQueue();
-    const token = getAuthToken();
-    if (queue.length === 0 || !token) return;
+    // Never run two retries at once — overlapping runs re-posted the same
+    // queued payload and created duplicate orders on the server.
+    if (retryInFlightRef.current) return;
+    retryInFlightRef.current = true;
+    try {
+      const queue = await readQueue();
+      const token = getAuthToken();
+      if (queue.length === 0 || !token) return;
 
-    for (const pending of queue) {
-      try {
-        const data = await apiAdminPost<{ id?: string }>('/orders', pending.payload);
-        setOrders((prev) =>
-          prev.map((o) => (o.id === pending.id ? { ...o, id: data.id || o.id } : o))
-        );
-        await removeFromQueue(pending.id);
-      } catch (err) {
-        console.error(`[useOrders] Retry failed for queued order ${pending.id}:`, err);
-        // Still offline — leave in queue
+      for (const pending of queue) {
+        try {
+          const data = await apiAdminPost<{ id?: string }>('/orders', pending.payload);
+          setOrders((prev) => dedupeById(
+            prev.map((o) => (o.id === pending.id ? { ...o, id: data.id || o.id } : o))
+          ));
+          await removeFromQueue(pending.id);
+        } catch (err) {
+          console.error(`[useOrders] Retry failed for queued order ${pending.id}:`, err);
+          // Still offline — leave in queue
+        }
       }
+      const updatedQueue = await readQueue();
+      setPendingCount(updatedQueue.length);
+    } finally {
+      retryInFlightRef.current = false;
     }
-    const updatedQueue = await readQueue();
-    setPendingCount(updatedQueue.length);
   }, []);
 
   // Sync today's orders from backend on mount (once)
@@ -301,6 +335,7 @@ export function useOrders() {
         size: ci.selectedSize?.label || undefined,
       }));
       const payload: Record<string, unknown> = {
+        client_order_id: newClientOrderId(),
         staff_id: staff ? staff.rfid : undefined,
         staff_name: staff?.name,
         location_id: currentLocationId,
@@ -359,7 +394,7 @@ export function useOrders() {
         apiAdminPost<{ id?: string; subtotal?: number; tax?: number; total?: number }>('/orders', payload).then((data) => {
           // Remove pending entry since we're mapping the ID now
           pendingLocalRef.current.delete(localOrder.id);
-          setOrders((prev) =>
+          setOrders((prev) => dedupeById(
             prev.map((o) => {
               if (o.id !== localOrder.id) return o;
               return {
@@ -370,7 +405,7 @@ export function useOrders() {
                 total: data.total ?? o.total,
               };
             })
-          );
+          ));
         }).catch(async (err) => {
           console.error(`[useOrders] Failed to persist order ${localOrder.id} to server (admin):`, err);
           console.error('[useOrders] Order payload:', JSON.stringify(payload));
@@ -382,7 +417,7 @@ export function useOrders() {
         // Fallback: try without auth (will fail if server requires auth)
         apiPost<{ id?: string; subtotal?: number; tax?: number; total?: number }>('/orders', payload).then((data) => {
           pendingLocalRef.current.delete(localOrder.id);
-          setOrders((prev) =>
+          setOrders((prev) => dedupeById(
             prev.map((o) => {
               if (o.id !== localOrder.id) return o;
               return {
@@ -393,7 +428,7 @@ export function useOrders() {
                 total: data.total ?? o.total,
               };
             })
-          );
+          ));
         }).catch(async (err) => {
           console.error(`[useOrders] Failed to persist order ${localOrder.id} to server (fallback):`, err);
           console.error('[useOrders] Order payload:', JSON.stringify(payload));

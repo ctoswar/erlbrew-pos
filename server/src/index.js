@@ -150,6 +150,17 @@ app.use('/api/webhooks', webhooksRouter(pool, broadcastEvent));
 // Global JSON body parser (registered after webhooks so raw body is preserved there)
 app.use(express.json({ limit: '10mb' }));
 
+// Surface slow API calls. A stalled handler makes the POS proxy return 504,
+// the client treats it as a failed order and retries → duplicate kitchen tickets.
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    const ms = Date.now() - startedAt;
+    if (ms >= 2000) console.warn(`[slow] ${req.method} ${req.originalUrl} ${ms}ms → ${res.statusCode}`);
+  });
+  next();
+});
+
 // Print server URL resolver: env var › DB company_settings
 function normalizePrintServerUrl(url) {
   if (!url) return null;
@@ -560,6 +571,37 @@ await pool.query(`
     await pool.query('ALTER TABLE recipes ADD UNIQUE KEY unique_recipe (menu_item_id, size_id, inventory_item_id)').catch(() => {});
     await pool.query('ALTER TABLE recipes ADD INDEX idx_recipe_size (menu_item_id, size_id)').catch(() => {});
     await pool.query(`ALTER TABLE order_items ADD COLUMN size VARCHAR(64) DEFAULT NULL AFTER price`).catch(() => {});
+
+    // ── Collation self-heal ────────────────────────────────────────────────
+    // Tables created before the schema default changed kept utf8mb4_unicode_ci
+    // while the rest of the schema is utf8mb4_0900_ai_ci. Joining a column with
+    // an implicit unicode_ci collation to one with 0900_ai_ci throws
+    // ER_CANT_AGGREGATE_2COLLATIONS (errno 1267) — this broke the COGS report,
+    // the inventory deduction on every order, and (indirectly) duplicated
+    // kitchen tickets when the POS retried requests that timed out.
+    try {
+      const [[dbInfo]] = await pool.query('SELECT DATABASE() AS name');
+      if (dbInfo && dbInfo.name) {
+        await pool.query(
+          `ALTER DATABASE \`${dbInfo.name}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci`
+        );
+      }
+      const [mismatched] = await pool.query(
+        `SELECT TABLE_NAME, TABLE_ROWS FROM information_schema.TABLES
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_COLLATION <> 'utf8mb4_0900_ai_ci'`
+      );
+      for (const row of mismatched) {
+        const statement = `ALTER TABLE \`${row.TABLE_NAME}\` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci`;
+        if (Number(row.TABLE_ROWS) > 500000) {
+          console.warn(`[migration] ${row.TABLE_NAME} has a mismatched collation and is too large to rebuild on boot — run manually:\n  ${statement}`);
+          continue;
+        }
+        console.warn(`[migration] normalizing collation of ${row.TABLE_NAME}`);
+        await pool.query(statement);
+      }
+    } catch (e) {
+      console.error('[migration] collation normalize failed:', e.message);
+    }
 
     // ── Accounting integration (Roadmap → Phase 2) ─────────────────────────
     // Dedupe ledger: one row per (provider, sync_type, period). UNIQUE key is

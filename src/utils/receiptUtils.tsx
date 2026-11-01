@@ -67,6 +67,38 @@ export function getStoreInfo(): StoreInfo {
   return loadCompanySettings();
 }
 
+/** Split-bill orders are stored as payMethod 'cash' with the e-wallet leg
+ *  encoded in referenceNumber as `SPLIT:₱<amount>-<reference>`. */
+const SPLIT_REF_RE = /^SPLIT:₱?(\d+(?:\.\d+)?)-(.+)$/;
+
+export interface SplitPayment {
+  ewalletAmount: number;
+  reference: string;
+}
+
+/** Returns the decoded split-bill details, or null when the order isn't a split. */
+export function parseSplitPayment(order: Order): SplitPayment | null {
+  const m = SPLIT_REF_RE.exec(order.referenceNumber || "");
+  if (!m) return null;
+  const ewalletAmount = parseFloat(m[1]);
+  if (!isFinite(ewalletAmount) || ewalletAmount <= 0) return null;
+  return { ewalletAmount, reference: m[2].trim() };
+}
+
+/** Amount still due in cash — the e-wallet leg is subtracted for split orders. */
+export function getCashDue(order: Order): number {
+  const split = parseSplitPayment(order);
+  return split ? Math.max(0, order.total - split.ewalletAmount) : order.total;
+}
+
+export function getPaymentLabel(order: Order): string {
+  if (parseSplitPayment(order)) return "SPLIT (CASH+E-WALLET)";
+  return order.payMethod === "cash" ? "CASH"
+    : order.payMethod === "card" ? "CARD"
+    : order.payMethod === "delivery" ? "DELIVERY"
+    : "E-WALLET";
+}
+
 const MONO = "'Courier New', 'Lucida Console', monospace";
 
 export function buildReceiptLines(order: Order, settings: PrintSettings, discountAmount?: number, discountLabel?: string): string[] {
@@ -162,14 +194,18 @@ export function buildReceiptLines(order: Order, settings: PrintSettings, discoun
   lines.push(ln("="));
 
   // 6. Payment
-  const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : order.payMethod === "delivery" ? "DELIVERY" : "E-WALLET";
-  lines.push(`Payment : ${payLabel}`);
-  if (order.payMethod === "ewallet" && order.referenceNumber) {
+  const split = parseSplitPayment(order);
+  lines.push(`Payment : ${getPaymentLabel(order)}`);
+  if (split) {
+    lines.push(`${padRight("E-Wallet:", W - 9)}${padLeft(formatCurrency(split.ewalletAmount).replace("₱", "").trim(), 9)}`);
+    lines.push(`Ref No  : ${split.reference}`);
+    lines.push(`${padRight("Cash due:", W - 9)}${padLeft(formatCurrency(getCashDue(order)).replace("₱", "").trim(), 9)}`);
+  } else if (order.payMethod === "ewallet" && order.referenceNumber) {
     lines.push(`Ref No  : ${order.referenceNumber}`);
   }
   if (order.payMethod === "cash" && order.cashTendered) {
     lines.push(`${padRight("Tendered:", W - 9)}${padLeft(formatCurrency(order.cashTendered).replace("₱", "").trim(), 9)}`);
-    lines.push(`${padRight("Change:", W - 9)}${padLeft(formatCurrency(order.cashTendered - order.total).replace("₱", "").trim(), 9)}`);
+    lines.push(`${padRight("Change:", W - 9)}${padLeft(formatCurrency(order.cashTendered - getCashDue(order)).replace("₱", "").trim(), 9)}`);
   }
 
   // 7. WiFi Info (optional)

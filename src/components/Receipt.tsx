@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import { Order, CartItem } from "../types";
 import { formatCurrency } from "../utils";
-import { getStoreInfo } from "../utils/receiptUtils";
+import { getStoreInfo, parseSplitPayment, getCashDue, getPaymentLabel } from "../utils/receiptUtils";
 import { loadPrintSettings } from "./AdminPrintSettings";
 
 interface Props {
@@ -119,24 +119,29 @@ export const Receipt: React.FC<Props> = ({ order, onPrint }) => {
   lines.push(ln("-"));
 
   // 5. Totals
-  lines.push(`${padRight("Subtotal:", 22)}${padLeft(formatCurrency(subtotal).replace("₱","").trim(), 9)}`);
+  lines.push(`${padRight("Subtotal:", W - 9)}${padLeft(formatCurrency(subtotal).replace("₱","").trim(), 9)}`);
   if (order.discount && order.discount.amount > 0) {
-    lines.push(`${padRight(order.discount.label + ":", 22)}${padLeft("-" + formatCurrency(order.discount.amount).replace("₱","").trim(), 9)}`);
+    lines.push(`${padRight(order.discount.label + ":", W - 9)}${padLeft("-" + formatCurrency(order.discount.amount).replace("₱","").trim(), 9)}`);
   }
   lines.push(ln("="));
-  lines.push(`${padRight("TOTAL DUE:", 22)}${padLeft(formatCurrency(total).replace("₱","").trim(), 9)}`);
+  lines.push(`${padRight("TOTAL DUE:", W - 9)}${padLeft(formatCurrency(total).replace("₱","").trim(), 9)}`);
   lines.push(ln("="));
 
   // 6. Payment
-  const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : order.payMethod === "delivery" ? "DELIVERY" : "E-WALLET";
-  lines.push(`Payment : ${payLabel}`);
-  if (order.payMethod === "ewallet" && order.referenceNumber) {
+  const split = parseSplitPayment(order);
+  const cashDue = getCashDue(order);
+  lines.push(`Payment : ${getPaymentLabel(order)}`);
+  if (split) {
+    lines.push(`${padRight("E-Wallet:", W - 9)}${padLeft(formatCurrency(split.ewalletAmount).replace("₱", "").trim(), 9)}`);
+    lines.push(`Ref No  : ${split.reference}`);
+    lines.push(`${padRight("Cash due:", W - 9)}${padLeft(formatCurrency(cashDue).replace("₱", "").trim(), 9)}`);
+  } else if (order.payMethod === "ewallet" && order.referenceNumber) {
     lines.push(`Ref No  : ${order.referenceNumber}`);
   }
   if (order.payMethod === "cash" && order.cashTendered) {
     const tendered = order.cashTendered;
-    lines.push(`${padRight("Tendered:", 22)}${padLeft(formatCurrency(tendered).replace("₱","").trim(), 9)}`);
-    lines.push(`${padRight("Change:", 22)}${padLeft(formatCurrency(tendered - total).replace("₱","").trim(), 9)}`);
+    lines.push(`${padRight("Tendered:", W - 9)}${padLeft(formatCurrency(tendered).replace("₱","").trim(), 9)}`);
+    lines.push(`${padRight("Change:", W - 9)}${padLeft(formatCurrency(tendered - cashDue).replace("₱","").trim(), 9)}`);
   }
 
   // 7. WiFi Info (optional)

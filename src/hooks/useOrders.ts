@@ -353,8 +353,9 @@ export function useOrders() {
         payload.subtotal = subtotal;
         payload.total = total;
       }
-      // Add reference number for e-wallet payments
-      if (payMethod === 'ewallet' && referenceNumber) {
+      // Reference number: e-wallet ref, or the encoded split-bill payload
+      // (split orders are created as pay_method 'cash' — see PaymentScreen).
+      if (referenceNumber) {
         payload.reference_number = referenceNumber;
       }
       console.log('[DEBUG useOrders] payload to send:', JSON.stringify(payload));

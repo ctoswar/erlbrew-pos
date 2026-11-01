@@ -80,6 +80,16 @@ async function ensureDashboardExists(sheets, spreadsheetId) {
 
 function fmt(n) { return Number(n || 0); }
 
+/** Split-bill orders store `SPLIT:<amount>-<ref>` in reference_number (cash
+ *  order carrying an e-wallet leg). Show the readable reference, not the tag. */
+function formatRefNo(referenceNumber) {
+  const raw = String(referenceNumber || '').trim();
+  if (!raw) return '—';
+  const m = /^SPLIT:₱?(\d+(?:\.\d+)?)-(.+)$/.exec(raw);
+  if (m) return `SPLIT ₱${Number(m[1]).toFixed(2)} / ${m[2].trim()}`;
+  return raw;
+}
+
 export function googleSheetsClientInit(pool) {
   const keyEnv = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   let keyObj = null;
@@ -140,7 +150,7 @@ export function googleSheetsClientInit(pool) {
         `₱${Number(tax).toFixed(2)}`,
         `₱${Number(total).toFixed(2)}`,
         payMethod,
-        referenceNumber || '—',
+        formatRefNo(referenceNumber),
         status,
       ];
 
@@ -278,7 +288,7 @@ export function googleSheetsClientInit(pool) {
           fmt(o.tax).toFixed(2),
           fmt(o.total).toFixed(2),
           o.payMethod || '—',
-          o.referenceNumber || '—',
+          formatRefNo(o.referenceNumber),
           o.status || '—',
         ]);
       });

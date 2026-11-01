@@ -3,6 +3,7 @@ import { Order, CartItem, DiscountType } from "../types";
 import { buildDailySummary, formatCurrency, formatTime, toLocalDateStr } from "../utils";
 import { apiAdminGet, apiAdminPost, apiGet, resetCogs, resetInventoryCosts } from "../utils/api";
 import { ReceiptPreview } from "./ReceiptPreview";
+import { parseSplitPayment } from "../utils/receiptUtils";
 import { AnimatedDatePicker } from "./AnimatedDatePicker";
 import { useLocation } from "../contexts/LocationContext";
 
@@ -399,7 +400,11 @@ export const Dashboard: React.FC<Props> = ({ orders, staffName, onRepeatOrder })
                   <td className="py-1 pr-1.5 text-erl-text-muted text-[9px] tabular-nums">{o.items.reduce((s, ci) => s + (ci?.qty ?? 0), 0)}</td>
                   <td className="py-1 pr-1.5 text-erl-accent font-semibold tabular-nums text-[9px]">{formatCurrency(o.total)}</td>
                   <td className="py-1 pr-1.5 text-erl-text-muted text-[8px]">
-                    {o.payMethod === 'ewallet' && o.referenceNumber ? <span className="text-erl-accent font-medium">{o.referenceNumber}</span> : '—'}
+                    {(() => {
+                      const split = parseSplitPayment(o);
+                      const ref = split ? split.reference : (o.payMethod === 'ewallet' ? o.referenceNumber : undefined);
+                      return ref ? <span className="text-erl-accent font-medium">{ref}</span> : '—';
+                    })()}
                   </td>
                   <td className="py-1 pr-0">
                     <span className={`pill text-[7px] py-0.5 px-1.5 ${o.status === "completed" ? "pill-success" : o.status === "ready" ? "pill-gold" : "pill-muted"}`}>{o.status}</span>

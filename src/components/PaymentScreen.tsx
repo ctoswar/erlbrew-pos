@@ -58,10 +58,13 @@ export const PaymentScreen: React.FC<Props> = ({
   const printSettings = loadPrintSettings();
 
   const cash = parseFloat(cashGiven) || 0;
-  const change = cash - total;
   const quickAmounts = getQuickCashAmounts(total);
   const splitEwalletNum = parseFloat(splitEwallet) || 0;
   const splitCashNeeded = total - splitEwalletNum;
+  // In split mode only the cash leg is settled here, so change is measured
+  // against the cash due — not the full bill.
+  const cashDue = splitMode ? Math.max(0, splitCashNeeded) : total;
+  const change = cash - cashDue;
   // Gateway applies to single card/e-wallet payments when PayMongo is on
   const useGateway = !!gatewayEnabled && !splitMode && (method === "card" || method === "ewallet");
   const canConfirm = splitMode
@@ -134,7 +137,7 @@ export const PaymentScreen: React.FC<Props> = ({
 
   const handleConfirm = () => {
     if (splitMode) {
-      onConfirm("cash", parseFloat(cashGiven) || 0, `SPLIT:₱${splitEwalletNum.toFixed(0)}-${splitRef}`);
+      onConfirm("cash", parseFloat(cashGiven) || 0, `SPLIT:₱${splitEwalletNum.toFixed(2)}-${splitRef.trim()}`);
     } else if (useGateway) {
       startGateway();
     } else {
@@ -257,7 +260,7 @@ export const PaymentScreen: React.FC<Props> = ({
         )}
 
         {/* Cash Panel */}
-        {method === "cash" && (
+        {(method === "cash" || splitMode) && (
           <div className="mb-6">
             <div className="text-[10px] text-erl-text-muted tracking-[4px] uppercase mb-3 font-bold">Cash Tendered</div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-3">
@@ -272,22 +275,22 @@ export const PaymentScreen: React.FC<Props> = ({
               ))}
             </div>
             <input type="number" value={cashGiven} onChange={(e) => setCashGiven(e.target.value)} placeholder="Or enter amount" className="mb-3 min-h-[44px]" />
-            {cashGiven && cash >= total && (
+            {cashGiven && cash >= cashDue && (
               <div className="bg-erl-success/[0.05] border border-erl-success/20 rounded-2xl py-5 px-5 text-center">
                 <div className="text-[10px] text-erl-success tracking-[4px] uppercase mb-2 font-bold">Change</div>
                 <div className="font-display text-[28px] sm:text-[32px] md:text-[36px] font-bold text-erl-success tracking-tight">{formatCurrency(change)}</div>
               </div>
             )}
-            {cashGiven && cash < total && (
+            {cashGiven && cash < cashDue && (
               <div className="bg-erl-danger/[0.05] border border-erl-danger/20 rounded-2xl py-4 px-4 text-center">
-                <div className="text-sm text-erl-danger font-semibold">Short by {formatCurrency(total - cash)}</div>
+                <div className="text-sm text-erl-danger font-semibold">Short by {formatCurrency(cashDue - cash)}</div>
               </div>
             )}
           </div>
         )}
 
         {/* Card Panel */}
-        {method === "card" && (
+        {!splitMode && method === "card" && (
           useGateway ? (
             <div className="text-center py-6 mb-6 bg-erl-accent/[0.03] rounded-2xl border border-erl-accent/[0.08]">
               <div className="text-base text-erl-text-primary font-semibold mb-1">PayMongo Checkout</div>
@@ -305,7 +308,7 @@ export const PaymentScreen: React.FC<Props> = ({
         )}
 
         {/* E-Wallet Panel */}
-        {method === "ewallet" && !useGateway && (
+        {!splitMode && method === "ewallet" && !useGateway && (
           <div className="mb-6">
             <div className="bg-erl-accent/[0.03] rounded-2xl p-6 mb-4 text-center border border-erl-accent/[0.06]">
               <div className="text-[10px] text-erl-text-muted tracking-[4px] uppercase mb-3 font-bold">GCash Reference</div>
@@ -330,7 +333,7 @@ export const PaymentScreen: React.FC<Props> = ({
         )}
 
         {/* E-Wallet via gateway */}
-        {method === "ewallet" && useGateway && (
+        {!splitMode && method === "ewallet" && useGateway && (
           <div className="text-center py-6 mb-6 bg-erl-accent/[0.03] rounded-2xl border border-erl-accent/[0.08]">
             <div className="text-base text-erl-text-primary font-semibold mb-1">GCash · Maya · QR Ph via PayMongo</div>
             <div className="text-sm text-erl-text-muted leading-relaxed">Confirm to generate a QR code / payment link<br />Order enters the kitchen once paid</div>
@@ -383,14 +386,16 @@ export const PaymentScreen: React.FC<Props> = ({
           disabled={!canConfirm || !canConfirmEwallet}
         >
           {splitMode
-            ? `Split (₱${splitEwalletNum.toFixed(0)} GCash + ₱${Math.max(0, splitCashNeeded).toFixed(0)} Cash)`
+            ? `Split (₱${splitEwalletNum.toFixed(2)} E-Wallet + ₱${Math.max(0, splitCashNeeded).toFixed(2)} Cash)`
             : useGateway
               ? "Create Payment QR / Link ✓"
               : "Confirm & Place Order ✓"}
         </button>
         <div className="text-center mt-3">
           <span className="text-[10px] text-erl-text-faint tracking-wide font-medium">
-            {method === "cash" ? `Change: ${formatCurrency(change)}` : useGateway ? "Scan with GCash / Maya / any bank app" : method === "card" ? "Present card" : "Pay via GCash"}
+            {splitMode
+              ? `Cash due: ${formatCurrency(cashDue)}${cash > 0 ? ` · Change: ${formatCurrency(change)}` : ""}`
+              : method === "cash" ? `Change: ${formatCurrency(change)}` : useGateway ? "Scan with GCash / Maya / any bank app" : method === "card" ? "Present card" : "Pay via GCash"}
           </span>
         </div>
       </div>

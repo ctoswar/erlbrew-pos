@@ -3,7 +3,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { Order } from "../types";
 import { formatCurrency } from "../utils";
 import { loadPrintSettings, PrintSettings } from "./AdminPrintSettings";
-import { openPrintWindow, printViaBluetooth, getStoreInfo } from "../utils/receiptUtils";
+import { openPrintWindow, printViaBluetooth, getStoreInfo, parseSplitPayment, getCashDue, getPaymentLabel } from "../utils/receiptUtils";
 
 interface Props {
   order: Order;
@@ -20,7 +20,9 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
   const dateStr = now.toLocaleDateString("en-PH", { month: "short", day: "2-digit", year: "numeric" });
   const timeStr = now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-  const payLabel = order.payMethod === "cash" ? "CASH" : order.payMethod === "card" ? "CARD" : order.payMethod === "delivery" ? "DELIVERY" : "E-WALLET";
+  const payLabel = getPaymentLabel(order);
+  const split = parseSplitPayment(order);
+  const cashDue = getCashDue(order);
 
   const handlePrint = async () => {
     setPrintError("");
@@ -196,13 +198,20 @@ export const ReceiptPreview: React.FC<Props> = ({ order, onClose }) => {
             {/* 6. Payment */}
             <div className="text-[10px] mb-1.5">
               <div>Payment : {payLabel}</div>
-              {order.payMethod === "ewallet" && order.referenceNumber && (
+              {split && (
+                <>
+                  <div>E-Wallet: {formatCurrency(split.ewalletAmount)}</div>
+                  <div>Ref No  : {split.reference}</div>
+                  <div>Cash due: {formatCurrency(cashDue)}</div>
+                </>
+              )}
+              {!split && order.payMethod === "ewallet" && order.referenceNumber && (
                 <div>Ref No  : {order.referenceNumber}</div>
               )}
               {order.payMethod === "cash" && order.cashTendered && (
                 <>
                   <div>Tendered: {formatCurrency(order.cashTendered)}</div>
-                  <div>Change  : {formatCurrency(order.cashTendered - order.total)}</div>
+                  <div>Change  : {formatCurrency(order.cashTendered - cashDue)}</div>
                 </>
               )}
             </div>

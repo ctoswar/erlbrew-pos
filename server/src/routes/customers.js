@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { getApps, getApp, initializeApp, cert } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { customerAuthMiddleware } from '../middleware/customerAuth.js';
 import { logAudit } from '../services/audit.js';
@@ -8,6 +10,25 @@ import { locationScope, scopedLocationCondition } from '../middleware/location.j
 
 export default function customersRouter(pool) {
   const router = Router();
+  let firebaseApp;
+  if (getApps().length) {
+    firebaseApp = getApp();
+  } else {
+    let serviceAccount = null;
+    try {
+      serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+        ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+        : process.env.GOOGLE_SERVICE_ACCOUNT_KEY
+          ? JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY)
+          : null;
+    } catch {
+      serviceAccount = null;
+    }
+    firebaseApp = serviceAccount
+      ? initializeApp({ credential: cert(serviceAccount) })
+      : initializeApp();
+  }
+  const firebaseAuth = getAuth(firebaseApp);
 
   // GET /api/customers — list/search customers
   router.get('/', authMiddleware, async (req, res) => {
@@ -85,12 +106,13 @@ export default function customersRouter(pool) {
 
   // POST /api/customers/login — Customer login (supports phone or email)
   router.post('/login', async (req, res) => {
-    const { phone, password } = req.body;
-    if (!phone || !password) {
+    const { email, phone, password } = req.body;
+    const identifierValue = email || phone;
+    if (!identifierValue || !password) {
       return res.status(400).json({ error: 'phone/email and password are required' });
     }
     try {
-      const identifier = phone.trim();
+      const identifier = identifierValue.trim();
       const isEmail = identifier.includes('@');
       // Lookup by phone or email
       const query = isEmail
@@ -119,6 +141,46 @@ export default function customersRouter(pool) {
     } catch (e) {
       console.error('Customer login error:', e);
       res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // POST /api/customers/firebase-login — Exchange a Firebase customer token for a POS session
+  router.post('/firebase-login', async (req, res) => {
+    const idToken = typeof req.body?.idToken === 'string'
+      ? req.body.idToken.trim()
+      : '';
+    if (!idToken) {
+      return res.status(400).json({ error: 'Firebase ID token is required' });
+    }
+    try {
+      const decoded = await firebaseAuth.verifyIdToken(idToken);
+      const email = String(decoded.email || '').trim().toLowerCase();
+      if (!email) {
+        return res.status(401).json({ error: 'A verified customer email is required' });
+      }
+      const [rows] = await pool.query(
+        'SELECT id, phone, name, email, loyalty_points, loyalty_tier, total_orders, total_spent, created_at FROM customers WHERE LOWER(email) = ? LIMIT 1',
+        [email]
+      );
+      if (!rows.length) {
+        return res.status(404).json({ error: 'Customer profile not found' });
+      }
+      const customer = rows[0];
+      const token = jwt.sign(
+        { sub: customer.id, phone: customer.phone, name: customer.name || '', customer: true },
+        process.env.JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+      await logAudit(pool, req, {
+        action: 'customer_login',
+        entityType: 'customer',
+        entityId: String(customer.id),
+        details: { method: 'firebase_email', email },
+      });
+      return res.json({ token, customer });
+    } catch (e) {
+      console.error('Firebase customer login error:', e.message);
+      return res.status(401).json({ error: 'Invalid Firebase credentials' });
     }
   });
 

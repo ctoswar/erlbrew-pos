@@ -39,6 +39,11 @@ class FirebaseAuthService {
 
   String? get currentUserId => _auth?.currentUser?.uid;
 
+  Future<String?> getIdToken() async {
+    await _ensureReady();
+    return _auth!.currentUser?.getIdToken();
+  }
+
   Future<AppUser> signInWithEmailPassword({
     required String email,
     required String password,
@@ -49,13 +54,17 @@ class FirebaseAuthService {
     try {
       final credential = await _auth!.signInWithEmailAndPassword(
         email: email.trim(),
-        password: password.trim(),
+        password: password,
       );
 
-      final userDoc = await _firestore!.collection('users').doc(credential.user!.uid).get();
+      final userDoc =
+          await _firestore!.collection('users').doc(credential.user!.uid).get();
       final profile = userDoc.data() ?? <String, dynamic>{};
-      final storedRole = (profile['role'] ?? (profile['isAdmin'] == true ? 'admin' : 'customer')).toString();
-      final isAdminAccount = profile['isAdmin'] == true || storedRole == 'admin';
+      final storedRole = (profile['role'] ??
+              (profile['isAdmin'] == true ? 'admin' : 'customer'))
+          .toString();
+      final isAdminAccount =
+          profile['isAdmin'] == true || storedRole == 'admin';
 
       if (isAdmin && !isAdminAccount) {
         await _auth!.signOut();
@@ -75,7 +84,8 @@ class FirebaseAuthService {
 
       final currentUser = AppUser.fromMap(credential.user!.uid, {
         ...profile,
-        'name': profile['name'] ?? credential.user!.displayName ?? 'Erlbrew User',
+        'name':
+            profile['name'] ?? credential.user!.displayName ?? 'Erlbrew User',
         'email': profile['email'] ?? credential.user!.email ?? email,
         'role': storedRole,
         'isAdmin': isAdminAccount,
@@ -131,6 +141,30 @@ class FirebaseAuthService {
   Future<void> signOut() async {
     await _ensureReady();
     await _auth!.signOut();
+  }
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _ensureReady();
+    await _auth!.sendPasswordResetEmail(email: email.trim());
+  }
+
+  Future<void> sendEmailVerification() async {
+    await _ensureReady();
+    final user = _auth!.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'not-authenticated',
+        message: 'Your account could not be verified yet.',
+      );
+    }
+    if (!user.emailVerified) {
+      await user.sendEmailVerification();
+    }
+  }
+
+  Future<ConfirmationResult> sendPhoneOtp(String phoneNumber) async {
+    await _ensureReady();
+    return _auth!.signInWithPhoneNumber(phoneNumber.trim());
   }
 
   Future<void> updateDisplayName(String name) async {
@@ -240,17 +274,21 @@ class FirebaseAuthService {
   Stream<DocumentSnapshot<Map<String, dynamic>>> customerProfileStream(
     String customerId,
   ) {
-    return FirebaseFirestore.instance.collection('users').doc(customerId).snapshots();
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(customerId)
+        .snapshots();
   }
 
   Stream<List<AppUser>> adminCustomersStream() {
     return FirebaseFirestore.instance.collection('users').snapshots().map(
-      (snapshot) => snapshot.docs
-          .map((doc) => AppUser.fromMap(doc.id, doc.data()))
-          .where((user) => !user.isAdmin)
-          .toList()
-        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())),
-    );
+          (snapshot) => snapshot.docs
+              .map((doc) => AppUser.fromMap(doc.id, doc.data()))
+              .where((user) => !user.isAdmin)
+              .toList()
+            ..sort(
+                (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())),
+        );
   }
 
   Stream<List<PickupOrder>> adminOrdersStream() {
@@ -258,7 +296,8 @@ class FirebaseAuthService {
         .collection('orders')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map(_pickupOrderFromDocument).toList());
+        .map(
+            (snapshot) => snapshot.docs.map(_pickupOrderFromDocument).toList());
   }
 
   Stream<List<PickupOrder>> customerOrdersStream(String customerId) {
@@ -267,11 +306,10 @@ class FirebaseAuthService {
         .where('userId', isEqualTo: customerId)
         .snapshots()
         .map((snapshot) {
-          final orders =
-              snapshot.docs.map(_pickupOrderFromDocument).toList();
-          orders.sort((a, b) => b.placedAt.compareTo(a.placedAt));
-          return orders;
-        });
+      final orders = snapshot.docs.map(_pickupOrderFromDocument).toList();
+      orders.sort((a, b) => b.placedAt.compareTo(a.placedAt));
+      return orders;
+    });
   }
 
   PickupOrder _pickupOrderFromDocument(

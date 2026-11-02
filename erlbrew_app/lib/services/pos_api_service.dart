@@ -32,15 +32,15 @@ class PosApiService {
 
   /// HTTP headers with customer auth token
   Map<String, String> get _headers => {
-    'Content-Type': 'application/json',
-    if (_token != null) 'Authorization': 'Bearer $_token',
-  };
+        'Content-Type': 'application/json',
+        if (_token != null) 'Authorization': 'Bearer $_token',
+      };
 
   /// HTTP headers with staff/admin auth token
   Map<String, String> get _adminHeaders => {
-    'Content-Type': 'application/json',
-    if (_staffToken != null) 'Authorization': 'Bearer $_staffToken',
-  };
+        'Content-Type': 'application/json',
+        if (_staffToken != null) 'Authorization': 'Bearer $_staffToken',
+      };
 
   /// Initialize: load saved tokens and profile from SharedPreferences
   Future<void> init() async {
@@ -68,19 +68,20 @@ class PosApiService {
     _currentCustomer = customer;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('pos_token', token);
-    await prefs.setString('pos_customer', jsonEncode(_customerToJson(customer)));
+    await prefs.setString(
+        'pos_customer', jsonEncode(_customerToJson(customer)));
   }
 
   Map<String, dynamic> _customerToJson(AppUser customer) => {
-    'id': customer.id,
-    'name': customer.name,
-    'email': customer.email,
-    'points': customer.points,
-    'tier': customer.tier,
-    'totalOrders': customer.totalOrders,
-    'totalSpent': customer.totalSpent,
-    'isAdmin': customer.isAdmin,
-  };
+        'id': customer.id,
+        'name': customer.name,
+        'email': customer.email,
+        'points': customer.points,
+        'tier': customer.tier,
+        'totalOrders': customer.totalOrders,
+        'totalSpent': customer.totalSpent,
+        'isAdmin': customer.isAdmin,
+      };
 
   /// Clear saved customer session
   Future<void> logout() async {
@@ -101,11 +102,17 @@ class PosApiService {
   /// Handle API errors
   dynamic _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.trim().isEmpty) return null;
       return jsonDecode(response.body);
     }
     try {
       final body = jsonDecode(response.body);
-      throw PosApiServiceException(body['error'] ?? 'Request failed (${response.statusCode})');
+      final message = body is Map && body['error'] != null
+          ? body['error'].toString()
+          : 'Request failed (${response.statusCode})';
+      throw PosApiServiceException(message);
+    } on PosApiServiceException {
+      rethrow;
     } catch (_) {
       throw PosApiServiceException('Request failed (${response.statusCode})');
     }
@@ -132,26 +139,42 @@ class PosApiService {
     final response = await _withTimeout(http.post(
       Uri.parse('$baseUrl/api/customers/register'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'phone': phone, 'name': name, 'email': email, 'password': password}),
+      body: jsonEncode(
+          {'phone': phone, 'name': name, 'email': email, 'password': password}),
     ));
     final data = _handleResponse(response);
-    final customer = AppUser.fromMap(data['customer']['id'].toString(), data['customer']);
+    final customer =
+        AppUser.fromMap(data['customer']['id'].toString(), data['customer']);
     await _saveSession(data['token'], customer);
     return customer;
   }
 
-  /// Login with phone + password
+  /// Login with customer email + password
   Future<AppUser> login({
-    required String phone,
+    required String email,
     required String password,
   }) async {
     final response = await _withTimeout(http.post(
       Uri.parse('$baseUrl/api/customers/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'phone': phone, 'password': password}),
+      body: jsonEncode({'email': email.trim(), 'password': password}),
     ));
     final data = _handleResponse(response);
-    final customer = AppUser.fromMap(data['customer']['id'].toString(), data['customer']);
+    final customer =
+        AppUser.fromMap(data['customer']['id'].toString(), data['customer']);
+    await _saveSession(data['token'], customer);
+    return customer;
+  }
+
+  Future<AppUser> firebaseCustomerLogin(String idToken) async {
+    final response = await _withTimeout(http.post(
+      Uri.parse('$baseUrl/api/customers/firebase-login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'idToken': idToken}),
+    ));
+    final data = _handleResponse(response);
+    final customer =
+        AppUser.fromMap(data['customer']['id'].toString(), data['customer']);
     await _saveSession(data['token'], customer);
     return customer;
   }
@@ -175,6 +198,23 @@ class PosApiService {
     return data;
   }
 
+  Future<Map<String, dynamic>> firebaseStaffLogin(String idToken) async {
+    final response = await _withTimeout(http.post(
+      Uri.parse('$baseUrl/api/staff/firebase-login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'idToken': idToken}),
+    ));
+    final data = _handleResponse(response);
+    final token = data is Map ? data['token'] : null;
+    if (token is! String || token.isEmpty) {
+      throw PosApiServiceException('The staff login response was invalid.');
+    }
+    _staffToken = token;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('pos_staff_token', token);
+    return Map<String, dynamic>.from(data as Map);
+  }
+
   // ── Profile Endpoints ─────────────────────────────────────────────
 
   /// Get current customer profile from POS
@@ -188,7 +228,8 @@ class PosApiService {
     _currentCustomer = customer;
     // Update saved customer data
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('pos_customer', jsonEncode(_customerToJson(customer)));
+    await prefs.setString(
+        'pos_customer', jsonEncode(_customerToJson(customer)));
     return customer;
   }
 
@@ -230,9 +271,8 @@ class PosApiService {
     final categories = <String, List<MenuItem>>{};
     final catData = data['categories'] as Map<String, dynamic>;
     for (final entry in catData.entries) {
-      categories[entry.key] = (entry.value as List)
-          .map((item) => MenuItem.fromMap(item))
-          .toList();
+      categories[entry.key] =
+          (entry.value as List).map((item) => MenuItem.fromMap(item)).toList();
     }
     return categories;
   }
@@ -311,16 +351,19 @@ class PosApiService {
   }
 
   /// Get paginated points history
-  Future<Map<String, dynamic>> getPointsHistory({int limit = 20, int offset = 0}) async {
+  Future<Map<String, dynamic>> getPointsHistory(
+      {int limit = 20, int offset = 0}) async {
     final response = await _withTimeout(http.get(
-      Uri.parse('$baseUrl/api/customers/me/points/history?limit=$limit&offset=$offset'),
+      Uri.parse(
+          '$baseUrl/api/customers/me/points/history?limit=$limit&offset=$offset'),
       headers: _headers,
     ));
     return _handleResponse(response);
   }
 
   /// Get order history
-  Future<List<Map<String, dynamic>>> getOrderHistory({int limit = 20, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> getOrderHistory(
+      {int limit = 20, int offset = 0}) async {
     final response = await _withTimeout(http.get(
       Uri.parse('$baseUrl/api/customers/me/orders?limit=$limit&offset=$offset'),
       headers: _headers,
@@ -438,11 +481,10 @@ class PosApiService {
 
   /// List/search customers (admin)
   Future<List<AppUser>> getCustomers({String? search, int limit = 100}) async {
-    final uri = Uri.parse('$baseUrl/api/customers')
-        .replace(queryParameters: {
-          if (search != null && search.isNotEmpty) 'search': search,
-          'limit': limit.toString(),
-        });
+    final uri = Uri.parse('$baseUrl/api/customers').replace(queryParameters: {
+      if (search != null && search.isNotEmpty) 'search': search,
+      'limit': limit.toString(),
+    });
     final response = await _withTimeout(http.get(
       uri,
       headers: _adminHeaders,

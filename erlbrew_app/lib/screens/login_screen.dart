@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_models.dart';
+import '../services/firebase_auth_service.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
@@ -36,23 +38,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (trimmedEmail.isEmpty || !trimmedEmail.contains('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid email to reset your password.')),
+        const SnackBar(
+            content: Text('Enter a valid email to reset your password.')),
       );
       return;
     }
 
-    // POS backend does not support email password reset for customer accounts.
-    // Customers log in with phone + password. For now, instruct them to contact staff.
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please visit the café and ask a staff member to reset your password.'),
-      ),
-    );
+    try {
+      await FirebaseAuthService.instance.sendPasswordResetEmail(trimmedEmail);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Password reset link sent. Check your inbox.')),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? 'Unable to send reset link.')),
+      );
+    }
   }
 
   Future<void> _handleForgotPassword() async {
-    final controller = TextEditingController(text: _emailController.text.trim());
+    final controller =
+        TextEditingController(text: _emailController.text.trim());
 
     await showDialog<void>(
       context: context,
@@ -126,7 +135,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppColors.gold, width: 1.5),
+                      borderSide:
+                          const BorderSide(color: AppColors.gold, width: 1.5),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 14,
@@ -155,7 +165,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextButton.styleFrom(
                         backgroundColor: AppColors.onyx,
                         foregroundColor: AppColors.goldLight,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 18, vertical: 10),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -178,18 +189,47 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       if (_isAdmin) {
-        // Admin/staff login via POS backend
-        await PosApiService.instance.staffLogin(
-          username: _emailController.text.trim(),
+        final firebase = FirebaseAuthService.instance;
+        await firebase.signInWithEmailPassword(
+          email: _emailController.text.trim(),
           password: _passwordController.text,
+          isAdmin: true,
         );
+        final idToken = await firebase.getIdToken();
+        if (idToken == null || idToken.isEmpty) {
+          throw PosApiServiceException(
+              'Unable to create a secure staff session.');
+        }
+        await PosApiService.instance.firebaseStaffLogin(idToken);
       } else {
-        // Customer login via POS backend
-        final posService = PosApiService.instance;
-        final customer = await posService.login(
-          phone: _emailController.text,
-          password: _passwordController.text,
-        );
+        final firebase = FirebaseAuthService.instance;
+        AppUser customer;
+        try {
+          await firebase.signInWithEmailPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            isAdmin: false,
+          );
+          final idToken = await firebase.getIdToken();
+          if (idToken == null || idToken.isEmpty) {
+            throw PosApiServiceException(
+              'Unable to create a secure customer session.',
+            );
+          }
+          customer =
+              await PosApiService.instance.firebaseCustomerLogin(idToken);
+        } on FirebaseAuthException catch (error) {
+          if (error.code == 'user-not-found' ||
+              error.code == 'wrong-password' ||
+              error.code == 'invalid-credential') {
+            customer = await PosApiService.instance.login(
+              email: _emailController.text,
+              password: _passwordController.text,
+            );
+          } else {
+            rethrow;
+          }
+        }
         MockData.currentUser = customer;
       }
 
@@ -204,6 +244,25 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.message)),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      final message = switch (error.code) {
+        'invalid-email' => 'Enter a valid Firebase account email.',
+        'user-not-found' ||
+        'wrong-password' ||
+        'invalid-credential' =>
+          'The staff email or password is incorrect.',
+        'user-disabled' => 'This Firebase staff account is disabled.',
+        'too-many-requests' =>
+          'Too many sign-in attempts. Please wait and try again.',
+        'network-request-failed' =>
+          'Unable to reach Firebase. Check the internet connection.',
+        'not-admin' => 'This Firebase account does not have staff access.',
+        _ => 'Firebase sign-in failed. Check the staff account configuration.',
+      };
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
       );
     } catch (error) {
       if (!mounted) return;
@@ -226,135 +285,157 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
-          child: Column(
-            children: [
-              FadeSlideIn(child: _HeroPanel(isAdmin: _isAdmin)),
-              Transform.translate(
-                offset: const Offset(0, -32),
-                child: FadeSlideIn(
-                  delay: const Duration(milliseconds: 160),
-                  child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 22),
-                  padding: const EdgeInsets.fromLTRB(26, 28, 26, 26),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: AppColors.hairline),
-                    boxShadow: [AppColors.softShadow],
-                  ),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          _isAdmin ? 'Staff Sign In' : 'Welcome back',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.displayMedium,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 620),
+              child: Column(
+                children: [
+                  FadeSlideIn(child: _HeroPanel(isAdmin: _isAdmin)),
+                  Transform.translate(
+                    offset: const Offset(0, -30),
+                    child: FadeSlideIn(
+                      delay: const Duration(milliseconds: 160),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 22),
+                        padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
+                        decoration: BoxDecoration(
+                          color: AppColors.cream,
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(color: AppColors.hairline),
+                          boxShadow: [AppColors.softShadow],
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _isAdmin
-                              ? 'Manage orders, rewards, and customers'
-                              : 'Log in to track your points and pickups',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: AppColors.slateGrey, fontSize: 13.5),
-                        ),
-                        const SizedBox(height: 26),
-                        _RoleToggle(
-                          isAdmin: _isAdmin,
-                          onChanged: (v) => setState(() => _isAdmin = v),
-                        ),
-                        const SizedBox(height: 28),
-                        TextFormField(
-                          controller: _emailController,
-                          keyboardType: _isAdmin ? TextInputType.emailAddress : TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            labelText: _isAdmin ? 'Staff Email' : 'Phone or Email',
-                            prefixIcon: const Icon(Icons.mail_outline, size: 20),
-                          ),
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) {
-                              return _isAdmin ? 'Enter your email' : 'Enter your phone number or email';
-                            }
-                            if (_isAdmin && !v.contains('@')) return 'Enter a valid email';
-                            if (!_isAdmin && v.trim().length < 3) return 'Enter a valid phone number or email';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 22),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: _obscure,
-                          decoration: InputDecoration(
-                            labelText: 'Password',
-                            prefixIcon: const Icon(Icons.lock_outline, size: 20),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscure
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
-                                size: 20,
-                              ),
-                              onPressed: () =>
-                                  setState(() => _obscure = !_obscure),
-                            ),
-                          ),
-                          validator: (v) {
-                            if (v == null || v.length < 6) {
-                              return 'Password must be at least 6 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        if (!_isAdmin)
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: _handleForgotPassword,
-                              child: Text(
-                                'Forgot password?',
-                                style: TextStyle(color: AppColors.gold),
-                              ),
-                            ),
-                          ),
-                        SizedBox(height: _isAdmin ? 30 : 18),
-                        LuxuryButton(
-                          label: _isAdmin ? 'Enter Dashboard' : 'Log In',
-                          loading: _loading,
-                          onPressed: _handleLogin,
-                        ),
-                        const SizedBox(height: 22),
-                        if (!_isAdmin)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Text("Don't have an account?",
-                                  style: TextStyle(
-                                      color: AppColors.slateGrey,
-                                      fontSize: 13.5)),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                        builder: (_) => const SignupScreen()),
-                                  );
-                                },
-                                child: Text('Sign Up',
-                                    style: TextStyle(
-                                        color: AppColors.gold,
-                                        fontWeight: FontWeight.w700)),
+                              Text(
+                                _isAdmin ? 'Staff Sign In' : 'Welcome back',
+                                textAlign: TextAlign.center,
+                                style:
+                                    Theme.of(context).textTheme.displayMedium,
                               ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _isAdmin
+                                    ? 'Manage orders, rewards, and customers'
+                                    : 'Log in to track your points and pickups',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    color: AppColors.slateGrey, fontSize: 13.5),
+                              ),
+                              const SizedBox(height: 24),
+                              _RoleToggle(
+                                isAdmin: _isAdmin,
+                                onChanged: (v) => setState(() => _isAdmin = v),
+                              ),
+                              const SizedBox(height: 28),
+                              TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                decoration: InputDecoration(
+                                  labelText: _isAdmin
+                                      ? 'Staff Email'
+                                      : 'Email Address',
+                                  hintText: 'name@example.com',
+                                  prefixIcon: Icon(
+                                    Icons.email_outlined,
+                                    size: 20,
+                                  ),
+                                ),
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) {
+                                    return _isAdmin
+                                        ? 'Enter your staff email'
+                                        : 'Enter your email address';
+                                  }
+                                  if (_isAdmin &&
+                                      !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                                          .hasMatch(v.trim())) {
+                                    return 'Enter a valid staff email';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 22),
+                              TextFormField(
+                                controller: _passwordController,
+                                obscureText: _obscure,
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  prefixIcon:
+                                      const Icon(Icons.lock_outline, size: 20),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscure
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                      size: 20,
+                                    ),
+                                    onPressed: () =>
+                                        setState(() => _obscure = !_obscure),
+                                  ),
+                                ),
+                                validator: (v) {
+                                  final minimumLength = 6;
+                                  if (v == null || v.length < minimumLength) {
+                                    return _isAdmin
+                                        ? 'Password must be at least 6 characters'
+                                        : 'Password must be at least 6 characters';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              if (!_isAdmin)
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: _handleForgotPassword,
+                                    child: Text(
+                                      'Forgot password?',
+                                      style: TextStyle(color: AppColors.gold),
+                                    ),
+                                  ),
+                                ),
+                              SizedBox(height: _isAdmin ? 30 : 18),
+                              LuxuryButton(
+                                label: _isAdmin ? 'Enter Dashboard' : 'Log In',
+                                loading: _loading,
+                                onPressed: _handleLogin,
+                              ),
+                              const SizedBox(height: 22),
+                              if (!_isAdmin)
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text("Don't have an account?",
+                                        style: TextStyle(
+                                            color: AppColors.slateGrey,
+                                            fontSize: 13.5)),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const SignupScreen()),
+                                        );
+                                      },
+                                      child: Text('Sign Up',
+                                          style: TextStyle(
+                                              color: AppColors.gold,
+                                              fontWeight: FontWeight.w700)),
+                                    ),
+                                  ],
+                                ),
                             ],
                           ),
-                      ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -372,13 +453,20 @@ class _HeroPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.only(top: 44, bottom: 76),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
+      padding: const EdgeInsets.only(top: 34, bottom: 66),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
           colors: AppColors.onyxGradient,
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.espresso.withOpacity(0.16),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
+          ),
+        ],
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(36),
           bottomRight: Radius.circular(36),
@@ -387,7 +475,7 @@ class _HeroPanel extends StatelessWidget {
       child: Column(
         children: [
           const BrandMark(width: 168),
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
             child: Text(
@@ -399,6 +487,17 @@ class _HeroPanel extends StatelessWidget {
                 fontSize: 11.5,
                 letterSpacing: 3.2,
               ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            isAdmin
+                ? 'A calm command center for the café team.'
+                : 'Good coffee, better rituals.',
+            style: const TextStyle(
+              color: Colors.white60,
+              fontSize: 13,
+              letterSpacing: 0.2,
             ),
           ),
         ],

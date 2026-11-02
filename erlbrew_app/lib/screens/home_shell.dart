@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/app_models.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/ios_tab_bar.dart';
 import 'login_screen.dart';
 import 'pickup_screen.dart';
 import 'rewards_screen.dart';
@@ -26,27 +27,13 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: IosTabBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        backgroundColor: Colors.white,
-        indicatorColor: AppColors.latte,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.card_giftcard_outlined),
-            selectedIcon: Icon(Icons.card_giftcard),
-            label: 'Rewards',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.storefront_outlined),
-            selectedIcon: Icon(Icons.storefront),
-            label: 'Pickup',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+        onSelected: (i) => setState(() => _index = i),
+        items: const [
+          IosTabBarItem(icon: Icons.card_giftcard_outlined, label: 'Rewards'),
+          IosTabBarItem(icon: Icons.storefront_outlined, label: 'Pickup'),
+          IosTabBarItem(icon: Icons.person_outline, label: 'Profile'),
         ],
       ),
     );

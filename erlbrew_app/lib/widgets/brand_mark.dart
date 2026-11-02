@@ -16,16 +16,17 @@ class BrandMark extends StatelessWidget {
       'assets/images/erlbrew_logo.jpg',
       width: width,
       fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
     );
 
     if (!framed) return logo;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.gold.withOpacity(0.55), width: 1.2),
+        color: AppColors.cream,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: AppColors.gold.withOpacity(0.4), width: 1.2),
         boxShadow: [AppColors.goldGlow],
       ),
       child: ClipRRect(

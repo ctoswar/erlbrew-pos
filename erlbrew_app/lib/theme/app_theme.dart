@@ -2,39 +2,38 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Erlbrew Café brand palette — a boutique-café take on espresso and gold,
-/// built around the café's own logo lockup (deep coffee brown, warm cream,
-/// metallic gold) rather than a generic Material palette.
+/// Erlbrew Café brand palette — warm, editorial and deliberately restrained.
 class AppColors {
-  static const Color espresso = Color(0xFF3C2A21);
-  static const Color onyx = Color(0xFF231913); // near-black, for hero surfaces
-  static const Color coffeeBrown = Color(0xFF6F4E37);
-  static const Color cream = Color(0xFFFFF8F0);
-  static const Color ivory = Color(0xFFFBF6ED);
-  static const Color latte = Color(0xFFEFE1D1);
-  static const Color hairline = Color(0xFFE6D9C4);
-  static const Color matcha = Color(0xFF7C9070);
-  static const Color matchaDark = Color(0xFF5A6E4F);
-  static const Color slateGrey = Color(0xFF70726E); // Estuko Grey, from wall décor
-  static const Color gold = Color(0xFFC9A227);
-  static const Color goldLight = Color(0xFFE3C777);
-  static const Color error = Color(0xFFB3413B);
-  static const Color success = Color(0xFF5A6E4F);
+  static const Color espresso = Color(0xFF2A1D16);
+  static const Color onyx = Color(0xFF17110E);
+  static const Color coffeeBrown = Color(0xFF76513B);
+  static const Color cream = Color(0xFFFFFFFF);
+  static const Color ivory = Color(0xFFF8F5F0);
+  static const Color latte = Color(0xFFF1E7D7);
+  static const Color hairline = Color(0xFFE8DED2);
+  static const Color matcha = Color(0xFF4F806A);
+  static const Color matchaDark = Color(0xFF35624F);
+  static const Color slateGrey = Color(0xFF82766D);
+  static const Color gold = Color(0xFFC17A43);
+  static const Color goldLight = Color(0xFFF4D8B8);
+  static const Color error = Color(0xFFC65D51);
+  static const Color success = Color(0xFF4F806A);
+  static const Color mist = Color(0xFFE7EFEA);
 
   static const List<Color> espressoGradient = [
-    Color(0xFF4A362A),
-    Color(0xFF2E2019),
+    Color(0xFF5E3E2C),
+    Color(0xFF2A1D16),
   ];
 
   static const List<Color> onyxGradient = [
-    Color(0xFF2E2019),
-    Color(0xFF1A130F),
+    Color(0xFF5E3E2C),
+    Color(0xFF2A1D16),
   ];
 
   static BoxShadow softShadow = BoxShadow(
-    color: espresso.withOpacity(0.10),
-    blurRadius: 24,
-    offset: const Offset(0, 12),
+    color: espresso.withOpacity(0.08),
+    blurRadius: 28,
+    offset: const Offset(0, 14),
   );
 
   static BoxShadow goldGlow = BoxShadow(
@@ -50,28 +49,40 @@ class AppTheme {
 
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.ivory,
+      visualDensity: VisualDensity.standard,
       colorScheme: base.colorScheme.copyWith(
-        primary: AppColors.espresso,
+        primary: AppColors.coffeeBrown,
         secondary: AppColors.gold,
         surface: AppColors.ivory,
+        onSurface: AppColors.espresso,
         error: AppColors.error,
       ),
-      textTheme: GoogleFonts.quicksandTextTheme(base.textTheme).copyWith(
+      textTheme: GoogleFonts.manropeTextTheme(base.textTheme).copyWith(
         displayLarge: GoogleFonts.playfairDisplay(
-          fontSize: 32,
+          fontSize: 34,
           fontWeight: FontWeight.w700,
-          letterSpacing: 0.2,
+          letterSpacing: -0.5,
           color: AppColors.espresso,
         ),
         displayMedium: GoogleFonts.playfairDisplay(
-          fontSize: 27,
+          fontSize: 29,
           fontWeight: FontWeight.w700,
-          letterSpacing: 0.2,
+          letterSpacing: -0.4,
           color: AppColors.espresso,
         ),
         titleLarge: GoogleFonts.playfairDisplay(
-          fontSize: 22,
+          fontSize: 23,
           fontWeight: FontWeight.w600,
+          color: AppColors.espresso,
+        ),
+        titleMedium: GoogleFonts.manrope(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: AppColors.espresso,
+        ),
+        bodyMedium: GoogleFonts.manrope(
+          fontSize: 14,
+          height: 1.45,
           color: AppColors.espresso,
         ),
       ),
@@ -79,26 +90,29 @@ class AppTheme {
         backgroundColor: AppColors.ivory,
         foregroundColor: AppColors.espresso,
         elevation: 0,
-        centerTitle: true,
-        titleTextStyle: GoogleFonts.playfairDisplay(
-          fontSize: 20,
+        centerTitle: false,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        titleSpacing: 20,
+        titleTextStyle: GoogleFonts.manrope(
+          fontSize: 24,
           fontWeight: FontWeight.w700,
-          letterSpacing: 0.3,
+          letterSpacing: -0.2,
           color: AppColors.espresso,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.espresso,
-          foregroundColor: AppColors.goldLight,
-          minimumSize: const Size.fromHeight(54),
+          backgroundColor: AppColors.gold,
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(56),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
-          textStyle: GoogleFonts.quicksand(
+          textStyle: GoogleFonts.manrope(
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            letterSpacing: 1.1,
+            letterSpacing: 0.2,
           ),
           elevation: 0,
         ),
@@ -106,39 +120,49 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.espresso,
-          side: const BorderSide(color: AppColors.gold, width: 1.2),
-          minimumSize: const Size.fromHeight(52),
+          side: const BorderSide(color: AppColors.hairline, width: 1.2),
+          minimumSize: const Size.fromHeight(54),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
-          textStyle: GoogleFonts.quicksand(
+          textStyle: GoogleFonts.manrope(
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
+            letterSpacing: 0.2,
           ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        filled: false,
+        filled: true,
+        fillColor: AppColors.cream,
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 14),
-        border: const UnderlineInputBorder(
-          borderSide: BorderSide(color: AppColors.hairline, width: 1.2),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.hairline),
         ),
-        enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: AppColors.hairline, width: 1.2),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.hairline),
         ),
-        focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: AppColors.gold, width: 1.6),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.gold, width: 1.5),
         ),
-        errorBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: AppColors.error, width: 1.2),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.2),
         ),
-        labelStyle: GoogleFonts.quicksand(
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+        ),
+        labelStyle: GoogleFonts.manrope(
           color: AppColors.slateGrey,
-          fontSize: 13.5,
+          fontSize: 13,
         ),
-        floatingLabelStyle: GoogleFonts.quicksand(
+        floatingLabelStyle: GoogleFonts.manrope(
           color: AppColors.gold,
           fontWeight: FontWeight.w600,
           fontSize: 13,
@@ -151,34 +175,37 @@ class AppTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
           side: const BorderSide(color: AppColors.hairline),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        height: 70,
+        height: 78,
         elevation: 0,
-        backgroundColor: Colors.white,
-        indicatorColor: AppColors.gold.withOpacity(0.16),
+        backgroundColor: AppColors.cream,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: AppColors.latte,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
-          return GoogleFonts.quicksand(
-            fontSize: 11.5,
+          return GoogleFonts.manrope(
+            fontSize: 11,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            letterSpacing: 0.3,
+            letterSpacing: 0.1,
             color: selected ? AppColors.espresso : AppColors.slateGrey,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? AppColors.espresso : AppColors.slateGrey,
+            color: selected ? AppColors.goldLight : AppColors.slateGrey,
+            size: selected ? 22 : 21,
           );
         }),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.onyx,
-        contentTextStyle: GoogleFonts.quicksand(color: AppColors.goldLight),
+        contentTextStyle: GoogleFonts.manrope(color: Colors.white),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -190,19 +217,19 @@ class AppTheme {
           borderRadius: BorderRadius.circular(22),
           side: const BorderSide(color: AppColors.hairline),
         ),
-        titleTextStyle: GoogleFonts.playfairDisplay(
+        titleTextStyle: GoogleFonts.manrope(
           fontSize: 20,
           fontWeight: FontWeight.w700,
           color: AppColors.espresso,
         ),
-        contentTextStyle: GoogleFonts.quicksand(
+        contentTextStyle: GoogleFonts.manrope(
           fontSize: 14,
           color: AppColors.slateGrey,
         ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.latte,
-        labelStyle: GoogleFonts.quicksand(
+        labelStyle: GoogleFonts.manrope(
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: AppColors.espresso,
@@ -218,14 +245,17 @@ class AppTheme {
         thickness: 1,
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.espresso,
-        foregroundColor: AppColors.goldLight,
+        backgroundColor: AppColors.gold,
+        foregroundColor: Colors.white,
         elevation: 2,
       ),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
-          TargetPlatform.android: ZoomPageTransitionsBuilder(),
+          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
           TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.linux: CupertinoPageTransitionsBuilder(),
         },
       ),
     );

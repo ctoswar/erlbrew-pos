@@ -1,5 +1,5 @@
 import express from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logAudit } from '../services/audit.js';
 
 // Validation helper per FIX 5
@@ -126,7 +126,7 @@ export default function menuRouter(pool){
   });
 
   // Create item (admin only)
-  router.post('/', authMiddleware, async (req, res) => {
+  router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
     const { id, name, category, price, badge, description, emoji, popular } = req.body;
     const err = validate(req, res, {
       id: { required: true, type: 'string', maxLen: 64 },
@@ -145,7 +145,7 @@ export default function menuRouter(pool){
   });
 
   // Update item (admin only)
-  router.put('/:id', authMiddleware, async (req, res) => {
+  router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
     const { name, category, price, badge, description, emoji, popular } = req.body;
 const err = validate(req, res, {
@@ -164,7 +164,7 @@ const err = validate(req, res, {
   });
 
 // Delete item (admin only)
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
     if (!id || typeof id !== 'string' || id.length > 64) {
       return res.status(400).json({ error: 'id is required and must be a string' });
@@ -181,7 +181,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   });
 
   // PUT /api/menu/:id/sizes — replace all sizes for a menu item (admin only)
-  router.put('/:id/sizes', authMiddleware, async (req, res) => {
+  router.put('/:id/sizes', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
     const { sizes } = req.body;
     if (!Array.isArray(sizes)) return res.status(400).json({ error: 'sizes must be an array' });
@@ -214,7 +214,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   });
 
   // POST batch apply modifier to multiple menu items (admin only) — MUST be before /:id/modifiers
-  router.post('/modifiers/batch-apply', authMiddleware, async (req, res) => {
+  router.post('/modifiers/batch-apply', authMiddleware, adminMiddleware, async (req, res) => {
     const { modifier, menuItemIds } = req.body;
     if (!modifier || !modifier.name || typeof modifier.name !== 'string') {
       return res.status(400).json({ error: 'modifier.name is required' });
@@ -270,7 +270,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   });
 
   // POST a modifier for a menu item (admin only)
-  router.post('/:id/modifiers', authMiddleware, async (req, res) => {
+  router.post('/:id/modifiers', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
     const { name, price = 0, isDefault = false } = req.body;
     if (!name || typeof name !== 'string') {
@@ -290,7 +290,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   });
 
   // PUT update a modifier (admin only)
-  router.put('/modifiers/:id', authMiddleware, async (req, res) => {
+  router.put('/modifiers/:id', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
     const { name, price, isDefault } = req.body;
     try {
@@ -311,7 +311,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   });
 
   // DELETE a modifier (admin only)
-  router.delete('/modifiers/:id', authMiddleware, async (req, res) => {
+  router.delete('/modifiers/:id', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
     try {
       await pool.query('DELETE FROM menu_modifiers WHERE id = ?', [id]);

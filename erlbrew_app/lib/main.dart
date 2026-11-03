@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'screens/login_screen.dart';
@@ -6,7 +7,7 @@ import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await PosApiService.instance.init();
+  unawaited(PosApiService.instance.init());
   runApp(const ErlbrewApp());
 }
 

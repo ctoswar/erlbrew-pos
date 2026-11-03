@@ -206,7 +206,7 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.onyx,
         contentTextStyle: GoogleFonts.manrope(color: Colors.white),
-        behavior: SnackBarBehavior.floating,
+        behavior: SnackBarBehavior.fixed,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),

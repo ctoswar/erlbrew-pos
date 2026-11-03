@@ -13,7 +13,7 @@ void main() {
 
     // Sanity-check key login UI is present.
     expect(find.text('Welcome back'), findsOneWidget);
-    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Mobile Number'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
     expect(find.text('Log In'), findsOneWidget);
   });

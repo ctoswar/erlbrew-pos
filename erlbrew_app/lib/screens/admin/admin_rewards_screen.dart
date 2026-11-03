@@ -211,6 +211,7 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Reward Catalog')),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'admin-rewards-add',
         onPressed: () => _openEditor(),
         icon: const Icon(Icons.add),
         label: const Text('Add Reward'),

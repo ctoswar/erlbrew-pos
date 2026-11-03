@@ -162,6 +162,11 @@ class FirebaseAuthService {
     }
   }
 
+  Future<bool> isEmailVerified() async {
+    await _ensureReady();
+    return _auth!.currentUser?.emailVerified ?? false;
+  }
+
   Future<ConfirmationResult> sendPhoneOtp(String phoneNumber) async {
     await _ensureReady();
     return _auth!.signInWithPhoneNumber(phoneNumber.trim());

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logAuditDirect } from '../services/audit.js';
 
 // Helpers for Asia/Taipei time (UTC+8) — server timezone-independent
@@ -18,9 +18,10 @@ function taipeiToday() {
 
 export default function clockRouter(pool, googleSheets) {
   const router = Router();
+  router.use(authMiddleware, adminMiddleware);
 
   // POST /api/clock — RFID scan → clock in or clock out
-  // Public (no auth) so employees can tap their card directly
+  // Restricted to authorized managers; RFID alone is not sufficient for remote access.
   router.post('/', async (req, res) => {
     let { rfid } = req.body;
     if (rfid && typeof rfid === 'string') rfid = rfid.replace(/[\x00-\x1f]/g, '').trim().toUpperCase();

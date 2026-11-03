@@ -27,7 +27,7 @@ import integrationsRouter from './routes/integrations.js';
 import accountingRouter from './routes/accounting.js';
 import insightsRouter from './routes/insights.js';
 import { googleSheetsClientInit } from './services/googleSheets.js';
-import { authMiddleware } from './middleware/auth.js';
+import { authMiddleware, adminMiddleware } from './middleware/auth.js';
 import { locationScope, scopedLocationCondition } from './middleware/location.js';
 import rateLimit from 'express-rate-limit';
 
@@ -927,7 +927,7 @@ function printServerRequest(urlStr, options = {}, attempt = 1) {
   });
 }
 
-app.post('/api/print', async (req, res) => {
+app.post('/api/print', authMiddleware, adminMiddleware, async (req, res) => {
   const { lines, paperSize, qrCodeUrl, wifiQrData } = req.body || {};
   if (!lines || !Array.isArray(lines)) {
     return res.status(400).json({ error: 'lines array required' });
@@ -956,7 +956,7 @@ app.post('/api/print', async (req, res) => {
   }
 });
 
-app.post('/api/open-drawer', async (req, res) => {
+app.post('/api/open-drawer', authMiddleware, adminMiddleware, async (req, res) => {
   const serverUrl = await resolvePrintServer();
   if (!serverUrl) {
     return res.status(502).json({ error: 'Print server not configured. Set PRINT_SERVER_URL env or configure in Admin Settings.' });

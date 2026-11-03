@@ -10,6 +10,7 @@ import { locationScope, scopedLocationCondition } from '../middleware/location.j
 
 export default function customersRouter(pool) {
   const router = Router();
+  const customerColumns = 'id, phone, name, email, notes, loyalty_points, loyalty_tier, last_points_update, total_orders, total_spent, created_at, updated_at';
   let firebaseApp;
   if (getApps().length) {
     firebaseApp = getApp();
@@ -31,10 +32,10 @@ export default function customersRouter(pool) {
   const firebaseAuth = getAuth(firebaseApp);
 
   // GET /api/customers — list/search customers
-  router.get('/', authMiddleware, async (req, res) => {
+  router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
     try {
       const { search, limit = 50 } = req.query;
-      let sql = 'SELECT * FROM customers';
+      let sql = `SELECT ${customerColumns} FROM customers`;
       const values = [];
       if (search) {
         sql += ' WHERE phone LIKE ? OR name LIKE ?';
@@ -51,11 +52,11 @@ export default function customersRouter(pool) {
   });
 
   // GET /api/customers/top — top customers by order count / spend
-  router.get('/top', authMiddleware, async (req, res) => {
+  router.get('/top', authMiddleware, adminMiddleware, async (req, res) => {
     try {
       const { limit = 10 } = req.query;
       const [rows] = await pool.query(
-        'SELECT * FROM customers ORDER BY total_spent DESC LIMIT ?',
+        `SELECT ${customerColumns} FROM customers ORDER BY total_spent DESC LIMIT ?`,
         [Number(limit)]
       );
       res.json(rows);
@@ -157,6 +158,9 @@ export default function customersRouter(pool) {
     }
     try {
       const decoded = await firebaseAuth.verifyIdToken(idToken);
+      if (decoded.email_verified !== true) {
+        return res.status(403).json({ error: 'Email verification is required', code: 'EMAIL_NOT_VERIFIED' });
+      }
       const email = String(decoded.email || '').trim().toLowerCase();
       if (!email) {
         return res.status(401).json({ error: 'A verified customer email is required' });
@@ -419,7 +423,7 @@ export default function customersRouter(pool) {
   // GET /api/customers/lookup?phone=… — minimal public loyalty lookup (#173)
   // Powers the customer display: returns name + points + tier only, never email/password_hash.
   // Must stay before the /:id routes below.
-  router.get('/lookup', async (req, res) => {
+  router.get('/lookup', authMiddleware, adminMiddleware, async (req, res) => {
     const { phone } = req.query;
     if (!phone || typeof phone !== 'string' || !phone.trim()) {
       return res.status(400).json({ error: 'phone is required' });
@@ -448,9 +452,9 @@ export default function customersRouter(pool) {
   // ── Admin Endpoints (MUST be after /me routes, before /:id) ──────────
 
   // GET /api/customers/:id — single customer
-  router.get('/:id', authMiddleware, async (req, res) => {
+  router.get('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     try {
-      const [rows] = await pool.query('SELECT * FROM customers WHERE id = ?', [req.params.id]);
+      const [rows] = await pool.query(`SELECT ${customerColumns} FROM customers WHERE id = ?`, [req.params.id]);
       if (!rows.length) return res.status(404).json({ error: 'Not found' });
       res.json(rows[0]);
     } catch (e) {
@@ -460,7 +464,7 @@ export default function customersRouter(pool) {
   });
 
   // GET /api/customers/:id/orders — order history
-  router.get('/:id/orders', authMiddleware, locationScope, async (req, res) => {
+  router.get('/:id/orders', authMiddleware, adminMiddleware, locationScope, async (req, res) => {
     try {
       const scope = scopedLocationCondition(req, 'o.location_id');
       const [rows] = await pool.query(
@@ -480,7 +484,7 @@ export default function customersRouter(pool) {
   });
 
   // POST /api/customers — create or update by phone
-  router.post('/', authMiddleware, async (req, res) => {
+  router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
     const { phone, name, email, notes } = req.body;
     if (!phone || typeof phone !== 'string') {
       return res.status(400).json({ error: 'phone is required' });
@@ -499,7 +503,7 @@ export default function customersRouter(pool) {
           values.push(normalizedPhone);
           await pool.query(`UPDATE customers SET ${fields.join(', ')} WHERE phone = ?`, values);
         }
-        const [updated] = await pool.query('SELECT * FROM customers WHERE phone = ?', [normalizedPhone]);
+        const [updated] = await pool.query(`SELECT ${customerColumns} FROM customers WHERE phone = ?`, [normalizedPhone]);
         await logAudit(pool, req, { action: 'customer_update', entityType: 'customer', entityId: String(existing[0].id), details: { phone: normalizedPhone, name } });
         return res.json(updated[0]);
       }
@@ -507,7 +511,7 @@ export default function customersRouter(pool) {
         'INSERT INTO customers (phone, name, email, notes) VALUES (?, ?, ?, ?)',
         [normalizedPhone, name || null, email || null, notes || null]
       );
-      const [inserted] = await pool.query('SELECT * FROM customers WHERE id = ?', [r.insertId]);
+      const [inserted] = await pool.query(`SELECT ${customerColumns} FROM customers WHERE id = ?`, [r.insertId]);
       await logAudit(pool, req, { action: 'customer_create', entityType: 'customer', entityId: String(r.insertId), details: { phone: normalizedPhone, name } });
       res.json(inserted[0]);
     } catch (e) {
@@ -517,7 +521,7 @@ export default function customersRouter(pool) {
   });
 
   // PUT /api/customers/:id — update customer
-  router.put('/:id', authMiddleware, async (req, res) => {
+  router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     const { name, email, notes } = req.body;
     try {
       const fields = [];
@@ -528,7 +532,7 @@ export default function customersRouter(pool) {
       if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
       values.push(req.params.id);
       await pool.query(`UPDATE customers SET ${fields.join(', ')} WHERE id = ?`, values);
-      const [rows] = await pool.query('SELECT * FROM customers WHERE id = ?', [req.params.id]);
+      const [rows] = await pool.query(`SELECT ${customerColumns} FROM customers WHERE id = ?`, [req.params.id]);
       await logAudit(pool, req, { action: 'customer_update', entityType: 'customer', entityId: req.params.id });
       res.json(rows[0]);
     } catch (e) {

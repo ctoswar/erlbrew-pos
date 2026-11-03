@@ -1083,6 +1083,7 @@ export interface CustomerLoyalty {
 
 export async function lookupCustomerByPhone(phone: string): Promise<CustomerLoyalty> {
   const res = await fetch(getApiUrl(`/customers/lookup?phone=${encodeURIComponent(phone)}`), {
+    headers: { ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) },
     credentials: 'include',
   });
   if (!res.ok) throw new Error(`API failed: ${res.status}`);

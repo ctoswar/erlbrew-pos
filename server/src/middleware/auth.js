@@ -9,6 +9,9 @@ export const authMiddleware = (req, res, next) => {
   if (!token) return res.status(401).json({ error: 'Missing token', code: 'NO_TOKEN' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.customer === true) {
+      return res.status(403).json({ error: 'Staff access required', code: 'STAFF_TOKEN_REQUIRED' });
+    }
     req.user = decoded;
     next();
   } catch (e) {

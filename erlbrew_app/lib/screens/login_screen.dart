@@ -183,6 +183,42 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Future<void> _handleResendVerification() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || !email.contains('@') || password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter your email and password first.')),
+      );
+      return;
+    }
+
+    try {
+      final firebase = FirebaseAuthService.instance;
+      await firebase.signInWithEmailPassword(
+        email: email,
+        password: password,
+        isAdmin: false,
+      );
+      await firebase.sendEmailVerification();
+      await firebase.signOut();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Verification email sent. Check your inbox.')),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      final message =
+          error.code == 'wrong-password' || error.code == 'invalid-credential'
+              ? 'The password is incorrect. Use Forgot password first.'
+              : error.message ?? 'Unable to send verification email.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
+
   void _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
@@ -210,6 +246,14 @@ class _LoginScreenState extends State<LoginScreen> {
             password: _passwordController.text,
             isAdmin: false,
           );
+          if (!await firebase.isEmailVerified()) {
+            await firebase.sendEmailVerification();
+            await firebase.signOut();
+            throw FirebaseAuthException(
+              code: 'email-not-verified',
+              message: 'Verify your email before signing in.',
+            );
+          }
           final idToken = await firebase.getIdToken();
           if (idToken == null || idToken.isEmpty) {
             throw PosApiServiceException(
@@ -258,6 +302,8 @@ class _LoginScreenState extends State<LoginScreen> {
           'Too many sign-in attempts. Please wait and try again.',
         'network-request-failed' =>
           'Unable to reach Firebase. Check the internet connection.',
+        'email-not-verified' =>
+          'Verify the link in your email before signing in. We sent another link.',
         'not-admin' => 'This Firebase account does not have staff access.',
         _ => 'Firebase sign-in failed. Check the staff account configuration.',
       };
@@ -387,15 +433,25 @@ class _LoginScreenState extends State<LoginScreen> {
                                 },
                               ),
                               if (!_isAdmin)
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton(
-                                    onPressed: _handleForgotPassword,
-                                    child: Text(
-                                      'Forgot password?',
-                                      style: TextStyle(color: AppColors.gold),
+                                Wrap(
+                                  alignment: WrapAlignment.end,
+                                  children: [
+                                    TextButton(
+                                      onPressed: _handleResendVerification,
+                                      child: Text(
+                                        'Resend verification',
+                                        style: TextStyle(
+                                            color: AppColors.matchaDark),
+                                      ),
                                     ),
-                                  ),
+                                    TextButton(
+                                      onPressed: _handleForgotPassword,
+                                      child: Text(
+                                        'Forgot password?',
+                                        style: TextStyle(color: AppColors.gold),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               SizedBox(height: _isAdmin ? 30 : 18),
                               LuxuryButton(

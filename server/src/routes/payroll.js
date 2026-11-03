@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logAudit } from '../services/audit.js';
 
 // ── PH Payroll Constants (2025–2026 Rates) ──────────────────────────────────
@@ -122,6 +122,7 @@ function generatePeriodLabel(dateFrom, dateTo) {
 
 export default function payrollRouter(pool, googleSheets) {
   const router = Router();
+  router.use(authMiddleware, adminMiddleware);
 
   // ── GET /api/payroll/periods — list all payroll periods ────────────────
   router.get('/periods', authMiddleware, async (req, res) => {

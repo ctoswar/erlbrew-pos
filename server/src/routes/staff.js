@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import express from 'express';
+import { getApps, getApp, initializeApp, cert } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logAudit, logAuditDirect } from '../services/audit.js';
 
@@ -32,6 +35,25 @@ return null;
   function toMysqlDatetime(d) { return d.toISOString().slice(0, 19).replace('T', ' '); }
 
 export default function staffRouter(pool){
+  let firebaseApp;
+  if (getApps().length) {
+    firebaseApp = getApp();
+  } else {
+    let serviceAccount = null;
+    try {
+      serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+        ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+        : process.env.GOOGLE_SERVICE_ACCOUNT_KEY
+          ? JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY)
+          : null;
+    } catch {
+      serviceAccount = null;
+    }
+    firebaseApp = serviceAccount ? initializeApp({ credential: cert(serviceAccount) }) : initializeApp();
+  }
+  const firebaseAuth = getAuth(firebaseApp);
+  const firestore = getFirestore(firebaseApp);
+
   // Auto clock-in when staff logs in with RFID
   // Only clocks IN — never clocks out. Logout should not be a clock-out action.
   async function autoClockIn(staffId, rfid) {
@@ -255,7 +277,10 @@ if (rfid && pin) {
   }
   // Username + Password login (admin with password hash OR PIN login)
     if (username) {
-      const [rows] = await pool.query('SELECT id, name, role, pin, password_hash, location_id FROM staff WHERE name = ?', [username]);
+      const [rows] = await pool.query(
+        'SELECT id, name, role, pin, password_hash, location_id FROM staff WHERE LOWER(name) = LOWER(?)',
+        [String(username).trim()]
+      );
       if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' });
       const user = rows[0];
       if (user.password_hash) {
@@ -263,8 +288,13 @@ if (rfid && pin) {
         const ok = await bcrypt.compare(password, user.password_hash);
         if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
       } else {
-        // No separate password — verify against bcrypt-hashed PIN in pin column
-        const ok = await bcrypt.compare(password, user.pin);
+        // Legacy seeded accounts may still have a four-digit plaintext PIN.
+        // Prefer bcrypt whenever the stored value is a bcrypt hash.
+        const storedPin = String(user.pin || '');
+        const isBcryptHash = /^\$2[aby]\$\d{2}\$/.test(storedPin);
+        const ok = isBcryptHash
+          ? await bcrypt.compare(password, storedPin)
+          : password === storedPin;
         if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
       }
       if (user.role !== 'Manager' && !user.location_id) {
@@ -279,6 +309,47 @@ if (rfid && pin) {
   } catch (e) {
     console.error('Login error:', e);
     res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Exchange a Firebase customer/admin session for the POS API JWT.
+// The Firestore profile is the source of truth for staff access.
+router.post('/firebase-login', async (req, res) => {
+  const idToken = typeof req.body?.idToken === 'string'
+    ? req.body.idToken.trim()
+    : '';
+  if (!idToken) {
+    return res.status(400).json({ error: 'Firebase ID token is required' });
+  }
+
+  try {
+    const decoded = await firebaseAuth.verifyIdToken(idToken);
+    const profileSnapshot = await firestore.collection('users').doc(decoded.uid).get();
+    const profile = profileSnapshot.exists ? profileSnapshot.data() || {} : {};
+    const role = String(profile.role || '').toLowerCase();
+    const isAdmin = profile.isAdmin === true || role === 'admin' || role === 'manager';
+    if (!isAdmin) {
+      return res.status(403).json({
+        error: 'This Firebase account does not have staff access',
+        code: 'FORBIDDEN',
+      });
+    }
+
+    const name = String(profile.name || decoded.name || decoded.email || 'Erlbrew Staff');
+    const token = jwt.sign(
+      {
+        sub: decoded.uid,
+        name,
+        role: 'Manager',
+        firebase_uid: decoded.uid,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+    return res.json({ token, staff: { id: decoded.uid, name, role: 'Manager', email: decoded.email || null } });
+  } catch (error) {
+    console.error('[Staff] Firebase login failed:', error.message);
+    return res.status(401).json({ error: 'Invalid Firebase credentials' });
   }
 });
 

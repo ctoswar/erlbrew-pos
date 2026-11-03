@@ -4,6 +4,7 @@ import '../../services/pos_api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/animated_counter.dart';
 import '../../widgets/fade_slide_in.dart';
+import '../../widgets/ios_tab_bar.dart';
 import '../login_screen.dart';
 import 'admin_customers_screen.dart';
 import 'admin_menu_screen.dart';
@@ -34,42 +35,16 @@ class _AdminHomeShellState extends State<AdminHomeShell> {
 
     return Scaffold(
       body: IndexedStack(index: _index, children: screens),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: IosTabBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        backgroundColor: Colors.white,
-        indicatorColor: AppColors.latte,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Overview',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.qr_code_scanner_outlined),
-            selectedIcon: Icon(Icons.qr_code_scanner),
-            label: 'Scan',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'Orders',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.restaurant_menu_outlined),
-            selectedIcon: Icon(Icons.restaurant_menu),
-            label: 'Menu',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.card_giftcard_outlined),
-            selectedIcon: Icon(Icons.card_giftcard),
-            label: 'Rewards',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: 'Customers',
-          ),
+        onSelected: (i) => setState(() => _index = i),
+        items: const [
+          IosTabBarItem(icon: Icons.dashboard_outlined, label: 'Overview'),
+          IosTabBarItem(icon: Icons.qr_code_scanner_outlined, label: 'Scan'),
+          IosTabBarItem(icon: Icons.receipt_long_outlined, label: 'Orders'),
+          IosTabBarItem(icon: Icons.restaurant_menu_outlined, label: 'Menu'),
+          IosTabBarItem(icon: Icons.card_giftcard_outlined, label: 'Rewards'),
+          IosTabBarItem(icon: Icons.people_outline, label: 'Customers'),
         ],
       ),
     );

@@ -60,9 +60,7 @@ class _AdminScanScreenState extends State<AdminScanScreen>
   }
 
   void _onCameraStateChanged() {
-    if (!_controller.value.isInitialized ||
-        _cameraReadyNotified ||
-        !mounted) {
+    if (!_controller.value.isInitialized || _cameraReadyNotified || !mounted) {
       return;
     }
 
@@ -71,7 +69,8 @@ class _AdminScanScreenState extends State<AdminScanScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Camera access is allowed on this device. Ready to scan.'),
+          content:
+              Text('Camera access is allowed on this device. Ready to scan.'),
           duration: Duration(seconds: 3),
         ),
       );
@@ -80,9 +79,8 @@ class _AdminScanScreenState extends State<AdminScanScreen>
 
   void _onDetect(BarcodeCapture capture) {
     if (_handling) return;
-    final raw = capture.barcodes.isNotEmpty
-        ? capture.barcodes.first.rawValue
-        : null;
+    final raw =
+        capture.barcodes.isNotEmpty ? capture.barcodes.first.rawValue : null;
     if (raw == null) return;
 
     _handleScannedCode(raw);
@@ -110,14 +108,16 @@ class _AdminScanScreenState extends State<AdminScanScreen>
 
       if (customer == null) {
         setState(() => _handling = false);
-        _showError('Customer not found. Ask them to register in the app first.');
+        _showError(
+            'Customer not found. Ask them to register in the app first.');
         _startCamera();
         return;
       }
 
       _openAwardSheet(customer);
     } on FormatException {
-      _showError('Couldn\'t read that QR code. Please show the Erlbrew QR code.');
+      _showError(
+          'Couldn\'t read that QR code. Please show the Erlbrew QR code.');
     } on TypeError {
       _showError('This QR code has an invalid Erlbrew format');
     } catch (e) {
@@ -318,7 +318,9 @@ class _CameraErrorView extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                permissionDenied ? 'Camera permission needed' : 'Camera unavailable',
+                permissionDenied
+                    ? 'Camera permission needed'
+                    : 'Camera unavailable',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: Colors.white,
@@ -414,10 +416,20 @@ class _AwardSheetState extends State<_AwardSheet> {
   static const _pointOptions = [10, 25, 50, 90];
 
   Future<void> _apply() async {
+    final customerId = int.tryParse(widget.customer.id);
+    if (customerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This customer account cannot receive points yet.'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _saving = true);
     try {
       final updated = await PosApiService.instance.adjustCustomerPoints(
-        customerId: int.parse(widget.customer.id),
+        customerId: customerId,
         delta: _pointsToAdd,
         reason: 'Awarded via admin QR scan',
       );
@@ -444,7 +456,8 @@ class _AwardSheetState extends State<_AwardSheet> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to save points. Please try again.')),
+        const SnackBar(
+            content: Text('Unable to save points. Please try again.')),
       );
     }
   }
@@ -453,7 +466,8 @@ class _AwardSheetState extends State<_AwardSheet> {
   Widget build(BuildContext context) {
     final c = widget.customer;
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
         decoration: const BoxDecoration(
@@ -493,8 +507,7 @@ class _AwardSheetState extends State<_AwardSheet> {
                         Text(c.name,
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
-                        Text(
-                            '${c.points} pts',
+                        Text('${c.points} pts',
                             style: TextStyle(
                                 color: AppColors.slateGrey, fontSize: 12.5)),
                       ],

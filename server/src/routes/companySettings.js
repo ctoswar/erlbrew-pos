@@ -10,7 +10,7 @@ export default function companySettingsRouter(pool) {
   router.use(express.json({ limit: '10mb' }));
 
   // GET all company settings
-  router.get('/', async (req, res) => {
+  router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
     try {
       const [settings] = await pool.execute(`SELECT * FROM company_settings`);
       const obj = {};
@@ -41,7 +41,7 @@ export default function companySettingsRouter(pool) {
   });
 
   // GET single setting
-  router.get('/:key', async (req, res) => {
+  router.get('/:key', authMiddleware, adminMiddleware, async (req, res) => {
     try {
       const [settings] = await pool.execute(
         `SELECT * FROM company_settings WHERE setting_key = ?`,

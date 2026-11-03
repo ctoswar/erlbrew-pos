@@ -257,6 +257,7 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
               ],
             ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'admin-menu-add',
         backgroundColor: AppColors.gold,
         onPressed: () => _openEditor(),
         child: const Icon(Icons.add, color: Colors.white),

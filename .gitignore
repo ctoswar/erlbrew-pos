@@ -9,6 +9,7 @@ dist/
 .env.local
 .env.production
 server/.env
+erlbrew_app/*firebase-adminsdk*.json
 .env.*.local
 
 # MCP config with secrets (use .mcp-config.example instead)

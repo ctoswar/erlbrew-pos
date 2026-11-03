@@ -100,6 +100,9 @@ export default function customersRouter(pool) {
       res.json({ token, customer: inserted[0] });
     } catch (e) {
       console.error('Customer register error:', e);
+      if (e.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ error: 'Customer account already registered' });
+      }
       res.status(500).json({ error: 'DB error' });
     }
   });

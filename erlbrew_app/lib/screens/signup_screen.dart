@@ -7,7 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/luxury_button.dart';
-import 'home_shell.dart';
+import 'login_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -25,11 +25,11 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscure = true;
   bool _loading = false;
 
-  String _firebasePhoneNumber(String value) {
-    final phone = value.trim().replaceAll(RegExp(r'[^0-9+]'), '');
-    if (phone.startsWith('09')) return '+63${phone.substring(1)}';
-    if (phone.startsWith('63')) return '+$phone';
-    return phone;
+  String _normalizedPhone(String value) {
+    var phone = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (phone.startsWith('63')) phone = phone.substring(2);
+    if (phone.startsWith('0')) phone = phone.substring(1);
+    return '+63$phone';
   }
 
   Future<bool> _verifyPhoneOtp() async {
@@ -37,7 +37,7 @@ class _SignupScreenState extends State<SignupScreen> {
     ConfirmationResult confirmation;
     try {
       confirmation = await firebase.sendPhoneOtp(
-        _firebasePhoneNumber(_phoneController.text),
+        _normalizedPhone(_phoneController.text),
       );
     } on FirebaseAuthException catch (error) {
       if (error.code != 'quota-exceeded' && error.code != 'too-many-requests') {
@@ -106,16 +106,14 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _loading = true);
 
     try {
-      final phoneVerified = await _verifyPhoneOtp();
-      if (!phoneVerified) return;
-
       final firebase = FirebaseAuthService.instance;
       AppUser firebaseUser;
+      final phone = _normalizedPhone(_phoneController.text);
       try {
         firebaseUser = await firebase.signUp(
           name: _nameController.text,
           email: _emailController.text,
-          phone: _phoneController.text,
+          phone: phone,
           password: _passwordController.text,
         );
       } on FirebaseAuthException catch (error) {
@@ -130,22 +128,31 @@ class _SignupScreenState extends State<SignupScreen> {
 
       final posService = PosApiService.instance;
       await posService.register(
-        phone: _phoneController.text,
+        phone: phone,
         name: _nameController.text,
         email: _emailController.text,
         password: _passwordController.text,
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Verify your email'),
           content: Text(
-            'Verification link sent to ${firebaseUser.email}. Check your inbox.',
+            'We sent a verification link to ${firebaseUser.email}. Open it before logging in.',
           ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Go to Login'),
+            ),
+          ],
         ),
       );
+      await firebase.signOut();
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeShell()),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     } on PosApiServiceException catch (error) {
       if (!mounted) return;
@@ -154,6 +161,24 @@ class _SignupScreenState extends State<SignupScreen> {
       );
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
+      if (error.code == 'invalid-credential' ||
+          error.code == 'wrong-password') {
+        try {
+          await FirebaseAuthService.instance.sendPasswordResetEmail(
+            _emailController.text,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'This email already has an account. A password reset link was sent.',
+              ),
+            ),
+          );
+          return;
+        } on FirebaseAuthException {
+          // Fall through to the standard error message if reset delivery fails.
+        }
+      }
       final message = switch (error.code) {
         'invalid-phone-number' => 'Enter a valid phone number in +63 format.',
         'invalid-app-credential' ||
@@ -254,12 +279,22 @@ class _SignupScreenState extends State<SignupScreen> {
                     keyboardType: TextInputType.phone,
                     decoration: const InputDecoration(
                       labelText: 'Mobile Number',
-                      hintText: '+63 917 123 4567',
+                      prefixText: '+63 ',
+                      hintText: '917 123 4567',
                       prefixIcon: Icon(Icons.phone_outlined, size: 20),
                     ),
-                    validator: (v) => (v == null || v.trim().length < 7)
+                    validator: (v) => (v == null ||
+                            v.replaceAll(RegExp(r'[^0-9]'), '').length < 9)
                         ? 'Enter a valid mobile number'
                         : null,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'We will send a verification link to your email after signup.',
+                    style: TextStyle(
+                      color: AppColors.slateGrey,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 22),
                   TextFormField(

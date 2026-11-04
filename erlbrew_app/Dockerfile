@@ -18,6 +18,16 @@ COPY erlbrew_app/ .
 ARG POS_API_URL=http://localhost:3001
 RUN flutter build web --release --dart-define=POS_API_URL=${POS_API_URL}
 
+# Cache-bust the entry chain. main.dart.js / flutter_bootstrap.js keep the same
+# filename on every build, so CDNs and browsers can serve a stale copy for hours
+# after a rebuild (seen live: mixed-content errors from an old baked-in URL,
+# even after the origin was fixed). Stamp references with a content hash of
+# main.dart.js: identical build -> identical URL (cache-friendly), any change ->
+# a URL no cache has ever seen (always fresh, no purge needed).
+RUN STAMP=$(md5sum build/web/main.dart.js | cut -c1-10) && \
+    sed -i "s/main\.dart\.js/main.dart.js?v=$STAMP/g" build/web/flutter_bootstrap.js && \
+    sed -i "s/flutter_bootstrap\.js/flutter_bootstrap.js?v=$STAMP/g" build/web/index.html
+
 # Stage 2: Serve statically
 FROM nginx:alpine
 RUN rm /etc/nginx/conf.d/default.conf

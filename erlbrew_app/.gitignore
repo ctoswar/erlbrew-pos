@@ -1,3 +1,6 @@
+# Backend URL env file (local only)
+config/.env
+
 # Miscellaneous
 *.class
 *.log

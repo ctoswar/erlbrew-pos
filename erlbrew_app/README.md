@@ -1,8 +1,23 @@
 # Erlbrew Café — Rewards & Pickup App
 
 A Flutter customer app for café loyalty and pickup orders. Rewards and the
-demo menu remain mocked locally, while PayMongo checkout and payment-confirmed
+admin menu customers use the POS backend under `../server` (Docker-ready via
+`../infra/docker-compose.yml`), while PayMongo checkout and payment-confirmed
 order status use the Firebase Functions project under `functions/`.
+
+## Backend URL (env)
+
+`PosApiService.baseUrl` is set at build time from the environment — no code edits
+needed per deployment:
+
+1. `copy config\env.example config\.env` and set `POS_API_URL` to the machine
+   running the backend (see the examples inside that file).
+2. Then:
+   - Dev: `flutter run --dart-define-from-file=config/.env`
+   - Release APK: `.\build_apk.ps1` (wraps `flutter build apk --release --dart-define-from-file=config/.env`)
+
+`POS_API_URL` defaults to `http://localhost:3001` when no define is given
+(dev emulator uses `10.0.2.2` to reach the host).
 
 ## Screens
 

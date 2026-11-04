@@ -14,9 +14,11 @@ class PosApiService {
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   /// Base URL of the POS backend.
-  /// Override with --dart-define=POS_API_URL=http://your-ip:3001
+  /// Set per-build via an env file (--dart-define-from-file=config/.env —
+  /// see config/env.example, or use .\build_apk.ps1) or directly:
+  ///   --dart-define=POS_API_URL=http://your-ip:3001
   /// For Android emulator use 10.0.2.2, for iOS simulator use localhost,
-  /// for physical devices use the machine's IP.
+  /// for physical devices use the machine's LAN IP.
   static const String baseUrl = String.fromEnvironment(
     'POS_API_URL',
     defaultValue: 'http://localhost:3001',

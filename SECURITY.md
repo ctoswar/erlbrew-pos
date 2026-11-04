@@ -74,6 +74,8 @@ These are known areas for hardening. Contributions welcome:
 5. **Rate limiting** — Only login is rate-limited. Other endpoints (order creation, etc.) should be too.
 6. **Audit logging** — No centralized audit trail for admin actions (void, refund, staff delete).
 7. **CSRF protection** — No CSRF tokens. Acceptable for API-only backend with JWT, but should be reconsidered if cookies are ever used.
+8. **`minimatch`/`glob` chain via `exceljs` (root)** — `exceljs@4.4.0` → `archiver` → `glob`/`minimatch` (< 11.0.1, GHSA-g3hv-75wg-m249; glob GHSA-3g3m-2fjr-6pw4). Advisories are DoS-class (CWE-405 / signal-bypass traversal) in glob pattern matching; the Excel export feature (`AdminReports.tsx`) only invokes internal fixed patterns, never attacker-controlled globs. No compatible upstream release on the pinned chain (fix needs minimatch ≥ 11 / glob ≥ 14.0.2). Accepted risk; revisit when exceljs or glob repackages its bundling.
+9. **`glob`/`gaxios` chain via `firebase-admin` (server)** — `firebase-admin@14.5.0` → `@google-cloud/firestore-api` pins the same fresh glob/minimatch advisories through `gaxios@7.1.3` / `gcp-metadata@8.1.4` / `google-gax@5.0.8`. Same DoS-class exposure in transitive internals (token refresh/metadata fetch), no in-range fix yet. Bumped to 14.5.0 in [#288](https://github.com/ctoswar/erlbrew-pos/pull/288) specifically to remove the nested `uuid@9.0.1` advisory (GHSA-w5hq-g745-h8pq, CVSS 7.5), which was the higher-severity alert. Clear these via a future minor refresh once Google publishes patched deps.
 
 ## Environment Variables
 

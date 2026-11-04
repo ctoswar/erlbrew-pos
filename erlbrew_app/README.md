@@ -19,6 +19,25 @@ needed per deployment:
 `POS_API_URL` defaults to `http://localhost:3001` when no define is given
 (dev emulator uses `10.0.2.2` to reach the host).
 
+## Running the PWA in Docker
+
+`infra/docker-compose.yml` includes an `erlbrew-app` service (Flutter Web → nginx,
+port **3005**) — the customer app as a browser/PWA:
+
+```bash
+# from the repository root; POS_API_URL is baked at build time
+POS_API_URL=http://192.168.5.115:3001 docker compose -f infra/docker-compose.yml up -d --build erlbrew-app
+```
+
+- Open `http://192.168.5.115:3005` from any LAN device (desktop or phone).
+- CORS: the API allows `http://192.168.*` and `http://localhost:3005` origins (see the compose `CORS_ORIGINS` line).
+- The browser **Install/Add-to-Home-Screen badge** requires HTTPS — once the host
+  is published (e.g. Cloudflare tunnel → `app.erlbrewcafe.page`), the badge works;
+  plain LAN HTTP still runs the app fine.
+- `config/.env` stays git-ignored; the container reads `POS_API_URL` from the
+  compose build-arg instead.
+
+
 ## Screens
 
 ### Customer

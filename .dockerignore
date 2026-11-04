@@ -8,12 +8,17 @@ print-server/venv/
 
 # Build output
 dist/
+erlbrew_app/build/
+erlbrew_app/.dart_tool/
+erlbrew_app/android/.gradle/
+erlbrew_app/android/.kotlin/
 
 # Environment files
 .env
 .env.local
 .env.production
 server/.env
+erlbrew_app/config/.env
 .env.*.local
 
 # IDE

@@ -18,10 +18,12 @@ function taipeiToday() {
 
 export default function clockRouter(pool, googleSheets) {
   const router = Router();
-  router.use(authMiddleware, adminMiddleware);
+  // Any staff token can reach the router (the RFID tap is staff-accessible),
+  // but viewing/adjusting other staff's records stays Manager-only.
+  router.use(authMiddleware);
 
   // POST /api/clock — RFID scan → clock in or clock out
-  // Restricted to authorized managers; RFID alone is not sufficient for remote access.
+  // Any logged-in staff may tap; the token prevents anonymous/remote spoofing.
   router.post('/', async (req, res) => {
     let { rfid } = req.body;
     if (rfid && typeof rfid === 'string') rfid = rfid.replace(/[\x00-\x1f]/g, '').trim().toUpperCase();
@@ -39,33 +41,38 @@ export default function clockRouter(pool, googleSheets) {
 
       const { id: staff_id, name, role, initials, color } = staff[0];
 
-      // Check if already clocked in today (open record exists)
+      // Check for open records today (a record with no clock_out)
       const today = taipeiToday(); // YYYY-MM-DD in Asia/Taipei
       const [open] = await pool.query(
-        'SELECT id FROM time_records WHERE staff_id = ? AND DATE(clock_in) = ? AND clock_out IS NULL LIMIT 1',
+        'SELECT id, clock_in FROM time_records WHERE staff_id = ? AND DATE(clock_in) = ? AND clock_out IS NULL ORDER BY clock_in',
         [staff_id, today]
       );
 
-if (open.length) {
-// Clock OUT — close the open record, compute hours
+      if (open.length) {
+// Clock OUT — close ALL open records (defensive: past adjustments can leave
+// duplicates), computing hours per record. The latest-session record is the response.
+    const openIds = open.map((o) => o.id);
     const clockOutTime = toMysqlDatetime(taipeiNow());
     await pool.query(
-      'UPDATE time_records SET clock_out = ?, total_hours = TIMESTAMPDIFF(MINUTE, clock_in, ?) / 60.0 WHERE id = ?',
-      [clockOutTime, clockOutTime, open[0].id]
+      'UPDATE time_records SET clock_out = ?, total_hours = TIMESTAMPDIFF(MINUTE, clock_in, ?) / 60.0 WHERE id IN (?)',
+      [clockOutTime, clockOutTime, openIds]
     );
 
-    // Fetch updated record
+    // Fetch updated records and use the most recent session as representative
     const [records] = await pool.query(
-      'SELECT id, clock_in, clock_out, total_hours FROM time_records WHERE id = ?',
-      [open[0].id]
+      'SELECT id, clock_in, clock_out, total_hours FROM time_records WHERE id IN (?) ORDER BY clock_in DESC',
+      [openIds]
     );
 
     // Log to Google Sheets (best-effort — don't fail the clock-out if sheets errors)
     const rec = records[0];
     if (!rec) return res.status(404).json({ error: 'Clock record not found after insert' });
 
-    // Audit: clock-out
-    await logAuditDirect(pool, { staffId: staff_id, staffName: name, action: 'clock_out', entityType: 'time_record', entityId: String(open[0].id), details: { hours: rec.total_hours } });
+    // Audit: clock-out (log each closed record)
+    for (const o of openIds) {
+      const closed = records.find((r) => r.id === o) || rec;
+      await logAuditDirect(pool, { staffId: staff_id, staffName: name, action: 'clock_out', entityType: 'time_record', entityId: String(o), details: { hours: closed.total_hours } });
+    }
 
     if (googleSheets) {
       try {
@@ -87,6 +94,54 @@ if (open.length) {
       });
       } else {
 // Clock IN — create new record
+      // First: auto-close stale open records left from previous days (missed
+      // clock-outs). Clock-out = scheduled shift end for that record's weekday;
+      // fallback = 23:59:59 of the clock-in day. Keeps pay bounded and correctable.
+      try {
+        const [stale] = await pool.query(
+          `SELECT tr.id, DATE_FORMAT(tr.clock_in, '%Y-%m-%d') AS cin_date
+           FROM time_records tr
+           WHERE tr.staff_id = ? AND tr.clock_out IS NULL AND DATE(tr.clock_in) < ?
+           LIMIT 20`,
+          [staff_id, today]
+        );
+        for (const st of stale) {
+          const [sched] = await pool.query(
+            `SELECT ssd.shift_start, ssd.shift_end
+             FROM time_records tr
+             JOIN staff s ON s.id = tr.staff_id
+             LEFT JOIN staff_schedule_days ssd ON ssd.schedule_id = s.schedule_id
+               AND ssd.day_of_week = CASE DAYOFWEEK(tr.clock_in)
+                 WHEN 1 THEN 'sun' WHEN 2 THEN 'mon' WHEN 3 THEN 'tue' WHEN 4 THEN 'wed'
+                 WHEN 5 THEN 'thu' WHEN 6 THEN 'fri' WHEN 7 THEN 'sat'
+               END
+             WHERE tr.id = ?`,
+            [st.id]
+          );
+          const ss = sched[0]?.shift_start ? String(sched[0].shift_start) : null;
+          const se = sched[0]?.shift_end ? String(sched[0].shift_end) : null;
+          let outTs = `${st.cin_date} 23:59:59`;
+          if (ss && se && se > ss) outTs = `${st.cin_date} ${se}`;
+          else if (ss && se && se <= ss) {
+            // Overnight shift (end on the next calendar day)
+            const nextDay = toDateOnly(new Date(new Date(`${st.cin_date}T00:00:00`).getTime() + 86400000));
+            outTs = `${nextDay} ${se}`;
+          }
+          await pool.query(
+            'UPDATE time_records SET clock_out = ?, total_hours = TRUNCATE(TIMESTAMPDIFF(MINUTE, clock_in, ?) / 60.0, 2) WHERE id = ? AND clock_out IS NULL',
+            [outTs, outTs, st.id]
+          );
+          await logAuditDirect(pool, { staffId: staff_id, staffName: name, action: 'clock_out_auto', entityType: 'time_record', entityId: String(st.id), details: { automatic: true, reason: 'missed clock-out auto-closed on next clock-in', clock_out: outTs } });
+          if (googleSheets) {
+            try {
+              await googleSheets.appendTimeRecord({ staffName: name, role, action: 'Clock Out (Auto)', clockIn: `${st.cin_date} (auto-closed)`, clockOut: outTs, totalHours: null });
+            } catch (e) { console.error('[Clock] Sheets auto clock-out failed:', e.message); }
+          }
+        }
+      } catch (e) {
+        console.error('[Clock] stale open auto-close failed (non-fatal):', e.message);
+      }
+
       const clockInTime = toMysqlDatetime(taipeiNow());
       const [insert] = await pool.query(
         'INSERT INTO time_records (staff_id, rfid, clock_in) VALUES (?, ?, ?)',
@@ -130,7 +185,7 @@ const [records] = await pool.query(
   });
 
   // GET /api/clock — today's clock records (for TimeKeeping screen)
-  // Returns all staff with today's clock status
+  // Any logged-in staff can view records
 router.get('/', async (req, res) => {
     try {
       const today = taipeiToday();
@@ -153,10 +208,14 @@ router.get('/', async (req, res) => {
          [nowParam, today]
       );
 
-      // Group by staff — keep latest record per person
+      // Group by staff — prefer an OPEN record (still clocked in) over a newer
+      // closed one. Adjusting an open record's clock-in to an earlier time can
+      // put it behind newer closed records in the ORDER BY; without this the
+      // person wrongly displays as "clocked_out" while still working.
       const staffMap = {};
       for (const r of records) {
-        if (!staffMap[r.staff_id]) {
+        const cur = staffMap[r.staff_id];
+        if (!cur || (cur.clock_out && !r.clock_out)) {
           staffMap[r.staff_id] = r;
         }
       }
@@ -379,7 +438,7 @@ router.get('/', async (req, res) => {
   });
 
   // PUT /api/clock/:recordId/adjust — adjust a time record (auth required: Manager+)
-  router.put('/:recordId/adjust', authMiddleware, async (req, res) => {
+  router.put('/:recordId/adjust', authMiddleware, adminMiddleware, async (req, res) => {
     const { recordId } = req.params;
     const { clock_in, clock_out, reason } = req.body;
     const user = req.user;
@@ -397,6 +456,14 @@ router.get('/', async (req, res) => {
       // Prepare new values — if not provided, keep old
       const newIn = clock_in ? clock_in : oldIn;
       const newOut = (typeof clock_out !== 'undefined') ? clock_out : oldOut;
+
+      // Validate: when both are present, clock_out must be after clock_in
+      if (newIn && newOut) {
+        const inT = new Date(newIn).getTime();
+        const outT = new Date(newOut).getTime();
+        if (Number.isNaN(inT) || Number.isNaN(outT)) return res.status(400).json({ error: 'Invalid date format' });
+        if (outT <= inT) return res.status(400).json({ error: 'Clock out must be after clock in' });
+      }
 
       // Update the record with new timestamps and recompute total_hours
       const [upd] = await pool.query(

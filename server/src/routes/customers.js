@@ -8,6 +8,12 @@ import { customerAuthMiddleware } from '../middleware/customerAuth.js';
 import { logAudit } from '../services/audit.js';
 import { locationScope, scopedLocationCondition } from '../middleware/location.js';
 
+export function isVerifiedFirebaseCustomer(decoded) {
+  return decoded?.email_verified === true &&
+    typeof decoded?.email === 'string' &&
+    decoded.email.trim().length > 0;
+}
+
 export default function customersRouter(pool) {
   const router = Router();
   const customerColumns = 'id, phone, name, email, notes, loyalty_points, loyalty_tier, last_points_update, total_orders, total_spent, created_at, updated_at';
@@ -158,7 +164,7 @@ export default function customersRouter(pool) {
     }
     try {
       const decoded = await firebaseAuth.verifyIdToken(idToken);
-      if (decoded.email_verified !== true) {
+      if (!isVerifiedFirebaseCustomer(decoded)) {
         return res.status(403).json({ error: 'Email verification is required', code: 'EMAIL_NOT_VERIFIED' });
       }
       const email = String(decoded.email || '').trim().toLowerCase();

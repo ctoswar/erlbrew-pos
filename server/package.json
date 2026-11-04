@@ -22,8 +22,8 @@
     "multer": "^2.4.0",
     "mysql2": "^3.24.4",
     "node-cron": "^4.2.1",
-    "undici": "^6.28.0",
-    "uuid": "^14.0.2"
+    "undici": "^8.12.3",
+    "uuid": "^14.0.3"
   },
   "devDependencies": {
     "autoprefixer": "^10.5.0",

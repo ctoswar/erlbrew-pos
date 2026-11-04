@@ -3,8 +3,9 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Install dumb-init for proper signal handling + mariadb client (mysqldump)
+# for the SQL backup endpoint (dumps external MySQL 8 servers over the LAN)
+RUN apk add --no-cache dumb-init mysql-client
 
 # Create non-root user for security (before installing deps so we can chown)
 RUN addgroup -g 1001 -S nodejs && adduser -S nodeapp -u 1001

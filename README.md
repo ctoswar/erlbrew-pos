@@ -201,6 +201,9 @@ consolidated view.
 | `OLLAMA_BASE_URL` | No | Ollama service URL (Docker default: `http://ollama:11434`) |
 | `OLLAMA_MODEL` | No | Installed local model name used for briefings (example: `qwen3.5:2b`) |
 | `OLLAMA_TIMEOUT_MS` | No | Briefing request timeout, bounded by the backend (default: `5000`) |
+| `BACKUP_DB_USER` | No | Dedicated MySQL user for `GET /api/admin/backup/sql`. Falls back to the `DATABASE_URL` user. Must use `mysql_native_password` (the MariaDB dump client shipped in the container cannot authenticate with MySQL 8's default `caching_sha2_password`) |
+| `BACKUP_DB_PASSWORD` | No | Password for `BACKUP_DB_USER` |
+| `MYSQLDUMP_BIN` | No | Dump binary to use (default: `mariadb-dump`, falls back to `mysqldump` if missing) |
 
 `CORS_ORIGINS` must contain the exact browser origin used by each deployment,
 including the scheme and port when present. For example, a POS opened at
@@ -217,6 +220,20 @@ docker compose -f infra/docker-compose.yml up -d --force-recreate erlbw-api
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `VITE_PRINT_SERVER_URL` | No | Print server URL for receipts |
+
+### Restoring a SQL Backup
+
+The SQL backup from **Backup & Restore → Server Database Backup (SQL)** is a
+gzipped `mysqldump` of the whole database. Restores are done manually from the
+terminal (there is no restore button by design):
+
+```bash
+gunzip < backup.sql.gz | docker exec -i <mysql_container> mysql -u <user> -p <db>
+```
+
+If MySQL runs outside Docker, pipe directly into that server's `mysql` client.
+The dump uses `--single-transaction` (no table locks) and generated columns are
+stripped from `INSERT` statements so the file restores cleanly into MySQL 8.
 
 ## API Documentation
 

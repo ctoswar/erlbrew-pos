@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useState, useEffect, useCallback } from "react";
 import { Order, Staff, InventoryItem, DiscountType } from "../types";
 import { formatCurrency, parseServerDatetime } from "../utils";
-import { apiGet, apiAdminGet, clearAllOrders } from "../utils/api";
+import { apiGet, apiAdminGet, clearAllOrders, getAuthToken } from "../utils/api";
 import { useViewport } from "../hooks/useViewport";
 import { LocationSelector } from "./LocationSelector";
 import { getNavIcon } from "./NavIcons";
@@ -71,6 +71,8 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'ok' | 'error'>('idle');
   const [serverMsg, setServerMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [sqlBusy, setSqlBusy] = useState(false);
+  const [sqlMsg, setSqlMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -233,6 +235,47 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
     const blob = new Blob([JSON.stringify({ exportDate: new Date().toISOString(), orders, inventory, staff: { name: staff.name, role: staff.role } }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `erlbrew-backup-${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url);
+  };
+
+  // Server-side MySQL dump — streamed as .sql.gz. Uses fetch with the auth
+  // token (blob download keeps the Authorization header; a plain <a href>
+  // would lose it).
+  const downloadSqlBackup = async () => {
+    if (sqlBusy) return;
+    setSqlBusy(true);
+    setSqlMsg(null);
+    try {
+      const token = getAuthToken();
+      const res = await fetch('/api/admin/backup/sql', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        let msg = `Backup failed (HTTP ${res.status})`;
+        try {
+          const body = await res.json();
+          if (body?.error) msg = body.error;
+        } catch { /* non-JSON error body */ }
+        throw new Error(msg);
+      }
+      const blob = await res.blob();
+      if (blob.size < 100) throw new Error('Backup came back empty — check the server logs');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      // Prefer the server-provided filename (contains the Asia/Taipei timestamp)
+      const cd = res.headers.get('Content-Disposition') || '';
+      const m = cd.match(/filename="?([^";]+)"?/);
+      a.download = m ? m[1] : `erlbrew-backup-${new Date().toISOString().slice(0, 10)}.sql.gz`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setSqlMsg({ text: `SQL backup downloaded (${(blob.size / 1024).toFixed(0)} KB gzip)`, type: 'success' });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to download SQL backup';
+      setSqlMsg({ text: msg, type: 'error' });
+    } finally {
+      setSqlBusy(false);
+      setTimeout(() => setSqlMsg(null), 6000);
+    }
   };
 
   const importData = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -525,13 +568,27 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             <h2 className="text-lg text-erl-text-primary mb-5">Backup & Restore</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-erl-surface rounded-xl p-4 md:p-6 border border-erl-border-subtle">
-                <h3 className="text-[13px] text-erl-text-primary mb-2">📤 Export Backup</h3>
+                <h3 className="text-[13px] text-erl-text-primary mb-2">📤 Browser Backup (JSON)</h3>
                 <p className="text-[11px] text-erl-text-muted mb-4">Download all orders and inventory data to a JSON file.</p>
+                <p className="text-[10px] text-erl-text-faint mb-3 italic">Note: this only contains data cached in THIS browser (localStorage) — not the full server database. Use the SQL backup below for a complete server-side dump.</p>
                 <div className="text-[10px] text-erl-text-muted mb-3">Orders: {orders.length} | Inventory: {inventory.length} items</div>
                 <button onClick={exportData} disabled={orders.length === 0 && inventory.length === 0}
                   className="py-2.5 px-5 text-[11px] rounded-lg border border-erl-accent bg-erl-accent text-erl-base cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">
                   Download Backup
                 </button>
+              </div>
+              <div className="bg-erl-surface rounded-xl p-4 md:p-6 border border-erl-border-subtle">
+                <h3 className="text-[13px] text-erl-text-primary mb-2">🗄️ Server Database Backup (SQL)</h3>
+                <p className="text-[11px] text-erl-text-muted mb-4">Download a full MySQL dump of the server database, including staff accounts, orders, inventory, and settings.</p>
+                <button onClick={downloadSqlBackup} disabled={sqlBusy}
+                  className="py-2.5 px-5 text-[11px] rounded-lg border border-erl-accent bg-erl-accent text-erl-base cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">
+                  {sqlBusy ? 'Preparing backup...' : 'Download SQL Backup'}
+                </button>
+                {sqlMsg && (
+                  <div className={`mt-3 text-[11px] font-semibold ${sqlMsg.type === 'success' ? 'text-erl-success' : 'text-erl-danger'}`}>
+                    {sqlMsg.text}
+                  </div>
+                )}
               </div>
               <div className="bg-erl-surface rounded-xl p-4 md:p-6 border border-erl-border-subtle">
                 <h3 className="text-[13px] text-erl-text-primary mb-2">📥 Import Backup</h3>
@@ -569,6 +626,10 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
                   <li>Data syncs from server when you click "Sync Now"</li>
                   <li>You can export backups for safekeeping</li>
                 </ul>
+                <p className="text-[11px] text-erl-text-muted mt-3 mb-1 font-semibold">Restoring a SQL backup (done manually from the terminal — there is intentionally no restore button here):</p>
+                <code className="block text-[10px] text-erl-text-muted bg-erl-base rounded-lg px-3 py-2 overflow-x-auto">
+                  {'gunzip < backup.sql.gz | docker exec -i <mysql_container> mysql -u <user> -p <db>'}
+                </code>
               </div>
             </div>
           </div>

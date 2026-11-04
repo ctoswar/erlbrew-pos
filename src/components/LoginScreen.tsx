@@ -17,7 +17,6 @@ interface CompanyInfo {
 
 interface RfidStaffResponse {
   id: number;
-  rfid: string;
   name: string;
   role: Role;
   initials: string;
@@ -92,7 +91,7 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
         setRfid("");
         return;
       }
-      const staff: Staff = { ...found, pin: "", locationId: found.location_id ?? null };
+      const staff: Staff = { ...found, rfid: trimmed, pin: "", locationId: found.location_id ?? null };
       setSelectedStaff(staff);
       setRfid(trimmed);
       setStep("pin");

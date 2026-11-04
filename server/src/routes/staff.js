@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { getApps, getApp, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -33,6 +34,14 @@ return null;
   // Helpers for Asia/Taipei time (UTC+8)
   function taipeiNow() { return new Date(Date.now() + 8 * 60 * 60 * 1000); }
   function toMysqlDatetime(d) { return d.toISOString().slice(0, 19).replace('T', ' '); }
+
+export function maskStaffName(name) {
+  return String(name || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => `${word[0]}***`)
+    .join(' ');
+}
 
 export default function staffRouter(pool){
   let firebaseApp;
@@ -77,15 +86,38 @@ export default function staffRouter(pool){
   }
   const router = express.Router();
 
-  // GET /staff/rfid/:rfid — public, used by LoginScreen for card-lookup
-  router.get('/rfid/:rfid', async (req, res) => {
+  // GET /staff/rfid/:rfid — public pre-auth card lookup for the POS login screen
+  // (also used by VoidCredentialModal). Published to the internet via the
+  // Cloudflare tunnel, so:
+  //  1. It is rate-limited hard (10/min/IP — enough for shift-start card taps
+  //     sharing one LAN IP, useless for enumeration).
+  //  2. It returns the minimum the login UI needs and initials-masks the name —
+  //     it must not leak card UIDs, rfid_alt, location_id or created_at, and
+  //     never lets a remote caller harvest full staff names.
+  const rfidLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    message: { error: 'Too many card lookups. Please wait a moment.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  router.get('/rfid/:rfid', rfidLimiter, async (req, res) => {
     try {
       const rfid = (req.params.rfid || '').replace(/[\x00-\x1f]/g, '').trim().toUpperCase();
       const [rows] = await pool.query(
-        'SELECT id, rfid, rfid_alt, name, role, initials, color, location_id, created_at FROM staff WHERE rfid = ? OR rfid_alt = ?',
+        'SELECT id, name, role, initials, color, location_id FROM staff WHERE rfid = ? OR rfid_alt = ?',
         [rfid, rfid]
       );
-      return res.json(rows[0] || null);
+      if (!rows.length) return res.json(null);
+      const { id, name, role, initials, color, location_id } = rows[0];
+      return res.json({
+        id,
+        name: maskStaffName(name),
+        role,
+        initials,
+        color,
+        location_id: location_id ?? null,
+      });
     } catch (e) {
       res.status(500).json({ error: 'DB error' });
     }

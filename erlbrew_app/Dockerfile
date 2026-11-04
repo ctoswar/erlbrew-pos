@@ -5,14 +5,14 @@
 # needs HTTPS, which arrives when the host is published (Cloudflare tunnel/Pages).
 
 # Stage 1: Build the Flutter web bundle
-FROM ghcr.io/cirruslabs/flutter:3.47.2 AS builder
+FROM ghcr.io/cirruslabs/flutter:3.44.0 AS builder
 WORKDIR /app
 
-# Pub-first for layer caching
-COPY pubspec.yaml pubspec.lock ./
+# Pub-first for layer caching (build context = repo root, see infra/docker-compose.yml)
+COPY erlbrew_app/pubspec.yaml erlbrew_app/pubspec.lock ./
 RUN flutter pub get
 
-COPY . .
+COPY erlbrew_app/ .
 
 # Backend URL baked into the JS bundle (PosApiService reads POS_API_URL)
 ARG POS_API_URL=http://localhost:3001

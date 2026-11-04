@@ -169,3 +169,12 @@ server/migrate-sun.js
 .github/agents/fullstack.agent.md
 erlbrew_app/lib/firebase_options.dart
 erlbrew_app/firebase_options.dart
+
+# ── Local-only secrets and TLS material (never commit) ──────────────────────
+# Root-level copies of the TLS certs used by the frontend container volume
+/cert.pem
+/key.pem
+/rootCA.pem
+/certs/
+# Local backup copy of server/.env (real secrets)
+/server/env

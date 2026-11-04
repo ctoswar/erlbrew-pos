@@ -24,6 +24,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _passwordController = TextEditingController();
   bool _obscure = true;
   bool _loading = false;
+  bool _useSmsVerification = false;
 
   String _normalizedPhone(String value) {
     var phone = value.replaceAll(RegExp(r'[^0-9]'), '');
@@ -40,7 +41,10 @@ class _SignupScreenState extends State<SignupScreen> {
         _normalizedPhone(_phoneController.text),
       );
     } on FirebaseAuthException catch (error) {
-      if (error.code != 'quota-exceeded' && error.code != 'too-many-requests') {
+      if (error.code != 'quota-exceeded' &&
+          error.code != 'too-many-requests' &&
+          error.code != 'invalid-app-credential' &&
+          error.code != 'captcha-check-failed') {
         rethrow;
       }
       if (!mounted) return false;
@@ -106,6 +110,10 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _loading = true);
 
     try {
+      final phoneVerified =
+          _useSmsVerification ? await _verifyPhoneOtp() : true;
+      if (!phoneVerified) return;
+
       final firebase = FirebaseAuthService.instance;
       AppUser firebaseUser;
       final phone = _normalizedPhone(_phoneController.text);
@@ -295,6 +303,15 @@ class _SignupScreenState extends State<SignupScreen> {
                       color: AppColors.slateGrey,
                       fontSize: 12,
                     ),
+                  ),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Verify by SMS instead'),
+                    subtitle: const Text(
+                        'Requires Firebase Phone Auth and reCAPTCHA.'),
+                    value: _useSmsVerification,
+                    onChanged: (value) =>
+                        setState(() => _useSmsVerification = value),
                   ),
                   const SizedBox(height: 22),
                   TextFormField(

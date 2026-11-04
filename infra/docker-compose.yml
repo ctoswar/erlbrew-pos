@@ -27,7 +27,7 @@ services:
       # CORS: allow the frontend container by Docker DNS name
       # Also allow by IP range for direct tablet access on LAN
       # Override or append in your .env as needed
-      CORS_ORIGINS: http://erlbrew-pos,http://localhost:3000,http://localhost:3004,http://localhost:3005,http://pos.lan,http://192.168.*,http://172.*,http://100.*,https://pos.tirona.site,https://localhost,https://localhost:3004,https://localhost:3005,https://pos.lan,https://pos.lan:3004,https://192.168.*,https://172.*,https://100.*
+      CORS_ORIGINS: http://erlbrew-pos,http://localhost:3000,http://localhost:3004,http://localhost:3005,http://pos.lan,http://192.168.*,http://172.*,http://100.*,https://pos.tirona.site,https://localhost,https://localhost:3004,https://localhost:3005,https://pos.lan,https://pos.lan:3004,https://192.168.*,https://172.*,https://100.*,https://app.erlbrewcafe.page,https://erlapi.erlbrewcafe.page
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/menu"]
       interval: 30s
@@ -54,7 +54,7 @@ services:
 
   # ── Customer PWA (Flutter Web) ──────────────────────────────────────────────
   # erlbrew_app compiled to web. Backend URL is baked at build time from
-  # POS_API_URL (env or config/.env-style value, e.g. http://192.168.5.115:3001).
+  # POS_API_URL (env or config/.env-style value, e.g. https://erlapi.erlbrewcafe.page).
   # Serve on 3005; the browser "install" badge appears once the host is served
   # over HTTPS (e.g. published via the Cloudflare tunnel as app.erlbrewcafe.page).
   erlbrew-app:
@@ -62,7 +62,7 @@ services:
       context: ..
       dockerfile: erlbrew_app/Dockerfile
       args:
-        POS_API_URL: ${POS_API_URL:-http://192.168.5.115:3001}
+        POS_API_URL: ${POS_API_URL:-https://erlapi.erlbrewcafe.page}
     container_name: erlbrew-app
     restart: unless-stopped
     ports:

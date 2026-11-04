@@ -927,7 +927,8 @@ function printServerRequest(urlStr, options = {}, attempt = 1) {
   });
 }
 
-app.post('/api/print', authMiddleware, adminMiddleware, async (req, res) => {
+// Receipt printing is a cashier flow — any logged-in staff token is allowed
+app.post('/api/print', authMiddleware, async (req, res) => {
   const { lines, paperSize, qrCodeUrl, wifiQrData } = req.body || {};
   if (!lines || !Array.isArray(lines)) {
     return res.status(400).json({ error: 'lines array required' });
@@ -956,7 +957,8 @@ app.post('/api/print', authMiddleware, adminMiddleware, async (req, res) => {
   }
 });
 
-app.post('/api/open-drawer', authMiddleware, adminMiddleware, async (req, res) => {
+// Cash drawer opening is also a cashier flow — staff token required
+app.post('/api/open-drawer', authMiddleware, async (req, res) => {
   const serverUrl = await resolvePrintServer();
   if (!serverUrl) {
     return res.status(502).json({ error: 'Print server not configured. Set PRINT_SERVER_URL env or configure in Admin Settings.' });

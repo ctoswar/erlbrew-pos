@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ZReport } from "../utils/api";
+import { ZReport, getAuthToken } from "../utils/api";
 import { formatCurrency } from "../utils";
 import { loadPrintSettings, PrintSettings } from "./AdminPrintSettings";
 import { getStoreInfo } from "../utils/receiptUtils";
@@ -272,9 +272,13 @@ async function printZReportViaBluetooth(report: ZReport, settings: PrintSettings
   // Repeat lines for multi-copy
   const allLines = Array(settings.printCopies).fill(lines).flat();
 
+  const token = getAuthToken() || '';
   const res = await fetch(`${baseUrl}/api/print`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({
       lines: allLines,
       paperSize: settings.paperSize,

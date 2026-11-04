@@ -1,5 +1,6 @@
 import { Order } from "../types";
 import { formatCurrency } from "./index";
+import { getAuthToken } from "./api";
 import { PrintSettings } from "../components/AdminPrintSettings";
 
 // Load company settings from localStorage (set by AdminPrintSettings)
@@ -320,9 +321,13 @@ export async function printViaBluetooth(order: Order, settings: PrintSettings, d
   // Repeat lines for multi-copy
   const allLines = Array(settings.printCopies).fill(lines).flat();
 
+  const token = getAuthToken();
   const res = await fetch(`${baseUrl}/api/print`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({
       lines: allLines,
       paperSize: settings.paperSize,
@@ -340,9 +345,13 @@ export async function printViaBluetooth(order: Order, settings: PrintSettings, d
 // Open cash drawer via backend proxy
 export async function openCashDrawer(): Promise<void> {
   const baseUrl = (import.meta.env.VITE_API_URL as string) || '';
+  const token = getAuthToken() || '';
   const res = await fetch(`${baseUrl}/api/open-drawer`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

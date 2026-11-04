@@ -2053,6 +2053,128 @@ html[data-app-scale="1.4"]   { zoom: 1.4; }
   }
 }
 
+/* ── Receipt preview: "printing out of a slot" animation ────────────────────
+ * Screen-only flourish for the Receipt Preview modal. The paper slides down
+ * out of a decorative printer slot, then the receipt rows reveal one by one
+ * (staggered via the --i CSS variable). All of it is disabled for print and
+ * for prefers-reduced-motion users — the 57mm thermal output stays static.
+ * ZReportPreview shares .receipt-print-target, so these classes are scoped to
+ * the scene wrapper used by ReceiptPreview only.
+ */
+.receipt-slot-scene {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Decorative printer slot the receipt "emerges" from */
+.receipt-slot {
+  width: 100%;
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(#3b3b3b, #1c1c1c);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.75),
+    0 1px 0 rgba(255, 255, 255, 0.35);
+  margin-bottom: 2px;
+}
+
+/* Clip container: the paper hides fully inside it before sliding out */
+.receipt-slot-paper {
+  overflow: hidden;
+  /* Shadow lives on the wrapper so overflow:hidden doesn't clip it,
+   * and the torn mask on the paper doesn't eat it either. */
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.22));
+}
+
+/* 1) Slide down out of the slot */
+.receipt-anim-paper {
+  animation: receipt-unroll 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes receipt-unroll {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(0); }
+}
+
+/* 2) Rows reveal one by one — staggered by --i (0.4s base, 50ms per row) */
+.receipt-reveal {
+  animation: receipt-row-in 0.25s ease-out both;
+  animation-delay: calc(0.4s + var(--i, 0) * 0.05s);
+}
+
+@keyframes receipt-row-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Print-button click: the receipt feeds back up into the slot, slot pulses
+ * like a thermal printer, then the paper re-emerges before the modal closes.
+ * One animation (~1.05s) so the whole flow stays snappy. */
+.receipt-feeding .receipt-anim-paper {
+  animation: receipt-feed 1.05s cubic-bezier(0.45, 0, 0.55, 1) both;
+}
+
+@keyframes receipt-feed {
+  0%   { transform: translateY(0); }
+  45%  { transform: translateY(-100%); }
+  52%  { transform: translateY(-100%); }
+  100% { transform: translateY(0); }
+}
+
+.receipt-feeding .receipt-slot {
+  animation: receipt-slot-pulse 0.35s linear infinite;
+}
+
+@keyframes receipt-slot-pulse {
+  0%, 100% { box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.75), 0 0 0 rgba(0, 0, 0, 0); }
+  50%      { box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.75), 0 3px 8px rgba(0, 0, 0, 0.4); }
+}
+
+/* 3) Zigzag torn bottom edge (conic-gradient mask) */
+.receipt-torn {
+  --tear: 8px;
+  -webkit-mask:
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--tear)) no-repeat,
+    conic-gradient(from -45deg at 50% 100%, #000 90deg, #0000 0) bottom / calc(var(--tear) * 2) var(--tear) repeat-x;
+  mask:
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--tear)) no-repeat,
+    conic-gradient(from -45deg at 50% 100%, #000 90deg, #0000 0) bottom / calc(var(--tear) * 2) var(--tear) repeat-x;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .receipt-anim-paper,
+  .receipt-reveal,
+  .receipt-feeding .receipt-slot {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .receipt-torn {
+    -webkit-mask: none !important;
+    mask: none !important;
+  }
+}
+
+/* 7) The on-screen animation must never leak into printed output */
+@media print {
+  .receipt-anim-paper,
+  .receipt-reveal,
+  .receipt-feeding .receipt-slot {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .receipt-torn {
+    -webkit-mask: none !important;
+    mask: none !important;
+  }
+  .receipt-slot,
+  .receipt-slot-paper {
+    filter: none !important;
+  }
+}
+
 /* ── Ingredient editor: calm workbench treatment ─────────────────────────────
  * This modal intentionally avoids the app-wide glass treatment. Ingredient
  * editing is a focused, repetitive task: solid surfaces and one accent make

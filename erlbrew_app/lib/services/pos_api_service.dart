@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_models.dart';
 
@@ -9,6 +11,7 @@ import '../models/app_models.dart';
 class PosApiService {
   PosApiService._();
   static final PosApiService instance = PosApiService._();
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   /// Base URL of the POS backend.
   /// Override with --dart-define=POS_API_URL=http://your-ip:3001
@@ -44,9 +47,10 @@ class PosApiService {
 
   /// Initialize: load saved tokens and profile from SharedPreferences
   Future<void> init() async {
+    if (kIsWeb) return;
     final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('pos_token');
-    _staffToken = prefs.getString('pos_staff_token');
+    _token = await _secureStorage.read(key: 'pos_token');
+    _staffToken = await _secureStorage.read(key: 'pos_staff_token');
     final customerJson = prefs.getString('pos_customer');
     if (_token != null && customerJson != null) {
       try {
@@ -66,8 +70,9 @@ class PosApiService {
   Future<void> _saveSession(String token, AppUser customer) async {
     _token = token;
     _currentCustomer = customer;
+    if (kIsWeb) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('pos_token', token);
+    await _secureStorage.write(key: 'pos_token', value: token);
     await prefs.setString(
         'pos_customer', jsonEncode(_customerToJson(customer)));
   }
@@ -87,16 +92,17 @@ class PosApiService {
   Future<void> logout() async {
     _token = null;
     _currentCustomer = null;
+    if (kIsWeb) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('pos_token');
+    await _secureStorage.delete(key: 'pos_token');
     await prefs.remove('pos_customer');
   }
 
   /// Clear saved staff session
   Future<void> adminLogout() async {
     _staffToken = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('pos_staff_token');
+    if (kIsWeb) return;
+    await _secureStorage.delete(key: 'pos_staff_token');
   }
 
   /// Handle API errors
@@ -192,8 +198,8 @@ class PosApiService {
     final data = _handleResponse(response);
     _staffToken = data['token'] as String?;
     if (_staffToken != null) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('pos_staff_token', _staffToken!);
+      if (kIsWeb) return data;
+      await _secureStorage.write(key: 'pos_staff_token', value: _staffToken!);
     }
     return data;
   }
@@ -210,8 +216,8 @@ class PosApiService {
       throw PosApiServiceException('The staff login response was invalid.');
     }
     _staffToken = token;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('pos_staff_token', token);
+    if (kIsWeb) return Map<String, dynamic>.from(data as Map);
+    await _secureStorage.write(key: 'pos_staff_token', value: token);
     return Map<String, dynamic>.from(data as Map);
   }
 

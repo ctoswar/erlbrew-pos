@@ -87,9 +87,7 @@ test('menu insights enforce Manager role and scope selected location', async () 
   assert.equal(forecastResponse.statusCode, 200);
   assert.equal(forecastResponse.body.locationId, 2);
   assert.equal(forecastResponse.body.horizonDays, 7);
-  const tomorrow = new Date();
-  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-  assert.equal(forecastResponse.body.forecasts[0].forecastStartDate, tomorrow.toISOString().slice(0, 10));
+  assert.equal(forecastResponse.body.forecasts[0].forecastStartDate, '2026-10-05');
   const dailyQuery = calls.find((call) => call.sql.includes('DATE(o.created_at) AS sale_date'));
   assert.deepEqual(dailyQuery.params, [90, 2]);
   assert.equal(forecastResponse.body.forecasts[0].asOfDate, '2026-10-04');

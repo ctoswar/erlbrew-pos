@@ -362,6 +362,10 @@ await pool.query(`
     await pool.query(`ALTER TABLE customers ADD COLUMN loyalty_tier ENUM('bronze','silver','gold','platinum') DEFAULT 'bronze'`).catch(() => {});
     await pool.query(`ALTER TABLE customers ADD COLUMN last_points_update TIMESTAMP NULL`).catch(() => {});
     await pool.query(`ALTER TABLE customers ADD COLUMN password_hash VARCHAR(256) DEFAULT NULL`).catch(() => {});
+    await pool.query(`ALTER TABLE customers ADD COLUMN first_name VARCHAR(100) DEFAULT NULL`).catch(() => {});
+    await pool.query(`ALTER TABLE customers ADD COLUMN last_name VARCHAR(100) DEFAULT NULL`).catch(() => {});
+    await pool.query(`ALTER TABLE customers ADD COLUMN username VARCHAR(32) DEFAULT NULL`).catch(() => {});
+    await pool.query(`ALTER TABLE customers ADD UNIQUE KEY uniq_customers_username (username)`).catch(() => {});
     console.log('customers loyalty columns ready');
 
     // ── Loyalty rewards catalog ──────────────────────────────────────────

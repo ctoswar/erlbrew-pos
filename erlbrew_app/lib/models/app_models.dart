@@ -1,6 +1,7 @@
 class AppUser {
   final String id;
   final String name;
+  final String username;
   final String email;
   int points;
   String tier;
@@ -11,6 +12,7 @@ class AppUser {
   AppUser({
     required this.id,
     required this.name,
+    this.username = '',
     required this.email,
     this.points = 0,
     this.tier = 'bronze',
@@ -21,6 +23,7 @@ class AppUser {
 
   factory AppUser.fromMap(String uid, Map<String, dynamic> data) {
     final rawName = (data['name'] ?? '').toString();
+    final rawUsername = (data['username'] ?? '').toString();
     final rawEmail = (data['email'] ?? '').toString();
     final roleFlag = data['isAdmin'] == true || data['role'] == 'admin';
     // Support both legacy 'points' and new 'loyalty_points' field
@@ -31,12 +34,19 @@ class AppUser {
     return AppUser(
       id: uid,
       name: rawName.isNotEmpty ? rawName : 'Erlbrew User',
+      username: rawUsername,
       email: rawEmail.isNotEmpty ? rawEmail : 'user@erlbrew.cafe',
-      points: (rawPoints is int) ? rawPoints : (rawPoints is num ? rawPoints.toInt() : 0),
+      points: (rawPoints is int)
+          ? rawPoints
+          : (rawPoints is num ? rawPoints.toInt() : 0),
       tier: rawTier.toString(),
       isAdmin: roleFlag,
-      totalOrders: rawTotalOrders is int ? rawTotalOrders : (rawTotalOrders is num ? rawTotalOrders.toInt() : null),
-      totalSpent: rawTotalSpent is double ? rawTotalSpent : (rawTotalSpent is num ? rawTotalSpent.toDouble() : null),
+      totalOrders: rawTotalOrders is int
+          ? rawTotalOrders
+          : (rawTotalOrders is num ? rawTotalOrders.toInt() : null),
+      totalSpent: rawTotalSpent is double
+          ? rawTotalSpent
+          : (rawTotalSpent is num ? rawTotalSpent.toDouble() : null),
     );
   }
 }

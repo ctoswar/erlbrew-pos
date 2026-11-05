@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import '../models/app_models.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/username_policy.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/lazy_indexed_stack.dart';
 import '../widgets/page_transitions.dart';
 import '../widgets/shimmer.dart';
 import '../widgets/ios_tab_bar.dart';
+import 'legal_screen.dart';
 import 'login_screen.dart';
 import 'pickup_screen.dart';
 import 'rewards_screen.dart';
@@ -192,6 +194,74 @@ class _ProfileScreenState extends State<_ProfileScreen> {
     }
   }
 
+  /// Lets the user pick or change their @username — validated with the
+  /// same rules as signup, and uniqueness is enforced by the server
+  /// (which also returns the friendly "already taken" message).
+  Future<void> _showEditUsername(BuildContext context, AppUser user) async {
+    final formKey = GlobalKey<FormState>();
+    final controller = TextEditingController(text: user.username);
+    final updatedUsername = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Change username'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Username',
+                prefixText: '@',
+                helperText: '3-20 letters, numbers or underscores.',
+              ),
+              validator: UsernamePolicy.validate,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  Navigator.of(dialogContext).pop(controller.text.trim());
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+
+    final candidate = (updatedUsername ?? '').trim().toLowerCase();
+    if (!mounted || candidate.isEmpty || candidate == user.username) return;
+
+    try {
+      final updated = await PosApiService.instance.updateUsername(candidate);
+      if (!mounted) return;
+      setState(() => _user = updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Username updated — welcome, @${updated.username}.'),
+        ),
+      );
+    } on PosApiServiceException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to update your username.')),
+      );
+    }
+  }
+
   Future<void> _showSettings(BuildContext context, AppUser user) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -227,6 +297,21 @@ class _ProfileScreenState extends State<_ProfileScreen> {
                     onTap: () {
                       Navigator.of(sheetContext).pop();
                       _showEditName(context, user);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.alternate_email),
+                    title: const Text('Username'),
+                    subtitle: user.username.isNotEmpty
+                        ? Text('@${user.username}')
+                        : const Text('Not set yet — pick yours'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      _showEditUsername(context, user);
                     },
                   ),
                 ),
@@ -322,6 +407,14 @@ class _ProfileScreenState extends State<_ProfileScreen> {
               child: Text(user.name,
                   style: Theme.of(context).textTheme.titleLarge),
             ),
+            if (user.username.isNotEmpty)
+              Center(
+                child: Text('@${user.username}',
+                    style: const TextStyle(
+                        color: AppColors.coffeeBrown,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+              ),
             Center(
               child: Text(user.email,
                   style: const TextStyle(color: AppColors.slateGrey)),
@@ -449,6 +542,16 @@ class _ProfileScreenState extends State<_ProfileScreen> {
                 subtitle: const Text('Account and security preferences'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _showSettings(context, user),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.policy_outlined),
+                title: const Text('Terms, Privacy & Cookies'),
+                subtitle: const Text('The legal bits, in plain language'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => LegalScreen.show(context),
               ),
             ),
             const SizedBox(height: 20),

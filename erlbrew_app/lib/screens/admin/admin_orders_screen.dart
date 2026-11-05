@@ -128,7 +128,8 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
     final items = (order['items'] as List<dynamic>?) ?? [];
     if (items.isEmpty) return '—';
     return items
-        .map((it) => '${it['qty']}× ${it['name'] ?? it['menu_item_id']}')
+        .map((it) =>
+            '${it['qty']}× ${it['name'] ?? it['menu_item_name'] ?? it['menu_item_id'] ?? 'Item'}')
         .join(', ');
   }
 

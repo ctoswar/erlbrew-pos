@@ -309,7 +309,7 @@ class _AdminDashboardState extends State<_AdminDashboard> {
                   ? '—'
                   : items
                       .map((it) =>
-                          '${it['qty']}× ${it['name'] ?? it['menu_item_id']}')
+                          '${it['qty']}× ${it['name'] ?? it['menu_item_name'] ?? it['menu_item_id'] ?? 'Item'}')
                       .join(', ');
               return FadeSlideIn(
                 delay: fadeStagger(entry.key,

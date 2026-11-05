@@ -82,7 +82,8 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     if (!orderIds.length) return [];
     const [items] = await pool.query(`
       SELECT oi.order_id, oi.menu_item_id, oi.qty, oi.notes, oi.price, oi.size,
-             COALESCE(oi.item_name, mi.name) AS menu_item_name, mi.category, mi.emoji, mi.badge,
+             COALESCE(oi.item_name, mi.name) AS menu_item_name,
+             COALESCE(oi.item_name, mi.name) AS name, mi.category, mi.emoji, mi.badge,
              JSON_ARRAYAGG(
                CASE WHEN oim.id IS NOT NULL
                  THEN JSON_OBJECT('name', oim.modifier_name, 'price', oim.modifier_price)

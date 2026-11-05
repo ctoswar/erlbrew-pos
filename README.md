@@ -195,7 +195,8 @@ consolidated view.
 | `PORT` | No | Server port (default: 3001) |
 | `CORS_ORIGINS` | No | Comma-separated allowed origins |
 | `GOOGLE_SHEETS_ID` | No | Google Sheets ID for cloud sync |
-| `GOOGLE_SERVICE_ACCOUNT_KEY` | No | Google service account JSON |
+| `FIREBASE_SERVICE_ACCOUNT_KEY` | No | Firebase **service account JSON for login** — must be from the same Firebase project as the client apps (the token `aud` must match). Read first; `GOOGLE_SERVICE_ACCOUNT_KEY` is the fallback. Staff roles resolve from Firestore `users/{uid}` (`role: "admin"`/`"manager"` or `isAdmin: true`) |
+| `GOOGLE_SERVICE_ACCOUNT_KEY` | No | Legacy fallback for the Firebase service account JSON (see above) |
 | `PRINT_SERVER_URL` | No | Raspberry Pi print server URL |
 | `OLLAMA_ENABLED` | No | Set `true` to enable optional Manager AI briefings; deterministic analytics do not require it |
 | `OLLAMA_BASE_URL` | No | Ollama service URL (Docker default: `http://ollama:11434`) |

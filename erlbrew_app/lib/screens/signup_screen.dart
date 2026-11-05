@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_models.dart';
 import '../services/firebase_auth_service.dart';
+import '../utils/auth_error_message.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
@@ -209,8 +210,10 @@ class _SignupScreenState extends State<SignupScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Something went wrong while creating your account.'),
+        SnackBar(
+          duration: const Duration(seconds: 8),
+          content: Text(friendlyAuthError(error,
+              fallback: 'Something went wrong while creating your account.')),
         ),
       );
     } finally {

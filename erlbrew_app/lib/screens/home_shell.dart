@@ -501,7 +501,7 @@ class _ProfileScreenState extends State<_ProfileScreen> {
                           child: const Icon(Icons.receipt_long,
                               size: 18, color: AppColors.coffeeBrown),
                         ),
-                        title: Text('#${o['id']}',
+                        title: Text(_orderSummary(o),
                             style:
                                 const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text(
@@ -589,6 +589,24 @@ class _ProfileScreenState extends State<_ProfileScreen> {
   String _formatAmount(double amount) {
     if (amount == amount.roundToDouble()) return amount.toInt().toString();
     return amount.toStringAsFixed(2);
+  }
+
+  /// "2x CHOCOLATE 22oz, 1x Cookies" — real item names for the recent
+  /// orders list instead of raw order ids.
+  String _orderSummary(Map<String, dynamic> o) {
+    final items = o['items'];
+    if (items is List && items.isNotEmpty) {
+      return items.map((item) {
+        if (item is! Map) return 'Order item';
+        final qty = item['qty'] ?? 1;
+        final name = item['name'] ??
+            item['menu_item_name'] ??
+            item['menu_item_id'] ??
+            'Menu item';
+        return '${qty}x $name';
+      }).join(', ');
+    }
+    return 'Order';
   }
 
   String _formatOrderDate(dynamic dateStr) {

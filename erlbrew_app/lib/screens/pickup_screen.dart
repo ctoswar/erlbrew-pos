@@ -31,14 +31,44 @@ class _PickupScreenState extends State<PickupScreen> {
     await _ordersFuture;
   }
 
+  static const List<String> _monthLabels = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  /// "Nov 5, 2026 · 2:45 PM" — friendly timestamp for order cards.
+  String _formatPlacedAt(DateTime d) {
+    final hour12 = d.hour % 12 == 0 ? 12 : d.hour % 12;
+    final ampm = d.hour < 12 ? 'AM' : 'PM';
+    final mm = d.minute.toString().padLeft(2, '0');
+    return '${_monthLabels[d.month - 1]} ${d.day}, ${d.year} · $hour12:$mm $ampm';
+  }
+
+  String _formatTotal(double total) {
+    if (total == total.roundToDouble()) return total.toInt().toString();
+    return total.toStringAsFixed(2);
+  }
+
   String _itemSummary(Map<String, dynamic> order) {
     final items = order['items'];
     if (items is List && items.isNotEmpty) {
       return items.map((item) {
         if (item is! Map) return 'Menu item';
         final quantity = item['qty'] ?? item['quantity'] ?? 1;
-        final name =
-            item['name'] ?? item['menu_item_name'] ?? item['menu_item_id'];
+        final name = item['name'] ??
+            item['menu_item_name'] ??
+            item['menu_item_id'] ??
+            'Menu item';
         return '${quantity}x $name';
       }).join(', ');
     }
@@ -185,33 +215,33 @@ class _PickupScreenState extends State<PickupScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          Row(
-                                            children: [
-                                              Container(
-                                                width: 36,
-                                                height: 36,
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.latte,
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                                alignment: Alignment.center,
-                                                child: const Icon(
-                                                    Icons.receipt_long,
-                                                    size: 18,
-                                                    color:
-                                                        AppColors.coffeeBrown),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Text('#${order.id}',
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w700)),
-                                            ],
+                                          Container(
+                                            width: 36,
+                                            height: 36,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.latte,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: const Icon(
+                                                Icons.receipt_long,
+                                                size: 18,
+                                                color: AppColors.coffeeBrown),
                                           ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              order.itemSummary,
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  height: 1.3),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
                                           Pulse(
                                             active: order.status ==
                                                 PickupStatus.ready,
@@ -242,15 +272,12 @@ class _PickupScreenState extends State<PickupScreen> {
                                         ],
                                       ),
                                       const SizedBox(height: 8),
-                                      Text(order.itemSummary,
-                                          style: const TextStyle(
-                                              color: AppColors.slateGrey)),
-                                      const SizedBox(height: 4),
                                       Text(
-                                        'Placed ${order.placedAt.hour.toString().padLeft(2, '0')}:${order.placedAt.minute.toString().padLeft(2, '0')}',
+                                        'Placed ${_formatPlacedAt(order.placedAt)}'
+                                        '${order.total != null && order.total! > 0 ? ' · ₱${_formatTotal(order.total!)}' : ''}',
                                         style: const TextStyle(
                                             color: AppColors.slateGrey,
-                                            fontSize: 12),
+                                            fontSize: 12.5),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(

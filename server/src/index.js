@@ -576,6 +576,18 @@ await pool.query(`
     await pool.query('ALTER TABLE recipes ADD UNIQUE KEY unique_recipe (menu_item_id, size_id, inventory_item_id)').catch(() => {});
     await pool.query('ALTER TABLE recipes ADD INDEX idx_recipe_size (menu_item_id, size_id)').catch(() => {});
     await pool.query(`ALTER TABLE order_items ADD COLUMN size VARCHAR(64) DEFAULT NULL AFTER price`).catch(() => {});
+    // ── Order item name snapshot (#318) ───────────────────────────────────
+    // History/receipts previously resolved item names via a live join on
+    // menu_items, so deleting or re-creating a menu item erased the names
+    // from every past order. Snapshot the name onto each order item at
+    // creation instead (written by POST /api/orders from here on).
+    await pool.query(`ALTER TABLE order_items ADD COLUMN item_name VARCHAR(160) DEFAULT NULL AFTER menu_item_id`).catch(() => {});
+    await pool.query(
+      `UPDATE order_items oi
+       LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+       SET oi.item_name = mi.name
+       WHERE oi.item_name IS NULL AND mi.name IS NOT NULL`
+    ).catch(() => {});
 
     // ── Collation self-heal ────────────────────────────────────────────────
     // Tables created before the schema default changed kept utf8mb4_unicode_ci

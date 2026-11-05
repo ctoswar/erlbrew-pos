@@ -496,7 +496,8 @@ export default function customersRouter(pool) {
         const orderIds = orders.map(o => o.id);
         const [items] = await pool.query(
           `SELECT oi.order_id, oi.qty, oi.notes, oi.price,
-                  mi.name AS item_name, mi.emoji
+                  COALESCE(oi.item_name, mi.name) AS item_name, mi.emoji,
+                  oi.menu_item_id
            FROM order_items oi
            LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
            WHERE oi.order_id IN (?)`,
@@ -518,6 +519,7 @@ export default function customersRouter(pool) {
           if (!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = [];
           itemsByOrder[item.order_id].push({
             name: item.item_name,
+            menu_item_id: item.menu_item_id,
             emoji: item.emoji,
             qty: item.qty,
             price: Number(item.price),

@@ -82,7 +82,7 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     if (!orderIds.length) return [];
     const [items] = await pool.query(`
       SELECT oi.order_id, oi.menu_item_id, oi.qty, oi.notes, oi.price, oi.size,
-             mi.name AS menu_item_name, mi.category, mi.emoji, mi.badge,
+             COALESCE(oi.item_name, mi.name) AS menu_item_name, mi.category, mi.emoji, mi.badge,
              JSON_ARRAYAGG(
                CASE WHEN oim.id IS NOT NULL
                  THEN JSON_OBJECT('name', oim.modifier_name, 'price', oim.modifier_price)
@@ -406,14 +406,34 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         }
       }
 
+      // ── Snapshot item names (#318) ───────────────────────────────────────
+      // Resolve each item's name now (live menu first, client-supplied name
+      // as fallback) and store it on the order item, so history and receipts
+      // keep real names even after the menu item is renamed or deleted.
+      const menuIds = [...new Set(itemsOut.map((it) => String(it.id)))];
+      const nameById = new Map();
+      if (menuIds.length > 0) {
+        const [menuNameRows] = await pool.query(
+          'SELECT id, name FROM menu_items WHERE id IN (?)',
+          [menuIds]
+        );
+        for (const row of menuNameRows) {
+          nameById.set(String(row.id), row.name);
+        }
+      }
+      for (const it of itemsOut) {
+        it.item_name = nameById.get(String(it.id))
+          ?? (typeof it.name === 'string' && it.name.trim() ? it.name.trim() : null);
+      }
+
       await pool.query(
         'INSERT INTO orders (id, staff_id, status, subtotal, tax, total, customer_name, customer_id, table_name, type, pay_method, reference_number, discount_json, location_id, pay_status, preparing_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [id, staffDbId, initialStatus, orderSubtotal, orderTax, orderTotal, customer_name || null, customerId, table_name || null, type || 'dine-in', pay_method || 'cash', reference_number || null, discountJson, req.locationId, initialPayStatus, initialStatus === 'preparing' ? new Date() : null]
       );
       for (const it of itemsOut) {
         const [itemResult] = await pool.query(
-          'INSERT INTO order_items (order_id, menu_item_id, qty, notes, price, size) VALUES (?, ?, ?, ?, ?, ?)',
-          [id, it.id, it.qty, it.notes || '', it.price, it.size || null]
+          'INSERT INTO order_items (order_id, menu_item_id, item_name, qty, notes, price, size) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [id, it.id, it.item_name, it.qty, it.notes || '', it.price, it.size || null]
         );
         const orderItemId = itemResult.insertId;
         // Insert modifiers for this order item

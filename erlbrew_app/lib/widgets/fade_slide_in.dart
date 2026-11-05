@@ -59,3 +59,16 @@ class _FadeSlideInState extends State<FadeSlideIn>
     );
   }
 }
+
+/// Pre-capped stagger for [FadeSlideIn] lists. Without it, a delay like
+/// `index * 60ms` leaves item #20 waiting 1.2s to appear — the list feels
+/// broken, not animated. The first [maxItems] items stagger by [step];
+/// anything deeper uses the last (near-instant) delay.
+Duration fadeStagger(
+  int index, {
+  Duration step = const Duration(milliseconds: 55),
+  int maxItems = 6,
+}) {
+  final capped = index < maxItems ? index : maxItems;
+  return step * capped;
+}

@@ -31,13 +31,13 @@ class AppColors {
   ];
 
   static BoxShadow softShadow = BoxShadow(
-    color: espresso.withOpacity(0.08),
+    color: espresso.withValues(alpha: 0.08),
     blurRadius: 28,
     offset: const Offset(0, 14),
   );
 
   static BoxShadow goldGlow = BoxShadow(
-    color: gold.withOpacity(0.18),
+    color: gold.withValues(alpha: 0.18),
     blurRadius: 30,
     spreadRadius: 2,
   );

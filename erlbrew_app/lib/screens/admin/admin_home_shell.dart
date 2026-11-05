@@ -4,6 +4,9 @@ import '../../services/pos_api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/animated_counter.dart';
 import '../../widgets/fade_slide_in.dart';
+import '../../widgets/lazy_indexed_stack.dart';
+import '../../widgets/page_transitions.dart';
+import '../../widgets/shimmer.dart';
 import '../../widgets/ios_tab_bar.dart';
 import '../login_screen.dart';
 import 'admin_customers_screen.dart';
@@ -34,7 +37,10 @@ class _AdminHomeShellState extends State<AdminHomeShell> {
     ];
 
     return Scaffold(
-      body: IndexedStack(index: _index, children: screens),
+      // Lazy tabs: each admin screen is constructed (and fetches its data)
+      // only the first time the owner taps it — no more 6-screensworth of
+      // requests stampeding right after login.
+      body: LazyIndexedStack(index: _index, children: screens),
       bottomNavigationBar: IosTabBar(
         selectedIndex: _index,
         onSelected: (i) => setState(() => _index = i),
@@ -99,7 +105,7 @@ class _AdminDashboardState extends State<_AdminDashboard> {
     await PosApiService.instance.adminLogout();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      fadeThrough(const LoginScreen()),
       (route) => false,
     );
   }
@@ -113,8 +119,28 @@ class _AdminDashboardState extends State<_AdminDashboard> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      // Skeleton layout mirrors the dashboard: header card, two stat rows,
+      // a few order tiles — reads as "content shaping up", not a dead screen.
+      return Scaffold(
+        appBar: AppBar(title: const Text('Admin Dashboard')),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: const [
+            SkeletonBox(
+              width: double.infinity,
+              height: 84,
+              radius: BorderRadius.all(Radius.circular(20)),
+            ),
+            SizedBox(height: 20),
+            SkeletonStatRow(),
+            SizedBox(height: 12),
+            SkeletonStatRow(),
+            SizedBox(height: 24),
+            SkeletonLine(widthFactor: 0.4, height: 18),
+            SizedBox(height: 12),
+            SkeletonTileList(count: 3),
+          ],
+        ),
       );
     }
 
@@ -130,7 +156,7 @@ class _AdminDashboardState extends State<_AdminDashboard> {
                 Text(
                   'Unable to load dashboard data.\n$_error',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.error),
+                  style: const TextStyle(color: AppColors.error),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
@@ -144,10 +170,15 @@ class _AdminDashboardState extends State<_AdminDashboard> {
       );
     }
 
-    final preparing = _orders.where((o) => o['status']?.toString().toLowerCase() == 'preparing').length;
-    final ready = _orders.where((o) => o['status']?.toString().toLowerCase() == 'ready').length;
+    final preparing = _orders
+        .where((o) => o['status']?.toString().toLowerCase() == 'preparing')
+        .length;
+    final ready = _orders
+        .where((o) => o['status']?.toString().toLowerCase() == 'ready')
+        .length;
     final totalCustomers = _customers.length;
-    final totalPointsIssued = _customers.fold<int>(0, (sum, c) => sum + c.points);
+    final totalPointsIssued =
+        _customers.fold<int>(0, (sum, c) => sum + c.points);
 
     return Scaffold(
       appBar: AppBar(
@@ -176,18 +207,21 @@ class _AdminDashboardState extends State<_AdminDashboard> {
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.gold.withOpacity(0.3)),
+                  border:
+                      Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppColors.gold.withOpacity(0.14),
+                        color: AppColors.gold.withValues(alpha: 0.14),
                         shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.gold.withOpacity(0.4)),
+                        border: Border.all(
+                            color: AppColors.gold.withValues(alpha: 0.4)),
                       ),
-                      child: const Icon(Icons.storefront, color: AppColors.goldLight),
+                      child: const Icon(Icons.storefront,
+                          color: AppColors.goldLight),
                     ),
                     const SizedBox(width: 14),
                     const Expanded(
@@ -273,19 +307,24 @@ class _AdminDashboardState extends State<_AdminDashboard> {
               final items = (o['items'] as List<dynamic>?) ?? [];
               final itemSummary = items.isEmpty
                   ? '—'
-                  : items.map((it) => '${it['qty']}× ${it['name'] ?? it['menu_item_id']}').join(', ');
+                  : items
+                      .map((it) =>
+                          '${it['qty']}× ${it['name'] ?? it['menu_item_id']}')
+                      .join(', ');
               return FadeSlideIn(
-                delay: Duration(milliseconds: 240 + entry.key * 70),
+                delay: fadeStagger(entry.key,
+                    step: const Duration(milliseconds: 70)),
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Card(
                     child: ListTile(
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                      title: Text('#${o['id']} · ${o['customer_name'] ?? 'Walk-in'}',
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 4),
+                      title: Text(
+                          '#${o['id']} · ${o['customer_name'] ?? 'Walk-in'}',
                           style: const TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(itemSummary,
-                          style: TextStyle(
+                          style: const TextStyle(
                               color: AppColors.slateGrey, fontSize: 12.5)),
                       trailing: Text(
                         status,
@@ -335,7 +374,7 @@ class _StatCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.14),
+                color: color.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: color, size: 18),
@@ -343,11 +382,11 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 12),
             AnimatedCounter(
               value: value,
-              style: const TextStyle(
-                  fontSize: 22, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             Text(label,
-                style: TextStyle(fontSize: 12, color: AppColors.slateGrey)),
+                style:
+                    const TextStyle(fontSize: 12, color: AppColors.slateGrey)),
           ],
         ),
       ),

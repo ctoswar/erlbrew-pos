@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/luxury_button.dart';
+import '../widgets/page_transitions.dart';
 import 'admin/admin_home_shell.dart';
 import 'home_shell.dart';
 import 'signup_screen.dart';
@@ -108,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 18),
-                Text(
+                const Text(
                   'Enter your email address and we will send you a secure reset link.',
                   style: TextStyle(
                     color: AppColors.slateGrey,
@@ -281,8 +282,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => _isAdmin ? const AdminHomeShell() : const HomeShell(),
+        fadeThrough(
+          _isAdmin ? const AdminHomeShell() : const HomeShell(),
         ),
       );
     } on PosApiServiceException catch (error) {
@@ -374,7 +375,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ? 'Manage orders, rewards, and customers'
                                     : 'Log in to track your points and pickups',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
+                                style: const TextStyle(
                                     color: AppColors.slateGrey, fontSize: 13.5),
                               ),
                               const SizedBox(height: 24),
@@ -391,7 +392,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ? 'Staff Email'
                                       : 'Email Address',
                                   hintText: 'name@example.com',
-                                  prefixIcon: Icon(
+                                  prefixIcon: const Icon(
                                     Icons.email_outlined,
                                     size: 20,
                                   ),
@@ -430,7 +431,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                                 validator: (v) {
-                                  final minimumLength = 6;
+                                  const minimumLength = 6;
                                   if (v == null || v.length < minimumLength) {
                                     return _isAdmin
                                         ? 'Password must be at least 6 characters'
@@ -445,7 +446,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   children: [
                                     TextButton(
                                       onPressed: _handleResendVerification,
-                                      child: Text(
+                                      child: const Text(
                                         'Resend verification',
                                         style: TextStyle(
                                             color: AppColors.matchaDark),
@@ -453,7 +454,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     TextButton(
                                       onPressed: _handleForgotPassword,
-                                      child: Text(
+                                      child: const Text(
                                         'Forgot password?',
                                         style: TextStyle(color: AppColors.gold),
                                       ),
@@ -471,7 +472,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text("Don't have an account?",
+                                    const Text("Don't have an account?",
                                         style: TextStyle(
                                             color: AppColors.slateGrey,
                                             fontSize: 13.5)),
@@ -483,7 +484,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                   const SignupScreen()),
                                         );
                                       },
-                                      child: Text('Sign Up',
+                                      child: const Text('Sign Up',
                                           style: TextStyle(
                                               color: AppColors.gold,
                                               fontWeight: FontWeight.w700)),
@@ -525,12 +526,12 @@ class _HeroPanel extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.espresso.withOpacity(0.16),
+            color: AppColors.espresso.withValues(alpha: 0.16),
             blurRadius: 28,
             offset: const Offset(0, 12),
           ),
         ],
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(36),
           bottomRight: Radius.circular(36),
         ),
@@ -544,7 +545,7 @@ class _HeroPanel extends StatelessWidget {
             child: Text(
               isAdmin ? 'STAFF PORTAL' : 'REWARDS & PICKUP',
               key: ValueKey(isAdmin),
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.goldLight,
                 fontWeight: FontWeight.w600,
                 fontSize: 11.5,
@@ -638,7 +639,7 @@ class _RoleOption extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: AppColors.espresso.withOpacity(0.25),
+                    color: AppColors.espresso.withValues(alpha: 0.25),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),

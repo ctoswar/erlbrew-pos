@@ -259,14 +259,46 @@ class PosApiService {
 
   // ── Menu Endpoints ────────────────────────────────────────────────
 
-  /// Fetch menu from POS API (source of truth)
-  Future<List<MenuItem>> getMenu() async {
+  /// Menu rarely changes — cache it with a short TTL so re-opening the
+  /// order sheet is instant. Within TTL (or when a cache exists that's
+  /// worth showing) this serves the cached copy immediately; a stale one
+  /// is refreshed in the background (stale-while-revalidate).
+  List<MenuItem>? _menuCache;
+  DateTime? _menuCachedAt;
+  static const Duration _menuCacheTtl = Duration(minutes: 5);
+
+  /// Fetch menu from POS API (source of truth), going through the cache.
+  Future<List<MenuItem>> getMenu({bool forceRefresh = false}) async {
+    final age = _menuCachedAt == null
+        ? null
+        : DateTime.now().difference(_menuCachedAt!);
+    if (!forceRefresh && _menuCache != null) {
+      if (age != null && age < _menuCacheTtl) return _menuCache!;
+      // Stale but usable — hand it back now, refresh silently.
+      unawaited(
+          _refreshMenu().catchError((_) => _menuCache ?? const <MenuItem>[]));
+      return _menuCache!;
+    }
+    return _refreshMenu();
+  }
+
+  Future<List<MenuItem>> _refreshMenu() async {
     final response = await _withTimeout(http.get(
       Uri.parse('$baseUrl/api/menu'),
       headers: {'Content-Type': 'application/json'},
     ));
     final data = _handleResponse(response);
-    return (data as List).map((item) => MenuItem.fromMap(item)).toList();
+    final items = (data as List).map((item) => MenuItem.fromMap(item)).toList();
+    _menuCache = items;
+    _menuCachedAt = DateTime.now();
+    return items;
+  }
+
+  /// Drop the cache (admin menu mutations call this) so the next read
+  /// fetches fresh.
+  void invalidateMenuCache() {
+    _menuCache = null;
+    _menuCachedAt = null;
   }
 
   /// Fetch menu grouped by categories (optimized for Flutter)
@@ -311,6 +343,7 @@ class PosApiService {
       }),
     ));
     _handleResponse(response);
+    invalidateMenuCache();
   }
 
   /// Update an existing menu item (admin only)
@@ -336,6 +369,7 @@ class PosApiService {
       }),
     ));
     _handleResponse(response);
+    invalidateMenuCache();
   }
 
   /// Delete a menu item (admin only)
@@ -345,6 +379,7 @@ class PosApiService {
       headers: _adminHeaders,
     ));
     _handleResponse(response);
+    invalidateMenuCache();
   }
 
   // ── Loyalty Endpoints ─────────────────────────────────────────────

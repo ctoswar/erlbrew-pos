@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
 import '../../services/pos_api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/fade_slide_in.dart';
+import '../../widgets/shimmer.dart';
 
 class AdminMenuScreen extends StatefulWidget {
   const AdminMenuScreen({super.key});
@@ -27,7 +30,8 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
       final matchSearch = _search.isEmpty ||
           m.name.toLowerCase().contains(_search.toLowerCase()) ||
           m.category.toLowerCase().contains(_search.toLowerCase());
-      final matchCat = _selectedCategory == 'All' || m.category == _selectedCategory;
+      final matchCat =
+          _selectedCategory == 'All' || m.category == _selectedCategory;
       return matchSearch && matchCat;
     }).toList();
   }
@@ -42,7 +46,12 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
     setState(() => _loading = true);
     try {
       final items = await PosApiService.instance.getMenu();
-      if (mounted) setState(() { _items = items; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _items = items;
+          _loading = false;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -51,7 +60,8 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
   void _openEditor({MenuItem? existing}) {
     final nameCtrl = TextEditingController(text: existing?.name);
     final catCtrl = TextEditingController(text: existing?.category ?? 'Coffee');
-    final priceCtrl = TextEditingController(text: existing?.price.toStringAsFixed(0));
+    final priceCtrl =
+        TextEditingController(text: existing?.price.toStringAsFixed(0));
     final emojiCtrl = TextEditingController(text: existing?.emoji ?? '☕');
     final descCtrl = TextEditingController(text: existing?.description ?? '');
     final formKey = GlobalKey<FormState>();
@@ -77,9 +87,12 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
                 children: [
                   Center(
                     child: Container(
-                      width: 40, height: 4,
+                      width: 40,
+                      height: 4,
                       margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(color: AppColors.latte, borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(
+                          color: AppColors.latte,
+                          borderRadius: BorderRadius.circular(2)),
                     ),
                   ),
                   Text(existing == null ? 'New Menu Item' : 'Edit Menu Item',
@@ -88,27 +101,43 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
                   Row(children: [
                     SizedBox(
                       width: 70,
-                      child: TextFormField(controller: emojiCtrl, textAlign: TextAlign.center,
+                      child: TextFormField(
+                          controller: emojiCtrl,
+                          textAlign: TextAlign.center,
                           decoration: const InputDecoration(labelText: 'Icon')),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: TextFormField(controller: nameCtrl,
-                          decoration: const InputDecoration(labelText: 'Item name'),
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null),
+                      child: TextFormField(
+                          controller: nameCtrl,
+                          decoration:
+                              const InputDecoration(labelText: 'Item name'),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Required'
+                              : null),
                     ),
                   ]),
                   const SizedBox(height: 14),
-                  TextFormField(controller: catCtrl,
+                  TextFormField(
+                      controller: catCtrl,
                       decoration: const InputDecoration(labelText: 'Category'),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null),
+                      validator: (v) =>
+                          (v == null || v.trim().isEmpty) ? 'Required' : null),
                   const SizedBox(height: 14),
-                  TextFormField(controller: priceCtrl, keyboardType: TextInputType.number,
+                  TextFormField(
+                      controller: priceCtrl,
+                      keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: 'Price (₱)'),
-                      validator: (v) { final n = double.tryParse(v ?? ''); if (n == null || n <= 0) return 'Enter a valid price'; return null; }),
+                      validator: (v) {
+                        final n = double.tryParse(v ?? '');
+                        if (n == null || n <= 0) return 'Enter a valid price';
+                        return null;
+                      }),
                   const SizedBox(height: 14),
-                  TextFormField(controller: descCtrl,
-                      decoration: const InputDecoration(labelText: 'Description (optional)')),
+                  TextFormField(
+                      controller: descCtrl,
+                      decoration: const InputDecoration(
+                          labelText: 'Description (optional)')),
                   const SizedBox(height: 22),
                   ElevatedButton(
                     onPressed: () async {
@@ -116,27 +145,39 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
                       final nav = Navigator.of(ctx);
                       final messenger = ScaffoldMessenger.of(context);
                       try {
-                        final id = existing?.id ?? 'm${DateTime.now().millisecondsSinceEpoch}';
+                        final id = existing?.id ??
+                            'm${DateTime.now().millisecondsSinceEpoch}';
                         final name = nameCtrl.text.trim();
                         final category = catCtrl.text.trim();
                         final price = double.parse(priceCtrl.text.trim());
-                        final emoji = emojiCtrl.text.trim().isEmpty ? '☕' : emojiCtrl.text.trim();
+                        final emoji = emojiCtrl.text.trim().isEmpty
+                            ? '☕'
+                            : emojiCtrl.text.trim();
                         final desc = descCtrl.text.trim();
                         if (existing != null) {
                           await PosApiService.instance.updateMenuItem(
-                            id: existing.id, name: name, category: category,
-                            price: price, emoji: emoji, description: desc,
+                            id: existing.id,
+                            name: name,
+                            category: category,
+                            price: price,
+                            emoji: emoji,
+                            description: desc,
                           );
                         } else {
                           await PosApiService.instance.createMenuItem(
-                            id: id, name: name, category: category,
-                            price: price, emoji: emoji, description: desc,
+                            id: id,
+                            name: name,
+                            category: category,
+                            price: price,
+                            emoji: emoji,
+                            description: desc,
                           );
                         }
                         nav.pop();
                         _loadMenu();
                       } catch (e) {
-                        messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+                        messenger
+                            .showSnackBar(SnackBar(content: Text('Error: $e')));
                       }
                     },
                     child: Text(existing == null ? 'Add Item' : 'Save Changes'),
@@ -157,7 +198,9 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
         title: const Text('Remove item?'),
         content: Text('"${item.name}" will be removed from the menu.'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
               Navigator.of(context).pop();
@@ -165,10 +208,14 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
                 await PosApiService.instance.deleteMenuItem(item.id);
                 _loadMenu();
               } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (mounted) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text('Error: $e')));
+                }
               }
             },
-            child: Text('Remove', style: TextStyle(color: AppColors.error)),
+            child:
+                const Text('Remove', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -185,7 +232,7 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const SkeletonGrid(count: 6)
           : Column(
               children: [
                 // Search bar
@@ -195,8 +242,10 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
                     decoration: InputDecoration(
                       hintText: 'Search menu items...',
                       prefixIcon: const Icon(Icons.search, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                     ),
                     onChanged: (v) => setState(() => _search = v),
                   ),
@@ -215,9 +264,12 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
                       return ChoiceChip(
                         label: Text(cat),
                         selected: selected,
-                        onSelected: (_) => setState(() => _selectedCategory = cat),
+                        onSelected: (_) =>
+                            setState(() => _selectedCategory = cat),
                         selectedColor: AppColors.gold,
-                        labelStyle: TextStyle(color: selected ? Colors.white : AppColors.espresso),
+                        labelStyle: TextStyle(
+                            color:
+                                selected ? Colors.white : AppColors.espresso),
                       );
                     },
                   ),
@@ -229,28 +281,36 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text('${_filtered.length} items',
-                        style: TextStyle(color: AppColors.slateGrey, fontSize: 12)),
+                        style: const TextStyle(
+                            color: AppColors.slateGrey, fontSize: 12)),
                   ),
                 ),
                 const SizedBox(height: 8),
                 // Menu items grid
                 Expanded(
                   child: _filtered.isEmpty
-                      ? Center(child: Text('No menu items found',
-                          style: TextStyle(color: AppColors.slateGrey)))
+                      ? const EmptyState(
+                          icon: Icons.restaurant_menu_outlined,
+                          title: 'No menu items found',
+                          subtitle: 'Add one with the + button',
+                        )
                       : GridView.builder(
                           padding: const EdgeInsets.all(16),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
                             childAspectRatio: 1.4,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
                           ),
                           itemCount: _filtered.length,
-                          itemBuilder: (_, i) => _MenuCard(
-                            item: _filtered[i],
-                            onEdit: () => _openEditor(existing: _filtered[i]),
-                            onDelete: () => _delete(_filtered[i]),
+                          itemBuilder: (_, i) => FadeSlideIn(
+                            delay: fadeStagger(i),
+                            child: _MenuCard(
+                              item: _filtered[i],
+                              onEdit: () => _openEditor(existing: _filtered[i]),
+                              onDelete: () => _delete(_filtered[i]),
+                            ),
                           ),
                         ),
                 ),
@@ -271,7 +331,8 @@ class _MenuCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const _MenuCard({required this.item, required this.onEdit, required this.onDelete});
+  const _MenuCard(
+      {required this.item, required this.onEdit, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -287,7 +348,13 @@ class _MenuCard extends StatelessWidget {
                 Text(item.emoji, style: const TextStyle(fontSize: 24)),
                 const Spacer(),
                 PopupMenuButton<String>(
-                  onSelected: (v) { if (v == 'edit') onEdit(); else if (v == 'delete') onDelete(); },
+                  onSelected: (v) {
+                    if (v == 'edit') {
+                      onEdit();
+                    } else if (v == 'delete') {
+                      onDelete();
+                    }
+                  },
                   itemBuilder: (_) => [
                     const PopupMenuItem(value: 'edit', child: Text('Edit')),
                     const PopupMenuItem(value: 'delete', child: Text('Delete')),
@@ -297,13 +364,19 @@ class _MenuCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(item.name,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
             Text(item.category.toUpperCase(),
-                style: TextStyle(color: AppColors.slateGrey, fontSize: 10, letterSpacing: 0.5)),
+                style: const TextStyle(
+                    color: AppColors.slateGrey,
+                    fontSize: 10,
+                    letterSpacing: 0.5)),
             const Spacer(),
             Text('₱${item.price.toStringAsFixed(0)}',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
           ],
         ),
       ),

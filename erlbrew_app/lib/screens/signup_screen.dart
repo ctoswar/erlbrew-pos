@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/luxury_button.dart';
+import '../widgets/page_transitions.dart';
 import 'login_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -161,7 +162,7 @@ class _SignupScreenState extends State<SignupScreen> {
       );
       await firebase.signOut();
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        fadeThrough(const LoginScreen()),
       );
     } on PosApiServiceException catch (error) {
       if (!mounted) return;
@@ -245,7 +246,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 4),
-                  Center(child: const BrandMark(width: 108)),
+                  const Center(child: BrandMark(width: 108)),
                   const SizedBox(height: 26),
                   Text(
                     'Make every cup count.',
@@ -253,7 +254,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     style: Theme.of(context).textTheme.displayMedium,
                   ),
                   const SizedBox(height: 6),
-                  Text(
+                  const Text(
                     'Create your account to collect points, discover rewards, and keep your pickup history close.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -282,8 +283,9 @@ class _SignupScreenState extends State<SignupScreen> {
                       prefixIcon: Icon(Icons.mail_outline, size: 20),
                     ),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty)
+                      if (v == null || v.trim().isEmpty) {
                         return 'Enter your email';
+                      }
                       if (!v.contains('@')) return 'Enter a valid email';
                       return null;
                     },
@@ -304,7 +306,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         : null,
                   ),
                   const SizedBox(height: 8),
-                  Text(
+                  const Text(
                     'We will send a verification link to your email after signup.',
                     style: TextStyle(
                       color: AppColors.slateGrey,

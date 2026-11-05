@@ -60,14 +60,14 @@ class _LuxuryButtonState extends State<LuxuryButton> {
             border: Border.all(
               color: _disabled
                   ? Colors.transparent
-                  : AppColors.gold.withOpacity(_pressed ? 0.85 : 0.6),
+                  : AppColors.gold.withValues(alpha: _pressed ? 0.85 : 0.6),
               width: 1,
             ),
             boxShadow: _disabled || _pressed
                 ? []
                 : [
                     BoxShadow(
-                      color: AppColors.espresso.withOpacity(0.35),
+                      color: AppColors.espresso.withValues(alpha: 0.35),
                       blurRadius: 18,
                       offset: const Offset(0, 8),
                     ),

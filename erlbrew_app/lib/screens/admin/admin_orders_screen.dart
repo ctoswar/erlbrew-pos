@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/pos_api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/fade_slide_in.dart';
+import '../../widgets/shimmer.dart';
 
 class AdminOrdersScreen extends StatefulWidget {
   const AdminOrdersScreen({super.key});
@@ -16,7 +17,14 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   bool _loading = true;
   String? _error;
 
-  final _statuses = ['pending', 'preparing', 'ready', 'completed', 'voided', 'refunded'];
+  final _statuses = [
+    'pending',
+    'preparing',
+    'ready',
+    'completed',
+    'voided',
+    'refunded'
+  ];
 
   @override
   void initState() {
@@ -119,7 +127,9 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   String _itemSummary(Map<String, dynamic> order) {
     final items = (order['items'] as List<dynamic>?) ?? [];
     if (items.isEmpty) return '—';
-    return items.map((it) => '${it['qty']}× ${it['name'] ?? it['menu_item_id']}').join(', ');
+    return items
+        .map((it) => '${it['qty']}× ${it['name'] ?? it['menu_item_id']}')
+        .join(', ');
   }
 
   String _formatTime(dynamic dateStr) {
@@ -132,7 +142,9 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   Widget build(BuildContext context) {
     final filtered = _filter == null
         ? _orders
-        : _orders.where((o) => o['status']?.toString().toLowerCase() == _filter).toList();
+        : _orders
+            .where((o) => o['status']?.toString().toLowerCase() == _filter)
+            .toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Orders')),
@@ -169,20 +181,28 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
                 'Unable to load orders: $_error',
-                style: TextStyle(color: AppColors.error),
+                style: const TextStyle(color: AppColors.error),
                 textAlign: TextAlign.center,
               ),
             ),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator())
+                ? ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: const [
+                      SkeletonTileList(count: 6, trailingPill: true),
+                    ],
+                  )
                 : RefreshIndicator(
                     onRefresh: _loadOrders,
                     child: filtered.isEmpty
                         ? ListView(
                             children: [
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-                              Center(
+                              SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.2),
+                              const Center(
                                 child: Text(
                                   'No orders in this filter',
                                   style: TextStyle(color: AppColors.slateGrey),
@@ -195,27 +215,34 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                             itemCount: filtered.length,
                             itemBuilder: (context, i) {
                               final order = filtered[i];
-                              final status = order['status']?.toString().toLowerCase() ?? 'pending';
+                              final status =
+                                  order['status']?.toString().toLowerCase() ??
+                                      'pending';
                               return FadeSlideIn(
-                                delay: Duration(milliseconds: i * 60),
+                                delay: fadeStagger(i,
+                                    step: const Duration(milliseconds: 60)),
                                 child: Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: Card(
                                     child: Padding(
                                       padding: const EdgeInsets.all(16),
                                       child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Container(
                                             width: 42,
                                             height: 42,
                                             decoration: BoxDecoration(
-                                              color: _color(status).withOpacity(0.15),
-                                              borderRadius: BorderRadius.circular(12),
+                                              color: _color(status)
+                                                  .withValues(alpha: 0.15),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
                                             alignment: Alignment.center,
                                             child: Icon(_icon(status),
-                                                color: _color(status), size: 20),
+                                                color: _color(status),
+                                                size: 20),
                                           ),
                                           const SizedBox(width: 14),
                                           Expanded(
@@ -225,45 +252,63 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                                               children: [
                                                 Row(
                                                   mainAxisAlignment:
-                                                      MainAxisAlignment.spaceBetween,
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
                                                   children: [
                                                     Text('#${order['id']}',
                                                         style: const TextStyle(
-                                                            fontWeight: FontWeight.w700)),
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w700)),
                                                     Text(
-                                                      _formatTime(order['created_at']),
-                                                      style: TextStyle(
+                                                      _formatTime(
+                                                          order['created_at']),
+                                                      style: const TextStyle(
                                                           fontSize: 12,
-                                                          color: AppColors.slateGrey),
+                                                          color: AppColors
+                                                              .slateGrey),
                                                     ),
                                                   ],
                                                 ),
                                                 const SizedBox(height: 4),
-                                                Text(order['customer_name']?.toString() ?? 'Walk-in',
-                                                    style: TextStyle(
-                                                        color: AppColors.coffeeBrown,
-                                                        fontWeight: FontWeight.w600,
+                                                Text(
+                                                    order['customer_name']
+                                                            ?.toString() ??
+                                                        'Walk-in',
+                                                    style: const TextStyle(
+                                                        color: AppColors
+                                                            .coffeeBrown,
+                                                        fontWeight:
+                                                            FontWeight.w600,
                                                         fontSize: 13)),
                                                 const SizedBox(height: 2),
                                                 Text(_itemSummary(order),
-                                                    style: TextStyle(
-                                                        color: AppColors.slateGrey,
+                                                    style: const TextStyle(
+                                                        color:
+                                                            AppColors.slateGrey,
                                                         fontSize: 13)),
                                                 const SizedBox(height: 12),
-                                                if (status == 'preparing' || status == 'ready')
+                                                if (status == 'preparing' ||
+                                                    status == 'ready')
                                                   SizedBox(
                                                     width: double.infinity,
                                                     child: FilledButton(
-                                                      style: FilledButton.styleFrom(
+                                                      style: FilledButton
+                                                          .styleFrom(
                                                         backgroundColor:
-                                                            AppColors.coffeeBrown,
-                                                        minimumSize: const Size(0, 40),
-                                                        shape: RoundedRectangleBorder(
+                                                            AppColors
+                                                                .coffeeBrown,
+                                                        minimumSize:
+                                                            const Size(0, 40),
+                                                        shape:
+                                                            RoundedRectangleBorder(
                                                           borderRadius:
-                                                              BorderRadius.circular(10),
+                                                              BorderRadius
+                                                                  .circular(10),
                                                         ),
                                                       ),
-                                                      onPressed: () => _advance(order),
+                                                      onPressed: () =>
+                                                          _advance(order),
                                                       child: Text(
                                                         status == 'preparing'
                                                             ? 'Mark Ready'
@@ -274,15 +319,19 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                                                 else
                                                   Row(
                                                     children: [
-                                                      Icon(Icons.check_circle,
+                                                      const Icon(
+                                                          Icons.check_circle,
                                                           size: 16,
-                                                          color: AppColors.success),
+                                                          color: AppColors
+                                                              .success),
                                                       const SizedBox(width: 6),
                                                       Text(_label(status),
-                                                          style: TextStyle(
-                                                              color: AppColors.success,
+                                                          style: const TextStyle(
+                                                              color: AppColors
+                                                                  .success,
                                                               fontWeight:
-                                                                  FontWeight.w600,
+                                                                  FontWeight
+                                                                      .w600,
                                                               fontSize: 12.5)),
                                                     ],
                                                   ),

@@ -4,6 +4,8 @@ import '../models/app_models.dart';
 import '../services/paymongo_service.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/fade_slide_in.dart';
+import '../widgets/shimmer.dart';
 import '../widgets/luxury_button.dart';
 
 /// Opens the "New Order" pull-up sheet. Returns the created [PickupOrder]
@@ -45,11 +47,16 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
 
   Future<void> _loadMenu() async {
     try {
+      // Served from the in-memory cache (stale-while-revalidate) when the
+      // sheet is re-opened shortly after — the previous behaviour
+      // re-downloaded the full menu on every single open.
       final items = await PosApiService.instance.getMenu();
-      if (mounted) setState(() {
-        _menuItems = items;
-        _loadingMenu = false;
-      });
+      if (mounted) {
+        setState(() {
+          _menuItems = items;
+          _loadingMenu = false;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _loadingMenu = false);
     }
@@ -138,8 +145,6 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = _menuItems.map((m) => m.category).toSet().toList();
-
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
       minChildSize: 0.5,
@@ -180,43 +185,36 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
               const SizedBox(height: 8),
               Expanded(
                 child: _loadingMenu
-                    ? const Center(child: CircularProgressIndicator())
+                    ? _MenuSkeleton()
                     : _menuItems.isEmpty
-                        ? Center(
+                        ? const Center(
                             child: Text('No menu items available',
                                 style: TextStyle(color: AppColors.slateGrey)),
                           )
-                        : ListView(
+                        : _MenuRows(
                             controller: scrollController,
-                            padding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
-                            children: [
-                              for (final category in categories) ...[
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 16, bottom: 10),
-                                  child: Text(
-                                    category.toUpperCase(),
-                                    style: TextStyle(
-                                      color: AppColors.gold,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
-                                      letterSpacing: 1.6,
-                                    ),
-                                  ),
-                                ),
-                                ..._menuItems
-                                    .where((m) => m.category == category)
-                                    .map((item) => _MenuRow(
-                                          item: item,
-                                          quantity: _cart[item] ?? 0,
-                                          onAdd: () => _addOne(item),
-                                          onRemove: () => _removeOne(item),
-                                        )),
-                              ],
-                            ],
+                            items: _menuItems,
+                            cart: _cart,
+                            onAdd: _addOne,
+                            onRemove: _removeOne,
                           ),
               ),
-              if (_cart.isNotEmpty)
-                Container(
+              // Cart footer grows in when the first item is added and
+              // collapses away when the cart empties. (SizeTransition
+              // actually releases the layout space — an AnimatedSlide
+              // would leave a dead gap under the list.)
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: _cart.isEmpty ? 0.0 : 1.0),
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                builder: (context, t, child) => SizeTransition(
+                  sizeFactor: AlwaysStoppedAnimation(t),
+                  // was `axisAlignment: -1` — child pinned to the top-edge
+                  // while the footer collapses (see SizeTransition docs).
+                  alignment: const Alignment(-1.0, -1.0),
+                  child: child,
+                ),
+                child: Container(
                   padding: EdgeInsets.fromLTRB(
                     22,
                     14,
@@ -273,7 +271,7 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
                                 children: [
                                   Text(
                                     '$_totalItems item${_totalItems == 1 ? '' : 's'}',
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                         color: AppColors.slateGrey,
                                         fontSize: 12),
                                   ),
@@ -302,10 +300,115 @@ class _NewOrderSheetState extends State<_NewOrderSheet> {
                     ),
                   ),
                 ),
+              ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Category headers + item rows flattened into one index so the
+/// ListView only builds rows as they scroll into view instead of
+/// constructing the entire grouped tree up front.
+class _MenuRows extends StatelessWidget {
+  final ScrollController controller;
+  final List<MenuItem> items;
+  final Map<MenuItem, int> cart;
+  final ValueChanged<MenuItem> onAdd;
+  final ValueChanged<MenuItem> onRemove;
+
+  const _MenuRows({
+    required this.controller,
+    required this.items,
+    required this.cart,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  ({int? headerCategory, MenuItem? item}) _rowAt(int index) {
+    final categories = _categoriesOf();
+    var position = 0;
+    for (final category in categories) {
+      if (index == position) return (headerCategory: position, item: null);
+      position += 1;
+      final inCategory = items.where((m) => m.category == category);
+      for (final item in inCategory) {
+        if (index == position) return (headerCategory: null, item: item);
+        position += 1;
+      }
+    }
+    return (headerCategory: null, item: null);
+  }
+
+  List<String> _categoriesOf() {
+    final categories = <String>[];
+    for (final item in items) {
+      if (!categories.contains(item.category)) categories.add(item.category);
+    }
+    return categories;
+  }
+
+  int get _rowCount {
+    // one header per category + one row per item
+    return _categoriesOf().length + items.length;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      controller: controller,
+      padding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
+      itemCount: _rowCount,
+      itemBuilder: (context, index) {
+        final row = _rowAt(index);
+        if (row.headerCategory != null || row.item == null) {
+          final category = _categoriesOf()[row.headerCategory!];
+          return Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 10),
+            child: Text(
+              category.toUpperCase(),
+              style: const TextStyle(
+                color: AppColors.gold,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                letterSpacing: 1.6,
+              ),
+            ),
+          );
+        }
+        final item = row.item!;
+        return FadeSlideIn(
+          child: _MenuRow(
+            item: item,
+            quantity: cart[item] ?? 0,
+            onAdd: () => onAdd(item),
+            onRemove: () => onRemove(item),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Skeleton stand-in while the menu loads — mirrors row heights so the
+/// sheet doesn't jump when content arrives.
+class _MenuSkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        for (var section = 0; section < 2; section++) ...[
+          const Padding(
+            padding: EdgeInsets.only(top: 16, bottom: 10),
+            child: SkeletonLine(widthFactor: 0.25, height: 12),
+          ),
+          const SkeletonTileList(count: 3),
+        ],
+      ],
     );
   }
 }
@@ -351,7 +454,7 @@ class _MenuRow extends StatelessWidget {
                     Text(item.name,
                         style: const TextStyle(fontWeight: FontWeight.w700)),
                     Text('₱${item.price.toStringAsFixed(0)}',
-                        style: TextStyle(
+                        style: const TextStyle(
                             color: AppColors.slateGrey, fontSize: 12.5)),
                   ],
                 ),

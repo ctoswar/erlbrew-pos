@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
 import '../../services/pos_api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 import '../../widgets/fade_slide_in.dart';
+import '../../widgets/shimmer.dart';
 
 class AdminCustomersScreen extends StatefulWidget {
   const AdminCustomersScreen({super.key});
@@ -13,6 +17,7 @@ class AdminCustomersScreen extends StatefulWidget {
 
 class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
   final _searchController = TextEditingController();
+  Timer? _searchDebounce;
   String _query = '';
   List<AppUser> _customers = [];
   bool _loading = true;
@@ -22,6 +27,29 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
   void initState() {
     super.initState();
     _loadCustomers();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  /// The list holds up to 500 rows — rebuilding the whole screen on every
+  /// keystroke is what made search feel laggy. Debounce ~250ms and only
+  /// setState with the final value.
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(
+      const Duration(milliseconds: 250),
+      () {
+        if (!mounted) return;
+        final trimmed = value.trim();
+        if (trimmed == _query) return;
+        setState(() => _query = trimmed);
+      },
+    );
   }
 
   Future<void> _loadCustomers() async {
@@ -90,7 +118,9 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
         customer.points = updated.points;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${customer.name} now has ${updated.points} points.')),
+        SnackBar(
+            content:
+                Text('${customer.name} now has ${updated.points} points.')),
       );
     } on PosApiServiceException catch (error) {
       if (!mounted) return;
@@ -124,7 +154,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
             child: TextField(
               controller: _searchController,
-              onChanged: (v) => setState(() => _query = v),
+              onChanged: _onSearchChanged,
               decoration: const InputDecoration(
                 hintText: 'Search customers',
                 prefixIcon: Icon(Icons.search),
@@ -136,24 +166,32 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
                 'Unable to load customers: $_error',
-                style: TextStyle(color: AppColors.error),
+                style: const TextStyle(color: AppColors.error),
                 textAlign: TextAlign.center,
               ),
             ),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator())
+                ? ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: const [
+                      SkeletonTileList(count: 8),
+                    ],
+                  )
                 : RefreshIndicator(
                     onRefresh: _loadCustomers,
                     child: _filteredCustomers.isEmpty
                         ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             children: [
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-                              Center(
-                                child: Text(
-                                  'No customers found',
-                                  style: TextStyle(color: AppColors.slateGrey),
-                                ),
+                              const SizedBox(height: 72),
+                              EmptyState(
+                                icon: Icons.people_outline,
+                                title: 'No customers found',
+                                subtitle: _query.isEmpty
+                                    ? 'No customers registered yet'
+                                    : 'Try a different name or email',
                               ),
                             ],
                           )
@@ -163,30 +201,33 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
                             itemBuilder: (context, i) {
                               final c = _filteredCustomers[i];
                               return FadeSlideIn(
-                                delay: Duration(milliseconds: i * 60),
+                                delay: fadeStagger(i),
                                 child: Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: Card(
                                     child: ListTile(
-                                      contentPadding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 6),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 14, vertical: 6),
                                       leading: CircleAvatar(
                                         backgroundColor: AppColors.coffeeBrown,
                                         child: Text(
                                           c.name.isNotEmpty
                                               ? c.name[0].toUpperCase()
                                               : '?',
-                                          style: const TextStyle(color: Colors.white),
+                                          style: const TextStyle(
+                                              color: Colors.white),
                                         ),
                                       ),
                                       title: Text(c.name,
-                                          style:
-                                              const TextStyle(fontWeight: FontWeight.w600)),
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w600)),
                                       subtitle: Text(c.email,
-                                          style: TextStyle(
-                                              color: AppColors.slateGrey, fontSize: 12.5)),
+                                          style: const TextStyle(
+                                              color: AppColors.slateGrey,
+                                              fontSize: 12.5)),
                                       trailing: Text('${c.points} pts',
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                               fontWeight: FontWeight.w700,
                                               color: AppColors.matchaDark)),
                                       onTap: () => _adjustPoints(c),

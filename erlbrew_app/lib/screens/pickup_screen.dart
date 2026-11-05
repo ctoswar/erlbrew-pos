@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../models/app_models.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/pulse.dart';
+import '../widgets/shimmer.dart';
 import 'order_sheet.dart';
 
 class PickupScreen extends StatefulWidget {
@@ -122,36 +124,31 @@ class _PickupScreenState extends State<PickupScreen> {
                   return _PickupError(onRetry: _refreshOrders);
                 }
                 if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+                  // Shimmer order cards mirror the list layout while loading.
+                  return ListView(
+                    padding: const EdgeInsets.all(20),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SkeletonTileList(count: 5, trailingPill: true),
+                    ],
+                  );
                 }
                 final orders = snapshot.data!;
                 return RefreshIndicator(
                   onRefresh: _refreshOrders,
                   child: orders.isEmpty
                       ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           children: [
-                            SizedBox(
-                                height:
-                                    MediaQuery.of(context).size.height * 0.24),
-                            Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.coffee_outlined,
-                                      size: 48, color: AppColors.latte),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    'No pickup orders yet',
-                                    style:
-                                        TextStyle(color: AppColors.slateGrey),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  TextButton.icon(
-                                    onPressed: _openNewOrder,
-                                    icon: const Icon(Icons.add),
-                                    label: const Text('Start an order'),
-                                  ),
-                                ],
+                            const SizedBox(height: 80),
+                            EmptyState(
+                              icon: Icons.coffee_outlined,
+                              title: 'No pickup orders yet',
+                              subtitle: 'Start an order and track it here',
+                              action: TextButton.icon(
+                                onPressed: _openNewOrder,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Start an order'),
                               ),
                             ),
                           ],
@@ -178,7 +175,7 @@ class _PickupScreenState extends State<PickupScreen> {
                               status: _statusFromServer(o['status'] ?? ''),
                             );
                             return FadeSlideIn(
-                              delay: Duration(milliseconds: index * 70),
+                              delay: fadeStagger(index),
                               child: Card(
                                 margin: const EdgeInsets.only(bottom: 14),
                                 child: Padding(
@@ -226,7 +223,8 @@ class _PickupScreenState extends State<PickupScreen> {
                                               decoration: BoxDecoration(
                                                 color:
                                                     _statusColor(order.status)
-                                                        .withOpacity(0.15),
+                                                        .withValues(
+                                                            alpha: 0.15),
                                                 borderRadius:
                                                     BorderRadius.circular(20),
                                               ),
@@ -245,12 +243,12 @@ class _PickupScreenState extends State<PickupScreen> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(order.itemSummary,
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                               color: AppColors.slateGrey)),
                                       const SizedBox(height: 4),
                                       Text(
                                         'Placed ${order.placedAt.hour.toString().padLeft(2, '0')}:${order.placedAt.minute.toString().padLeft(2, '0')}',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                             color: AppColors.slateGrey,
                                             fontSize: 12),
                                       ),
@@ -260,7 +258,7 @@ class _PickupScreenState extends State<PickupScreen> {
                                         '${order.paymentStatus == PickupPaymentStatus.pending ? ' · Awaiting confirmation' : ''}'
                                         '${order.paymentStatus == PickupPaymentStatus.failed ? ' · Failed' : ''}'
                                         '${order.paymentStatus == PickupPaymentStatus.cancelled ? ' · Cancelled' : ''}',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: AppColors.coffeeBrown,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
@@ -269,7 +267,7 @@ class _PickupScreenState extends State<PickupScreen> {
                                       if (order.status ==
                                           PickupStatus.pending) ...[
                                         const SizedBox(height: 12),
-                                        Text(
+                                        const Text(
                                           'Complete payment in the checkout window. We will start preparing your order after PayMongo confirms it.',
                                           style: TextStyle(
                                             color: AppColors.slateGrey,

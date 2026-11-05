@@ -43,7 +43,7 @@ class MyQrScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
-              Text(
+              const Text(
                 'The barista scans this to add your points',
                 style: TextStyle(color: AppColors.slateGrey, fontSize: 13),
                 textAlign: TextAlign.center,
@@ -85,7 +85,7 @@ class MyQrScreen extends StatelessWidget {
               ),
               Text(
                 user.email,
-                style: TextStyle(color: AppColors.slateGrey, fontSize: 12.5),
+                style: const TextStyle(color: AppColors.slateGrey, fontSize: 12.5),
               ),
             ],
             ),

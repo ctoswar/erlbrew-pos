@@ -24,11 +24,11 @@ class IosTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.cream.withOpacity(0.97),
+        color: AppColors.cream.withValues(alpha: 0.97),
         border: const Border(top: BorderSide(color: AppColors.hairline)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.espresso.withOpacity(0.06),
+            color: AppColors.espresso.withValues(alpha: 0.06),
             blurRadius: 18,
             offset: const Offset(0, -6),
           ),
@@ -83,7 +83,7 @@ class _IosTab extends StatelessWidget {
             color: selected ? AppColors.mist : Colors.transparent,
             borderRadius: BorderRadius.circular(18),
             border: selected
-                ? Border.all(color: AppColors.matcha.withOpacity(0.18))
+                ? Border.all(color: AppColors.matcha.withValues(alpha: 0.18))
                 : null,
           ),
           child: Column(

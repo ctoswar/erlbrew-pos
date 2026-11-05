@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import '../models/app_models.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/fade_slide_in.dart';
+import '../widgets/lazy_indexed_stack.dart';
+import '../widgets/page_transitions.dart';
+import '../widgets/shimmer.dart';
 import '../widgets/ios_tab_bar.dart';
 import 'login_screen.dart';
 import 'pickup_screen.dart';
@@ -26,7 +31,10 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
+      // LazyIndexedStack: a tab is only built the first time you visit it
+      // (then kept alive), so opening the app doesn't fire every tab's
+      // network requests at once — plus a soft fade between tabs.
+      body: LazyIndexedStack(index: _index, children: _screens),
       bottomNavigationBar: IosTabBar(
         selectedIndex: _index,
         onSelected: (i) => setState(() => _index = i),
@@ -67,44 +75,64 @@ class _ProfileScreenState extends State<_ProfileScreen> {
       _loadingOrders = true;
     });
     try {
-      final user = await PosApiService.instance.getProfile();
-      final pointsData = await PosApiService.instance.getPoints();
-      final orders = await PosApiService.instance.getOrderHistory(limit: 5);
-      if (mounted) setState(() {
-        _user = user;
-        _tier = pointsData['tier'] ?? 'bronze';
-        _points = pointsData['points'] ?? 0;
-        _recentOrders = orders;
-        _loadingOrders = false;
-      });
+      // All three requests in parallel — the old sequential awaits stacked
+      // their latency, which made the profile tab feel sluggish.
+      final results = await Future.wait<dynamic>([
+        PosApiService.instance.getProfile(),
+        PosApiService.instance.getPoints(),
+        PosApiService.instance.getOrderHistory(limit: 5),
+      ]);
+      if (mounted) {
+        setState(() {
+          _user = results[0] as AppUser;
+          _tier = ((results[1] as Map<String, dynamic>)['tier'] ?? 'bronze')
+              as String;
+          _points =
+              ((results[1] as Map<String, dynamic>)['points'] ?? 0) as int;
+          _recentOrders = results[2] as List<Map<String, dynamic>>;
+          _loadingOrders = false;
+        });
+      }
     } on PosApiServiceException catch (e) {
-      if (mounted) setState(() {
-        _error = e.message;
-        _loadingOrders = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          _loadingOrders = false;
+        });
+      }
     } catch (e) {
-      if (mounted) setState(() {
-        _error = 'Unable to load profile';
-        _loadingOrders = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = 'Unable to load profile';
+          _loadingOrders = false;
+        });
+      }
     }
   }
 
   String _tierLabel(String tier) {
     switch (tier) {
-      case 'platinum': return 'Platinum';
-      case 'gold': return 'Gold';
-      case 'silver': return 'Silver';
-      default: return 'Bronze';
+      case 'platinum':
+        return 'Platinum';
+      case 'gold':
+        return 'Gold';
+      case 'silver':
+        return 'Silver';
+      default:
+        return 'Bronze';
     }
   }
 
   Color _tierColor(String tier) {
     switch (tier) {
-      case 'platinum': return const Color(0xFFE5E4E2);
-      case 'gold': return const Color(0xFFD4AF37);
-      case 'silver': return const Color(0xFFC0C0C0);
-      default: return const Color(0xFFCD7F32);
+      case 'platinum':
+        return const Color(0xFFE5E4E2);
+      case 'gold':
+        return const Color(0xFFD4AF37);
+      case 'silver':
+        return const Color(0xFFC0C0C0);
+      default:
+        return const Color(0xFFCD7F32);
     }
   }
 
@@ -144,7 +172,8 @@ class _ProfileScreenState extends State<_ProfileScreen> {
     if (!mounted || updatedName == null || updatedName.isEmpty) return;
 
     try {
-      final updated = await PosApiService.instance.updateProfile(name: updatedName);
+      final updated =
+          await PosApiService.instance.updateProfile(name: updatedName);
       if (!mounted) return;
       setState(() => _user = updated);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -184,7 +213,7 @@ class _ProfileScreenState extends State<_ProfileScreen> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 4),
-                Text(
+                const Text(
                   'Manage your account preferences',
                   style: TextStyle(color: AppColors.slateGrey, fontSize: 13),
                 ),
@@ -214,7 +243,8 @@ class _ProfileScreenState extends State<_ProfileScreen> {
                   child: ListTile(
                     leading: const Icon(Icons.lock_reset_outlined),
                     title: const Text('Reset password'),
-                    subtitle: const Text('Send a secure reset link to your email'),
+                    subtitle:
+                        const Text('Send a secure reset link to your email'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       Navigator.of(sheetContext).pop();
@@ -242,21 +272,30 @@ class _ProfileScreenState extends State<_ProfileScreen> {
     if (user == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Profile')),
-        body: Center(
-          child: _error != null
-              ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(_error!, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _refreshProfile,
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                )
-              : const CircularProgressIndicator(),
-        ),
+        body: _error != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.cloud_off_outlined,
+                          size: 42, color: AppColors.slateGrey),
+                      const SizedBox(height: 12),
+                      Text(_error!, textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _refreshProfile,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : const SafeArea(
+                child: SkeletonProfile(), // mirrors the real profile layout
+              ),
       );
     }
 
@@ -273,7 +312,9 @@ class _ProfileScreenState extends State<_ProfileScreen> {
               child: Text(
                 user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
                 style: const TextStyle(
-                    color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(height: 16),
@@ -283,7 +324,7 @@ class _ProfileScreenState extends State<_ProfileScreen> {
             ),
             Center(
               child: Text(user.email,
-                  style: TextStyle(color: AppColors.slateGrey)),
+                  style: const TextStyle(color: AppColors.slateGrey)),
             ),
             const SizedBox(height: 28),
 
@@ -295,11 +336,13 @@ class _ProfileScreenState extends State<_ProfileScreen> {
                 subtitle: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: _tierColor(_tier).withOpacity(0.15),
+                        color: _tierColor(_tier).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: _tierColor(_tier).withOpacity(0.4)),
+                        border: Border.all(
+                            color: _tierColor(_tier).withValues(alpha: 0.4)),
                       ),
                       child: Text(
                         _tierLabel(_tier),
@@ -313,7 +356,8 @@ class _ProfileScreenState extends State<_ProfileScreen> {
                   ],
                 ),
                 trailing: Text('$_points',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 16)),
               ),
             ),
             const SizedBox(height: 12),
@@ -321,12 +365,17 @@ class _ProfileScreenState extends State<_ProfileScreen> {
             // Order Stats
             Card(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _statColumn('Orders', '${user.totalOrders ?? 0}', Icons.receipt_long),
-                    _statColumn('Total Spent', '₱${_formatAmount(user.totalSpent ?? 0)}', Icons.payments),
+                    _statColumn('Orders', '${user.totalOrders ?? 0}',
+                        Icons.receipt_long),
+                    _statColumn(
+                        'Total Spent',
+                        '₱${_formatAmount(user.totalSpent ?? 0)}',
+                        Icons.payments),
                   ],
                 ),
               ),
@@ -336,45 +385,59 @@ class _ProfileScreenState extends State<_ProfileScreen> {
             // Recent Orders
             if (_recentOrders.isNotEmpty) ...[
               Text('Recent Orders',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
-              ..._recentOrders.map((o) => Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.latte,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.receipt_long, size: 18, color: AppColors.coffeeBrown),
-                  ),
-                  title: Text('#${o['id']}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text(
-                    _formatOrderDate(o['created_at']),
-                    style: TextStyle(color: AppColors.slateGrey, fontSize: 12),
-                  ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('₱${_formatAmount((o['total'] as num?)?.toDouble() ?? 0)}',
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                      Text('+${o['points_earned'] ?? 0} pts',
-                          style: TextStyle(color: AppColors.matcha, fontSize: 11)),
-                    ],
-                  ),
-                ),
-              )),
+              ..._recentOrders.asMap().entries.map((entry) {
+                final o = entry.value;
+                return FadeSlideIn(
+                    delay: fadeStagger(entry.key),
+                    child: Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.latte,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.receipt_long,
+                              size: 18, color: AppColors.coffeeBrown),
+                        ),
+                        title: Text('#${o['id']}',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                          _formatOrderDate(o['created_at']),
+                          style: const TextStyle(
+                              color: AppColors.slateGrey, fontSize: 12),
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                                '₱${_formatAmount((o['total'] as num?)?.toDouble() ?? 0)}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700, fontSize: 13)),
+                            Text('+${o['points_earned'] ?? 0} pts',
+                                style: const TextStyle(
+                                    color: AppColors.matcha, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                    ));
+              }),
               const SizedBox(height: 12),
             ] else if (!_loadingOrders) ...[
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text('No orders yet', style: TextStyle(color: AppColors.slateGrey)),
-                ),
+              const EmptyState(
+                icon: Icons.receipt_long_outlined,
+                title: 'No orders yet',
+                subtitle: 'Place a pickup order to start earning points',
               ),
             ],
 
@@ -394,7 +457,7 @@ class _ProfileScreenState extends State<_ProfileScreen> {
                 await PosApiService.instance.logout();
                 if (!mounted) return;
                 Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  fadeThrough(const LoginScreen()),
                   (route) => false,
                 );
               },
@@ -412,8 +475,10 @@ class _ProfileScreenState extends State<_ProfileScreen> {
       children: [
         Icon(icon, size: 20, color: AppColors.coffeeBrown),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-        Text(label, style: TextStyle(color: AppColors.slateGrey, fontSize: 11)),
+        Text(value,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        Text(label,
+            style: const TextStyle(color: AppColors.slateGrey, fontSize: 11)),
       ],
     );
   }
@@ -427,7 +492,9 @@ class _ProfileScreenState extends State<_ProfileScreen> {
     final date = DateTime.tryParse(dateStr?.toString() ?? '') ?? DateTime.now();
     final now = DateTime.now();
     final diff = now.difference(date);
-    if (diff.inDays == 0) return 'Today ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    if (diff.inDays == 0) {
+      return 'Today ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    }
     if (diff.inDays == 1) return 'Yesterday';
     if (diff.inDays < 7) return '${diff.inDays} days ago';
     return '${date.month}/${date.day}/${date.year}';

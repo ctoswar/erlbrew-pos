@@ -26,7 +26,7 @@ class BrandMark extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cream,
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: AppColors.gold.withOpacity(0.4), width: 1.2),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.4), width: 1.2),
         boxShadow: [AppColors.goldGlow],
       ),
       child: ClipRRect(

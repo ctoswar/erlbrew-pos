@@ -208,7 +208,7 @@ class _AdminScanScreenState extends State<AdminScanScreen>
           // Dim overlay with a viewfinder cutout
           IgnorePointer(
             child: Container(
-              decoration: BoxDecoration(color: Colors.black.withOpacity(0.35)),
+              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35)),
               child: Center(
                 child: SizedBox(
                   width: 240,
@@ -237,14 +237,14 @@ class _AdminScanScreenState extends State<AdminScanScreen>
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                AppColors.gold.withOpacity(0),
+                                AppColors.gold.withValues(alpha: 0),
                                 AppColors.gold,
-                                AppColors.gold.withOpacity(0),
+                                AppColors.gold.withValues(alpha: 0),
                               ],
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.gold.withOpacity(0.6),
+                                color: AppColors.gold.withValues(alpha: 0.6),
                                 blurRadius: 6,
                               ),
                             ],
@@ -266,7 +266,7 @@ class _AdminScanScreenState extends State<AdminScanScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.55),
+                  color: Colors.black.withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
@@ -305,7 +305,7 @@ class _CameraErrorView extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.espresso,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.gold.withOpacity(0.45)),
+            border: Border.all(color: AppColors.gold.withValues(alpha: 0.45)),
             boxShadow: [AppColors.goldGlow],
           ),
           child: Column(
@@ -508,7 +508,7 @@ class _AwardSheetState extends State<_AwardSheet> {
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
                         Text('${c.points} pts',
-                            style: TextStyle(
+                            style: const TextStyle(
                                 color: AppColors.slateGrey, fontSize: 12.5)),
                       ],
                     ),
@@ -516,7 +516,7 @@ class _AwardSheetState extends State<_AwardSheet> {
                 ],
               ),
               const SizedBox(height: 20),
-              Text('Points to award',
+              const Text('Points to award',
                   style: TextStyle(
                       fontWeight: FontWeight.w600, color: AppColors.espresso)),
               const SizedBox(height: 10),
@@ -555,7 +555,7 @@ class _AwardSheetState extends State<_AwardSheet> {
                 curve: Curves.elasticOut,
                 builder: (context, t, child) =>
                     Transform.scale(scale: t, child: child),
-                child: Icon(Icons.check_circle,
+                child: const Icon(Icons.check_circle,
                     color: AppColors.success, size: 48),
               ),
               const SizedBox(height: 12),
@@ -564,7 +564,7 @@ class _AwardSheetState extends State<_AwardSheet> {
                   textAlign: TextAlign.center),
               const SizedBox(height: 6),
               Text('New balance: ${c.points} pts',
-                  style: TextStyle(color: AppColors.slateGrey),
+                  style: const TextStyle(color: AppColors.slateGrey),
                   textAlign: TextAlign.center),
               const SizedBox(height: 20),
               ElevatedButton(

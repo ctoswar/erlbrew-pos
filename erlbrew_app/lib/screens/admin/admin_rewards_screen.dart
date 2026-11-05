@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/pos_api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 import '../../widgets/fade_slide_in.dart';
+import '../../widgets/shimmer.dart';
 
 class AdminRewardsScreen extends StatefulWidget {
   const AdminRewardsScreen({super.key});
@@ -28,28 +30,38 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
     });
     try {
       final rewards = await PosApiService.instance.getAllRewards();
-      if (mounted) setState(() {
-        _rewards = rewards;
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _rewards = rewards;
+          _loading = false;
+        });
+      }
     } on PosApiServiceException catch (e) {
-      if (mounted) setState(() {
-        _error = e.message;
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          _loading = false;
+        });
+      }
     } catch (e) {
-      if (mounted) setState(() {
-        _error = 'Unable to load rewards';
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = 'Unable to load rewards';
+          _loading = false;
+        });
+      }
     }
   }
 
   void _openEditor({Map<String, dynamic>? existing}) {
-    final titleController = TextEditingController(text: existing?['title']?.toString());
-    final descController = TextEditingController(text: existing?['description']?.toString());
-    final costController = TextEditingController(text: existing?['points_cost']?.toString());
-    final emojiController = TextEditingController(text: existing?['emoji']?.toString() ?? '☕');
+    final titleController =
+        TextEditingController(text: existing?['title']?.toString());
+    final descController =
+        TextEditingController(text: existing?['description']?.toString());
+    final costController =
+        TextEditingController(text: existing?['points_cost']?.toString());
+    final emojiController =
+        TextEditingController(text: existing?['emoji']?.toString() ?? '☕');
     final formKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
@@ -121,8 +133,7 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
                 TextFormField(
                   controller: costController,
                   keyboardType: TextInputType.number,
-                  decoration:
-                      const InputDecoration(labelText: 'Points cost'),
+                  decoration: const InputDecoration(labelText: 'Points cost'),
                   validator: (v) {
                     final n = int.tryParse(v ?? '');
                     if (n == null || n <= 0) return 'Enter a valid number';
@@ -199,7 +210,8 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
               }
               if (mounted) Navigator.of(context).pop();
             },
-            child: Text('Remove', style: TextStyle(color: AppColors.error)),
+            child:
+                const Text('Remove', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -217,7 +229,13 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
         label: const Text('Add Reward'),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+              physics: const NeverScrollableScrollPhysics(),
+              children: const [
+                SkeletonTileList(count: 5),
+              ],
+            )
           : _error != null
               ? Center(
                   child: Column(
@@ -225,7 +243,7 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
                     children: [
                       Text('Error: $_error',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: AppColors.error)),
+                          style: const TextStyle(color: AppColors.error)),
                       const SizedBox(height: 12),
                       ElevatedButton(
                         onPressed: _loadRewards,
@@ -235,75 +253,83 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
                   ),
                 )
               : _rewards.isEmpty
-                  ? Center(
-                      child: Text('No rewards yet — add one',
-                          style: TextStyle(color: AppColors.slateGrey)),
+                  ? const EmptyState(
+                      icon: Icons.card_giftcard_outlined,
+                      title: 'No rewards yet',
+                      subtitle: 'Tap Add Reward to create one',
                     )
                   : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-                  itemCount: _rewards.length,
-                  itemBuilder: (context, i) {
-                    final item = _rewards[i];
-                    return FadeSlideIn(
-                      delay: Duration(milliseconds: i * 60),
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Card(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                      itemCount: _rewards.length,
+                      itemBuilder: (context, i) {
+                        final item = _rewards[i];
+                        return FadeSlideIn(
+                          delay: fadeStagger(i),
                           child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 46,
-                                  height: 46,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.latte,
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(item['emoji']?.toString() ?? '🎁',
-                                      style: const TextStyle(fontSize: 20)),
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 46,
+                                      height: 46,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.latte,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                          item['emoji']?.toString() ?? '🎁',
+                                          style: const TextStyle(fontSize: 20)),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(item['title']?.toString() ?? '',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.w700)),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                              item['description']?.toString() ??
+                                                  '',
+                                              style: const TextStyle(
+                                                  color: AppColors.slateGrey,
+                                                  fontSize: 12.5)),
+                                          const SizedBox(height: 4),
+                                          Text('${item['points_cost']} pts',
+                                              style: const TextStyle(
+                                                  color: AppColors.matchaDark,
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 12.5)),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined,
+                                          size: 20),
+                                      color: AppColors.coffeeBrown,
+                                      onPressed: () =>
+                                          _openEditor(existing: item),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline,
+                                          size: 20),
+                                      color: AppColors.error,
+                                      onPressed: () => _delete(item),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(item['title']?.toString() ?? '',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.w700)),
-                                      const SizedBox(height: 2),
-                                      Text(item['description']?.toString() ?? '',
-                                          style: TextStyle(
-                                              color: AppColors.slateGrey,
-                                              fontSize: 12.5)),
-                                      const SizedBox(height: 4),
-                                      Text('${item['points_cost']} pts',
-                                          style: TextStyle(
-                                              color: AppColors.matchaDark,
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 12.5)),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined, size: 20),
-                                  color: AppColors.coffeeBrown,
-                                  onPressed: () => _openEditor(existing: item),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, size: 20),
-                                  color: AppColors.error,
-                                  onPressed: () => _delete(item),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                        );
+                      },
+                    ),
     );
   }
 }

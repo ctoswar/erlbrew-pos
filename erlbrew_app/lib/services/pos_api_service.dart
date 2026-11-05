@@ -82,6 +82,7 @@ class PosApiService {
   Map<String, dynamic> _customerToJson(AppUser customer) => {
         'id': customer.id,
         'name': customer.name,
+        'username': customer.username,
         'email': customer.email,
         'points': customer.points,
         'tier': customer.tier,
@@ -141,14 +142,24 @@ class PosApiService {
   Future<AppUser> register({
     required String phone,
     required String name,
+    required String firstName,
+    required String lastName,
+    required String username,
     required String email,
     required String password,
   }) async {
     final response = await _withTimeout(http.post(
       Uri.parse('$baseUrl/api/customers/register'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(
-          {'phone': phone, 'name': name, 'email': email, 'password': password}),
+      body: jsonEncode({
+        'phone': phone,
+        'name': name,
+        'first_name': firstName.trim(),
+        'last_name': lastName.trim(),
+        'username': username.trim().toLowerCase(),
+        'email': email,
+        'password': password,
+      }),
     ));
     final data = _handleResponse(response);
     final customer =
@@ -254,6 +265,25 @@ class PosApiService {
     final data = _handleResponse(response);
     final customer = AppUser.fromMap(data['id'].toString(), data);
     _currentCustomer = customer;
+    return customer;
+  }
+
+  /// Change the signed-in customer's username (server validates the
+  /// format, reserved words and case-insensitive uniqueness).
+  Future<AppUser> updateUsername(String username) async {
+    final response = await _withTimeout(http.put(
+      Uri.parse('$baseUrl/api/customers/me'),
+      headers: _headers,
+      body: jsonEncode({'username': username.trim().toLowerCase()}),
+    ));
+    final data = _handleResponse(response);
+    final customer = AppUser.fromMap(data['id'].toString(), data);
+    _currentCustomer = customer;
+    // Keep the cached session profile in sync so the username survives
+    // an app restart without a network round-trip.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        'pos_customer', jsonEncode(_customerToJson(customer)));
     return customer;
   }
 

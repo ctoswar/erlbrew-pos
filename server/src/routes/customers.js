@@ -16,7 +16,7 @@ export function isVerifiedFirebaseCustomer(decoded) {
 
 export default function customersRouter(pool) {
   const router = Router();
-  const customerColumns = 'id, phone, name, email, notes, loyalty_points, loyalty_tier, last_points_update, total_orders, total_spent, created_at, updated_at';
+  const customerColumns = 'id, phone, name, email, first_name, last_name, username, notes, loyalty_points, loyalty_tier, last_points_update, total_orders, total_spent, created_at, updated_at';
   let firebaseApp;
   if (getApps().length) {
     firebaseApp = getApp();
@@ -95,14 +95,65 @@ export default function customersRouter(pool) {
   };
 
   // POST /api/customers/register — Create customer account
+  //
+  // Username policy — mirrors erlbrew_app/lib/utils/username_policy.dart:
+  // 3-20 characters, letters, numbers and underscores. Stored lowercase
+  // and unique case-insensitively; a few handles are reserved.
+  const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
+  const RESERVED_USERNAMES = new Set([
+    'admin', 'administrator', 'erlbrew', 'root', 'support',
+    'staff', 'moderator', 'owner', 'null', 'undefined',
+  ]);
+
+  const usernameTaken = async (value) => {
+    const [rows] = await pool.query(
+      'SELECT id FROM customers WHERE LOWER(username) = ? LIMIT 1',
+      [value]
+    );
+    return rows.length > 0;
+  };
+
+  // Builds a unique lowercase handle from the customer's names when none
+  // was chosen, e.g. "Jan" + "Dela Cruz" -> "jandelacruz", then
+  // "jandelacruz2", "jandelacruz3", ... if those are taken.
+  const generateUniqueUsername = async (firstName, lastName, fallbackName) => {
+    let base = `${firstName}${lastName}`.trim() || String(fallbackName || '');
+    base = base
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .slice(0, 18);
+    if (base.length < 3) base = `erl${base}`;
+    for (let attempt = 0; attempt < 25; attempt += 1) {
+      const candidate = attempt === 0 ? base : `${base}${attempt + 1}`;
+      if (!RESERVED_USERNAMES.has(candidate) && !(await usernameTaken(candidate))) {
+        return candidate;
+      }
+    }
+    // Practically unreachable — fall back to a time-based unique handle.
+    return `erl${Date.now().toString(36)}`;
+  };
+
   router.post('/register', async (req, res) => {
-    const { phone, name, email, password } = req.body;
+    const { phone, email, password } = req.body;
+    // Accept both snake_case and camelCase from clients.
+    const firstName = String(req.body.first_name ?? req.body.firstName ?? '').trim();
+    const lastName = String(req.body.last_name ?? req.body.lastName ?? '').trim();
+    const rawName = String(req.body.name ?? '').trim();
+    const rawUsername = String(req.body.username ?? '').trim();
     if (!phone || typeof phone !== 'string') {
       return res.status(400).json({ error: 'phone is required' });
+    }
+    if (!firstName) {
+      return res.status(400).json({ error: 'first name is required' });
     }
     const passwordIssue = firstPasswordIssue(password);
     if (passwordIssue) {
       return res.status(400).json({ error: passwordIssue });
+    }
+    if (rawUsername && !USERNAME_PATTERN.test(rawUsername)) {
+      return res.status(400).json({ error: 'Username must be 3-20 letters, numbers or underscores' });
     }
     try {
       const normalizedPhone = phone.trim();
@@ -110,26 +161,43 @@ export default function customersRouter(pool) {
       if (existing.length > 0) {
         return res.status(409).json({ error: 'Phone number already registered' });
       }
+      // Resolve the username: validate the chosen one (reserved words,
+      // case-insensitive uniqueness) or auto-generate a free handle.
+      let username = null;
+      if (rawUsername) {
+        const candidate = rawUsername.toLowerCase();
+        if (RESERVED_USERNAMES.has(candidate)) {
+          return res.status(409).json({ error: 'That username is not available' });
+        }
+        if (await usernameTaken(candidate)) {
+          return res.status(409).json({ error: 'That username is already taken' });
+        }
+        username = candidate;
+      } else {
+        username = await generateUniqueUsername(firstName, lastName, rawName);
+      }
+      const displayName = rawName || `${firstName} ${lastName}`.trim();
       const passwordHash = await bcrypt.hash(password, 10);
       const [r] = await pool.query(
-        'INSERT INTO customers (phone, name, email, password_hash) VALUES (?, ?, ?, ?)',
-        [normalizedPhone, name || null, email || null, passwordHash]
+        'INSERT INTO customers (phone, name, email, password_hash, first_name, last_name, username) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [normalizedPhone, displayName, email || null, passwordHash, firstName, lastName || null, username]
       );
       const token = jwt.sign(
-        { sub: r.insertId, phone: normalizedPhone, name: name || '', customer: true },
+        { sub: r.insertId, phone: normalizedPhone, name: displayName, customer: true },
         process.env.JWT_SECRET,
         { expiresIn: '30d' }
       );
       const [inserted] = await pool.query(
-        'SELECT id, phone, name, email, loyalty_points, loyalty_tier, created_at FROM customers WHERE id = ?',
+        'SELECT id, phone, name, email, first_name, last_name, username, loyalty_points, loyalty_tier, created_at FROM customers WHERE id = ?',
         [r.insertId]
       );
-      await logAudit(pool, req, { action: 'customer_register', entityType: 'customer', entityId: String(r.insertId), details: { phone: normalizedPhone, name } });
+      await logAudit(pool, req, { action: 'customer_register', entityType: 'customer', entityId: String(r.insertId), details: { phone: normalizedPhone, name: displayName, username } });
       res.json({ token, customer: inserted[0] });
     } catch (e) {
       console.error('Customer register error:', e);
       if (e.code === 'ER_DUP_ENTRY') {
-        return res.status(409).json({ error: 'Customer account already registered' });
+        const isUsername = /username/i.test(e.message || '');
+        return res.status(409).json({ error: isUsername ? 'That username is already taken' : 'Customer account already registered' });
       }
       res.status(500).json({ error: 'DB error' });
     }
@@ -147,8 +215,8 @@ export default function customersRouter(pool) {
       const isEmail = identifier.includes('@');
       // Lookup by phone or email
       const query = isEmail
-        ? 'SELECT id, phone, name, email, password_hash, loyalty_points, loyalty_tier, created_at FROM customers WHERE email = ?'
-        : 'SELECT id, phone, name, email, password_hash, loyalty_points, loyalty_tier, created_at FROM customers WHERE phone = ?';
+        ? 'SELECT id, phone, name, email, first_name, last_name, username, password_hash, loyalty_points, loyalty_tier, created_at FROM customers WHERE email = ?'
+        : 'SELECT id, phone, name, email, first_name, last_name, username, password_hash, loyalty_points, loyalty_tier, created_at FROM customers WHERE phone = ?';
       const [rows] = await pool.query(query, [identifier]);
       if (!rows.length) {
         return res.status(401).json({ error: 'Invalid credentials' });
@@ -193,7 +261,7 @@ export default function customersRouter(pool) {
         return res.status(401).json({ error: 'A verified customer email is required' });
       }
       const [rows] = await pool.query(
-        'SELECT id, phone, name, email, loyalty_points, loyalty_tier, total_orders, total_spent, created_at FROM customers WHERE LOWER(email) = ? LIMIT 1',
+        'SELECT id, phone, name, email, first_name, last_name, username, loyalty_points, loyalty_tier, total_orders, total_spent, created_at FROM customers WHERE LOWER(email) = ? LIMIT 1',
         [email]
       );
       if (!rows.length) {
@@ -222,7 +290,7 @@ export default function customersRouter(pool) {
   router.get('/me', customerAuthMiddleware, async (req, res) => {
     try {
       const [rows] = await pool.query(
-        'SELECT id, phone, name, email, loyalty_points, loyalty_tier, last_points_update, total_orders, total_spent, created_at FROM customers WHERE id = ?',
+        'SELECT id, phone, name, email, first_name, last_name, username, loyalty_points, loyalty_tier, last_points_update, total_orders, total_spent, created_at FROM customers WHERE id = ?',
         [req.customer.sub]
       );
       if (!rows.length) return res.status(404).json({ error: 'Customer not found' });
@@ -235,22 +303,45 @@ export default function customersRouter(pool) {
 
   // PUT /api/customers/me — Update current customer profile
   router.put('/me', customerAuthMiddleware, async (req, res) => {
-    const { name, email } = req.body;
+    const { name, email, username } = req.body;
     try {
       const fields = [];
       const values = [];
       if (name !== undefined) { fields.push('name = ?'); values.push(name); }
       if (email !== undefined) { fields.push('email = ?'); values.push(email); }
+      if (username !== undefined) {
+        // Same policy as /register (erlbrew_app/lib/utils/username_policy.dart),
+        // with uniqueness checked excluding the caller's own row.
+        const candidate = String(username ?? '').trim().toLowerCase();
+        if (!USERNAME_PATTERN.test(candidate)) {
+          return res.status(400).json({ error: 'Username must be 3-20 letters, numbers or underscores' });
+        }
+        if (RESERVED_USERNAMES.has(candidate)) {
+          return res.status(409).json({ error: 'That username is not available' });
+        }
+        const [clashes] = await pool.query(
+          'SELECT id FROM customers WHERE LOWER(username) = ? AND id != ? LIMIT 1',
+          [candidate, req.customer.sub]
+        );
+        if (clashes.length > 0) {
+          return res.status(409).json({ error: 'That username is already taken' });
+        }
+        fields.push('username = ?');
+        values.push(candidate);
+      }
       if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
       values.push(req.customer.sub);
       await pool.query(`UPDATE customers SET ${fields.join(', ')} WHERE id = ?`, values);
       const [rows] = await pool.query(
-        'SELECT id, phone, name, email, loyalty_points, loyalty_tier, total_orders, total_spent, created_at FROM customers WHERE id = ?',
+        'SELECT id, phone, name, email, first_name, last_name, username, loyalty_points, loyalty_tier, total_orders, total_spent, created_at FROM customers WHERE id = ?',
         [req.customer.sub]
       );
       res.json(rows[0]);
     } catch (e) {
       console.error(e);
+      if (e.code === 'ER_DUP_ENTRY' && /username/i.test(e.message || '')) {
+        return res.status(409).json({ error: 'That username is already taken' });
+      }
       res.status(500).json({ error: 'DB error' });
     }
   });

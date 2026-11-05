@@ -140,6 +140,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
     final q = _query.toLowerCase();
     return _customers.where((c) {
       return c.name.toLowerCase().contains(q) ||
+          c.username.toLowerCase().contains(q) ||
           c.email.toLowerCase().contains(q);
     }).toList();
   }
@@ -191,7 +192,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
                                 title: 'No customers found',
                                 subtitle: _query.isEmpty
                                     ? 'No customers registered yet'
-                                    : 'Try a different name or email',
+                                    : 'Try a different name, username or email',
                               ),
                             ],
                           )
@@ -222,7 +223,10 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
                                       title: Text(c.name,
                                           style: const TextStyle(
                                               fontWeight: FontWeight.w600)),
-                                      subtitle: Text(c.email,
+                                      subtitle: Text(
+                                          c.username.isNotEmpty
+                                              ? '@${c.username} · ${c.email}'
+                                              : c.email,
                                           style: const TextStyle(
                                               color: AppColors.slateGrey,
                                               fontSize: 12.5)),

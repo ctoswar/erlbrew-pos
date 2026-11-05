@@ -1,15 +1,19 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../legal/legal_documents.dart';
 import '../models/app_models.dart';
 import '../services/firebase_auth_service.dart';
 import '../utils/auth_error_message.dart';
 import '../utils/password_policy.dart';
+import '../utils/username_policy.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/luxury_button.dart';
 import '../widgets/page_transitions.dart';
+import 'legal_screen.dart';
 import 'login_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -21,7 +25,9 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -31,6 +37,17 @@ class _SignupScreenState extends State<SignupScreen> {
   // Mirrors the password field so the live requirements checklist can
   // tick rules off as the user types.
   String _password = '';
+  // True once the user hand-edits the username — after that their choice
+  // is respected and the auto-suggestion stops overwriting it.
+  bool _usernameTouched = false;
+  bool _agreedToTerms = false;
+  bool _consentError = false;
+
+  // Gesture recognizers for the tappable legal links in the consent row.
+  late final TapGestureRecognizer _termsLink = TapGestureRecognizer()
+    ..onTap = () => LegalScreen.show(context, doc: LegalDoc.terms);
+  late final TapGestureRecognizer _privacyLink = TapGestureRecognizer()
+    ..onTap = () => LegalScreen.show(context, doc: LegalDoc.privacy);
 
   String _normalizedPhone(String value) {
     var phone = value.replaceAll(RegExp(r'[^0-9]'), '');
@@ -104,15 +121,36 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _termsLink.dispose();
+    _privacyLink.dispose();
     super.dispose();
+  }
+
+  /// Keeps the username suggestion in sync with the names while the user
+  /// has not hand-edited it: "Jan" + "Dela Cruz" → "jandelacruz".
+  void _maybeSuggestUsername() {
+    if (_usernameTouched) return;
+    final suggested = UsernamePolicy.suggest(
+      _firstNameController.text,
+      _lastNameController.text,
+    );
+    if (suggested != _usernameController.text) {
+      setState(() => _usernameController.text = suggested);
+    }
   }
 
   void _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_agreedToTerms) {
+      setState(() => _consentError = true);
+      return;
+    }
     setState(() => _loading = true);
 
     try {
@@ -120,20 +158,26 @@ class _SignupScreenState extends State<SignupScreen> {
           _useSmsVerification ? await _verifyPhoneOtp() : true;
       if (!phoneVerified) return;
 
+      final firstName = _firstNameController.text.trim();
+      final lastName = _lastNameController.text.trim();
+      final displayName = '$firstName $lastName'.trim();
+      final username = _usernameController.text.trim().toLowerCase();
+      final email = _emailController.text.trim();
+      final phone = _normalizedPhone(_phoneController.text);
+
       final firebase = FirebaseAuthService.instance;
       AppUser firebaseUser;
-      final phone = _normalizedPhone(_phoneController.text);
       try {
         firebaseUser = await firebase.signUp(
-          name: _nameController.text,
-          email: _emailController.text,
+          name: displayName,
+          email: email,
           phone: phone,
           password: _passwordController.text,
         );
       } on FirebaseAuthException catch (error) {
         if (error.code != 'email-already-in-use') rethrow;
         firebaseUser = await firebase.signInWithEmailPassword(
-          email: _emailController.text,
+          email: email,
           password: _passwordController.text,
           isAdmin: false,
         );
@@ -143,8 +187,11 @@ class _SignupScreenState extends State<SignupScreen> {
       final posService = PosApiService.instance;
       await posService.register(
         phone: phone,
-        name: _nameController.text,
-        email: _emailController.text,
+        name: displayName,
+        firstName: firstName,
+        lastName: lastName,
+        username: username,
+        email: email,
         password: _passwordController.text,
       );
 
@@ -268,15 +315,53 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                   const SizedBox(height: 28),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _firstNameController,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: const InputDecoration(
+                            labelText: 'First name',
+                            prefixIcon: Icon(Icons.person_outline, size: 20),
+                          ),
+                          onChanged: (_) => _maybeSuggestUsername(),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Enter your first name'
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _lastNameController,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: const InputDecoration(
+                            labelText: 'Last name',
+                          ),
+                          onChanged: (_) => _maybeSuggestUsername(),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Enter your last name'
+                              : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
                   TextFormField(
-                    controller: _nameController,
+                    controller: _usernameController,
                     decoration: const InputDecoration(
-                      labelText: 'Full Name',
-                      prefixIcon: Icon(Icons.person_outline, size: 20),
+                      labelText: 'Username',
+                      prefixIcon: Icon(Icons.alternate_email, size: 20),
+                      helperText:
+                          'Your public handle — letters, numbers, underscores.',
                     ),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Enter your name'
-                        : null,
+                    onChanged: (v) {
+                      _usernameTouched = true;
+                      setState(() {});
+                    },
+                    validator: UsernamePolicy.validate,
                   ),
                   const SizedBox(height: 22),
                   TextFormField(
@@ -349,7 +434,65 @@ class _SignupScreenState extends State<SignupScreen> {
                     validator: PasswordPolicy.validate,
                   ),
                   _PasswordChecklist(password: _password),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 22),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Checkbox(
+                        value: _agreedToTerms,
+                        onChanged: (v) => setState(() {
+                          _agreedToTerms = v ?? false;
+                          if (_agreedToTerms) _consentError = false;
+                        }),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text.rich(
+                            TextSpan(
+                              style: const TextStyle(
+                                color: AppColors.slateGrey,
+                                fontSize: 12.5,
+                                height: 1.4,
+                              ),
+                              children: [
+                                const TextSpan(text: 'I agree to the '),
+                                TextSpan(
+                                  text: 'Terms of Service',
+                                  style: const TextStyle(
+                                    color: AppColors.matchaDark,
+                                    fontWeight: FontWeight.w700,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                  recognizer: _termsLink,
+                                ),
+                                const TextSpan(text: ' and the '),
+                                TextSpan(
+                                  text: 'Privacy Policy',
+                                  style: const TextStyle(
+                                    color: AppColors.matchaDark,
+                                    fontWeight: FontWeight.w700,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                  recognizer: _privacyLink,
+                                ),
+                                const TextSpan(text: ' (including cookies).'),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_consentError)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6, left: 16),
+                      child: Text(
+                        'Please agree to the Terms and Privacy Policy to create your account.',
+                        style: TextStyle(color: AppColors.error, fontSize: 12),
+                      ),
+                    ),
+                  const SizedBox(height: 26),
                   LuxuryButton(
                     label: 'Create Account',
                     loading: _loading,

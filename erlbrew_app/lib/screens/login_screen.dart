@@ -303,6 +303,10 @@ class _LoginScreenState extends State<LoginScreen> {
           'Too many sign-in attempts. Please wait and try again.',
         'network-request-failed' =>
           'Unable to reach Firebase. Check the internet connection.',
+        'firebase-init-failed' => error.message?.isNotEmpty == true
+            ? error.message!
+            : 'This browser blocked the sign-in service. Open the page in a '
+                'normal (non-private) browser tab and try again.',
         'email-not-verified' =>
           'Verify the link in your email before signing in. We sent another link.',
         'not-admin' => 'This Firebase account does not have staff access.',

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_models.dart';
 import '../services/firebase_auth_service.dart';
 import '../utils/auth_error_message.dart';
+import '../utils/password_policy.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
@@ -27,6 +28,9 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscure = true;
   bool _loading = false;
   bool _useSmsVerification = false;
+  // Mirrors the password field so the live requirements checklist can
+  // tick rules off as the user types.
+  String _password = '';
 
   String _normalizedPhone(String value) {
     var phone = value.replaceAll(RegExp(r'[^0-9]'), '');
@@ -339,13 +343,12 @@ class _SignupScreenState extends State<SignupScreen> {
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                     ),
-                    validator: (v) {
-                      if (v == null || v.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
+                    onChanged: (v) => setState(() => _password = v),
+                    // Same policy the POS server enforces on
+                    // POST /api/customers/register.
+                    validator: PasswordPolicy.validate,
                   ),
+                  _PasswordChecklist(password: _password),
                   const SizedBox(height: 32),
                   LuxuryButton(
                     label: 'Create Account',
@@ -358,6 +361,68 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Live password-policy checklist under the signup password field —
+/// each rule ticks off with a matcha check as the user's typing
+/// satisfies it, so mistakes are fixed before validation ever runs.
+class _PasswordChecklist extends StatelessWidget {
+  final String password;
+
+  const _PasswordChecklist({required this.password});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final (text, met) in PasswordPolicy.requirements(password))
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    width: 17,
+                    height: 17,
+                    decoration: BoxDecoration(
+                      color: met ? AppColors.matcha : Colors.transparent,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: met
+                            ? AppColors.matcha
+                            : AppColors.slateGrey.withValues(alpha: 0.45),
+                        width: 1.4,
+                      ),
+                    ),
+                    child: met
+                        ? const Icon(
+                            Icons.check_rounded,
+                            size: 11,
+                            color: Colors.white,
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                  const SizedBox(width: 8),
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 220),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: met ? FontWeight.w600 : FontWeight.w400,
+                      color: met ? AppColors.matchaDark : AppColors.slateGrey,
+                    ),
+                    child: Text(text),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

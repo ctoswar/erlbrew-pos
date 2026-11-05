@@ -74,14 +74,35 @@ export default function customersRouter(pool) {
 
   // ── Customer Auth Endpoints (MUST be before /:id routes) ─────────────
 
+  // Password policy — mirrors the signup screen
+  // (erlbrew_app/lib/utils/password_policy.dart): at least 6 characters
+  // with one capital letter, one number and one special character.
+  // Returns the first rule the value breaks, or null when it passes.
+  const firstPasswordIssue = (value) => {
+    if (typeof value !== 'string' || value.length < 6) {
+      return 'password must use at least 6 characters';
+    }
+    if (!/[A-Z]/.test(value)) {
+      return 'password must include at least one capital letter';
+    }
+    if (!/[0-9]/.test(value)) {
+      return 'password must include at least one number';
+    }
+    if (!/[^A-Za-z0-9]/.test(value)) {
+      return 'password must include at least one special character (e.g. ! @ #)';
+    }
+    return null;
+  };
+
   // POST /api/customers/register — Create customer account
   router.post('/register', async (req, res) => {
     const { phone, name, email, password } = req.body;
     if (!phone || typeof phone !== 'string') {
       return res.status(400).json({ error: 'phone is required' });
     }
-    if (!password || typeof password !== 'string' || password.length < 6) {
-      return res.status(400).json({ error: 'password must be at least 6 characters' });
+    const passwordIssue = firstPasswordIssue(password);
+    if (passwordIssue) {
+      return res.status(400).json({ error: passwordIssue });
     }
     try {
       const normalizedPhone = phone.trim();

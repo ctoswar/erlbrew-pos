@@ -8,33 +8,72 @@ import '../models/app_models.dart';
 class FirebaseAuthService {
   FirebaseAuthService._();
 
-  static FirebaseAuthService get instance {
-    if (Firebase.apps.isEmpty) {
-      return FirebaseAuthService._uninitialized();
+  bool _firebaseInitFailed = false;
+
+  /// Accessing [Firebase.apps] can THROW on iOS Safari / WebKit while the
+  /// Firebase JS SDK module is still loading (or when its load failed) — the
+  /// js_interop backing for the web plugin is not present yet. Wrap it so the
+  /// app never crashes just by *checking* whether Firebase is ready.
+  bool _appsEmpty() {
+    try {
+      return Firebase.apps.isEmpty;
+    } catch (error) {
+      // iOS Safari / WebKit while the Firebase JS module is not loaded yet.
+      return true;
     }
-    return FirebaseAuthService._();
   }
 
-  FirebaseAuthService._uninitialized()
-      : _auth = null,
-        _firestore = null;
+  static FirebaseAuthService get instance {
+    // Avoid Firebase.apps here: on WebKit it may throw before the SDK's JS
+    // module has loaded (the reason for ensureFirebaseReady() + _appsEmpty()).
+    return FirebaseAuthService._();
+  }
 
   FirebaseAuth? _auth;
   FirebaseFirestore? _firestore;
 
   bool get isReady => _auth != null && _firestore != null;
 
-  Future<void> _ensureReady() async {
-    if (isReady) return;
+  /// Whether Firebase could not be initialized (e.g. blocked network /
+  /// unsupported browser). The UI can surface this as actionable guidance.
+  bool get firebaseInitFailed => _firebaseInitFailed;
 
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
+  /// Idempotent: initialize Firebase (loading its JS SDK on web) and wire up
+  /// FirebaseAuth / FirebaseFirestore. Called from main() before runApp so
+  /// no sign-in path races the SDK load, and from every auth entrypoint as a
+  /// safety net.
+  Future<bool> ensureFirebaseReady() async {
+    if (isReady) return true;
+    if (_firebaseInitFailed) return false;
+
+    try {
+      if (_appsEmpty()) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
+      _auth ??= FirebaseAuth.instance;
+      _firestore ??= FirebaseFirestore.instance;
+    } catch (error) {
+      _firebaseInitFailed = true;
+    }
+    return isReady;
+  }
+
+  Future<void> _ensureReady() async {
+    // One initialization path for everything (used by main() too). Throws a
+    // mapped FirebaseAuthException when Firebase genuinely cannot start; the
+    // login screens map that code to actionable guidance instead of a raw
+    // "null check operator" crash.
+    final ok = await ensureFirebaseReady();
+    if (!ok) {
+      throw FirebaseAuthException(
+        code: 'firebase-init-failed',
+        message:
+            'Firebase could not start in this browser. Try a normal '
+            '(non-private) browser tab or check the connection.',
       );
     }
-
-    _auth ??= FirebaseAuth.instance;
-    _firestore ??= FirebaseFirestore.instance;
   }
 
   String? get currentUserId => _auth?.currentUser?.uid;

@@ -199,6 +199,10 @@ class _SignupScreenState extends State<SignupScreen> {
         'too-many-requests' =>
           'Too many attempts. Please wait before requesting another code.',
         'email-already-in-use' => 'This email already has a Firebase account.',
+        'firebase-init-failed' => error.message?.isNotEmpty == true
+            ? error.message!
+            : 'This browser blocked the sign-in service. Open the page in a '
+                'normal (non-private) browser tab and try again.',
         'invalid-credential' ||
         'wrong-password' =>
           'This email already has an account, but the password does not match. Use Log In and Forgot password.',

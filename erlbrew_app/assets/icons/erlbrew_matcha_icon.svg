@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none" >  <title>Matcha</title>
+  <!-- steam -->
+  <g stroke="#9DBF8A" stroke-width="2.4" stroke-linecap="round" fill="none">
+    <path d="M25 17c-3-3.500 2.500-6-.5-10.500"/>
+    <path d="M32 17c-3-3.500 2.500-6-.5-12"/>
+    <path d="M39 17c-3-3.500 2.500-6-.5-10.500"/>
+  </g>
+  <!-- shadow -->
+  <ellipse cx="32" cy="57" rx="19" ry="3" fill="#CBB49A"/>
+  <!-- foot -->
+  <path d="M23 51h18v3.500a2.500 2.500 0 0 1-2.500 2.500h-13A2.500 2.500 0 0 1 23 54.500z" fill="#1F4F3F"/>
+  <!-- bowl body -->
+  <path d="M9 28h46c0 14-9 24-23 24S9 42 9 28z" fill="#2F6B55"/>
+  <path d="M15 34c1.500 6 5 10 10 12" stroke="#4C8A72" stroke-width="2.400" stroke-linecap="round"/>
+  <!-- rim + matcha -->
+  <ellipse cx="32" cy="28" rx="23" ry="6.500" fill="#3F8068"/>
+  <ellipse cx="32" cy="28.500" rx="20" ry="4.800" fill="#86B06F"/>
+  <!-- foam -->
+  <ellipse cx="32" cy="28.300" rx="14" ry="3" fill="#A7CB8F"/>
+  <circle cx="25" cy="28" r="1.200" fill="#C9E2B5"/>
+  <circle cx="31" cy="27.200" r="1" fill="#C9E2B5"/>
+  <circle cx="37" cy="28.600" r="1.300" fill="#C9E2B5"/>
+  <circle cx="41" cy="27.500" r="0.900" fill="#C9E2B5"/>
+</svg>

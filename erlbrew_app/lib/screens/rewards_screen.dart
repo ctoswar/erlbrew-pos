@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/app_models.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/reward_icons.dart';
 import '../widgets/animated_counter.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/fade_slide_in.dart';
@@ -416,8 +417,11 @@ class _RewardsScreenState extends State<RewardsScreen> {
                                   color: AppColors.latte,
                                   borderRadius: BorderRadius.circular(14)),
                               alignment: Alignment.center,
-                              child: Text(item['emoji'] ?? '🎁',
-                                  style: const TextStyle(fontSize: 20)),
+                              child: rewardIconVisual(
+                                title: item['title']?.toString(),
+                                description: item['description']?.toString(),
+                                emoji: item['emoji']?.toString(),
+                              ),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -511,8 +515,12 @@ class _RewardsScreenState extends State<RewardsScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           alignment: Alignment.center,
-                          child: Text(item['emoji'] ?? '🎁',
-                              style: const TextStyle(fontSize: 18)),
+                          child: rewardIconVisual(
+                            title: item['title']?.toString(),
+                            emoji: item['emoji']?.toString(),
+                            iconSize: 28,
+                            emojiFontSize: 18,
+                          ),
                         ),
                         title: Text(item['title'] ?? '',
                             style: const TextStyle(

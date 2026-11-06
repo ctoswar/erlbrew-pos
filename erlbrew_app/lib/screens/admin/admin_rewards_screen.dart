@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/pos_api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/reward_icons.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/fade_slide_in.dart';
 import '../../widgets/shimmer.dart';
@@ -280,9 +281,12 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
                                         borderRadius: BorderRadius.circular(14),
                                       ),
                                       alignment: Alignment.center,
-                                      child: Text(
-                                          item['emoji']?.toString() ?? '🎁',
-                                          style: const TextStyle(fontSize: 20)),
+                                      child: rewardIconVisual(
+                                        title: item['title']?.toString(),
+                                        description:
+                                            item['description']?.toString(),
+                                        emoji: item['emoji']?.toString(),
+                                      ),
                                     ),
                                     const SizedBox(width: 14),
                                     Expanded(

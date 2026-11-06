@@ -40,6 +40,21 @@ export default function companySettingsRouter(pool) {
     }
   });
 
+  // GET public fields — customer-facing screens have no staff token (whitelist only, no auth)
+  router.get('/public', async (req, res) => {
+    try {
+      const [settings] = await pool.execute(
+        `SELECT setting_key, setting_value FROM company_settings WHERE setting_key IN ('promo_messages', 'company_name')`
+      );
+      const obj = {};
+      settings.forEach(s => { obj[s.setting_key] = s.setting_value; });
+      res.json(obj);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   // GET single setting
   router.get('/:key', authMiddleware, adminMiddleware, async (req, res) => {
     try {

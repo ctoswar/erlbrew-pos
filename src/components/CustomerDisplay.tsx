@@ -4,7 +4,7 @@ import { formatCurrency, calcSubtotal, calcGrand } from "../utils";
 import { useCart } from "../hooks/useCart";
 import {
   apiGet,
-  getCompanySettings,
+  getPublicCompanySettings,
   lookupCustomerByPhone,
   parsePromoMessages,
   CustomerLoyalty,
@@ -144,7 +144,7 @@ export const CustomerDisplay: React.FC = () => {
   useEffect(() => {
     let alive = true;
     const load = () => {
-      getCompanySettings()
+      getPublicCompanySettings()
         .then((settings) => { if (alive) setPromoMessages(parsePromoMessages(settings.promo_messages)); })
         // Hidden entirely when the fetch fails
         .catch(() => { if (alive) setPromoMessages([]); });

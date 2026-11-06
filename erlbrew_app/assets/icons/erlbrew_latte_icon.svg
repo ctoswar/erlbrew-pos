@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <title>Cafe Latte</title>
+  <g stroke="#B89B80" stroke-width="2.4" stroke-linecap="round" fill="none">
+    <path d="M24.5 17.5c-3-3.5 2.5-6-.5-10.5"/>
+    <path d="M32 17.5c-3-3.5 2.5-6-.5-12"/>
+    <path d="M39.5 17.5c-3-3.5 2.5-6-.5-10.5"/>
+  </g>
+  <ellipse cx="32" cy="51.5" rx="23" ry="4.5" fill="#CBB49A"/>
+  <ellipse cx="32" cy="50" rx="23" ry="4.5" fill="#E8D8C4"/>
+  <path d="M50.5 30h3.5c5.5 0 5.5 11 0 11h-4.5" stroke="#B8683A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M13 27h38v6c0 10-7 16-19 16S13 43 13 33z" fill="#C47A45"/>
+  <path d="M18 33c0 5 2.5 8.5 6.5 10.5" stroke="#E0A478" stroke-width="2.4" stroke-linecap="round"/>
+  <ellipse cx="32" cy="27" rx="19" ry="5.5" fill="#E09A66"/>
+  <ellipse cx="32" cy="27.3" rx="16.5" ry="4" fill="#A9744C"/>
+  <path d="M32 29.4c-4-2.4-3-5 -1.2-4.4.8.2 1.2.8 1.2.8s.4-.6 1.2-.8c1.8-.6 2.8 2 -1.2 4.4z" fill="#F5E9D8"/>
+</svg>

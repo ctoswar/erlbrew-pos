@@ -384,7 +384,26 @@ export function parsePromoMessages(raw: unknown): string[] {
 }
 
 export async function getCompanySettings(): Promise<CompanySettings> {
+  const token = getAuthToken();
   const res = await fetch(getApiUrl('/company-settings'), {
+    credentials: 'include',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    if (res.status === 403) throw new Error('Admin access required');
+    throw new Error(`API failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+/** Public (no-token) settings for customer-facing screens — whitelisted safe fields only */
+export interface PublicCompanySettings {
+  company_name?: string;
+  promo_messages?: string;
+}
+
+export async function getPublicCompanySettings(): Promise<PublicCompanySettings> {
+  const res = await fetch(getApiUrl('/company-settings/public'), {
     credentials: 'include',
   });
   if (!res.ok) throw new Error(`API failed: ${res.status}`);

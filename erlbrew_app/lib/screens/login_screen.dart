@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../models/app_models.dart';
 import '../services/firebase_auth_service.dart';
 import '../utils/auth_error_message.dart';
@@ -392,6 +393,99 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Google sign-in for both the customer and staff tabs. The Firebase user
+  /// comes back verified (Google emails always are); the POS exchange then
+  /// links by email — existing customers just work, while a brand-new
+  /// Google account gets pointed at signup.
+  Future<void> _handleGoogleLogin() async {
+    setState(() => _loading = true);
+    final firebase = FirebaseAuthService.instance;
+    try {
+      await firebase.signInWithGoogle(isAdmin: _isAdmin);
+      final idToken = await firebase.getIdToken();
+      if (idToken == null || idToken.isEmpty) {
+        throw PosApiServiceException('Unable to create a secure session.');
+      }
+      if (_isAdmin) {
+        await PosApiService.instance.firebaseStaffLogin(idToken);
+      } else {
+        try {
+          final customer =
+              await PosApiService.instance.firebaseCustomerLogin(idToken);
+          MockData.currentUser = customer;
+        } on PosApiServiceException catch (error) {
+          if (error.message.contains('Customer profile not found')) {
+            await firebase.signOut();
+            throw PosApiServiceException(
+              'No Erlbrew account is linked to that Google email yet. '
+              'Sign up with the same email first — after that, Google '
+              'sign-in links automatically.',
+            );
+          }
+          rethrow;
+        }
+      }
+
+      // Remember me: same opt-in contract as the email/password flow —
+      // persist only once the whole sign-in chain succeeded.
+      try {
+        await SessionService.instance.persistDecision(_keepSignedIn, _isAdmin);
+      } catch (_) {
+        // Best effort — never block a successful sign-in on this.
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        fadeThrough(
+          _isAdmin ? const AdminHomeShell() : const HomeShell(),
+        ),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      final message = switch (error.code) {
+        // User closed the picker/popup — not an error worth a snackbar.
+        'google-signin-cancelled' ||
+        'popup-closed-by-user' ||
+        'cancelled-popup-request' =>
+          null,
+        'popup-blocked' => 'The browser blocked the Google popup. Allow '
+            'popups for this site and try again.',
+        'account-exists-with-different-credential' =>
+          'This email already uses another sign-in method. Sign in with '
+              'email and password first.',
+        'customer-only' => 'This Google account is a staff account — switch '
+            'to the Admin tab to sign in.',
+        'network-request-failed' =>
+          'Unable to reach Google. Check the internet connection.',
+        'not-admin' => 'This Google account does not have staff access.',
+        _ => 'Google sign-in failed. Check the account configuration.',
+      };
+      if (message != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } on PosApiServiceException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 8),
+          content: Text(friendlyAuthError(error,
+              fallback: 'Something went wrong with Google sign-in.')),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -530,6 +624,36 @@ class _LoginScreenState extends State<LoginScreen> {
                                 label: _isAdmin ? 'Enter Dashboard' : 'Log In',
                                 loading: _loading,
                                 onPressed: _handleLogin,
+                              ),
+                              const SizedBox(height: 16),
+                              const Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(color: AppColors.hairline),
+                                  ),
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 12),
+                                    child: Text(
+                                      'or',
+                                      style: TextStyle(
+                                        color: AppColors.slateGrey,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(color: AppColors.hairline),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              _GoogleSignInButton(
+                                label: _isAdmin
+                                    ? 'Continue with Google'
+                                    : 'Sign in with Google',
+                                onPressed:
+                                    _loading ? null : _handleGoogleLogin,
                               ),
                               const SizedBox(height: 22),
                               if (!_isAdmin)
@@ -733,3 +857,53 @@ class _RoleOption extends StatelessWidget {
     );
   }
 }
+
+/// White Google sign-in button with the official four-color "G" — matches
+/// the cream card without introducing a new asset.
+class _GoogleSignInButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+
+  const _GoogleSignInButton({required this.label, this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.espresso,
+        backgroundColor: Colors.white,
+        side: const BorderSide(color: AppColors.hairline),
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SvgPicture.string(_googleLogoSvg, width: 18, height: 18),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The official four-color Google "G" (24x24 viewBox), inlined so the login
+/// screen needs no extra asset.
+const String _googleLogoSvg = '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
+  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/>
+  <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/>
+  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.31 1 3.26 3.7 1.29 7.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
+</svg>
+''';

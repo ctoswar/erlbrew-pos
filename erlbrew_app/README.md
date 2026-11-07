@@ -38,6 +38,49 @@ POS_API_URL=http://192.168.5.115:3001 docker compose -f infra/docker-compose.yml
   compose build-arg instead.
 
 
+## Google sign-in
+
+The login screen offers **Sign in with Google** (both Customer and Admin tabs)
+alongside email/password (`lib/screens/login_screen.dart`,
+`FirebaseAuthService.signInWithGoogle`). Firebase already owns the session, so
+no new accounts or passwords are stored.
+
+- **Web** uses `signInWithPopup(GoogleAuthProvider())` — no extra packages.
+- **Android** uses the `google_sign_in` plugin. Because this app initializes
+  Firebase Dart-side (`lib/firebase_options.dart`, no google-services gradle
+  plugin), the plugin needs the Web OAuth client ID passed explicitly via
+  `--dart-define=GOOGLE_SERVER_CLIENT_ID=...apps.googleusercontent.com`
+  (see `config/env.example`; `build_apk.ps1` reads the same env file).
+
+One-time Firebase Console setup:
+
+1. **Authentication → Sign-in method → Google → Enable.** Note the *Web SDK
+   configuration* client ID (`.apps.googleusercontent.com`) — that is the
+   `GOOGLE_SERVER_CLIENT_ID` value above.
+2. **Authentication → Settings → Authorized domains** — add every domain the
+   PWA is served from (localhost is pre-authorized; e.g.
+   `app.erlbrewcafe.page`, LAN hostnames are not usable there).
+3. **Android** — register the app's SHA-1 fingerprints under project settings:
+   debug keystore plus the release key (`android/app/erlbrew-upload-key.jks`):
+   ```bash
+   keytool -list -v -keystore android/app/erlbrew-upload-key.jks -alias <alias>
+   ```
+4. **iOS** (if built) — add the reversed client ID URL scheme to
+   `ios/Runner/Info.plist` per the google_sign_in docs.
+
+Behavior after sign-in:
+
+- The Google account's Firestore profile decides the tab rules — Admin tab
+  requires an existing admin/manager profile; a staff account picked on the
+  Customer tab is rejected with a hint (same contract as email/password).
+- The POS exchange (`firebase-login`) links **by email**: existing customers
+  (including legacy password accounts) sign in with no extra steps. A
+  brand-new Google user with no Erlbrew account is told to sign up with the
+  same email first — signup then links Google automatically on the next
+  sign-in.
+- "Keep me signed in" applies to Google sign-in exactly like the email flow;
+  Log out also clears the device Google session.
+
 ## Screens
 
 ### Customer

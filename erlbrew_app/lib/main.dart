@@ -5,10 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'legal/legal_documents.dart';
+import 'screens/admin/admin_home_shell.dart';
+import 'screens/home_shell.dart';
 import 'screens/legal_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/pos_api_service.dart';
+import 'services/session_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/branded_loader.dart';
 import 'widgets/brand_mark.dart';
@@ -34,6 +37,9 @@ class ErlbrewApp extends StatefulWidget {
 class _ErlbrewAppState extends State<ErlbrewApp> {
   bool _booted = false;
   bool _cookieNotice = false;
+  /// Non-null when "Keep me signed in" restored the last session at boot —
+  /// the shell the visitor lands in instead of the login screen.
+  Widget? _restoredHome;
 
   static const String _cookieConsentKey = 'erlbrew_cookie_notice_v1';
 
@@ -46,9 +52,28 @@ class _ErlbrewAppState extends State<ErlbrewApp> {
 
   Future<void> _boot() async {
     await FirebaseAuthService.instance.ensureFirebaseReady();
-    // Whether it succeeded or failed, hand over to the login screen —
-    // it displays the actionable error when Firebase could not start.
-    if (mounted) setState(() => _booted = true);
+    // "Keep me signed in": restore the last session behind the boot splash.
+    // Any failure (expired token, backend unreachable, Firebase down) just
+    // falls back to the normal login screen.
+    Widget? restored;
+    try {
+      final ok = await SessionService.instance.restore();
+      if (ok) {
+        restored = PosApiService.instance.isStaffLoggedIn
+            ? const AdminHomeShell()
+            : const HomeShell();
+      }
+    } catch (_) {
+      restored = null;
+    }
+    // Whether it succeeded or failed, hand over — the login screen
+    // displays the actionable error when Firebase could not start.
+    if (mounted) {
+      setState(() {
+        _booted = true;
+        _restoredHome = restored;
+      });
+    }
   }
 
   /// Web only: show the cookie / local-storage notice on first visit
@@ -84,7 +109,7 @@ class _ErlbrewAppState extends State<ErlbrewApp> {
       theme: AppTheme.light,
       home: Stack(
         children: [
-          const LoginScreen(),
+          _restoredHome ?? const LoginScreen(),
           // Branded boot splash covering the login form until Firebase is
           // ready (or has failed) — softly fades out when done. Once
           // transparent at opacity 0 nothing paints, so it costs nothing.

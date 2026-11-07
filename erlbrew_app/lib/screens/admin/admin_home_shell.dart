@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
+import '../../services/firebase_auth_service.dart';
 import '../../services/pos_api_service.dart';
+import '../../services/session_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/animated_counter.dart';
 import '../../widgets/fade_slide_in.dart';
@@ -103,6 +105,14 @@ class _AdminDashboardState extends State<_AdminDashboard> {
 
   Future<void> _logout() async {
     await PosApiService.instance.adminLogout();
+    // Log out must also drop the "Keep me signed in" opt-in and the
+    // Firebase session, or the next launch would auto-login.
+    try {
+      await FirebaseAuthService.instance.signOut();
+      await SessionService.instance.forget();
+    } catch (_) {
+      // Best effort — POS staff token is already cleared.
+    }
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       fadeThrough(const LoginScreen()),

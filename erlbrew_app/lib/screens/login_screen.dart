@@ -4,6 +4,7 @@ import '../models/app_models.dart';
 import '../services/firebase_auth_service.dart';
 import '../utils/auth_error_message.dart';
 import '../services/pos_api_service.dart';
+import '../services/session_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/fade_slide_in.dart';
@@ -27,6 +28,20 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscure = true;
   bool _loading = false;
   bool _isAdmin = false;
+  bool _keepSignedIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberDefault();
+  }
+
+  /// Pre-tick the checkbox to match the visitor's last successful
+  /// "Keep me signed in" choice (first visit comes up unticked).
+  Future<void> _loadRememberDefault() async {
+    final remembered = await SessionService.instance.rememberMeDefault();
+    if (mounted) setState(() => _keepSignedIn = remembered);
+  }
 
   @override
   void dispose() {
@@ -221,6 +236,41 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// "Keep me signed in" checkbox row — shown for both customer and staff
+  /// sign-in. Ticking it records the session opt-in once sign-in succeeds;
+  /// the next launch then skips this screen entirely.
+  Widget _buildKeepSignedInRow() {
+    return InkWell(
+      onTap:
+          _loading ? null : () => setState(() => _keepSignedIn = !_keepSignedIn),
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            SizedBox(
+              height: 24,
+              width: 24,
+              child: Checkbox(
+                value: _keepSignedIn,
+                onChanged: _loading
+                    ? null
+                    : (v) => setState(() => _keepSignedIn = v ?? false),
+                activeColor: AppColors.gold,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Text(
+              'Keep me signed in',
+              style: TextStyle(color: AppColors.slateGrey, fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
@@ -277,6 +327,16 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         }
         MockData.currentUser = customer;
+      }
+
+      // Remember me: persist the checkbox decision only now that sign-in
+      // fully succeeded (Firebase session + POS session both established).
+      // Checked → auto-login on the next launch; unchecked → make sure no
+      // remembered state survives.
+      try {
+        await SessionService.instance.persistDecision(_keepSignedIn, _isAdmin);
+      } catch (_) {
+        // Best effort — never block a successful sign-in on this.
       }
 
       if (!mounted) return;
@@ -440,6 +500,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   return null;
                                 },
                               ),
+                              const SizedBox(height: 4),
+                              _buildKeepSignedInRow(),
+                              const SizedBox(height: 2),
                               if (!_isAdmin)
                                 Wrap(
                                   alignment: WrapAlignment.end,
@@ -461,7 +524,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ],
                                 ),
-                              SizedBox(height: _isAdmin ? 30 : 18),
+                              SizedBox(height: _isAdmin ? 18 : 8),
                               LuxuryButton(
                                 label: _isAdmin ? 'Enter Dashboard' : 'Log In',
                                 loading: _loading,

@@ -61,8 +61,9 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
         TextEditingController(text: existing?['description']?.toString());
     final costController =
         TextEditingController(text: existing?['points_cost']?.toString());
-    final emojiController =
-        TextEditingController(text: existing?['emoji']?.toString() ?? '☕');
+    final initialIcon =
+        rewardIconChoiceFromKey(existing?['icon_key']?.toString());
+    RewardIconChoice? pickedIcon;
     final formKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
@@ -102,21 +103,41 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
                 ),
                 const SizedBox(height: 18),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(
-                      width: 70,
-                      child: TextFormField(
-                        controller: emojiController,
-                        textAlign: TextAlign.center,
+                      width: 170,
+                      child: DropdownButtonFormField<RewardIconChoice>(
+                        initialValue: initialIcon,
+                        isExpanded: true,
                         decoration: const InputDecoration(labelText: 'Icon'),
+                        items: rewardIconChoices
+                            .map((choice) => DropdownMenuItem<RewardIconChoice>(
+                                  value: choice,
+                                  child: Row(
+                                    children: [
+                                      rewardIconChoicePreview(choice),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          choice.label,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontSize: 13.5),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: (value) => pickedIcon = value,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextFormField(
                         controller: titleController,
-                        decoration:
-                            const InputDecoration(labelText: 'Reward name'),
+                        decoration: const InputDecoration(
+                            labelText: 'Reward name'),
                         validator: (v) =>
                             (v == null || v.trim().isEmpty) ? 'Required' : null,
                       ),
@@ -126,7 +147,8 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: descController,
-                  decoration: const InputDecoration(labelText: 'Description'),
+                  decoration:
+                      const InputDecoration(labelText: 'Description'),
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
@@ -134,7 +156,8 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
                 TextFormField(
                   controller: costController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Points cost'),
+                  decoration:
+                      const InputDecoration(labelText: 'Points cost'),
                   validator: (v) {
                     final n = int.tryParse(v ?? '');
                     if (n == null || n <= 0) return 'Enter a valid number';
@@ -145,6 +168,7 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     if (!formKey.currentState!.validate()) return;
+                    final iconKey = (pickedIcon ?? initialIcon).key;
                     try {
                       if (existing != null) {
                         await PosApiService.instance.updateReward(
@@ -152,18 +176,14 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
                           title: titleController.text.trim(),
                           description: descController.text.trim(),
                           pointsCost: int.parse(costController.text.trim()),
-                          emoji: emojiController.text.trim().isEmpty
-                              ? '☕'
-                              : emojiController.text.trim(),
+                          iconKey: iconKey,
                         );
                       } else {
                         await PosApiService.instance.createReward(
                           title: titleController.text.trim(),
                           description: descController.text.trim(),
                           pointsCost: int.parse(costController.text.trim()),
-                          emoji: emojiController.text.trim().isEmpty
-                              ? '☕'
-                              : emojiController.text.trim(),
+                          iconKey: iconKey,
                         );
                       }
                       await _loadRewards();
@@ -176,7 +196,8 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
                       }
                     }
                   },
-                  child: Text(existing == null ? 'Add Reward' : 'Save Changes'),
+                  child:
+                      Text(existing == null ? 'Add Reward' : 'Save Changes'),
                 ),
               ],
             ),
@@ -282,6 +303,7 @@ class _AdminRewardsScreenState extends State<AdminRewardsScreen> {
                                       ),
                                       alignment: Alignment.center,
                                       child: rewardIconVisual(
+                                        iconKey: item['icon_key']?.toString(),
                                         title: item['title']?.toString(),
                                         description:
                                             item['description']?.toString(),

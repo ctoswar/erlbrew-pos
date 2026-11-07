@@ -6,13 +6,27 @@ import { logAudit } from '../services/audit.js';
 export default function loyaltyRouter(pool) {
   const router = Router();
 
+  // Supported reward icon keys for the admin icon dropdown.
+  // NULL / '' means the app infers the icon from the reward's name.
+  const REWARD_ICON_KEYS = ['latte', 'matcha', 'coldbrew', 'pastry'];
+
+  // Normalizes a request value: null (or '') → null (auto), a valid key →
+  // the key, undefined (invalid) → undefined so routes can reject it.
+  const normalizeRewardIconKey = (value) => {
+    if (value === undefined || value === null || value === '') return null;
+    if (typeof value !== 'string' || !REWARD_ICON_KEYS.includes(value)) {
+      return undefined;
+    }
+    return value;
+  };
+
   // ── Rewards Catalog (public read, admin write) ────────────────────
 
   // GET /api/loyalty/rewards — list active rewards (public)
   router.get('/rewards', async (req, res) => {
     try {
       const [rows] = await pool.query(
-        'SELECT id, title, description, points_cost, emoji, is_active, created_at FROM loyalty_rewards WHERE is_active = 1 ORDER BY points_cost ASC'
+        'SELECT id, title, description, points_cost, emoji, icon_key, is_active, created_at FROM loyalty_rewards WHERE is_active = 1 ORDER BY points_cost ASC'
       );
       res.json(rows);
     } catch (e) {
@@ -25,7 +39,7 @@ export default function loyaltyRouter(pool) {
   router.get('/rewards/all', authMiddleware, adminMiddleware, async (req, res) => {
     try {
       const [rows] = await pool.query(
-        'SELECT id, title, description, points_cost, emoji, is_active, created_at FROM loyalty_rewards ORDER BY points_cost ASC'
+        'SELECT id, title, description, points_cost, emoji, icon_key, is_active, created_at FROM loyalty_rewards ORDER BY points_cost ASC'
       );
       res.json(rows);
     } catch (e) {
@@ -36,20 +50,24 @@ export default function loyaltyRouter(pool) {
 
   // POST /api/loyalty/rewards — create reward (admin only)
   router.post('/rewards', authMiddleware, adminMiddleware, async (req, res) => {
-    const { title, description, points_cost, emoji } = req.body;
+    const { title, description, points_cost, emoji, icon_key } = req.body;
     if (!title || typeof title !== 'string') {
       return res.status(400).json({ error: 'title is required' });
     }
     if (!points_cost || typeof points_cost !== 'number' || points_cost <= 0) {
       return res.status(400).json({ error: 'points_cost must be a positive number' });
     }
+    const iconKey = normalizeRewardIconKey(icon_key);
+    if (iconKey === undefined) {
+      return res.status(400).json({ error: `icon_key must be one of: ${REWARD_ICON_KEYS.join(', ')} or null` });
+    }
     try {
       const [result] = await pool.query(
-        'INSERT INTO loyalty_rewards (title, description, points_cost, emoji, is_active) VALUES (?, ?, ?, ?, 1)',
-        [title, description || '', points_cost, emoji || '🎁']
+        'INSERT INTO loyalty_rewards (title, description, points_cost, emoji, icon_key, is_active) VALUES (?, ?, ?, ?, ?, 1)',
+        [title, description || '', points_cost, emoji || '🎁', iconKey]
       );
-      await logAudit(pool, req, { action: 'reward_create', entityType: 'loyalty_reward', entityId: String(result.insertId), details: { title, points_cost } });
-      res.json({ id: result.insertId, title, description: description || '', points_cost, emoji: emoji || '🎁', is_active: 1 });
+      await logAudit(pool, req, { action: 'reward_create', entityType: 'loyalty_reward', entityId: String(result.insertId), details: { title, points_cost, icon_key: iconKey } });
+      res.json({ id: result.insertId, title, description: description || '', points_cost, emoji: emoji || '🎁', icon_key: iconKey, is_active: 1 });
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });
@@ -59,7 +77,7 @@ export default function loyaltyRouter(pool) {
   // PUT /api/loyalty/rewards/:id — update reward (admin only)
   router.put('/rewards/:id', authMiddleware, adminMiddleware, async (req, res) => {
     const { id } = req.params;
-    const { title, description, points_cost, emoji, is_active } = req.body;
+    const { title, description, points_cost, emoji, icon_key, is_active } = req.body;
     try {
       const fields = [];
       const vals = [];
@@ -72,6 +90,13 @@ export default function loyaltyRouter(pool) {
         fields.push('points_cost = ?'); vals.push(points_cost);
       }
       if (emoji !== undefined) { fields.push('emoji = ?'); vals.push(emoji); }
+      if (icon_key !== undefined) {
+        const iconKey = normalizeRewardIconKey(icon_key);
+        if (iconKey === undefined) {
+          return res.status(400).json({ error: `icon_key must be one of: ${REWARD_ICON_KEYS.join(', ')} or null` });
+        }
+        fields.push('icon_key = ?'); vals.push(iconKey);
+      }
       if (is_active !== undefined) { fields.push('is_active = ?'); vals.push(is_active ? 1 : 0); }
       if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
       vals.push(id);
@@ -195,7 +220,7 @@ export default function loyaltyRouter(pool) {
     try {
       const [rows] = await pool.query(
         `SELECT lr.id, lr.points_spent, lr.created_at,
-                r.title, r.emoji, r.description
+                r.title, r.icon_key, r.emoji, r.description
          FROM loyalty_redemptions lr
          JOIN loyalty_rewards r ON lr.reward_id = r.id
          WHERE lr.customer_id = ?

@@ -1,12 +1,26 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../firebase_options.dart';
 import '../models/app_models.dart';
 
 class FirebaseAuthService {
   FirebaseAuthService._();
+
+  /// Web OAuth client ID for Google sign-in on native builds — the app
+  /// initializes Firebase Dart-side (no google-services gradle plugin), so
+  /// the plugin can't auto-discover it. Set via
+  /// `--dart-define=GOOGLE_SERVER_CLIENT_ID=...apps.googleusercontent.com`
+  /// (see config/env.example). Unused on web, which uses signInWithPopup.
+  static const String _googleServerClientId =
+      String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
+
+  GoogleSignIn _googleSignIn() => _googleServerClientId.isEmpty
+      ? GoogleSignIn()
+      : GoogleSignIn(serverClientId: _googleServerClientId);
 
   bool _firebaseInitFailed = false;
 
@@ -136,6 +150,69 @@ class FirebaseAuthService {
     }
   }
 
+  /// Google sign-in. Web uses the Firebase popup; native builds use the
+  /// google_sign_in plugin. Role checks mirror [signInWithEmailPassword]:
+  /// admin mode demands an existing admin profile, customer mode rejects
+  /// staff accounts. A brand-new Google user has no Firestore profile and
+  /// falls through as a customer — the POS `firebase-login` endpoint then
+  /// decides (404 → the login screen asks them to sign up with the same
+  /// email first; Google emails always pass its email_verified gate).
+  Future<AppUser> signInWithGoogle({required bool isAdmin}) async {
+    await _ensureReady();
+
+    final UserCredential credential;
+    if (kIsWeb) {
+      credential = await _auth!.signInWithPopup(GoogleAuthProvider());
+    } else {
+      final account = await _googleSignIn().signIn();
+      if (account == null) {
+        throw FirebaseAuthException(
+          code: 'google-signin-cancelled',
+          message: 'Google sign-in was cancelled.',
+        );
+      }
+      final googleAuth = await account.authentication;
+      credential = await _auth!.signInWithCredential(
+        GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        ),
+      );
+    }
+    final user = credential.user!;
+
+    final userDoc = await _firestore!.collection('users').doc(user.uid).get();
+    final profile = userDoc.data() ?? <String, dynamic>{};
+    final storedRole = (profile['role'] ??
+            (profile['isAdmin'] == true ? 'admin' : 'customer'))
+        .toString();
+    final isAdminAccount = profile['isAdmin'] == true || storedRole == 'admin';
+
+    if (isAdmin && !isAdminAccount) {
+      await signOut();
+      throw FirebaseAuthException(
+        code: 'not-admin',
+        message: 'This Google account does not have staff access.',
+      );
+    }
+
+    if (!isAdmin && isAdminAccount) {
+      await signOut();
+      throw FirebaseAuthException(
+        code: 'customer-only',
+        message: 'Use the staff toggle to sign in as admin.',
+      );
+    }
+
+    return AppUser.fromMap(user.uid, {
+      ...profile,
+      'name': profile['name'] ?? user.displayName ?? 'Erlbrew User',
+      'email': profile['email'] ?? user.email ?? '',
+      'role': storedRole,
+      'isAdmin': isAdminAccount,
+    });
+  }
+
   Future<AppUser> signUp({
     required String name,
     required String email,
@@ -180,6 +257,17 @@ class FirebaseAuthService {
   Future<void> signOut() async {
     await _ensureReady();
     await _auth!.signOut();
+    // Native Google sign-in keeps its own device session — clear it too so
+    // the next sign-in shows the account picker again instead of silently
+    // re-using the last Google account.
+    if (!kIsWeb) {
+      try {
+        await _googleSignIn().signOut();
+      } catch (_) {
+        // Google not configured on this build — Firebase sign-out already
+        // happened, which is what matters.
+      }
+    }
   }
 
   Future<void> sendPasswordResetEmail(String email) async {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/app_models.dart';
+import '../services/firebase_auth_service.dart';
 import '../services/pos_api_service.dart';
+import '../services/session_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/username_policy.dart';
 import '../widgets/empty_state.dart';
@@ -558,6 +560,14 @@ class _ProfileScreenState extends State<_ProfileScreen> {
             OutlinedButton.icon(
               onPressed: () async {
                 await PosApiService.instance.logout();
+                // Log out must also drop the "Keep me signed in" opt-in and
+                // the Firebase session, or the next launch would auto-login.
+                try {
+                  await FirebaseAuthService.instance.signOut();
+                  await SessionService.instance.forget();
+                } catch (_) {
+                  // Best effort — POS tokens are already cleared.
+                }
                 if (!mounted) return;
                 Navigator.of(context).pushAndRemoveUntil(
                   fadeThrough(const LoginScreen()),

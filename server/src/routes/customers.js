@@ -75,12 +75,12 @@ export default function customersRouter(pool) {
   // ── Customer Auth Endpoints (MUST be before /:id routes) ─────────────
 
   // Password policy — mirrors the signup screen
-  // (erlbrew_app/lib/utils/password_policy.dart): at least 6 characters
+  // (erlbrew_app/lib/utils/password_policy.dart): at least 8 characters
   // with one capital letter, one number and one special character.
   // Returns the first rule the value breaks, or null when it passes.
   const firstPasswordIssue = (value) => {
-    if (typeof value !== 'string' || value.length < 6) {
-      return 'password must use at least 6 characters';
+    if (typeof value !== 'string' || value.length < 8) {
+      return 'password must use at least 8 characters';
     }
     if (!/[A-Z]/.test(value)) {
       return 'password must include at least one capital letter';

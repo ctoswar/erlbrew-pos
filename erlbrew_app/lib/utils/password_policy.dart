@@ -2,7 +2,7 @@
 /// requirements checklist read their rules from here, and the POS server's
 /// `POST /api/customers/register` mirrors the same rules server-side.
 ///
-/// Rules: at least 6 characters, one capital letter, one number and one
+/// Rules: at least 8 characters, one capital letter, one number and one
 /// special character.
 class PasswordPolicy {
   const PasswordPolicy._();
@@ -15,7 +15,7 @@ class PasswordPolicy {
   /// when it satisfies the whole policy.
   static String? validate(String? value) {
     final password = value ?? '';
-    if (password.length < 6) return 'Use at least 6 characters';
+    if (password.length < 8) return 'Use at least 8 characters';
     if (!_capital.hasMatch(password)) {
       return 'Add at least one capital letter';
     }
@@ -32,7 +32,7 @@ class PasswordPolicy {
   /// live checklist shown under the signup password field.
   static List<(String text, bool met)> requirements(String value) {
     return [
-      ('At least 6 characters', value.length >= 6),
+      ('At least 8 characters', value.length >= 8),
       ('One capital letter (A-Z)', _capital.hasMatch(value)),
       ('One number (0-9)', _number.hasMatch(value)),
       ('One special character (e.g. ! @ #)', _special.hasMatch(value)),

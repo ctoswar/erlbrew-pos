@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../models/app_models.dart';
 import '../../services/pos_api_service.dart';
@@ -415,6 +416,44 @@ class _AwardSheetState extends State<_AwardSheet> {
 
   static const _pointOptions = [10, 25, 50, 90];
 
+  final TextEditingController _customController = TextEditingController();
+  final FocusNode _customFocusNode = FocusNode();
+  int _chipSelection = 10;
+  bool _usingCustom = false;
+  bool _customInvalid = false;
+
+  void _selectOption(int value) {
+    setState(() {
+      _chipSelection = value;
+      _pointsToAdd = value;
+      _usingCustom = false;
+      _customInvalid = false;
+      _customController.clear();
+      _customFocusNode.unfocus();
+    });
+  }
+
+  void _onCustomChanged(String value) {
+    final trimmed = value.trim();
+    setState(() {
+      if (trimmed.isEmpty) {
+        // Field cleared — fall back to the last quick-select chip.
+        _usingCustom = false;
+        _customInvalid = false;
+        _pointsToAdd = _chipSelection;
+        return;
+      }
+      final parsed = int.tryParse(trimmed);
+      _usingCustom = true;
+      if (parsed != null && parsed > 0) {
+        _pointsToAdd = parsed;
+        _customInvalid = false;
+      } else {
+        _customInvalid = true;
+      }
+    });
+  }
+
   Future<void> _apply() async {
     final customerId = int.tryParse(widget.customer.id);
     if (customerId == null) {
@@ -460,6 +499,13 @@ class _AwardSheetState extends State<_AwardSheet> {
             content: Text('Unable to save points. Please try again.')),
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _customController.dispose();
+    _customFocusNode.dispose();
+    super.dispose();
   }
 
   @override
@@ -525,11 +571,11 @@ class _AwardSheetState extends State<_AwardSheet> {
                 children: _pointOptions
                     .map((v) => ChoiceChip(
                           label: Text('+$v'),
-                          selected: _pointsToAdd == v,
-                          onSelected: (_) => setState(() => _pointsToAdd = v),
+                          selected: !_usingCustom && _pointsToAdd == v,
+                          onSelected: (_) => _selectOption(v),
                           selectedColor: AppColors.matcha,
                           labelStyle: TextStyle(
-                            color: _pointsToAdd == v
+                            color: !_usingCustom && _pointsToAdd == v
                                 ? Colors.white
                                 : AppColors.espresso,
                             fontWeight: FontWeight.w700,
@@ -537,9 +583,26 @@ class _AwardSheetState extends State<_AwardSheet> {
                         ))
                     .toList(),
               ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _customController,
+                focusNode: _customFocusNode,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                textInputAction: TextInputAction.done,
+                onChanged: _onCustomChanged,
+                onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                decoration: InputDecoration(
+                  labelText: 'Custom points',
+                  hintText: 'Type any amount, e.g. 15',
+                  suffixText: 'pts',
+                  errorText:
+                      _customInvalid ? 'Enter a valid points amount' : null,
+                ),
+              ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _saving ? null : _apply,
+                onPressed: _saving || _customInvalid ? null : _apply,
                 child: _saving
                     ? const SizedBox(
                         width: 20,

@@ -5,7 +5,11 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { authMiddleware } from '../src/middleware/auth.js';
 import { customerAuthMiddleware } from '../src/middleware/customerAuth.js';
-import { isVerifiedFirebaseCustomer } from '../src/routes/customers.js';
+import {
+  deriveCustomerNames,
+  isVerifiedFirebaseCustomer,
+  sentinelPhoneForUid,
+} from '../src/routes/customers.js';
 
 process.env.JWT_SECRET = 'customer-security-test-secret';
 
@@ -57,4 +61,37 @@ test('Firebase customer exchange requires verified email claims', () => {
   assert.equal(isVerifiedFirebaseCustomer({ email: 'customer@example.com', email_verified: true }), true);
   assert.equal(isVerifiedFirebaseCustomer({ email: 'customer@example.com', email_verified: false }), false);
   assert.equal(isVerifiedFirebaseCustomer({ email_verified: true }), false);
+});
+
+test('deriveCustomerNames splits the Google display name', () => {
+  assert.deepEqual(deriveCustomerNames({ name: 'Juan Dela Cruz', email: 'juan@gmail.com' }), {
+    displayName: 'Juan Dela Cruz',
+    firstName: 'Juan',
+    lastName: 'Dela Cruz',
+  });
+  assert.deepEqual(deriveCustomerNames({ name: 'Maria', email: 'maria@gmail.com' }), {
+    displayName: 'Maria',
+    firstName: 'Maria',
+    lastName: null,
+  });
+});
+
+test('deriveCustomerNames falls back to the email local-part', () => {
+  const derived = deriveCustomerNames({ email: 'jane.doe@gmail.com' });
+  assert.equal(derived.firstName, 'Jane.doe');
+  assert.equal(derived.lastName, null);
+  assert.equal(derived.displayName, 'Jane.doe');
+
+  const bare = deriveCustomerNames({});
+  assert.equal(bare.firstName, 'Erlbrew');
+  assert.equal(bare.displayName, 'Erlbrew');
+});
+
+test('sentinelPhoneForUid is stable, unique and fits the phone column', () => {
+  const a = sentinelPhoneForUid('uid-alpha');
+  const b = sentinelPhoneForUid('uid-beta');
+  assert.equal(a, sentinelPhoneForUid('uid-alpha')); // deterministic — retries stay idempotent
+  assert.notEqual(a, b);
+  assert.match(a, /^g-[0-9a-f]{12}$/);
+  assert.ok(a.length <= 32); // VARCHAR(32) UNIQUE NOT NULL
 });

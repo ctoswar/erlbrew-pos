@@ -204,6 +204,29 @@ class FirebaseAuthService {
       );
     }
 
+    if (!isAdmin && !userDoc.exists) {
+      // First Google sign-in: provision the Firestore profile so the
+      // customer shows up in the admin directory and home streams —
+      // mirrors what signUp() writes. Phone is unknown for Google
+      // accounts; the POS row carries a placeholder instead.
+      try {
+        await _firestore!.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'name': profile['name'] ?? user.displayName ?? 'Erlbrew User',
+          'email': profile['email'] ?? user.email ?? '',
+          'phone': '',
+          'points': 0,
+          'role': 'customer',
+          'isAdmin': false,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (_) {
+        // Non-fatal — the POS row is what backs the session; a stricter
+        // ruleset that rejects this write must not break sign-in.
+      }
+    }
+
     return AppUser.fromMap(user.uid, {
       ...profile,
       'name': profile['name'] ?? user.displayName ?? 'Erlbrew User',

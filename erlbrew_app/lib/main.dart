@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -28,7 +28,13 @@ void main() {
 }
 
 class ErlbrewApp extends StatefulWidget {
-  const ErlbrewApp({super.key});
+  const ErlbrewApp({super.key, this.forceCookieNotice = false});
+
+  /// Test-only escape hatch: the first-visit cookie notice is web-only
+  /// (browser cookies/local storage), so widget tests run on non-web need
+  /// this to exercise the notice UI.
+  @visibleForTesting
+  final bool forceCookieNotice;
 
   @override
   State<ErlbrewApp> createState() => _ErlbrewAppState();
@@ -80,7 +86,7 @@ class _ErlbrewAppState extends State<ErlbrewApp> {
   /// until the user accepts. Native builds use device secure storage,
   /// not browser cookies, so they skip the banner.
   Future<void> _checkCookieNotice() async {
-    if (!kIsWeb) return;
+    if (!(kIsWeb || widget.forceCookieNotice)) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       if (prefs.getBool(_cookieConsentKey) != true && mounted) {
@@ -107,37 +113,46 @@ class _ErlbrewAppState extends State<ErlbrewApp> {
       title: 'Erlbrew Café',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: Stack(
-        children: [
-          _restoredHome ?? const LoginScreen(),
-          // Branded boot splash covering the login form until Firebase is
-          // ready (or has failed) — softly fades out when done. Once
-          // transparent at opacity 0 nothing paints, so it costs nothing.
-          Positioned.fill(
-            child: IgnorePointer(
-              ignoring: _booted,
-              child: AnimatedOpacity(
-                opacity: _booted ? 0.0 : 1.0,
-                duration: const Duration(milliseconds: 320),
-                curve: Curves.easeOut,
-                child: const _BootSplash(),
+      // Builder: the cookie notice's "Learn more" navigates from the root
+      // Stack, so it must use a context that is BELOW the app's Navigator.
+      // The State's own build context sits above MaterialApp's Navigator
+      // and would make Navigator.of throw (the tap silently does nothing
+      // on web).
+      home: Builder(
+        builder: (navigatorContext) => Stack(
+          children: [
+            _restoredHome ?? const LoginScreen(),
+            // Branded boot splash covering the login form until Firebase is
+            // ready (or has failed) — softly fades out when done. Once
+            // transparent at opacity 0 nothing paints, so it costs nothing.
+            Positioned.fill(
+              child: IgnorePointer(
+                ignoring: _booted,
+                child: AnimatedOpacity(
+                  opacity: _booted ? 0.0 : 1.0,
+                  duration: const Duration(milliseconds: 320),
+                  curve: Curves.easeOut,
+                  child: const _BootSplash(),
+                ),
               ),
             ),
-          ),
-          // First-visit cookie / storage notice (web only) — appears once
-          // the boot splash has lifted, until the user accepts it.
-          if (_booted && _cookieNotice)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: _CookieNotice(
-                onAccept: _acceptCookieNotice,
-                onLearnMore: () =>
-                    LegalScreen.show(context, doc: LegalDoc.cookies),
+            // First-visit cookie / storage notice (web only) — shows as
+            // soon as the boot check completes, even while the splash is
+            // still up (it sits above it in the stack, so taps work and a
+            // slow Firebase boot can't keep the notice hidden).
+            if (_cookieNotice)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: _CookieNotice(
+                  onAccept: _acceptCookieNotice,
+                  onLearnMore: () =>
+                      LegalScreen.show(navigatorContext, doc: LegalDoc.cookies),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

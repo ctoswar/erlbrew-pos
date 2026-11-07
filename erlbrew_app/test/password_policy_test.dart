@@ -10,13 +10,20 @@ void main() {
     });
 
     test('rejects nothing when null', () {
-      expect(PasswordPolicy.validate(null), 'Use at least 6 characters');
+      expect(PasswordPolicy.validate(null), 'Use at least 8 characters');
     });
 
     test('rejects short passwords first', () {
       expect(
         PasswordPolicy.validate('Ab1!'),
-        'Use at least 6 characters',
+        'Use at least 8 characters',
+      );
+    });
+
+    test('rejects a 7-character password even when every other rule passes', () {
+      expect(
+        PasswordPolicy.validate('Ab1!xyz'),
+        'Use at least 8 characters',
       );
     });
 
@@ -56,7 +63,7 @@ void main() {
 
     test('rules tick off progressively', () {
       final partial = PasswordPolicy.requirements('password');
-      expect(partial[0].$2, isTrue); // 6 characters
+      expect(partial[0].$2, isTrue); // 8 characters
       expect(partial[1].$2, isFalse); // no capital yet
     });
   });

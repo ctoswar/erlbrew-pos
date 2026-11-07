@@ -203,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleResendVerification() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-    if (email.isEmpty || !email.contains('@') || password.length < 6) {
+    if (email.isEmpty || !email.contains('@') || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter your email and password first.')),
       );
@@ -491,11 +491,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                                 validator: (v) {
-                                  const minimumLength = 6;
-                                  if (v == null || v.length < minimumLength) {
-                                    return _isAdmin
-                                        ? 'Password must be at least 6 characters'
-                                        : 'Password must be at least 6 characters';
+                                  // No length gate here — the 8+ character
+                                  // rule (PasswordPolicy) applies to account
+                                  // creation only, so existing customers with
+                                  // shorter passwords can still sign in.
+                                  if (v == null || v.isEmpty) {
+                                    return 'Enter your password';
                                   }
                                   return null;
                                 },

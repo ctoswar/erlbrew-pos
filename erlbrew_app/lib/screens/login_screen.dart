@@ -410,11 +410,12 @@ class _LoginScreenState extends State<LoginScreen> {
         await PosApiService.instance.firebaseStaffLogin(idToken);
       } else {
         try {
-          final customer =
-              await PosApiService.instance.firebaseCustomerLogin(idToken);
+          final customer = await PosApiService.instance
+              .firebaseCustomerLogin(idToken, autoProvision: true);
           MockData.currentUser = customer;
         } on PosApiServiceException catch (error) {
           if (error.message.contains('Customer profile not found')) {
+            // Server predates auto-provisioning — keep the old guidance.
             await firebase.signOut();
             throw PosApiServiceException(
               'No Erlbrew account is linked to that Google email yet. '

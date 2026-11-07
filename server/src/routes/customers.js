@@ -1,8 +1,10 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { getApps, getApp, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { customerAuthMiddleware } from '../middleware/customerAuth.js';
 import { logAudit } from '../services/audit.js';
@@ -12,6 +14,36 @@ export function isVerifiedFirebaseCustomer(decoded) {
   return decoded?.email_verified === true &&
     typeof decoded?.email === 'string' &&
     decoded.email.trim().length > 0;
+}
+
+// Split a Google/Firebase profile into customer name fields: the display
+// name keeps the full string, first/last split on the first space, and the
+// email local-part is the fallback when Google has no name at all.
+export function deriveCustomerNames(decoded) {
+  const displayName = String(decoded?.name || '').trim();
+  const email = String(decoded?.email || '').trim();
+  if (displayName) {
+    const parts = displayName.split(/\s+/);
+    return {
+      displayName,
+      firstName: parts[0],
+      lastName: parts.length > 1 ? parts.slice(1).join(' ') : null,
+    };
+  }
+  const local = email ? email.split('@')[0] : '';
+  const firstName = (local || 'erlbrew').charAt(0).toUpperCase() +
+    (local || 'erlbrew').slice(1);
+  return { displayName: firstName, firstName, lastName: null };
+}
+
+// Deterministic placeholder phone for Google-provisioned accounts — the
+// customers.phone column is NOT NULL UNIQUE and Google has no number. The
+// SHA-1 keeps it stable per Firebase user (retries stay idempotent), short
+// enough for VARCHAR(32), and outside real phone formats so loyalty
+// phone-lookups never match it.
+export function sentinelPhoneForUid(uid) {
+  const hash = crypto.createHash('sha1').update(String(uid)).digest('hex');
+  return `g-${hash.slice(0, 12)}`;
 }
 
 export default function customersRouter(pool) {
@@ -36,6 +68,7 @@ export default function customersRouter(pool) {
       : initializeApp();
   }
   const firebaseAuth = getAuth(firebaseApp);
+  const firestore = getFirestore(firebaseApp);
 
   // GET /api/customers — list/search customers
   router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
@@ -133,6 +166,48 @@ export default function customersRouter(pool) {
     }
     // Practically unreachable — fall back to a time-based unique handle.
     return `erl${Date.now().toString(36)}`;
+  };
+
+  // Creates a customer row for a verified Google/Firebase identity with no
+  // matching email yet — the first-run path of "Continue with Google".
+  // Returns the new row, or null when provisioning must be skipped (the
+  // Firestore profile lookup failed). Throws an error with code
+  // 'STAFF_ACCOUNT' when the Firebase profile is admin/manager — staff
+  // accounts must never become customer rows.
+  const provisionGoogleCustomer = async (decoded, email) => {
+    let staffProfile = {};
+    try {
+      const snap = await firestore.collection('users').doc(decoded.uid).get();
+      staffProfile = snap.exists ? snap.data() || {} : {};
+    } catch (e) {
+      console.error('[Customers] Google provision: profile lookup failed:', e.message);
+      return null;
+    }
+    const role = String(staffProfile.role || '').toLowerCase();
+    if (staffProfile.isAdmin === true || role === 'admin' || role === 'manager') {
+      const err = new Error('This Firebase account does not have staff access');
+      err.code = 'STAFF_ACCOUNT';
+      throw err;
+    }
+    const { displayName, firstName, lastName } = deriveCustomerNames(decoded);
+    const username = await generateUniqueUsername(firstName, lastName || '', email);
+    const phone = sentinelPhoneForUid(decoded.uid);
+    try {
+      await pool.query(
+        'INSERT INTO customers (phone, name, email, password_hash, first_name, last_name, username) VALUES (?, ?, ?, NULL, ?, ?, ?)',
+        [phone, displayName, email, firstName, lastName, username]
+      );
+    } catch (e) {
+      if (e.code !== 'ER_DUP_ENTRY') throw e;
+      // Lost a race (row appeared between SELECT and INSERT) — the
+      // re-select below picks it up. Same uid → same sentinel phone, so
+      // this stays idempotent.
+    }
+    const [inserted] = await pool.query(
+      'SELECT id, phone, name, email, first_name, last_name, username, loyalty_points, loyalty_tier, total_orders, total_spent, created_at FROM customers WHERE phone = ? LIMIT 1',
+      [phone]
+    );
+    return inserted[0] || null;
   };
 
   router.post('/register', async (req, res) => {
@@ -243,11 +318,14 @@ export default function customersRouter(pool) {
     }
   });
 
-  // POST /api/customers/firebase-login — Exchange a Firebase customer token for a POS session
+  // POST /api/customers/firebase-login — Exchange a Firebase customer token for a POS session.
+  // With `autoProvision: true` (sent by the Google sign-in flow), a verified
+  // identity with no matching customer row gets one created on the fly.
   router.post('/firebase-login', async (req, res) => {
     const idToken = typeof req.body?.idToken === 'string'
       ? req.body.idToken.trim()
       : '';
+    const autoProvision = req.body?.autoProvision === true;
     if (!idToken) {
       return res.status(400).json({ error: 'Firebase ID token is required' });
     }
@@ -264,10 +342,22 @@ export default function customersRouter(pool) {
         'SELECT id, phone, name, email, first_name, last_name, username, loyalty_points, loyalty_tier, total_orders, total_spent, created_at FROM customers WHERE LOWER(email) = ? LIMIT 1',
         [email]
       );
-      if (!rows.length) {
+      let customer = rows[0] || null;
+      let provisioned = false;
+      if (!customer && autoProvision) {
+        try {
+          customer = await provisionGoogleCustomer(decoded, email);
+          provisioned = customer != null;
+        } catch (e) {
+          if (e.code === 'STAFF_ACCOUNT') {
+            return res.status(403).json({ error: e.message, code: 'FORBIDDEN' });
+          }
+          throw e;
+        }
+      }
+      if (!customer) {
         return res.status(404).json({ error: 'Customer profile not found' });
       }
-      const customer = rows[0];
       const token = jwt.sign(
         { sub: customer.id, phone: customer.phone, name: customer.name || '', customer: true },
         process.env.JWT_SECRET,
@@ -277,7 +367,11 @@ export default function customersRouter(pool) {
         action: 'customer_login',
         entityType: 'customer',
         entityId: String(customer.id),
-        details: { method: 'firebase_email', email },
+        details: {
+          method: provisioned ? 'firebase_google' : 'firebase_email',
+          email,
+          ...(provisioned ? { provisioned: true } : {}),
+        },
       });
       return res.json({ token, customer });
     } catch (e) {

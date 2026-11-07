@@ -185,11 +185,17 @@ class PosApiService {
     return customer;
   }
 
-  Future<AppUser> firebaseCustomerLogin(String idToken) async {
+  Future<AppUser> firebaseCustomerLogin(String idToken, {bool autoProvision = false}) async {
     final response = await _withTimeout(http.post(
       Uri.parse('$baseUrl/api/customers/firebase-login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'idToken': idToken}),
+      body: jsonEncode({
+        'idToken': idToken,
+        // Google sign-in of a brand-new user: let the server create the
+        // customer row instead of answering 404 (old servers without this
+        // flag simply ignore it and still answer 404).
+        if (autoProvision) 'autoProvision': true,
+      }),
     ));
     final data = _handleResponse(response);
     final customer =

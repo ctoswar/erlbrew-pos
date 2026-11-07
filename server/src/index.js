@@ -382,6 +382,10 @@ await pool.query(`
     `);
     console.log('loyalty_rewards table ready');
 
+    // Icon picker support: key of the reward's explicitly chosen icon
+    // ('latte' | 'matcha' | 'coldbrew' | 'pastry'); NULL = infer from name
+    await pool.query(`ALTER TABLE loyalty_rewards ADD COLUMN icon_key VARCHAR(24) DEFAULT NULL AFTER emoji`).catch(() => {});
+
     // ── Loyalty points log ──────────────────────────────────────────────
     await pool.query(`
       CREATE TABLE IF NOT EXISTS loyalty_points_log (

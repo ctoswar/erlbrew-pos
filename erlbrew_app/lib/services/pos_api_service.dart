@@ -468,11 +468,15 @@ class PosApiService {
   }
 
   /// Create a reward (admin only)
+  ///
+  /// [iconKey] is one of the editor dropdown keys ('' = auto-infer from the
+  /// name); see `rewardIconChoices` in `lib/utils/reward_icons.dart`.
   Future<Map<String, dynamic>> createReward({
     required String title,
     required String description,
     required int pointsCost,
     String emoji = '🎁',
+    String? iconKey,
   }) async {
     final response = await _withTimeout(http.post(
       Uri.parse('$baseUrl/api/loyalty/rewards'),
@@ -482,18 +486,22 @@ class PosApiService {
         'description': description,
         'points_cost': pointsCost,
         'emoji': emoji,
+        if (iconKey != null) 'icon_key': iconKey,
       }),
     ));
     return _handleResponse(response);
   }
 
   /// Update a reward (admin only)
+  ///
+  /// Pass [iconKey] as '' to reset a reward's icon back to auto.
   Future<void> updateReward({
     required int id,
     String? title,
     String? description,
     int? pointsCost,
     String? emoji,
+    String? iconKey,
     bool? isActive,
   }) async {
     final response = await _withTimeout(http.put(
@@ -504,6 +512,7 @@ class PosApiService {
         if (description != null) 'description': description,
         if (pointsCost != null) 'points_cost': pointsCost,
         if (emoji != null) 'emoji': emoji,
+        if (iconKey != null) 'icon_key': iconKey,
         if (isActive != null) 'is_active': isActive,
       }),
     ));

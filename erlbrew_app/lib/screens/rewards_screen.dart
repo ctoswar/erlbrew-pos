@@ -418,6 +418,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
                                   borderRadius: BorderRadius.circular(14)),
                               alignment: Alignment.center,
                               child: rewardIconVisual(
+                                iconKey: item['icon_key']?.toString(),
                                 title: item['title']?.toString(),
                                 description: item['description']?.toString(),
                                 emoji: item['emoji']?.toString(),
@@ -516,6 +517,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
                           ),
                           alignment: Alignment.center,
                           child: rewardIconVisual(
+                            iconKey: item['icon_key']?.toString(),
                             title: item['title']?.toString(),
                             emoji: item['emoji']?.toString(),
                             iconSize: 28,

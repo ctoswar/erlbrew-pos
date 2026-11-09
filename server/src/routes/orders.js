@@ -410,6 +410,22 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         }
       }
 
+      // POS "NAME" box: staff may type the customer's app username instead of
+      // a display name. Exact case-insensitive match links the order to that
+      // account so pickup history, points and loyalty missions accrue to the
+      // right customer. No match = plain walk-in name, exactly as before.
+      // (Usernames never contain spaces, so a full name can't collide.)
+      if (customerId === null && customer_name && typeof customer_name === 'string' && customer_name.trim()) {
+        const usernameCandidate = customer_name.trim().toLowerCase();
+        const [usernameRows] = await pool.query(
+          'SELECT id FROM customers WHERE username IS NOT NULL AND LOWER(username) = ? LIMIT 1',
+          [usernameCandidate]
+        );
+        if (usernameRows.length > 0) {
+          customerId = usernameRows[0].id;
+        }
+      }
+
       // ── Snapshot item names (#318) ───────────────────────────────────────
       // Resolve each item's name now (live menu first, client-supplied name
       // as fallback) and store it on the order item, so history and receipts

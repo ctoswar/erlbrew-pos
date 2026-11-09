@@ -178,3 +178,5 @@ erlbrew_app/firebase_options.dart
 /certs/
 # Local backup copy of server/.env (real secrets)
 /server/env
+# PII plaintext pre-migration dumps + env backups — NEVER commit
+/backups/

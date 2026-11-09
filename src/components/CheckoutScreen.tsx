@@ -127,7 +127,7 @@ export const CheckoutScreen: React.FC<Props> = ({
                   type="text"
                   value={customerName}
                   onChange={(e) => onCustomerNameChange(e.target.value)}
-                  placeholder="Customer name"
+                  placeholder="Name or app username"
                   className="w-full min-h-[44px] bg-erl-surface border border-erl-border-default rounded-xl px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent transition-colors"
                 />
               </div>

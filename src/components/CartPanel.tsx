@@ -131,7 +131,7 @@ export const CartPanel: React.FC<Props> = ({
             type="text"
             value={customerName}
             onChange={(e) => onCustomerNameChange(e.target.value)}
-            placeholder={orderType === "takeout" ? "Required" : "Name…"}
+            placeholder="Name or app username…"
             className={`
               flex-1 rounded outline-none transition-all duration-200
               bg-erl-input text-erl-text-primary border px-3 py-2 md:px-2 md:py-1 text-sm md:text-xs

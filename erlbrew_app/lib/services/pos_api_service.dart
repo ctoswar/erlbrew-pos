@@ -205,6 +205,20 @@ class PosApiService {
     return customer;
   }
 
+  /// Bind the signed-in Firebase user to the customer row on the server so
+  /// order notifications can be delivered to the app's Firestore inbox
+  /// (users/{uid}/notifications). Idempotent; the server re-verifies the
+  /// Firebase ID token. Thrown errors are caught by the caller — this is a
+  /// best-effort side quest for every login, never a blocker.
+  Future<void> linkFirebaseAccount(String idToken) async {
+    final response = await _withTimeout(http.post(
+      Uri.parse('$baseUrl/api/customers/link-firebase'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'idToken': idToken}),
+    ));
+    _handleResponse(response);
+  }
+
   /// Staff/admin login with username + password
   Future<Map<String, dynamic>> staffLogin({
     required String username,

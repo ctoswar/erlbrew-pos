@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/app_models.dart';
+import '../services/firebase_auth_service.dart';
 import '../services/pos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/reward_icons.dart';
@@ -11,6 +13,7 @@ import '../widgets/luxury_button.dart';
 import '../widgets/page_transitions.dart';
 import '../widgets/shimmer.dart';
 import 'my_qr_screen.dart';
+import 'notifications_screen.dart';
 
 class RewardsScreen extends StatefulWidget {
   const RewardsScreen({super.key});
@@ -362,6 +365,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
       appBar: AppBar(
         title: const Text('Rewards'),
         actions: [
+          const RewardsNotificationBell(),
           IconButton(
             icon: const Icon(Icons.qr_code_2),
             tooltip: 'Show my QR code',
@@ -888,5 +892,61 @@ class _RewardsScreenState extends State<RewardsScreen> {
     } finally {
       if (mounted) setState(() => _redeeming = false);
     }
+  }
+}
+
+/// Bell icon in the Rewards app bar with an unread dot badge; opens the
+/// notification inbox. Streams the same Firestore inbox as the shell banner,
+/// so the badge and the history always agree.
+class RewardsNotificationBell extends StatelessWidget {
+  const RewardsNotificationBell({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseAuthService.instance.customerNotificationsStream(),
+      builder: (BuildContext context,
+          AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>> snapshot) {
+        final docs = snapshot.data?.docs ??
+            const <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+        final unread = docs.where((d) => d.data()['read'] != true).length;
+        return IconButton(
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(Icons.notifications_outlined),
+              if (unread > 0)
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: AppColors.gold,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints:
+                        const BoxConstraints(minWidth: 14, minHeight: 14),
+                    child: Text(
+                      unread > 9 ? '9+' : '$unread',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          tooltip: 'Notifications',
+          onPressed: () {
+            Navigator.of(context)
+                .push(fadeThrough(const NotificationsScreen()));
+          },
+        );
+      },
+    );
   }
 }

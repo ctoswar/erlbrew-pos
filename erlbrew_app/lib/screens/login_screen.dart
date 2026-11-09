@@ -242,8 +242,9 @@ class _LoginScreenState extends State<LoginScreen> {
   /// the next launch then skips this screen entirely.
   Widget _buildKeepSignedInRow() {
     return InkWell(
-      onTap:
-          _loading ? null : () => setState(() => _keepSignedIn = !_keepSignedIn),
+      onTap: _loading
+          ? null
+          : () => setState(() => _keepSignedIn = !_keepSignedIn),
       borderRadius: BorderRadius.circular(10),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
@@ -270,6 +271,22 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  /// Hands the Firebase ID token to the POS server so it binds the signed-in
+  /// Firebase uid to the customer row — that binding is what lets order
+  /// notifications land in the app's in-app inbox. Best-effort and idempotent;
+  /// a failed binding simply retries at the next sign-in.
+  void _linkFirebaseForNotifications() {
+    () async {
+      try {
+        final idToken = await FirebaseAuthService.instance.getIdToken();
+        if (idToken == null || idToken.isEmpty) return;
+        await PosApiService.instance.linkFirebaseAccount(idToken);
+      } catch (_) {
+        // Notifications are a bonus — never a login blocker.
+      }
+    }();
   }
 
   void _handleLogin() async {
@@ -328,6 +345,9 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         }
         MockData.currentUser = customer;
+        // Bind the Firebase uid → customer row (enables in-app order
+        // notifications); best-effort, see the helper.
+        _linkFirebaseForNotifications();
       }
 
       // Remember me: persist the checkbox decision only now that sign-in
@@ -413,6 +433,8 @@ class _LoginScreenState extends State<LoginScreen> {
           final customer = await PosApiService.instance
               .firebaseCustomerLogin(idToken, autoProvision: true);
           MockData.currentUser = customer;
+          // Same notification binding as the password flow (idempotent).
+          _linkFirebaseForNotifications();
         } on PosApiServiceException catch (error) {
           if (error.message.contains('Customer profile not found')) {
             // Server predates auto-provisioning — keep the old guidance.
@@ -633,8 +655,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     child: Divider(color: AppColors.hairline),
                                   ),
                                   Padding(
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: 12),
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 12),
                                     child: Text(
                                       'or',
                                       style: TextStyle(
@@ -653,8 +675,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 label: _isAdmin
                                     ? 'Continue with Google'
                                     : 'Sign in with Google',
-                                onPressed:
-                                    _loading ? null : _handleGoogleLogin,
+                                onPressed: _loading ? null : _handleGoogleLogin,
                               ),
                               const SizedBox(height: 22),
                               if (!_isAdmin)

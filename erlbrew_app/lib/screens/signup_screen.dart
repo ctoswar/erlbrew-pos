@@ -195,6 +195,18 @@ class _SignupScreenState extends State<SignupScreen> {
         password: _passwordController.text,
       );
 
+      // Bind the Firebase uid → customer row so order notifications reach
+      // this account's in-app inbox later. Best-effort — never blocks the
+      // registration flow, and the binding is refreshed at the next sign-in.
+      try {
+        final idToken = await firebase.getIdToken();
+        if (idToken != null && idToken.isNotEmpty) {
+          await posService.linkFirebaseAccount(idToken);
+        }
+      } catch (_) {
+        // Notifications are a bonus, not a signup requirement.
+      }
+
       if (!mounted) return;
       await showDialog<void>(
         context: context,

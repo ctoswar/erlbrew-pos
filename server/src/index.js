@@ -339,20 +339,24 @@ await pool.query(`
     `);
     console.log('audit_logs table ready');
 
-    // Customer CRM
+    // Customer CRM — PII is encrypted at rest (services/piiCrypto.js):
+    // phone/email are also hashed with HMAC for UNIQUE/lookup queries.
     await pool.query(`
       CREATE TABLE IF NOT EXISTS customers (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        phone VARCHAR(32) UNIQUE NOT NULL,
-        name VARCHAR(128) DEFAULT NULL,
-        email VARCHAR(128) DEFAULT NULL,
-        notes TEXT DEFAULT NULL,
+        phone_hash VARCHAR(32) UNIQUE NOT NULL,
+        phone_enc VARCHAR(255) DEFAULT NULL,
+        email_hash VARCHAR(32) DEFAULT NULL,
+        email_enc VARCHAR(255) DEFAULT NULL,
+        name_enc VARCHAR(511) DEFAULT NULL,
+        first_name_enc VARCHAR(255) DEFAULT NULL,
+        last_name_enc VARCHAR(255) DEFAULT NULL,
+        notes_enc TEXT DEFAULT NULL,
         total_orders INT DEFAULT 0,
         total_spent DECIMAL(12,2) DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_phone (phone),
-        INDEX idx_name (name)
+        INDEX idx_customers_email_hash (email_hash)
       )
     `);
     console.log('customers table ready');
@@ -362,8 +366,8 @@ await pool.query(`
     await pool.query(`ALTER TABLE customers ADD COLUMN loyalty_tier ENUM('bronze','silver','gold','platinum') DEFAULT 'bronze'`).catch(() => {});
     await pool.query(`ALTER TABLE customers ADD COLUMN last_points_update TIMESTAMP NULL`).catch(() => {});
     await pool.query(`ALTER TABLE customers ADD COLUMN password_hash VARCHAR(256) DEFAULT NULL`).catch(() => {});
-    await pool.query(`ALTER TABLE customers ADD COLUMN first_name VARCHAR(100) DEFAULT NULL`).catch(() => {});
-    await pool.query(`ALTER TABLE customers ADD COLUMN last_name VARCHAR(100) DEFAULT NULL`).catch(() => {});
+    await pool.query(`ALTER TABLE customers ADD COLUMN first_name_enc VARCHAR(255) DEFAULT NULL`).catch(() => {});
+    await pool.query(`ALTER TABLE customers ADD COLUMN last_name_enc VARCHAR(255) DEFAULT NULL`).catch(() => {});
     await pool.query(`ALTER TABLE customers ADD COLUMN username VARCHAR(32) DEFAULT NULL`).catch(() => {});
     await pool.query(`ALTER TABLE customers ADD UNIQUE KEY uniq_customers_username (username)`).catch(() => {});
     console.log('customers loyalty columns ready');

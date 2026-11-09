@@ -418,6 +418,42 @@ await pool.query(`
     `);
     console.log('loyalty_redemptions table ready');
 
+    // ── Loyalty missions (ZUS-style challenges) ─────────────────────────
+    // metric is VARCHAR (not ENUM) so new mission kinds can ship without a
+    // migration; 'orders' = complete N orders within the period.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS loyalty_missions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(128) NOT NULL,
+        description TEXT,
+        emoji VARCHAR(8) DEFAULT '🎯',
+        metric VARCHAR(24) NOT NULL DEFAULT 'orders',
+        target INT NOT NULL,
+        points_reward INT NOT NULL,
+        repeat_interval ENUM('daily','weekly','once') DEFAULT 'daily',
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('loyalty_missions table ready');
+
+    // One claim per customer per mission per period key
+    // (D-2026-11-09 daily / W-2026-W46 weekly / once)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS loyalty_mission_claims (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        customer_id INT NOT NULL,
+        mission_id INT NOT NULL,
+        period_key VARCHAR(32) NOT NULL,
+        points_awarded INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_mission_claim (customer_id, mission_id, period_key),
+        INDEX idx_claim_customer (customer_id),
+        INDEX idx_claim_mission (mission_id)
+      )
+    `);
+    console.log('loyalty_mission_claims table ready');
+
     // Link orders to customers
     await pool.query(`ALTER TABLE orders ADD COLUMN customer_id INT DEFAULT NULL AFTER customer_name`).catch(() => {});
 

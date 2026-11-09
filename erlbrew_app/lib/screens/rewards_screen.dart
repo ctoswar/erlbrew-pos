@@ -30,6 +30,9 @@ class _RewardsScreenState extends State<RewardsScreen> {
   bool _loadingHistory = false;
   List<Map<String, dynamic>> _redemptions = [];
   bool _redeeming = false;
+  List<Map<String, dynamic>> _missions = [];
+  bool _loadingMissions = true;
+  int? _claimingMissionId;
 
   @override
   void initState() {
@@ -63,6 +66,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
       }
       _loadPointsHistory();
       _loadRedemptions();
+      _loadMissions();
     } on PosApiServiceException catch (e) {
       if (mounted) {
         setState(() {
@@ -106,6 +110,221 @@ class _RewardsScreenState extends State<RewardsScreen> {
       if (mounted) setState(() => _redemptions = data);
     } catch (_) {
       // Redemption history is non-critical; leave empty on error.
+    }
+  }
+
+  Future<void> _loadMissions() async {
+    setState(() => _loadingMissions = true);
+    try {
+      final missions = await PosApiService.instance.getMissions();
+      if (mounted) {
+        setState(() {
+          _missions = missions;
+          _loadingMissions = false;
+        });
+      }
+    } on PosApiServiceException catch (e) {
+      // Missions are secondary — never block the rest of the rewards page.
+      debugPrint('missions failed: ${e.message}');
+      if (mounted) setState(() => _loadingMissions = false);
+    } catch (_) {
+      if (mounted) setState(() => _loadingMissions = false);
+    }
+  }
+
+  String _missionRepeatLabel(String? interval) {
+    switch (interval) {
+      case 'weekly':
+        return 'this week';
+      case 'once':
+        return 'all-time';
+      default:
+        return 'today';
+    }
+  }
+
+  Widget _missionCard(Map<String, dynamic> mission) {
+    final target = (mission['target'] as num?)?.toInt() ?? 0;
+    final progress = (mission['progress'] as num?)?.toInt() ?? 0;
+    final reward = (mission['points_reward'] as num?)?.toInt() ?? 0;
+    final claimed = mission['claimed'] == true;
+    final complete = target > 0 && progress >= target;
+    final emoji = mission['emoji']?.toString() ?? '🎯';
+    final title = mission['title']?.toString() ?? '';
+    final description = mission['description']?.toString() ?? '';
+    final isClaiming = _claimingMissionId != null &&
+        _claimingMissionId == (mission['id'] as num?)?.toInt();
+
+    return Card(
+      child: Opacity(
+        opacity: claimed ? 0.65 : 1,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(emoji, style: const TextStyle(fontSize: 22)),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w700)),
+                        if (description.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(description,
+                              style: const TextStyle(
+                                  color: AppColors.slateGrey, fontSize: 12.5)),
+                        ],
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: target <= 0
+                                      ? 0
+                                      : (progress / target).clamp(0.0, 1.0),
+                                  minHeight: 6,
+                                  backgroundColor: AppColors.slateGrey
+                                      .withValues(alpha: 0.15),
+                                  color: complete
+                                      ? AppColors.gold
+                                      : AppColors.matchaDark,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              '$progress / $target ${_missionRepeatLabel(mission['repeat_interval']?.toString())}',
+                              style: const TextStyle(
+                                  fontSize: 11, color: AppColors.slateGrey),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (claimed)
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Icon(Icons.check_circle_outline,
+                        size: 15, color: AppColors.matchaDark),
+                    SizedBox(width: 5),
+                    Text('Claimed',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.matchaDark)),
+                  ],
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  height: 36,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor:
+                          complete ? AppColors.gold : AppColors.slateGrey,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: complete && !isClaiming
+                        ? () => _claimMission(mission)
+                        : null,
+                    child: isClaiming
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : Text(
+                            complete
+                                ? 'Claim +$reward points'
+                                : '+$reward points on completion',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700, fontSize: 12.5),
+                          ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _claimMission(Map<String, dynamic> mission) async {
+    if (_claimingMissionId != null) return;
+    final missionId = (mission['id'] as num?)?.toInt() ?? 0;
+    final title = mission['title']?.toString() ?? 'Mission';
+    final reward = (mission['points_reward'] as num?)?.toInt() ?? 0;
+
+    setState(() => _claimingMissionId = missionId);
+    try {
+      final result = await PosApiService.instance.claimMission(missionId);
+      if (mounted) {
+        setState(() {
+          _points = (result['balance'] as num?)?.toInt() ?? _points;
+          _tier = result['tier']?.toString() ?? _tier;
+        });
+        _loadMissions();
+        _loadPointsHistory();
+        showDialog(
+          context: context,
+          builder: (_) => TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutBack,
+            builder: (context, t, child) =>
+                Transform.scale(scale: t, child: child),
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: const Text('Mission Complete! 🎉'),
+              content: Text(
+                  'You earned $reward points from "$title". Keep the streak going!'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Done')),
+              ],
+            ),
+          ),
+        );
+      }
+    } on PosApiServiceException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Claim failed: ${e.message}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Claim failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _claimingMissionId = null);
     }
   }
 
@@ -290,6 +509,37 @@ class _RewardsScreenState extends State<RewardsScreen> {
                     onPressed: _showMyQr),
               ),
             ),
+            const SizedBox(height: 24),
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 130),
+              child: Text('Missions',
+                  style: Theme.of(context).textTheme.titleLarge),
+            ),
+            const SizedBox(height: 12),
+            if (_loadingMissions)
+              const SkeletonTileList(count: 2)
+            else if (_missions.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: EmptyState(
+                  icon: Icons.flag_outlined,
+                  title: 'No missions right now',
+                  subtitle: 'Check back soon for new challenges!',
+                  compact: true,
+                ),
+              )
+            else
+              ...(_missions.asMap().entries.map((entry) {
+                final index = entry.key;
+                return FadeSlideIn(
+                  delay: fadeStagger(index,
+                      step: const Duration(milliseconds: 60)),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _missionCard(entry.value),
+                  ),
+                );
+              })),
             const SizedBox(height: 24),
             FadeSlideIn(
               delay: const Duration(milliseconds: 160),

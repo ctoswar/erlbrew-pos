@@ -185,7 +185,8 @@ class PosApiService {
     return customer;
   }
 
-  Future<AppUser> firebaseCustomerLogin(String idToken, {bool autoProvision = false}) async {
+  Future<AppUser> firebaseCustomerLogin(String idToken,
+      {bool autoProvision = false}) async {
     final response = await _withTimeout(http.post(
       Uri.parse('$baseUrl/api/customers/firebase-login'),
       headers: {'Content-Type': 'application/json'},
@@ -525,13 +526,17 @@ class PosApiService {
     _handleResponse(response);
   }
 
-  /// Delete (deactivate) a reward (admin only)
-  Future<void> deleteReward(int id) async {
+  /// Delete a reward (admin only)
+  ///
+  /// The server replies with `deleted: true` when the reward was removed
+  /// outright, or `deactivated: true` when it stays in the catalog as
+  /// "Inactive" because past redemptions reference it.
+  Future<Map<String, dynamic>> deleteReward(int id) async {
     final response = await _withTimeout(http.delete(
       Uri.parse('$baseUrl/api/loyalty/rewards/$id'),
       headers: _adminHeaders,
     ));
-    _handleResponse(response);
+    return _handleResponse(response) ?? const {'ok': true};
   }
 
   /// Redeem a reward with points
@@ -552,6 +557,106 @@ class PosApiService {
     ));
     final data = _handleResponse(response);
     return List<Map<String, dynamic>>.from(data as List);
+  }
+
+  // ── Missions Endpoints ────────────────────────────────────────────
+
+  /// Active missions with the signed-in customer's live progress.
+  /// Each entry: title, description, emoji, target, points_reward,
+  /// repeat_interval ('daily' | 'weekly' | 'once'), progress, claimed.
+  Future<List<Map<String, dynamic>>> getMissions() async {
+    final response = await _withTimeout(http.get(
+      Uri.parse('$baseUrl/api/loyalty/missions'),
+      headers: _headers,
+    ));
+    final data = _handleResponse(response);
+    return List<Map<String, dynamic>>.from(data as List);
+  }
+
+  /// Claim a completed mission — awards its bonus points server-side.
+  /// Returns { points_awarded, balance, tier, ... }.
+  Future<Map<String, dynamic>> claimMission(int missionId) async {
+    final response = await _withTimeout(http.post(
+      Uri.parse('$baseUrl/api/loyalty/missions/$missionId/claim'),
+      headers: _headers,
+      body: jsonEncode({}),
+    ));
+    return _handleResponse(response);
+  }
+
+  /// Fetch ALL missions including inactive (admin)
+  Future<List<Map<String, dynamic>>> getAllMissions() async {
+    final response = await _withTimeout(http.get(
+      Uri.parse('$baseUrl/api/loyalty/missions/all'),
+      headers: _adminHeaders,
+    ));
+    final data = _handleResponse(response);
+    return List<Map<String, dynamic>>.from(data as List);
+  }
+
+  /// Create an order-count mission (admin only)
+  ///
+  /// [repeatInterval] is 'daily' (each day), 'weekly' (Mon–Sun) or 'once'
+  /// (all-time, claimable a single time ever).
+  Future<Map<String, dynamic>> createMission({
+    required String title,
+    required String description,
+    required int targetOrders,
+    required int pointsReward,
+    required String repeatInterval,
+    String emoji = '🎯',
+  }) async {
+    final response = await _withTimeout(http.post(
+      Uri.parse('$baseUrl/api/loyalty/missions'),
+      headers: _adminHeaders,
+      body: jsonEncode({
+        'title': title,
+        'description': description,
+        'metric': 'orders',
+        'target': targetOrders,
+        'points_reward': pointsReward,
+        'repeat_interval': repeatInterval,
+        'emoji': emoji,
+      }),
+    ));
+    return _handleResponse(response);
+  }
+
+  /// Update a mission (admin only); pass [isActive] to pause/resume it
+  /// without deleting its claim history.
+  Future<void> updateMission({
+    required int id,
+    String? title,
+    String? description,
+    int? targetOrders,
+    int? pointsReward,
+    String? repeatInterval,
+    String? emoji,
+    bool? isActive,
+  }) async {
+    final response = await _withTimeout(http.put(
+      Uri.parse('$baseUrl/api/loyalty/missions/$id'),
+      headers: _adminHeaders,
+      body: jsonEncode({
+        if (title != null) 'title': title,
+        if (description != null) 'description': description,
+        if (targetOrders != null) 'target': targetOrders,
+        if (pointsReward != null) 'points_reward': pointsReward,
+        if (repeatInterval != null) 'repeat_interval': repeatInterval,
+        if (emoji != null) 'emoji': emoji,
+        if (isActive != null) 'is_active': isActive,
+      }),
+    ));
+    _handleResponse(response);
+  }
+
+  /// Delete a mission (admin only) — removes it and its claim ledger.
+  Future<void> deleteMission(int id) async {
+    final response = await _withTimeout(http.delete(
+      Uri.parse('$baseUrl/api/loyalty/missions/$id'),
+      headers: _adminHeaders,
+    ));
+    _handleResponse(response);
   }
 
   // ── Admin Customer Endpoints ──────────────────────────────────────

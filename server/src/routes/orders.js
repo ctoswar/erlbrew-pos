@@ -9,6 +9,7 @@ import { autoSyncDailySales } from '../services/accountingQuickBooks.js';
 import { autoSyncDailySales as autoSyncDailySalesXero } from '../services/accountingXero.js';
 import { locationScope, requireLocationId, scopedLocationCondition } from '../middleware/location.js';
 import { encryptPii, phoneHash } from '../services/piiCrypto.js';
+import { notifyOrderPlaced, notifyOrderReady } from '../services/notifications.js';
 
 // Helpers for Asia/Taipei time (UTC+8) — server timezone-independent
 function taipeiNow() {
@@ -552,6 +553,13 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     console.log(`[orders:create] ${id} ready in ${Date.now() - createdAt}ms (items=${itemsOut.length})`);
     res.json({ id, subtotal: orderSubtotal, tax: orderTax, total: orderTotal, status: initialStatus, pay_status: initialPayStatus, checkout_url: checkoutUrl });
 
+    // In-app notification (fire-and-forget): tell the linked customer their
+    // order is in. Gateway orders (pending_payment) wait for the paid webhook
+    // instead — never send "your order is in" for an unpaid ticket.
+    if (customerId && initialStatus !== 'pending_payment') {
+      notifyOrderPlaced(pool, customerId, { id, total: orderTotal, items: itemsOut });
+    }
+
     // Sheets sync — fire-and-forget so it can never delay the POS response.
     logToSheets('Order append', () => googleSheets.appendOrder({
       orderId: id, staffName: staff_name || '', items: itemsOut,
@@ -662,6 +670,16 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         }
       }
     }
+    // Linked customer for the "ready for pickup" notification — a lightweight
+    // grab inside the same transaction. Only fires when the status actually
+    // becomes ready (no re-notify after repeated PUTs).
+    let readyNotifyCustomerId = null;
+    if (status === 'ready') {
+      const [readyRows] = await conn.query('SELECT customer_id, status AS current_status FROM orders WHERE id = ? FOR UPDATE', [id]);
+      if (readyRows[0] && readyRows[0].customer_id && readyRows[0].current_status !== 'ready') {
+        readyNotifyCustomerId = readyRows[0].customer_id;
+      }
+    }
     await conn.query(
       `UPDATE orders SET status = ?, completed_at = ?, preparing_at = IF(? = "preparing", COALESCE(preparing_at, NOW()), preparing_at) WHERE id = ?${scopedLocationCondition(req, 'location_id').sql}`,
       [status, status === 'completed' ? new Date() : null, status, id, ...scopedLocationCondition(req, 'location_id').params]
@@ -670,6 +688,12 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
     // Audit: status change
     await logAudit(pool, req, { action: 'order_status_change', entityType: 'order', entityId: id, details: { newStatus: status } });
     res.json({ ok: true });
+
+    // In-app notification (fire-and-forget, never rejects): "your order is
+    // ready" — the customer sees it as a banner the next time they open the app.
+    if (readyNotifyCustomerId) {
+      notifyOrderReady(pool, readyNotifyCustomerId, { id, items: [] });
+    }
 
     // Phase 2: push status to delivery platform for inbound orders (fire-and-forget)
     try {

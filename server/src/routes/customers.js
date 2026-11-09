@@ -382,6 +382,15 @@ export default function customersRouter(pool) {
         return res.status(404).json({ error: 'Customer profile not found' });
       }
       customer = provisioned ? customer : decryptCustomerRow(customer);
+      // Bridge POS→Firebase: store the Firebase uid on the row so the server
+      // can deliver in-app notifications to users/{uid}/notifications in
+      // Firestore (the app may only read its own user subtree). Best-effort —
+      // a failure here must never block the login itself.
+      try {
+        await pool.query('UPDATE customers SET firebase_uid = ? WHERE id = ?', [decoded.uid, customer.id]);
+      } catch (e) {
+        console.warn('[Customers] firebase_uid write skipped:', e.message);
+      }
       const token = jwt.sign(
         { sub: customer.id, phone: customer.phone, name: customer.name || '', customer: true },
         process.env.JWT_SECRET,
@@ -401,6 +410,34 @@ export default function customersRouter(pool) {
     } catch (e) {
       console.error('Firebase customer login error:', e.message);
       return res.status(401).json({ error: 'Invalid Firebase credentials' });
+    }
+  });
+
+  // POST /api/customers/link-firebase — Bind the signed-in Firebase user to
+  // this customer row (idempotent; called by the app after every login) so
+  // Firestore notifications land in users/{uid}/notifications. Exchanges the
+  // Firebase ID token the app already holds for a verified uid.
+  router.post('/link-firebase', customerAuthMiddleware, async (req, res) => {
+    const idToken = typeof req.body?.idToken === 'string' ? req.body.idToken.trim() : '';
+    if (!idToken) {
+      return res.status(400).json({ error: 'Firebase ID token is required' });
+    }
+    let decoded;
+    try {
+      decoded = await firebaseAuth.verifyIdToken(idToken);
+    } catch (e) {
+      console.error('Link-firebase token error:', e.message);
+      return res.status(401).json({ error: 'Invalid Firebase credentials' });
+    }
+    if (!isVerifiedFirebaseCustomer(decoded)) {
+      return res.status(403).json({ error: 'Email verification is required', code: 'EMAIL_NOT_VERIFIED' });
+    }
+    try {
+      await pool.query('UPDATE customers SET firebase_uid = ? WHERE id = ?', [decoded.uid, req.customer.sub]);
+      return res.json({ ok: true, linked: true });
+    } catch (e) {
+      console.error('Link-firebase error:', e.message);
+      return res.status(500).json({ error: 'DB error' });
     }
   });
 

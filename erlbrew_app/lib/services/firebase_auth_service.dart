@@ -83,8 +83,7 @@ class FirebaseAuthService {
     if (!ok) {
       throw FirebaseAuthException(
         code: 'firebase-init-failed',
-        message:
-            'Firebase could not start in this browser. Try a normal '
+        message: 'Firebase could not start in this browser. Try a normal '
             '(non-private) browser tab or check the connection.',
       );
     }
@@ -183,9 +182,9 @@ class FirebaseAuthService {
 
     final userDoc = await _firestore!.collection('users').doc(user.uid).get();
     final profile = userDoc.data() ?? <String, dynamic>{};
-    final storedRole = (profile['role'] ??
-            (profile['isAdmin'] == true ? 'admin' : 'customer'))
-        .toString();
+    final storedRole =
+        (profile['role'] ?? (profile['isAdmin'] == true ? 'admin' : 'customer'))
+            .toString();
     final isAdminAccount = profile['isAdmin'] == true || storedRole == 'admin';
 
     if (isAdmin && !isAdminAccount) {
@@ -509,16 +508,56 @@ class FirebaseAuthService {
     );
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> customerNotificationsStream(
-    String customerId,
-  ) {
+  /// Firestore inbox for the signed-in Firebase user. The server writes
+  /// order notifications to users/{uid}/notifications — keyed by the Firebase
+  /// uid bound to the customer row at login (see POST
+  /// /api/customers/link-firebase), because firestore.rules only lets the
+  /// app read its own user subtree.
+  Stream<QuerySnapshot<Map<String, dynamic>>> customerNotificationsStream() {
+    final uid = currentUserId ?? FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      // Not signed in (or Firebase was not ready in this environment) —
+      // hand back a closed stream so callers can still watch it.
+      return const Stream.empty();
+    }
     return FirebaseFirestore.instance
         .collection('users')
-        .doc(customerId)
+        .doc(uid)
         .collection('notifications')
         .orderBy('createdAt', descending: true)
-        .limit(1)
+        .limit(20)
         .snapshots();
+  }
+
+  /// Best-effort: flip a notification to read. No-ops when signed out.
+  Future<void> markNotificationRead(String notificationId) async {
+    final uid = currentUserId ?? FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .doc(notificationId)
+        .set({'read': true}, SetOptions(merge: true));
+  }
+
+  /// Best-effort: mark every unread notification read (bounded at 50).
+  Future<void> markAllNotificationsRead() async {
+    final uid = currentUserId ?? FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .where('read', isEqualTo: false)
+        .limit(50)
+        .get();
+    if (snapshot.docs.isEmpty) return;
+    final batch = FirebaseFirestore.instance.batch();
+    for (final doc in snapshot.docs) {
+      batch.update(doc.reference, {'read': true});
+    }
+    await batch.commit();
   }
 
   Future<AppUser?> getSignedInUserProfile() async {

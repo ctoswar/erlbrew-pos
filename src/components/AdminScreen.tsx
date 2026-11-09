@@ -4,17 +4,19 @@ import { AdminMenu } from "./AdminMenu";
 import { AdminInventory } from "./AdminInventory";
 import { AdminStaff } from "./AdminStaff";
 import { AdminPrintSettings } from "./AdminPrintSettings";
+import { AdminEmailMarketing } from "./AdminEmailMarketing";
 import { ZReportScreen } from "./ZReportScreen";
 import { CashDrawerScreen } from "./CashDrawerScreen";
 import { apiGet } from "../utils/api";
 import { formatTime, formatCurrency, parseServerDatetime } from "../utils";
 
-type AdminTab = "menu" | "inventory" | "staff" | "reports" | "cash" | "print" | "orders";
+type AdminTab = "menu" | "inventory" | "staff" | "reports" | "cash" | "print" | "orders" | "marketing";
 
 const TABS: { key: AdminTab; label: string; icon: string }[] = [
   { key: "menu", label: "Menu Items", icon: "🍽️" },
   { key: "inventory", label: "Inventory", icon: "📦" },
   { key: "staff", label: "Staff", icon: "👥" },
+  { key: "marketing", label: "Marketing", icon: "✉️" },
   { key: "print", label: "Print Settings", icon: "🖨️" },
   { key: "reports", label: "Z-Report", icon: "📊" },
   { key: "cash", label: "Cash Drawer", icon: "💰" },
@@ -96,6 +98,7 @@ export const AdminScreen: React.FC<Props> = ({ onDismissOrder }) => {
         {tab === "menu" && <AdminMenu />}
         {tab === "inventory" && <AdminInventory />}
         {tab === "staff" && <AdminStaff />}
+        {tab === "marketing" && <AdminEmailMarketing />}
         {tab === "reports" && <ZReportScreen />}
         {tab === "cash" && <CashDrawerScreen />}
         {tab === "print" && <AdminPrintSettings />}

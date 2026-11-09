@@ -26,6 +26,7 @@ import loyaltyRouter from './routes/loyalty.js';
 import webhooksRouter from './routes/webhooks.js';
 import integrationsRouter from './routes/integrations.js';
 import accountingRouter from './routes/accounting.js';
+import adminEmailsRouter from './routes/adminEmails.js';
 import insightsRouter from './routes/insights.js';
 import { googleSheetsClientInit } from './services/googleSheets.js';
 import { authMiddleware, adminMiddleware } from './middleware/auth.js';
@@ -85,6 +86,14 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+// Marketing email sends (campaign/test) — staff-triggered, keep it tight
+const emailSendLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // 10 sends per IP per hour
+  message: { error: 'Too many email sends. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 100, // 100 requests per minute per IP
@@ -99,6 +108,7 @@ const apiLimiter = rateLimit({
 app.use('/api/staff/login', loginLimiter);
 app.use('/api/customers/login', loginLimiter);
 app.use('/api/customers/register', loginLimiter);
+app.use('/api/admin/emails/send', emailSendLimiter);
 // Apply a general API rate limiter for all /api/ routes
 app.use('/api/', apiLimiter);
 
@@ -461,6 +471,33 @@ await pool.query(`
     // Link orders to customers
     await pool.query(`ALTER TABLE orders ADD COLUMN customer_id INT DEFAULT NULL AFTER customer_name`).catch(() => {});
 
+    // ── Notifications + marketing emails (issue #349) ────────────────────
+    // Bridge POS customer rows ↔ Firebase auth: the server writes order
+    // notifications to Firestore users/{firebase_uid}/notifications (the app
+    // can only read its own subtree per firestore.rules).
+    await pool.query(`ALTER TABLE customers ADD COLUMN firebase_uid VARCHAR(128) DEFAULT NULL`).catch(() => {});
+    await pool.query(`ALTER TABLE customers ADD INDEX idx_customers_firebase_uid (firebase_uid)`).catch(() => {});
+
+    // Email campaign log — one row per sent advertisement mail blast
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS marketing_campaigns (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        subject VARCHAR(200) NOT NULL,
+        body TEXT NOT NULL,
+        recipient_count INT NOT NULL DEFAULT 0,
+        delivered_count INT NOT NULL DEFAULT 0,
+        failed_count INT NOT NULL DEFAULT 0,
+        status VARCHAR(16) NOT NULL DEFAULT 'sending',
+        error TEXT,
+        created_by INT DEFAULT NULL,
+        created_by_name VARCHAR(128) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        sent_at TIMESTAMP NULL,
+        INDEX idx_campaign_created (created_at)
+      )
+    `);
+    console.log('marketing_campaigns table ready');
+
     // ── Phase 2: Integrations (issue #127) ─────────────────────────────────
     // order_source: where the order originated (pos = created at the till)
     await pool.query(`ALTER TABLE orders ADD COLUMN order_source VARCHAR(16) DEFAULT 'pos' AFTER type`).catch(() => {});
@@ -817,6 +854,8 @@ app.use('/api/company-settings', companySettingsRoutes(pool));
 app.use('/api', uploadRouter(pool));
 app.use('/api/audit-logs', auditRoutes(pool));
 app.use('/api/admin/backup', adminRouter(pool));
+// Marketing emails (SMTP campaigns) — admin only
+app.use('/api/admin/emails', adminEmailsRouter(pool));
 app.use('/api/customers', customersRoutes(pool));
 app.use('/api/loyalty', loyaltyRouter(pool));
 app.use('/api/locations', locationsRoutes(pool));

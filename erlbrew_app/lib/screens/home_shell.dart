@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../models/app_models.dart';
 import '../services/firebase_auth_service.dart';
@@ -13,6 +16,7 @@ import '../widgets/shimmer.dart';
 import '../widgets/ios_tab_bar.dart';
 import 'legal_screen.dart';
 import 'login_screen.dart';
+import 'notifications_screen.dart';
 import 'pickup_screen.dart';
 import 'rewards_screen.dart';
 
@@ -32,13 +36,95 @@ class _HomeShellState extends State<HomeShell> {
     _ProfileScreen(),
   ];
 
+  // ── In-app order notifications (issue #349) ────────────────────────
+  // The server writes order events to Firestore users/{uid}/notifications.
+  // The shell listens for delivery while the customer is inside the app and
+  // slides a banner down; history lives in NotificationsScreen.
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _notifSub;
+  final Set<String> _seenNotificationIds = <String>{};
+  bool _notifsSeeded = false;
+  Map<String, dynamic>? _banner;
+  Timer? _bannerTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _notifSub = FirebaseAuthService.instance
+        .customerNotificationsStream()
+        .listen(_onNotifications, onError: (_) {});
+  }
+
+  @override
+  void dispose() {
+    _notifSub?.cancel();
+    _bannerTimer?.cancel();
+    super.dispose();
+  }
+
+  void _onNotifications(QuerySnapshot<Map<String, dynamic>> snapshot) {
+    final docs = snapshot.docs;
+    if (!_notifsSeeded) {
+      // First delivery after opening the app: acknowledge what is already
+      // in the inbox so history never banners on launch — only orders that
+      // arrive while the app is open will.
+      _notifsSeeded = true;
+      _seenNotificationIds
+        ..clear()
+        ..addAll(docs.map((d) => d.id));
+      return;
+    }
+    for (final doc in docs) {
+      // Newest first (orderBy createdAt desc) — show the freshest arrival.
+      if (_seenNotificationIds.contains(doc.id)) continue;
+      _seenNotificationIds.add(doc.id);
+      if (doc.data()['read'] == true) continue;
+      setState(() {
+        _banner = doc.data();
+      });
+      _bannerTimer?.cancel();
+      _bannerTimer = Timer(const Duration(seconds: 6), () {
+        if (mounted) setState(() => _banner = null);
+      });
+      break;
+    }
+  }
+
+  void _hideBanner() {
+    _bannerTimer?.cancel();
+    setState(() => _banner = null);
+  }
+
+  void _openNotifications() {
+    _hideBanner();
+    Navigator.of(context).push(fadeThrough(const NotificationsScreen()));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       // LazyIndexedStack: a tab is only built the first time you visit it
       // (then kept alive), so opening the app doesn't fire every tab's
       // network requests at once — plus a soft fade between tabs.
-      body: LazyIndexedStack(index: _index, children: _screens),
+      body: Stack(
+        children: [
+          LazyIndexedStack(index: _index, children: _screens),
+          // Slide-down alert for a fresh order notification. SafeArea keeps
+          // it clear of the status bar (no AppBar in the shell).
+          if (_banner != null)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: NotificationBanner(
+                  title: (_banner!['title'] ?? 'Order update').toString(),
+                  message: (_banner!['message'] ?? '').toString(),
+                  onTap: _openNotifications,
+                ),
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: IosTabBar(
         selectedIndex: _index,
         onSelected: (i) => setState(() => _index = i),

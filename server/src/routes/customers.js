@@ -9,6 +9,13 @@ import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { customerAuthMiddleware } from '../middleware/customerAuth.js';
 import { logAudit } from '../services/audit.js';
 import { locationScope, scopedLocationCondition } from '../middleware/location.js';
+import {
+  encryptPii,
+  decryptPii,
+  phoneHash,
+  emailHash,
+  decryptCustomerRow,
+} from '../services/piiCrypto.js';
 
 export function isVerifiedFirebaseCustomer(decoded) {
   return decoded?.email_verified === true &&
@@ -48,7 +55,9 @@ export function sentinelPhoneForUid(uid) {
 
 export default function customersRouter(pool) {
   const router = Router();
-  const customerColumns = 'id, phone, name, email, first_name, last_name, username, notes, loyalty_points, loyalty_tier, last_points_update, total_orders, total_spent, created_at, updated_at';
+  // Raw columns — encrypted values (AES-256-GCM) for customer PII.
+  // phone/email live as *_hash (HMAC lookup keys) + *_enc (display value).
+  const customerColumns = 'id, phone_enc, email_enc, name_enc, first_name_enc, last_name_enc, username, notes, loyalty_points, loyalty_tier, last_points_update, total_orders, total_spent, created_at, updated_at';
   let firebaseApp;
   if (getApps().length) {
     firebaseApp = getApp();
@@ -70,20 +79,33 @@ export default function customersRouter(pool) {
   const firebaseAuth = getAuth(firebaseApp);
   const firestore = getFirestore(firebaseApp);
 
-  // GET /api/customers — list/search customers
+  // GET /api/customers — list/search customers.
+  // PII is encrypted at rest (no LIKE over ciphertext) — the result window is
+  // fetched, decrypted, then filtered in JS. Sized for a café-scale customer
+  // base; revisit with a search index if listings ever grow orders larger.
   router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
     try {
       const { search, limit = 50 } = req.query;
       let sql = `SELECT ${customerColumns} FROM customers`;
       const values = [];
       if (search) {
-        sql += ' WHERE phone LIKE ? OR name LIKE ?';
-        values.push(`%${search}%`, `%${search}%`);
+        sql += ' ORDER BY total_spent DESC LIMIT 1000';
+      } else {
+        sql += ' ORDER BY total_spent DESC LIMIT ?';
+        values.push(Number(limit));
       }
-      sql += ' ORDER BY total_spent DESC LIMIT ?';
-      values.push(Number(limit));
       const [rows] = await pool.query(sql, values);
-      res.json(rows);
+      let customers = rows.map(decryptCustomerRow);
+      if (search) {
+        const needle = String(search).trim().toLowerCase();
+        customers = customers.filter((c) =>
+          String(c.name || '').toLowerCase().includes(needle) ||
+          String(c.email || '').toLowerCase().includes(needle) ||
+          String(c.phone || '').includes(String(search).trim())
+        );
+        customers = customers.slice(0, Number(limit));
+      }
+      res.json(customers);
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });
@@ -98,7 +120,7 @@ export default function customersRouter(pool) {
         `SELECT ${customerColumns} FROM customers ORDER BY total_spent DESC LIMIT ?`,
         [Number(limit)]
       );
-      res.json(rows);
+      res.json(rows.map(decryptCustomerRow));
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });
@@ -194,8 +216,8 @@ export default function customersRouter(pool) {
     const phone = sentinelPhoneForUid(decoded.uid);
     try {
       await pool.query(
-        'INSERT INTO customers (phone, name, email, password_hash, first_name, last_name, username) VALUES (?, ?, ?, NULL, ?, ?, ?)',
-        [phone, displayName, email, firstName, lastName, username]
+        'INSERT INTO customers (phone_hash, phone_enc, name_enc, email_hash, email_enc, first_name_enc, last_name_enc, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)',
+        [phoneHash(phone), encryptPii(phone), encryptPii(displayName), emailHash(email), encryptPii(email), encryptPii(firstName), encryptPii(lastName)]
       );
     } catch (e) {
       if (e.code !== 'ER_DUP_ENTRY') throw e;
@@ -204,10 +226,10 @@ export default function customersRouter(pool) {
       // this stays idempotent.
     }
     const [inserted] = await pool.query(
-      'SELECT id, phone, name, email, first_name, last_name, username, loyalty_points, loyalty_tier, total_orders, total_spent, created_at FROM customers WHERE phone = ? LIMIT 1',
-      [phone]
+      'SELECT id, phone_enc, email_enc, name_enc, first_name_enc, last_name_enc, username, loyalty_points, loyalty_tier, total_orders, total_spent, created_at FROM customers WHERE phone_hash = ? LIMIT 1',
+      [phoneHash(phone)]
     );
-    return inserted[0] || null;
+    return decryptCustomerRow(inserted[0]) || null;
   };
 
   router.post('/register', async (req, res) => {
@@ -232,7 +254,7 @@ export default function customersRouter(pool) {
     }
     try {
       const normalizedPhone = phone.trim();
-      const [existing] = await pool.query('SELECT id FROM customers WHERE phone = ?', [normalizedPhone]);
+      const [existing] = await pool.query('SELECT id FROM customers WHERE phone_hash = ?', [phoneHash(normalizedPhone)]);
       if (existing.length > 0) {
         return res.status(409).json({ error: 'Phone number already registered' });
       }
@@ -254,8 +276,8 @@ export default function customersRouter(pool) {
       const displayName = rawName || `${firstName} ${lastName}`.trim();
       const passwordHash = await bcrypt.hash(password, 10);
       const [r] = await pool.query(
-        'INSERT INTO customers (phone, name, email, password_hash, first_name, last_name, username) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [normalizedPhone, displayName, email || null, passwordHash, firstName, lastName || null, username]
+        'INSERT INTO customers (phone_hash, phone_enc, name_enc, email_hash, email_enc, first_name_enc, last_name_enc, password_hash, username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [phoneHash(normalizedPhone), encryptPii(normalizedPhone), encryptPii(displayName), email ? emailHash(email) : null, encryptPii(email), encryptPii(firstName), encryptPii(lastName || null), passwordHash, username]
       );
       const token = jwt.sign(
         { sub: r.insertId, phone: normalizedPhone, name: displayName, customer: true },
@@ -263,11 +285,11 @@ export default function customersRouter(pool) {
         { expiresIn: '30d' }
       );
       const [inserted] = await pool.query(
-        'SELECT id, phone, name, email, first_name, last_name, username, loyalty_points, loyalty_tier, created_at FROM customers WHERE id = ?',
+        'SELECT id, phone_enc, email_enc, name_enc, first_name_enc, last_name_enc, username, loyalty_points, loyalty_tier, created_at FROM customers WHERE id = ?',
         [r.insertId]
       );
-      await logAudit(pool, req, { action: 'customer_register', entityType: 'customer', entityId: String(r.insertId), details: { phone: normalizedPhone, name: displayName, username } });
-      res.json({ token, customer: inserted[0] });
+      await logAudit(pool, req, { action: 'customer_register', entityType: 'customer', entityId: String(r.insertId), details: { phone_norm: phoneHash(normalizedPhone), username } });
+      res.json({ token, customer: decryptCustomerRow(inserted[0]) });
     } catch (e) {
       console.error('Customer register error:', e);
       if (e.code === 'ER_DUP_ENTRY') {
@@ -288,11 +310,9 @@ export default function customersRouter(pool) {
     try {
       const identifier = identifierValue.trim();
       const isEmail = identifier.includes('@');
-      // Lookup by phone or email
-      const query = isEmail
-        ? 'SELECT id, phone, name, email, first_name, last_name, username, password_hash, loyalty_points, loyalty_tier, created_at FROM customers WHERE email = ?'
-        : 'SELECT id, phone, name, email, first_name, last_name, username, password_hash, loyalty_points, loyalty_tier, created_at FROM customers WHERE phone = ?';
-      const [rows] = await pool.query(query, [identifier]);
+      // Lookup by phone or email — both are HMAC hashes now
+      const query = `SELECT id, phone_enc, email_enc, name_enc, first_name_enc, last_name_enc, username, password_hash, loyalty_points, loyalty_tier, created_at FROM customers WHERE ${isEmail ? 'email_hash' : 'phone_hash'} = ?`;
+      const [rows] = await pool.query(query, [isEmail ? emailHash(identifier) : phoneHash(identifier)]);
       if (!rows.length) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
@@ -304,13 +324,15 @@ export default function customersRouter(pool) {
       if (!ok) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
+      const [phone, name] = [decryptPii(customer.phone_enc), decryptPii(customer.name_enc)];
       const token = jwt.sign(
-        { sub: customer.id, phone: customer.phone, name: customer.name || '', customer: true },
+        { sub: customer.id, phone, name: name || '', customer: true },
         process.env.JWT_SECRET,
         { expiresIn: '30d' }
       );
-      const { password_hash, ...customerData } = customer;
-      await logAudit(pool, req, { action: 'customer_login', entityType: 'customer', entityId: String(customer.id), details: { identifier } });
+      await logAudit(pool, req, { action: 'customer_login', entityType: 'customer', entityId: String(customer.id), details: { identifier_norm: isEmail ? emailHash(identifier) : phoneHash(identifier) } });
+      // password_hash never leaves the API even though it rode along in the row
+      const { password_hash: _omit, ...customerData } = decryptCustomerRow(customer);
       res.json({ token, customer: customerData });
     } catch (e) {
       console.error('Customer login error:', e);
@@ -339,8 +361,8 @@ export default function customersRouter(pool) {
         return res.status(401).json({ error: 'A verified customer email is required' });
       }
       const [rows] = await pool.query(
-        'SELECT id, phone, name, email, first_name, last_name, username, loyalty_points, loyalty_tier, total_orders, total_spent, created_at FROM customers WHERE LOWER(email) = ? LIMIT 1',
-        [email]
+        'SELECT id, phone_enc, email_enc, name_enc, first_name_enc, last_name_enc, username, loyalty_points, loyalty_tier, total_orders, total_spent, created_at FROM customers WHERE email_hash = ? LIMIT 1',
+        [emailHash(email)]
       );
       let customer = rows[0] || null;
       let provisioned = false;
@@ -358,6 +380,7 @@ export default function customersRouter(pool) {
       if (!customer) {
         return res.status(404).json({ error: 'Customer profile not found' });
       }
+      customer = provisioned ? customer : decryptCustomerRow(customer);
       const token = jwt.sign(
         { sub: customer.id, phone: customer.phone, name: customer.name || '', customer: true },
         process.env.JWT_SECRET,
@@ -369,7 +392,7 @@ export default function customersRouter(pool) {
         entityId: String(customer.id),
         details: {
           method: provisioned ? 'firebase_google' : 'firebase_email',
-          email,
+          email_norm: emailHash(email),
           ...(provisioned ? { provisioned: true } : {}),
         },
       });
@@ -384,11 +407,11 @@ export default function customersRouter(pool) {
   router.get('/me', customerAuthMiddleware, async (req, res) => {
     try {
       const [rows] = await pool.query(
-        'SELECT id, phone, name, email, first_name, last_name, username, loyalty_points, loyalty_tier, last_points_update, total_orders, total_spent, created_at FROM customers WHERE id = ?',
+        'SELECT id, phone_enc, email_enc, name_enc, first_name_enc, last_name_enc, username, loyalty_points, loyalty_tier, last_points_update, total_orders, total_spent, created_at FROM customers WHERE id = ?',
         [req.customer.sub]
       );
       if (!rows.length) return res.status(404).json({ error: 'Customer not found' });
-      res.json(rows[0]);
+      res.json(decryptCustomerRow(rows[0]));
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });
@@ -401,8 +424,9 @@ export default function customersRouter(pool) {
     try {
       const fields = [];
       const values = [];
-      if (name !== undefined) { fields.push('name = ?'); values.push(name); }
-      if (email !== undefined) { fields.push('email = ?'); values.push(email); }
+      if (name !== undefined) { fields.push('name_enc = ?'); values.push(encryptPii(name)); }
+      if (email !== undefined) { fields.push('email_enc = ?'); values.push(encryptPii(email)); }
+      if (email !== undefined) { fields.push('email_hash = ?'); values.push(email ? emailHash(email) : null); }
       if (username !== undefined) {
         // Same policy as /register (erlbrew_app/lib/utils/username_policy.dart),
         // with uniqueness checked excluding the caller's own row.
@@ -427,10 +451,10 @@ export default function customersRouter(pool) {
       values.push(req.customer.sub);
       await pool.query(`UPDATE customers SET ${fields.join(', ')} WHERE id = ?`, values);
       const [rows] = await pool.query(
-        'SELECT id, phone, name, email, first_name, last_name, username, loyalty_points, loyalty_tier, total_orders, total_spent, created_at FROM customers WHERE id = ?',
+        'SELECT id, phone_enc, email_enc, name_enc, first_name_enc, last_name_enc, username, loyalty_points, loyalty_tier, total_orders, total_spent, created_at FROM customers WHERE id = ?',
         [req.customer.sub]
       );
-      res.json(rows[0]);
+      res.json(decryptCustomerRow(rows[0]));
     } catch (e) {
       console.error(e);
       if (e.code === 'ER_DUP_ENTRY' && /username/i.test(e.message || '')) {
@@ -646,14 +670,14 @@ export default function customersRouter(pool) {
       // Same normalization as order creation (orders.js) so the phone matches
       const normalizedPhone = phone.trim();
       const [rows] = await pool.query(
-        'SELECT name, loyalty_points, loyalty_tier FROM customers WHERE phone = ?',
-        [normalizedPhone]
+        'SELECT name_enc, loyalty_points, loyalty_tier FROM customers WHERE phone_hash = ?',
+        [phoneHash(normalizedPhone)]
       );
       if (!rows.length) return res.json({ found: false });
       const customer = rows[0];
       res.json({
         found: true,
-        name: customer.name,
+        name: decryptPii(customer.name_enc),
         loyalty_points: Number(customer.loyalty_points) || 0,
         loyalty_tier: customer.loyalty_tier,
       });
@@ -670,7 +694,7 @@ export default function customersRouter(pool) {
     try {
       const [rows] = await pool.query(`SELECT ${customerColumns} FROM customers WHERE id = ?`, [req.params.id]);
       if (!rows.length) return res.status(404).json({ error: 'Not found' });
-      res.json(rows[0]);
+      res.json(decryptCustomerRow(rows[0]));
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });
@@ -706,28 +730,29 @@ export default function customersRouter(pool) {
     try {
       const normalizedPhone = phone.trim();
       // Upsert: if phone exists, update name/email/notes; otherwise insert
-      const [existing] = await pool.query('SELECT id FROM customers WHERE phone = ?', [normalizedPhone]);
+      const [existing] = await pool.query('SELECT id FROM customers WHERE phone_hash = ?', [phoneHash(normalizedPhone)]);
       if (existing.length > 0) {
         const fields = [];
         const values = [];
-        if (name !== undefined) { fields.push('name = ?'); values.push(name); }
-        if (email !== undefined) { fields.push('email = ?'); values.push(email); }
+        if (name !== undefined) { fields.push('name_enc = ?'); values.push(encryptPii(name)); }
+        if (email !== undefined) { fields.push('email_enc = ?'); values.push(encryptPii(email)); }
+        if (email !== undefined) { fields.push('email_hash = ?'); values.push(email ? emailHash(email) : null); }
         if (notes !== undefined) { fields.push('notes = ?'); values.push(notes); }
         if (fields.length > 0) {
-          values.push(normalizedPhone);
-          await pool.query(`UPDATE customers SET ${fields.join(', ')} WHERE phone = ?`, values);
+          values.push(phoneHash(normalizedPhone));
+          await pool.query(`UPDATE customers SET ${fields.join(', ')} WHERE phone_hash = ?`, values);
         }
-        const [updated] = await pool.query(`SELECT ${customerColumns} FROM customers WHERE phone = ?`, [normalizedPhone]);
-        await logAudit(pool, req, { action: 'customer_update', entityType: 'customer', entityId: String(existing[0].id), details: { phone: normalizedPhone, name } });
-        return res.json(updated[0]);
+        const [updated] = await pool.query(`SELECT ${customerColumns} FROM customers WHERE phone_hash = ?`, [phoneHash(normalizedPhone)]);
+        await logAudit(pool, req, { action: 'customer_update', entityType: 'customer', entityId: String(existing[0].id), details: { phone_hash: phoneHash(normalizedPhone) } });
+        return res.json(decryptCustomerRow(updated[0]));
       }
       const [r] = await pool.query(
-        'INSERT INTO customers (phone, name, email, notes) VALUES (?, ?, ?, ?)',
-        [normalizedPhone, name || null, email || null, notes || null]
+        'INSERT INTO customers (phone_hash, phone_enc, name_enc, email_hash, email_enc, notes) VALUES (?, ?, ?, ?, ?, ?)',
+        [phoneHash(normalizedPhone), encryptPii(normalizedPhone), encryptPii(name || null), email ? emailHash(email) : null, encryptPii(email), notes || null]
       );
       const [inserted] = await pool.query(`SELECT ${customerColumns} FROM customers WHERE id = ?`, [r.insertId]);
-      await logAudit(pool, req, { action: 'customer_create', entityType: 'customer', entityId: String(r.insertId), details: { phone: normalizedPhone, name } });
-      res.json(inserted[0]);
+      await logAudit(pool, req, { action: 'customer_create', entityType: 'customer', entityId: String(r.insertId), details: { phone_hash: phoneHash(normalizedPhone) } });
+      res.json(decryptCustomerRow(inserted[0]));
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });
@@ -740,15 +765,16 @@ export default function customersRouter(pool) {
     try {
       const fields = [];
       const values = [];
-      if (name !== undefined) { fields.push('name = ?'); values.push(name); }
-      if (email !== undefined) { fields.push('email = ?'); values.push(email); }
+      if (name !== undefined) { fields.push('name_enc = ?'); values.push(encryptPii(name)); }
+      if (email !== undefined) { fields.push('email_enc = ?'); values.push(encryptPii(email)); }
+      if (email !== undefined) { fields.push('email_hash = ?'); values.push(email ? emailHash(email) : null); }
       if (notes !== undefined) { fields.push('notes = ?'); values.push(notes); }
       if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
       values.push(req.params.id);
       await pool.query(`UPDATE customers SET ${fields.join(', ')} WHERE id = ?`, values);
       const [rows] = await pool.query(`SELECT ${customerColumns} FROM customers WHERE id = ?`, [req.params.id]);
       await logAudit(pool, req, { action: 'customer_update', entityType: 'customer', entityId: req.params.id });
-      res.json(rows[0]);
+      res.json(decryptCustomerRow(rows[0]));
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: 'DB error' });

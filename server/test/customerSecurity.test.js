@@ -5,13 +5,13 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { authMiddleware } from '../src/middleware/auth.js';
 import { customerAuthMiddleware } from '../src/middleware/customerAuth.js';
-import {
-  deriveCustomerNames,
-  isVerifiedFirebaseCustomer,
-  sentinelPhoneForUid,
-} from '../src/routes/customers.js';
 
 process.env.JWT_SECRET = 'customer-security-test-secret';
+// Static imports hoist, so customers.js (→ piiCrypto.js) must be imported
+// dynamically after the env vars it requires are in place.
+process.env.CUSTOMER_ENCRYPTION_KEY = 'c'.repeat(64);
+const { deriveCustomerNames, isVerifiedFirebaseCustomer, sentinelPhoneForUid } =
+  await import('../src/routes/customers.js');
 
 function request(app, path, token) {
   return new Promise((resolve, reject) => {

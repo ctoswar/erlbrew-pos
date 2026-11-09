@@ -8,6 +8,7 @@ import { pushOrderState } from '../services/deliveryChannels.js';
 import { autoSyncDailySales } from '../services/accountingQuickBooks.js';
 import { autoSyncDailySales as autoSyncDailySalesXero } from '../services/accountingXero.js';
 import { locationScope, requireLocationId, scopedLocationCondition } from '../middleware/location.js';
+import { encryptPii, phoneHash } from '../services/piiCrypto.js';
 
 // Helpers for Asia/Taipei time (UTC+8) — server timezone-independent
 function taipeiNow() {
@@ -391,17 +392,19 @@ export default function ordersRouter(pool, googleSheets, broadcastEvent) {
         }
       }
 
-      // Look up or create customer by phone
+      // Look up or create customer by phone — phone is a hashed lookup key
+      // in the customers table (PII encrypted at rest, see services/piiCrypto)
       let customerId = null;
       if (customer_phone && typeof customer_phone === 'string' && customer_phone.trim()) {
         const normalizedPhone = customer_phone.trim();
-        const [custRows] = await pool.query('SELECT id FROM customers WHERE phone = ?', [normalizedPhone]);
+        const phoneHmac = phoneHash(normalizedPhone);
+        const [custRows] = await pool.query('SELECT id FROM customers WHERE phone_hash = ?', [phoneHmac]);
         if (custRows.length > 0) {
           customerId = custRows[0].id;
         } else {
           const [newCust] = await pool.query(
-            'INSERT INTO customers (phone, name, total_orders, total_spent) VALUES (?, ?, 0, 0)',
-            [normalizedPhone, customer_name || null]
+            'INSERT INTO customers (phone_hash, phone_enc, name_enc, total_orders, total_spent) VALUES (?, ?, ?, 0, 0)',
+            [phoneHmac, encryptPii(normalizedPhone), encryptPii(customer_name || null)]
           );
           customerId = newCust.insertId;
         }

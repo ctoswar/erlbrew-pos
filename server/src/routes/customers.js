@@ -57,7 +57,8 @@ export default function customersRouter(pool) {
   const router = Router();
   // Raw columns — encrypted values (AES-256-GCM) for customer PII.
   // phone/email live as *_hash (HMAC lookup keys) + *_enc (display value).
-  const customerColumns = 'id, phone_enc, email_enc, name_enc, first_name_enc, last_name_enc, username, notes, loyalty_points, loyalty_tier, last_points_update, total_orders, total_spent, created_at, updated_at';
+  // Notes are staff free-text that can hold PII — also encrypted.
+  const customerColumns = 'id, phone_enc, email_enc, name_enc, first_name_enc, last_name_enc, notes_enc, username, loyalty_points, loyalty_tier, last_points_update, total_orders, total_spent, created_at, updated_at';
   let firebaseApp;
   if (getApps().length) {
     firebaseApp = getApp();
@@ -737,7 +738,7 @@ export default function customersRouter(pool) {
         if (name !== undefined) { fields.push('name_enc = ?'); values.push(encryptPii(name)); }
         if (email !== undefined) { fields.push('email_enc = ?'); values.push(encryptPii(email)); }
         if (email !== undefined) { fields.push('email_hash = ?'); values.push(email ? emailHash(email) : null); }
-        if (notes !== undefined) { fields.push('notes = ?'); values.push(notes); }
+        if (notes !== undefined) { fields.push('notes_enc = ?'); values.push(encryptPii(notes)); }
         if (fields.length > 0) {
           values.push(phoneHash(normalizedPhone));
           await pool.query(`UPDATE customers SET ${fields.join(', ')} WHERE phone_hash = ?`, values);
@@ -747,8 +748,8 @@ export default function customersRouter(pool) {
         return res.json(decryptCustomerRow(updated[0]));
       }
       const [r] = await pool.query(
-        'INSERT INTO customers (phone_hash, phone_enc, name_enc, email_hash, email_enc, notes) VALUES (?, ?, ?, ?, ?, ?)',
-        [phoneHash(normalizedPhone), encryptPii(normalizedPhone), encryptPii(name || null), email ? emailHash(email) : null, encryptPii(email), notes || null]
+        'INSERT INTO customers (phone_hash, phone_enc, name_enc, email_hash, email_enc, notes_enc) VALUES (?, ?, ?, ?, ?, ?)',
+        [phoneHash(normalizedPhone), encryptPii(normalizedPhone), encryptPii(name || null), email ? emailHash(email) : null, encryptPii(email), encryptPii(notes || null)]
       );
       const [inserted] = await pool.query(`SELECT ${customerColumns} FROM customers WHERE id = ?`, [r.insertId]);
       await logAudit(pool, req, { action: 'customer_create', entityType: 'customer', entityId: String(r.insertId), details: { phone_hash: phoneHash(normalizedPhone) } });
@@ -768,7 +769,7 @@ export default function customersRouter(pool) {
       if (name !== undefined) { fields.push('name_enc = ?'); values.push(encryptPii(name)); }
       if (email !== undefined) { fields.push('email_enc = ?'); values.push(encryptPii(email)); }
       if (email !== undefined) { fields.push('email_hash = ?'); values.push(email ? emailHash(email) : null); }
-      if (notes !== undefined) { fields.push('notes = ?'); values.push(notes); }
+      if (notes !== undefined) { fields.push('notes_enc = ?'); values.push(encryptPii(notes)); }
       if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
       values.push(req.params.id);
       await pool.query(`UPDATE customers SET ${fields.join(', ')} WHERE id = ?`, values);

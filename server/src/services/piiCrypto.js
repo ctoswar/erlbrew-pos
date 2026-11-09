@@ -81,10 +81,10 @@ function hmac32(value) {
 }
 
 /** Decrypt every `_enc` column of a raw DB row into the API shape used
- *  before encryption (phone, email, name, first_name, last_name). */
+ *  before encryption (phone, email, name, first_name, last_name, notes). */
 export function decryptCustomerRow(row) {
   if (!row) return row;
-  const { phone_enc, email_enc, name_enc, first_name_enc, last_name_enc, ...rest } = row;
+  const { phone_enc, email_enc, name_enc, first_name_enc, last_name_enc, notes_enc, ...rest } = row;
   return {
     ...rest,
     phone: decryptPii(phone_enc),
@@ -92,5 +92,6 @@ export function decryptCustomerRow(row) {
     name: decryptPii(name_enc),
     first_name: decryptPii(first_name_enc),
     last_name: decryptPii(last_name_enc),
+    notes: decryptPii(notes_enc),
   };
 }

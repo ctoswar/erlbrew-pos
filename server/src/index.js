@@ -351,7 +351,7 @@ await pool.query(`
         name_enc VARCHAR(511) DEFAULT NULL,
         first_name_enc VARCHAR(255) DEFAULT NULL,
         last_name_enc VARCHAR(255) DEFAULT NULL,
-        notes TEXT DEFAULT NULL,
+        notes_enc TEXT DEFAULT NULL,
         total_orders INT DEFAULT 0,
         total_spent DECIMAL(12,2) DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

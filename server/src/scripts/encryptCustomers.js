@@ -56,6 +56,7 @@ const encColumns = [
   'name_enc VARCHAR(511) DEFAULT NULL',
   'first_name_enc VARCHAR(255) DEFAULT NULL',
   'last_name_enc VARCHAR(255) DEFAULT NULL',
+  'notes_enc TEXT DEFAULT NULL',
 ];
 
 const conn = await pool.getConnection();
@@ -97,7 +98,7 @@ try {
     // wrote plaintext into an encrypted column, stop before destroying data.
     for (const [label, cell] of [
       ['phone_enc', row.phone_enc], ['email_enc', row.email_enc], ['name_enc', row.name_enc],
-      ['first_name_enc', row.first_name_enc], ['last_name_enc', row.last_name_enc],
+      ['first_name_enc', row.first_name_enc], ['last_name_enc', row.last_name_enc], ['notes_enc', row.notes_enc],
     ]) {
       if (typeof cell === 'string' && cell !== '' && !cell.startsWith(ENC_V1_PREFIX)) {
         console.error(`[Migrations] customer id=${row.id} ${label} is not ciphertext — aborting`);
@@ -132,6 +133,26 @@ try {
     console.log('[Migrations] index on email_hash created');
   }
 
+  // ── 3b. Notes — staff free-text that can hold PII (phone numbers, names) ─
+  // Legacy plaintext `notes` → ciphertext `notes_enc`, then the column drops.
+  const hasLegacyNotes = await columnExists(conn, 'customers', 'notes');
+  if (hasLegacyNotes) {
+    const [noteRows] = await conn.query('SELECT id, notes, notes_enc FROM customers');
+    let notesMigrated = 0;
+    for (const row of noteRows) {
+      const value = typeof row.notes_enc === 'string' && row.notes_enc.startsWith(ENC_V1_PREFIX)
+        ? row.notes_enc
+        : encryptPii(row.notes);
+      if (typeof row.notes_enc === 'string' && row.notes_enc !== '' && !row.notes_enc.startsWith(ENC_V1_PREFIX)) {
+        console.error(`[Migrations] customer id=${row.id} notes_enc is not ciphertext — aborting`);
+        process.exit(1);
+      }
+      await conn.query('UPDATE customers SET notes_enc = ? WHERE id = ?', [value, row.id]);
+      notesMigrated += 1;
+    }
+    console.log(`[Migrations] notes migrated to ciphertext for ${notesMigrated} rows`);
+  }
+
   // ── 4. Verify: roundtrip every row before destroying plaintext ──────────
   const [verifyRows] = await conn.query(
     'SELECT phone_hash, phone_enc, email_hash, email_enc, name_enc, first_name_enc, last_name_enc FROM customers'
@@ -159,7 +180,7 @@ try {
       console.log(`[Migrations] dropped index ${index}`);
     }
   }
-  for (const column of ['phone', 'name', 'email', 'first_name', 'last_name']) {
+  for (const column of ['phone', 'name', 'email', 'first_name', 'last_name', 'notes']) {
     if (await columnExists(conn, 'customers', column)) {
       await conn.query(`ALTER TABLE customers DROP COLUMN \`${column}\``);
       console.log(`[Migrations] dropped plaintext column customers.${column}`);

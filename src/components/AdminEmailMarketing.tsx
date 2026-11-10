@@ -87,7 +87,7 @@ export const AdminEmailMarketing: React.FC = () => {
 
   const refreshHistory = useCallback(async (list: CampaignRow[] = []) => {
     try {
-      const rows = await apiAdminGet<CampaignRow[]>("/api/admin/emails/history");
+      const rows = await apiAdminGet<CampaignRow[]>("/admin/emails/history");
       setHistory(rows);
       return rows;
     } catch {
@@ -98,8 +98,8 @@ export const AdminEmailMarketing: React.FC = () => {
   const load = useCallback(async () => {
     try {
       const [s, rows] = await Promise.all([
-        apiAdminGet<EmailStatus>("/api/admin/emails/status"),
-        apiAdminGet<CampaignRow[]>("/api/admin/emails/history"),
+        apiAdminGet<EmailStatus>("/admin/emails/status"),
+        apiAdminGet<CampaignRow[]>("/admin/emails/history"),
       ]);
       setStatus(s);
       setHistory(rows);
@@ -159,7 +159,7 @@ export const AdminEmailMarketing: React.FC = () => {
     }
     try {
       setBusy("smtp");
-      const r = await apiAdminPut<{ ok: boolean; configured: boolean }>("/api/admin/emails/smtp", payload);
+      const r = await apiAdminPut<{ ok: boolean; configured: boolean }>("/admin/emails/smtp", payload);
       await load();
       setMsg({
         text: r.configured
@@ -186,7 +186,7 @@ export const AdminEmailMarketing: React.FC = () => {
     setPreview(null);
     try {
       setBusy("test");
-      const r = await apiAdminPost<SendResult>("/api/admin/emails/send", {
+      const r = await apiAdminPost<SendResult>("/admin/emails/send", {
         subject: subject.trim(),
         body: body.trim(),
         testTo: testTo.trim(),
@@ -209,7 +209,7 @@ export const AdminEmailMarketing: React.FC = () => {
     }
     try {
       setBusy("preview");
-      const r = await apiAdminPost<DryRunResult>("/api/admin/emails/send", {
+      const r = await apiAdminPost<DryRunResult>("/admin/emails/send", {
         subject: subject.trim(),
         body: body.trim(),
         dryRun: true,
@@ -235,7 +235,7 @@ export const AdminEmailMarketing: React.FC = () => {
     setPreview(null);
     try {
       setBusy("send");
-      const r = await apiAdminPost<SendResult>("/api/admin/emails/send", {
+      const r = await apiAdminPost<SendResult>("/admin/emails/send", {
         subject: subject.trim(),
         body: body.trim(),
       });

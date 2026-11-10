@@ -1,18 +1,66 @@
-// SMTP mailer for marketing campaigns. Dark-launch: without SMTP env vars
-// configured every send is rejected with a clear message instead of trying
-// to auth with empty credentials.
+// SMTP mailer for marketing campaigns. Dark-launch: without SMTP configured
+// every send is rejected with a clear message instead of trying to auth with
+// empty credentials.
 //
 //   SMTP_HOST, SMTP_PORT (default 587), SMTP_USER, SMTP_PASS, MAIL_FROM
+//
+// Configuration resolution: env var › company_settings (decrypted, saved
+// from Settings → Email Marketing) › unset. Env keeps winning for
+// self-hosted setups; nothing needs a restart after saving from the UI.
+// The password is stored encrypted (integrationConfig encryptSecret).
 //
 // Pure helpers (validation, recipient dedupe, plain→HTML body) are exported
 // separately for unit tests.
 
 import nodemailer from 'nodemailer';
+import { decryptSecret } from './integrationConfig.js';
 
 export const MAX_SUBJECT_LENGTH = 200;
 export const MAX_BODY_LENGTH = 10000;
 export const MAX_RECIPIENTS = 2000;
 
+// company_settings keys for the UI-saved SMTP configuration.
+// secret: true → stored encrypted via integrationConfig.
+export const SMTP_SETTING_KEYS = {
+  host: { env: 'SMTP_HOST', setting: 'smtp_host' },
+  port: { env: 'SMTP_PORT', setting: 'smtp_port' },
+  user: { env: 'SMTP_USER', setting: 'smtp_user' },
+  pass: { env: 'SMTP_PASS', setting: 'smtp_pass', secret: true },
+  from: { env: 'MAIL_FROM', setting: 'smtp_mail_from' },
+};
+
+/** company_settings lookup — tolerated when the table is missing. */
+async function getSetting(pool, key) {
+  if (!pool) return null;
+  try {
+    const [rows] = await pool.query(
+      'SELECT setting_value FROM company_settings WHERE setting_key = ? LIMIT 1',
+      [key]
+    );
+    return rows.length > 0 ? rows[0].setting_value : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Full resolution — env var › DB (decrypted when secret) › undefined. */
+export async function resolveSmtpSettings(pool) {
+  const resolved = {};
+  for (const [field, def] of Object.entries(SMTP_SETTING_KEYS)) {
+    if (def.env && process.env[def.env]) {
+      resolved[field] = { value: process.env[def.env], source: 'env' };
+      continue;
+    }
+    let raw = await getSetting(pool, def.setting);
+    if (raw != null && raw !== '') {
+      if (def.secret) raw = decryptSecret(raw);
+      resolved[field] = { value: String(raw), source: 'settings' };
+    }
+  }
+  return resolved;
+}
+
+/** Env-only view (legacy, no DB) — kept sync for tests / status fallback. */
 export function smtpConfigured() {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
@@ -21,14 +69,27 @@ export function mailFrom() {
   return process.env.MAIL_FROM || process.env.SMTP_USER || null;
 }
 
-function transport() {
-  if (!smtpConfigured()) return null;
-  const port = Number(process.env.SMTP_PORT) || 587;
+/** Ready(send-capable)? with the full env › settings resolution. */
+export async function smtpReady(pool) {
+  const cfg = await resolveSmtpSettings(pool);
+  return Boolean(cfg.host?.value && cfg.user?.value && cfg.pass?.value);
+}
+
+/** From address with the full resolution (falls back to SMTP user). */
+export async function resolvedFrom(pool) {
+  const cfg = await resolveSmtpSettings(pool);
+  return cfg.from?.value || cfg.user?.value || null;
+}
+
+/** Build a nodemailer transport from resolved settings (null when unset). */
+function transport(cfg) {
+  if (!cfg.host?.value || !cfg.user?.value || !cfg.pass?.value) return null;
+  const port = Number(cfg.port?.value) || 587;
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
+    host: cfg.host.value,
     port,
     secure: port === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    auth: { user: cfg.user.value, pass: cfg.pass.value },
   });
 }
 
@@ -93,18 +154,23 @@ export function plainTextToHtml(text) {
 </body></html>`;
 }
 
-export async function sendCampaignMail({ to, subject, text, name }) {
-  const tx = transport();
+/** Send one campaign mail. SMTP resolves env › company_settings at call time.
+ *  `pool` is optional — without it only env vars are consulted. */
+export async function sendCampaignMail(opts, pool = null) {
+  const { to, subject, text, name } = opts;
+  const cfg = await resolveSmtpSettings(pool);
+  const tx = transport(cfg);
   if (!tx) {
     const err = new Error(
-      'Email sending is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS (and optional MAIL_FROM) to server/.env and restart.'
+      'Email sending is not configured. Set SMTP_HOST (env) or save the SMTP settings in Settings → Email Marketing.'
     );
     err.code = 'SMTP_NOT_CONFIGURED';
     throw err;
   }
+  const from = cfg.from?.value || cfg.user?.value;
   const greeting = name ? `Hi ${name.split(' ')[0]},\n\n` : '';
   return tx.sendMail({
-    from: mailFrom(),
+    from,
     to,
     subject,
     text: `${greeting}${text}\n\n— Erlbrew Café\n`,

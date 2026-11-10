@@ -13,18 +13,98 @@ import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import { logAudit } from '../services/audit.js';
 import { decryptPii } from '../services/piiCrypto.js';
 import {
-  smtpConfigured,
-  mailFrom,
+  smtpReady,
+  resolvedFrom,
   validateCampaign,
   buildRecipientList,
   sendCampaignMail,
   MAX_RECIPIENTS,
 } from '../services/mailer.js';
+import { SMTP_SETTING_KEYS } from '../services/mailer.js';
+import {
+  encryptSecret,
+  maskSecret,
+} from '../services/integrationConfig.js';
 
 export default function adminEmailsRouter(pool) {
   const router = Router();
 
   router.use(authMiddleware, adminMiddleware);
+
+  // GET /config — masked SMTP configuration view (no secrets leak; the
+  // password shows a "configured + masked" flag, env sources are named).
+  router.get('/config', async (req, res) => {
+    try {
+      const [rows] = await pool.query(
+        'SELECT setting_key, setting_value FROM company_settings WHERE setting_key IN (?)',
+        [Object.values(SMTP_SETTING_KEYS).map((f) => f.setting)]
+      );
+      const stored = new Map(rows.map((r) => [r.setting_key, r.setting_value]));
+      const fields = {};
+      for (const [field, def] of Object.entries(SMTP_SETTING_KEYS)) {
+        if (def.env && process.env[def.env]) {
+          fields[field] = { configured: true, source: 'env', masked: maskSecret(process.env[def.env]) };
+          continue;
+        }
+        const raw = stored.get(def.setting) || null;
+        const value = raw && def.secret ? decryptSecret(raw) : raw;
+        fields[field] = {
+          configured: Boolean(value),
+          source: value ? 'settings' : null,
+          ...((def.secret ? { masked: maskSecret(value) } : { value: value || '' })),
+        };
+      }
+      res.json({ fields, ready: await smtpReady(pool), from: await resolvedFrom(pool) });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // PUT /config — save SMTP settings from the admin UI.
+  //   field value  ''        → skip (unchanged)
+  //   field value  null      → clear the saved setting (falls back to env)
+  //   field value  '...'     → save (password encrypted at rest)
+  // The password is NEVER returned by GET. Missing env vars keep winning
+  // until an explicit null clear ends the env override.
+  router.put('/config', async (req, res) => {
+    const updates = req.body || {};
+    const saved = [];
+    try {
+      for (const [field, def] of Object.entries(SMTP_SETTING_KEYS)) {
+        if (!(field in updates)) continue;
+        const value = updates[field];
+        if (value === '') continue; // blank → leave stored value as-is
+        if (value === null) {
+          await pool.query('DELETE FROM company_settings WHERE setting_key = ?', [def.setting]);
+          saved.push(field);
+          continue;
+        }
+        const strValue = String(value).trim();
+        if (!strValue) continue;
+        if (field === 'port' && strValue && !/^\d{1,5}$/.test(strValue)) {
+          return res.status(400).json({ error: 'SMTP port must be a number' });
+        }
+        const stored = def.secret ? encryptSecret(strValue) : strValue;
+        await pool.query(
+          `INSERT INTO company_settings (setting_key, setting_value) VALUES (?, ?)
+           ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+          [def.setting, stored]
+        );
+        saved.push(field);
+      }
+      await logAudit(pool, req, {
+        action: 'email_smtp_config',
+        entityType: 'marketing_campaign',
+        details: { fields: saved },
+      });
+      res.json({ ok: true, saved, ready: await smtpReady(pool) });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
 
   // GET /status — is SMTP set up? how many customers can receive?
   router.get('/status', async (req, res) => {
@@ -34,8 +114,8 @@ export default function adminEmailsRouter(pool) {
       );
       const { recipients, skipped } = await resolveRecipients(rows);
       res.json({
-        configured: smtpConfigured(),
-        from: mailFrom(),
+        configured: await smtpReady(pool),
+        from: await resolvedFrom(pool),
         recipientCount: recipients.length,
         skippedWithoutValidEmail: skipped.length,
       });
@@ -66,14 +146,14 @@ export default function adminEmailsRouter(pool) {
     try {
       // Test send — one message to the admin's own inbox, campaign not logged.
       if (isTest) {
-        if (!smtpConfigured()) {
+        if (!(await smtpReady(pool))) {
           return res.status(400).json({
             error:
-              'Email sending is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS (and optional MAIL_FROM) to server/.env and restart.',
+              'Email sending is not configured. Set SMTP_HOST (env) or save the SMTP settings in Settings → Email Marketing.',
           });
         }
         try {
-          await sendCampaignMail({ to: testAddress, subject: `[TEST] ${cleanSubject}`, text: cleanBody, name: null });
+          await sendCampaignMail({ to: testAddress, subject: `[TEST] ${cleanSubject}`, text: cleanBody, name: null }, pool);
           await logAudit(pool, req, { action: 'email_test_send', entityType: 'marketing_campaign', details: { subject: cleanSubject, to: testAddress } });
           return res.json({ ok: true, test: true, sentTo: testAddress });
         } catch (e) {
@@ -98,10 +178,10 @@ export default function adminEmailsRouter(pool) {
         });
       }
 
-      if (!smtpConfigured()) {
+      if (!(await smtpReady(pool))) {
         return res.status(400).json({
           error:
-            'Email sending is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS (and optional MAIL_FROM) to server/.env and restart.',
+            'Email sending is not configured. Set SMTP_HOST (env) or save the SMTP settings in Settings → Email Marketing.',
         });
       }
       if (audience.length === 0) {
@@ -126,7 +206,7 @@ export default function adminEmailsRouter(pool) {
         let firstError = null;
         for (const recipient of audience) {
           try {
-            await sendCampaignMail({ to: recipient.email, subject: cleanSubject, text: cleanBody, name: recipient.name });
+            await sendCampaignMail({ to: recipient.email, subject: cleanSubject, text: cleanBody, name: recipient.name }, pool);
             delivered += 1;
           } catch (e) {
             failed += 1;

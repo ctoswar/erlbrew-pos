@@ -27,6 +27,8 @@ const AdminCustomers = lazy(() => import("./AdminCustomers").then(({ AdminCustom
 const AdminLocations = lazy(() => import("./AdminLocations").then(({ AdminLocations }) => ({ default: AdminLocations })));
 const AdminTransfers = lazy(() => import("./AdminTransfers").then(({ AdminTransfers }) => ({ default: AdminTransfers })));
 
+const AdminEmailMarketing = lazy(() => import("./AdminEmailMarketing").then(({ AdminEmailMarketing }) => ({ default: AdminEmailMarketing })));
+
 const STORAGE_KEY_ORDERS = 'erlbrew_admin_orders';
 const STORAGE_KEY_INVENTORY = 'erlbrew_admin_inventory';
 const STORAGE_KEY_LAST_SYNC = 'erlbrew_admin_last_sync';
@@ -36,7 +38,7 @@ interface Props {
   onLogout: () => void;
 }
 
-type AdminTab = 'dashboard' | 'insights' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings-integrations' | 'settings-print' | 'settings-display' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'payroll' | 'audit' | 'customers' | 'locations' | 'transfers';
+type AdminTab = 'dashboard' | 'insights' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings-integrations' | 'settings-print' | 'settings-display' | 'settings-email' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'payroll' | 'audit' | 'customers' | 'locations' | 'transfers';
 
 const TABS: { label: string; value: AdminTab; icon: string }[] = [
   { label: 'Dashboard', value: 'dashboard', icon: 'dashboard' },
@@ -334,6 +336,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
   const activeTabLabel = activeTab.startsWith('settings-')
     ? ({
         'settings-integrations': 'Integrations',
+        'settings-email': 'Email Marketing',
         'settings-print': 'Print Settings',
         'settings-display': 'Display Messages',
       } as Record<string, string>)[activeTab] || 'Settings'
@@ -391,6 +394,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             <div className={`admin-settings-submenu ${settingsOpen ? 'is-open' : ''}`} aria-hidden={!settingsOpen}>
               {[
                 { label: 'Integrations', value: 'settings-integrations' as AdminTab },
+                { label: 'Email Marketing', value: 'settings-email' as AdminTab },
                 { label: 'Print Settings', value: 'settings-print' as AdminTab },
                 { label: 'Display Messages', value: 'settings-display' as AdminTab },
               ].map(({ label, value }) => (
@@ -477,6 +481,14 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             </div>
             <div className="bg-erl-surface rounded-xl border border-erl-border-subtle mb-4">
               <AdminIntegrations />
+            </div>
+          </div>
+        )}
+        {activeTab === 'settings-email' && (
+          <div>
+            <h2 className="text-lg text-erl-text-primary mb-5">Email Marketing</h2>
+            <div className="bg-erl-surface rounded-xl border border-erl-border-subtle mb-4">
+              <AdminEmailMarketing />
             </div>
           </div>
         )}

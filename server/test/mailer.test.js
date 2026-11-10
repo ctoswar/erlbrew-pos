@@ -1,9 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
+process.env.JWT_SECRET = 'mailer-test-secret';
+
 const {
-  smtpConfigured,
-  mailFrom,
+  resolveSmtpFields,
+  smtpConfigComplete,
   validateCampaign,
   buildRecipientList,
   plainTextToHtml,
@@ -11,6 +13,34 @@ const {
   MAX_SUBJECT_LENGTH,
   MAX_BODY_LENGTH,
 } = await import('../src/services/mailer.js');
+const { encryptSecret } = await import('../src/services/integrationConfig.js');
+
+/** pool-shaped fake that answers the company_settings lookups with a map */
+function fakeSettingsPool(values) {
+  return {
+    query: async (_sql, params) => {
+      const key = params[0];
+      const v = values[key];
+      return v != null ? [[{ setting_value: v }]] : [[]];
+    },
+  };
+}
+
+/** clean env save/restore so SMTP resolution tests don't leak state */
+function envSnapshot(names) {
+  const snap = {};
+  for (const n of names) snap[n] = process.env[n];
+  return {
+    restore() {
+      for (const n of names) {
+        if (snap[n] === undefined) delete process.env[n];
+        else process.env[n] = snap[n];
+      }
+    },
+  };
+}
+
+const SMTP_ENV = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'MAIL_FROM'];
 
 test('validateCampaign accepts a clean subject + body', () => {
   assert.equal(validateCampaign({ subject: 'Double-double weekend!', body: 'Two stamps per drink until Sunday.' }), null);
@@ -71,27 +101,53 @@ test('plainTextToHtml escapes markup and breaks paragraphs on blank lines', () =
   assert.equal(paragraphs.length, 2);
 });
 
-test('mailFrom falls back to SMTP_USER when MAIL_FROM is unset', async () => {
-  const prev = { host: process.env.SMTP_HOST, user: process.env.SMTP_USER, pass: process.env.SMTP_PASS, from: process.env.MAIL_FROM };
-  process.env.SMTP_HOST = 'smtp.test.ph';
-  process.env.SMTP_USER = 'ads@erlbrew.ph';
-  process.env.SMTP_PASS = 'secret';
-  delete process.env.MAIL_FROM;
-  const mailer = await import('../src/services/mailer.js');
-  assert.equal(mailer.smtpConfigured(), true);
-  assert.equal(mailer.mailFrom(), 'ads@erlbrew.ph');
-  Object.assign(process.env, prev);
+test('resolveSmtpFields reads company_settings, decrypting the stored password', async () => {
+  const env = envSnapshot([...SMTP_ENV]);
+  for (const n of SMTP_ENV) delete process.env[n];
+  const pool = fakeSettingsPool({
+    smtp_host: 'smtp.erlbrew.ph',
+    smtp_port: '465',
+    smtp_user: 'ads@erlbrew.ph',
+    smtp_pass: encryptSecret('topsecret'),
+    smtp_mail_from: 'hello@erlbrew.ph',
+  });
+  const fields = await resolveSmtpFields(pool);
+  assert.equal(fields.host, 'smtp.erlbrew.ph');
+  assert.equal(fields.port, '465');
+  assert.equal(fields.user, 'ads@erlbrew.ph');
+  assert.equal(fields.pass, 'topsecret'); // decrypted from enc:v1: payload
+  assert.equal(fields.from, 'hello@erlbrew.ph');
+  assert.equal(fields.source, 'settings');
+  assert.equal(smtpConfigComplete(fields), true);
+  env.restore();
+});
+
+test('resolveSmtpFields: env wins per field, nothing saved → not configured', async () => {
+  const env = envSnapshot([...SMTP_ENV]);
+  for (const n of SMTP_ENV) delete process.env[n];
+  const empty = await resolveSmtpFields(fakeSettingsPool({}));
+  assert.equal(empty.source, null);
+  assert.equal(smtpConfigComplete(empty), false);
+
+  process.env.SMTP_HOST = 'smtp.ph';
+  process.env.SMTP_USER = 'env@erlbrew.ph';
+  process.env.SMTP_PASS = 'envpass';
+  const mixed = await resolveSmtpFields(
+    fakeSettingsPool({ smtp_host: 'db.ph', smtp_pass: encryptSecret('dbpass') })
+  );
+  assert.equal(mixed.host, 'smtp.ph'); // env › settings for host
+  assert.equal(mixed.pass, 'envpass'); // env › settings for pass
+  assert.equal(mixed.source, 'env');
+  assert.equal(smtpConfigComplete(mixed), true);
+  env.restore();
 });
 
 test('sendCampaignMail refuses to run while SMTP is unconfigured', async () => {
-  const prev = { host: process.env.SMTP_HOST, user: process.env.SMTP_USER, pass: process.env.SMTP_PASS };
-  delete process.env.SMTP_HOST;
-  delete process.env.SMTP_USER;
-  delete process.env.SMTP_PASS;
-  const mailer = await import('../src/services/mailer.js');
+  const env = envSnapshot([...SMTP_ENV]);
+  for (const n of SMTP_ENV) delete process.env[n];
   await assert.rejects(
-    () => mailer.sendCampaignMail({ to: 'jane@example.com', subject: 'Hi', text: 'Sale', name: 'Jane' }),
-    (e) => e.code === 'SMTP_NOT_CONFIGURED' && /SMTP_HOST/.test(e.message),
+    () => sendCampaignMail(fakeSettingsPool({}), { to: 'jane@example.com', subject: 'Hi', text: 'Sale', name: 'Jane' }),
+    (e) => e.code === 'SMTP_NOT_CONFIGURED' && /Email Marketing/.test(e.message),
   );
-  Object.assign(process.env, prev);
+  env.restore();
 });

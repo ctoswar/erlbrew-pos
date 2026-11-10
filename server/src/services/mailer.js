@@ -1,34 +1,92 @@
-// SMTP mailer for marketing campaigns. Dark-launch: without SMTP env vars
-// configured every send is rejected with a clear message instead of trying
-// to auth with empty credentials.
+// SMTP mailer for marketing campaigns. Dark-launch: without SMTP configured
+// every send is rejected with a clear message instead of trying to auth with
+// empty credentials.
 //
-//   SMTP_HOST, SMTP_PORT (default 587), SMTP_USER, SMTP_PASS, MAIL_FROM
+// Credentials live in company_settings (saved from the admin Settings →
+// Email Marketing card: smtp_host/port/user/pass/mail_from — pass encrypted
+// AES-256-GCM via integrationConfig); env vars SMTP_HOST, SMTP_PORT,
+// SMTP_USER, SMTP_PASS, MAIL_FROM still win when set (same env › settings
+// rule as every other provider).
 //
 // Pure helpers (validation, recipient dedupe, plain→HTML body) are exported
 // separately for unit tests.
 
 import nodemailer from 'nodemailer';
+import { decryptSecret } from './integrationConfig.js';
 
 export const MAX_SUBJECT_LENGTH = 200;
 export const MAX_BODY_LENGTH = 10000;
 export const MAX_RECIPIENTS = 2000;
 
-export function smtpConfigured() {
-  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+// SMTP lives in company_settings (admin Settings UI), same model as the
+// other provider credentials: each field resolves `env var › saved setting`
+// so .env keeps working for self-hosted setups without touching the DB.
+export const SMTP_SETTING_KEYS = {
+  host: 'smtp_host',
+  port: 'smtp_port',
+  user: 'smtp_user',
+  pass: 'smtp_pass',
+  from: 'smtp_mail_from',
+};
+
+async function getSettingValue(pool, key) {
+  try {
+    const [rows] = await pool.query(
+      'SELECT setting_value FROM company_settings WHERE setting_key = ?',
+      [key]
+    );
+    return rows.length > 0 ? rows[0].setting_value : null;
+  } catch {
+    return null; // company_settings table may not exist yet
+  }
 }
 
-export function mailFrom() {
-  return process.env.MAIL_FROM || process.env.SMTP_USER || null;
+const firstVal = (...vals) => vals.find((v) => v !== null && v !== undefined && v !== '') ?? null;
+
+/**
+ * Resolve all SMTP fields for display + sending: env › DB (smtp_pass is
+ * decrypted from the integrations-style `enc:v1:` payload). `source` tells
+ * the UI where the live config came from ('env' | 'settings' | null).
+ */
+export async function resolveSmtpFields(pool) {
+  const [dbHost, dbPort, dbUser, dbPassRaw, dbFrom] = await Promise.all([
+    getSettingValue(pool, SMTP_SETTING_KEYS.host),
+    getSettingValue(pool, SMTP_SETTING_KEYS.port),
+    getSettingValue(pool, SMTP_SETTING_KEYS.user),
+    getSettingValue(pool, SMTP_SETTING_KEYS.pass),
+    getSettingValue(pool, SMTP_SETTING_KEYS.from),
+  ]);
+  const passRaw = firstVal(process.env.SMTP_PASS, dbPassRaw);
+  let source = null;
+  if (process.env.SMTP_HOST || process.env.SMTP_USER || process.env.SMTP_PASS) {
+    source = 'env';
+  } else if (dbHost || dbUser || dbPassRaw) {
+    source = 'settings';
+  }
+  return {
+    host: firstVal(process.env.SMTP_HOST, dbHost),
+    port: firstVal(process.env.SMTP_PORT, dbPort),
+    user: firstVal(process.env.SMTP_USER, dbUser),
+    pass: passRaw
+      ? String(passRaw).startsWith('enc:v1:') ? decryptSecret(passRaw) : passRaw
+      : null,
+    from: firstVal(process.env.MAIL_FROM, dbFrom),
+    source,
+  };
 }
 
-function transport() {
-  if (!smtpConfigured()) return null;
-  const port = Number(process.env.SMTP_PORT) || 587;
+/** Can a mail go out right now? (host + user + pass; port/from are optional) */
+export function smtpConfigComplete(fields) {
+  return Boolean(fields && fields.host && fields.user && fields.pass);
+}
+
+function buildTransport(fields) {
+  const port = Number(fields.port) || 587;
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
+    host: fields.host,
     port,
     secure: port === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    auth: { user: fields.user, pass: fields.pass },
   });
 }
 
@@ -93,18 +151,24 @@ export function plainTextToHtml(text) {
 </body></html>`;
 }
 
-export async function sendCampaignMail({ to, subject, text, name }) {
-  const tx = transport();
-  if (!tx) {
+/**
+ * Sends one marketing mail. SMTP comes from resolveSmtpFields() — a missing
+ * host/user/pass throws with code SMTP_NOT_CONFIGURED (the route surfaces the
+ * "save it in Settings" guidance to the UI).
+ */
+export async function sendCampaignMail(pool, { to, subject, text, name }) {
+  const fields = await resolveSmtpFields(pool);
+  if (!smtpConfigComplete(fields)) {
     const err = new Error(
-      'Email sending is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS (and optional MAIL_FROM) to server/.env and restart.'
+      'Email sending is not configured. Open Admin → Settings → Email Marketing → SMTP and save a host, user and password (or set SMTP_HOST/SMTP_USER/SMTP_PASS in server/.env and restart).'
     );
     err.code = 'SMTP_NOT_CONFIGURED';
     throw err;
   }
+  const from = fields.from || fields.user;
   const greeting = name ? `Hi ${name.split(' ')[0]},\n\n` : '';
-  return tx.sendMail({
-    from: mailFrom(),
+  return buildTransport(fields).sendMail({
+    from,
     to,
     subject,
     text: `${greeting}${text}\n\n— Erlbrew Café\n`,

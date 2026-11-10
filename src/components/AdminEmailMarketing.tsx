@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { apiAdminGet, apiAdminPost } from "../utils/api";
+import { apiAdminGet, apiAdminPost, apiAdminPut } from "../utils/api";
 import { parseServerDatetime, formatTime } from "../utils";
 
 /**
@@ -7,15 +7,29 @@ import { parseServerDatetime, formatTime } from "../utils";
  * customers with an email on file (server decrypts addresses; they are
  * only ever surfaced in the dry-run preview, max 10).
  *
- * Dark-launch: the server rejects sends until SMTP is configured in
- * server/.env (SMTP_HOST/PORT/USER/PASS + optional MAIL_FROM) — the status
- * box here reflects exactly that, so the panel is still explorable without
- * credentials.
+ * SMTP credentials are saved right in this panel (card below) — stored in
+ * company_settings with the password encrypted, the same way the other
+ * provider configs are. server/.env SMTP_* vars still win when set. The
+ * server refuses sends until host + user + password resolve, and the status
+ * box reflects exactly that, so the panel is explorable before any creds.
  */
+
+interface SmtpField {
+  configured: boolean;
+  value?: string;
+  masked?: string | null;
+}
 
 interface EmailStatus {
   configured: boolean;
-  from: string | null;
+  source: "env" | "settings" | null;
+  smtp: {
+    host: SmtpField;
+    port: SmtpField;
+    user: SmtpField;
+    pass: SmtpField;
+    from: SmtpField;
+  };
   recipientCount: number;
   skippedWithoutValidEmail: number;
 }
@@ -46,7 +60,7 @@ interface DryRunResult {
   preview: { id: number; email: string; name: string | null }[];
 }
 
-type Busy = "test" | "send" | "preview" | null;
+type Busy = "test" | "send" | "preview" | "smtp" | null;
 
 const MAX_SUBJECT = 200;
 const MAX_BODY = 10000;
@@ -63,6 +77,7 @@ export const AdminEmailMarketing: React.FC = () => {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [testTo, setTestTo] = useState("");
+  const [smtpDraft, setSmtpDraft] = useState({ host: "", port: "", user: "", pass: "", from: "" });
   const [busy, setBusy] = useState<Busy>(null);
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [preview, setPreview] = useState<DryRunResult | null>(null);
@@ -88,6 +103,15 @@ export const AdminEmailMarketing: React.FC = () => {
       ]);
       setStatus(s);
       setHistory(rows);
+      // Mirror the saved values into the drafts (password stays hidden —
+      // only its mask shows). Blank = keep current on save.
+      setSmtpDraft({
+        host: s.smtp?.host?.value || "",
+        port: s.smtp?.port?.value || "",
+        user: s.smtp?.user?.value || "",
+        pass: "",
+        from: s.smtp?.from?.value || "",
+      });
     } catch (e) {
       setMsg({ text: errorText(e), type: "error" });
     } finally {
@@ -121,6 +145,34 @@ export const AdminEmailMarketing: React.FC = () => {
         : !body.trim()
           ? "Write the email body"
           : null;
+
+  const handleSaveSmtp = async () => {
+    const payload: Record<string, string> = {};
+    if (smtpDraft.host.trim()) payload.host = smtpDraft.host.trim();
+    if (smtpDraft.port.trim()) payload.port = smtpDraft.port.trim();
+    if (smtpDraft.user.trim()) payload.user = smtpDraft.user.trim();
+    if (smtpDraft.pass.trim()) payload.pass = smtpDraft.pass.trim();
+    if (smtpDraft.from.trim()) payload.from = smtpDraft.from.trim();
+    if (Object.keys(payload).length === 0) {
+      setMsg({ text: "Nothing to save — fill at least one SMTP field", type: "error" });
+      return;
+    }
+    try {
+      setBusy("smtp");
+      const r = await apiAdminPut<{ ok: boolean; configured: boolean }>("/api/admin/emails/smtp", payload);
+      await load();
+      setMsg({
+        text: r.configured
+          ? "SMTP settings saved — email sending is live."
+          : "SMTP settings saved — it still needs a host, user and password before sending works.",
+        type: r.configured ? "success" : "error",
+      });
+    } catch (e) {
+      setMsg({ text: errorText(e), type: "error" });
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const handleTest = async () => {
     if (composeError) {
@@ -204,17 +256,17 @@ export const AdminEmailMarketing: React.FC = () => {
 
   const statusBadge = () => {
     if (loading) return <span className="text-erl-text-muted text-xs">Loading…</span>;
-    if (!status) return <span className="text-erl-error text-xs font-bold">Status unavailable</span>;
+    if (!status) return <span className="text-xs font-bold text-[#C65D51]">Status unavailable</span>;
     if (!status.configured) {
       return (
         <span className="text-[11px] font-bold text-[#C65D51]">
-          ⚠ Not configured — add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS (+ MAIL_FROM) to server/.env and restart
+          ⚠ Not configured — save your SMTP details below
         </span>
       );
     }
     return (
       <span className="text-[11px] font-bold text-[#4F806A]">
-        ✔ SMTP ready{status.from ? ` · from ${status.from}` : ""} · {status.recipientCount} recipient
+        ✔ SMTP live ({status.source === "env" ? "from .env" : "saved in settings"}) · {status.recipientCount} recipient
         {status.recipientCount === 1 ? "" : "s"} on file
       </span>
     );
@@ -240,6 +292,100 @@ export const AdminEmailMarketing: React.FC = () => {
           {msg.text}
         </div>
       )}
+
+      {/* SMTP server — credentials are saved in company_settings (password
+          encrypted at rest, never echoed back, only its mask is shown) */}
+      <div className="glass-panel rounded-2xl p-4 mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-bold text-erl-text-primary uppercase tracking-wider">
+            SMTP Server
+          </span>
+          {status?.configured && (
+            <span className="text-[10px] font-bold text-[#4F806A]">
+              {status.source === "env" ? "from server .env" : "saved in settings"}
+              {status.smtp.pass.masked ? ` · password ${status.smtp.pass.masked}` : ""}
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label className="block text-[8px] text-erl-text-muted tracking-[2px] uppercase font-bold mb-1">
+              Host
+            </label>
+            <input
+              type="text"
+              value={smtpDraft.host}
+              onChange={(e) => setSmtpDraft((d) => ({ ...d, host: e.target.value }))}
+              placeholder="smtp.gmail.com"
+              className="w-full min-h-[44px] bg-erl-surface border border-erl-border-default rounded-xl px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent transition-colors"
+            />
+          </div>
+          <div>
+            <label className="block text-[8px] text-erl-text-muted tracking-[2px] uppercase font-bold mb-1">
+              Port (blank = 587)
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={smtpDraft.port}
+              onChange={(e) => setSmtpDraft((d) => ({ ...d, port: e.target.value }))}
+              placeholder="587 (465 = SSL)"
+              className="w-full min-h-[44px] bg-erl-surface border border-erl-border-default rounded-xl px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent transition-colors"
+            />
+          </div>
+          <div>
+            <label className="block text-[8px] text-erl-text-muted tracking-[2px] uppercase font-bold mb-1">
+              Username
+            </label>
+            <input
+              type="text"
+              value={smtpDraft.user}
+              onChange={(e) => setSmtpDraft((d) => ({ ...d, user: e.target.value }))}
+              placeholder="your.smtp.login"
+              autoComplete="off"
+              className="w-full min-h-[44px] bg-erl-surface border border-erl-border-default rounded-xl px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent transition-colors"
+            />
+          </div>
+          <div>
+            <label className="block text-[8px] text-erl-text-muted tracking-[2px] uppercase font-bold mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              value={smtpDraft.pass}
+              onChange={(e) => setSmtpDraft((d) => ({ ...d, pass: e.target.value }))}
+              placeholder={status?.smtp.pass.masked || "app password"}
+              autoComplete="new-password"
+              className="w-full min-h-[44px] bg-erl-surface border border-erl-border-default rounded-xl px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent transition-colors"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-[8px] text-erl-text-muted tracking-[2px] uppercase font-bold mb-1">
+              From address (blank = username)
+            </label>
+            <input
+              type="text"
+              value={smtpDraft.from}
+              onChange={(e) => setSmtpDraft((d) => ({ ...d, from: e.target.value }))}
+              placeholder="hello@erlbrew.ph"
+              className="w-full min-h-[44px] bg-erl-surface border border-erl-border-default rounded-xl px-3 py-2 text-xs text-erl-text-primary outline-none focus:border-erl-accent transition-colors"
+            />
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-2">
+          <span className="text-[9px] text-erl-text-muted">
+            Leave a field blank to keep its current value. The password is stored encrypted
+            and is never displayed again.
+          </span>
+          <button
+            onClick={() => void handleSaveSmtp()}
+            disabled={busy !== null}
+            className="min-h-[44px] px-5 rounded-xl bg-erl-accent text-white hover:bg-erl-accent/90 text-[11px] font-bold uppercase tracking-wider cursor-pointer disabled:opacity-50 transition-colors flex-shrink-0"
+          >
+            {busy === "smtp" ? "Saving…" : "Save SMTP"}
+          </button>
+        </div>
+      </div>
 
       {/* Composer */}
       <div className="glass-panel rounded-2xl p-4 mb-4 space-y-2">

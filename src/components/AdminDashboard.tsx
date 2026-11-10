@@ -15,6 +15,7 @@ const AdminMenu = lazy(() => import("./AdminMenu").then(({ AdminMenu }) => ({ de
 const AdminStaff = lazy(() => import("./AdminStaff").then(({ AdminStaff }) => ({ default: AdminStaff })));
 const AdminInventory = lazy(() => import("./AdminInventory").then(({ AdminInventory }) => ({ default: AdminInventory })));
 const AdminIntegrations = lazy(() => import("./AdminIntegrations").then(({ AdminIntegrations }) => ({ default: AdminIntegrations })));
+const AdminEmailMarketing = lazy(() => import("./AdminEmailMarketing").then(({ AdminEmailMarketing }) => ({ default: AdminEmailMarketing })));
 const AdminPrintSettings = lazy(() => import("./AdminPrintSettings").then(({ AdminPrintSettings }) => ({ default: AdminPrintSettings })));
 const AdminDisplayMessages = lazy(() => import("./AdminDisplayMessages").then(({ AdminDisplayMessages }) => ({ default: AdminDisplayMessages })));
 const ZReportScreen = lazy(() => import("./ZReportScreen").then(({ ZReportScreen }) => ({ default: ZReportScreen })));
@@ -36,7 +37,7 @@ interface Props {
   onLogout: () => void;
 }
 
-type AdminTab = 'dashboard' | 'insights' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings-integrations' | 'settings-print' | 'settings-display' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'payroll' | 'audit' | 'customers' | 'locations' | 'transfers';
+type AdminTab = 'dashboard' | 'insights' | 'menu' | 'staff' | 'inventory' | 'cogs' | 'reports' | 'history' | 'suppliers' | 'settings-integrations' | 'settings-email' | 'settings-print' | 'settings-display' | 'backup' | 'zreport' | 'cashdrawer' | 'time' | 'payroll' | 'audit' | 'customers' | 'locations' | 'transfers';
 
 const TABS: { label: string; value: AdminTab; icon: string }[] = [
   { label: 'Dashboard', value: 'dashboard', icon: 'dashboard' },
@@ -334,6 +335,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
   const activeTabLabel = activeTab.startsWith('settings-')
     ? ({
         'settings-integrations': 'Integrations',
+        'settings-email': 'Email Marketing',
         'settings-print': 'Print Settings',
         'settings-display': 'Display Messages',
       } as Record<string, string>)[activeTab] || 'Settings'
@@ -391,6 +393,7 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             <div className={`admin-settings-submenu ${settingsOpen ? 'is-open' : ''}`} aria-hidden={!settingsOpen}>
               {[
                 { label: 'Integrations', value: 'settings-integrations' as AdminTab },
+                { label: 'Email Marketing', value: 'settings-email' as AdminTab },
                 { label: 'Print Settings', value: 'settings-print' as AdminTab },
                 { label: 'Display Messages', value: 'settings-display' as AdminTab },
               ].map(({ label, value }) => (
@@ -477,6 +480,19 @@ export const AdminDashboard: React.FC<Props> = ({ staff, onLogout }) => {
             </div>
             <div className="bg-erl-surface rounded-xl border border-erl-border-subtle mb-4">
               <AdminIntegrations />
+            </div>
+          </div>
+        )}
+        {activeTab === 'settings-email' && (
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg text-erl-text-primary">Email Marketing</h2>
+              <button onClick={toggleFullscreen} className="py-2 px-3 text-[10px] rounded-lg border border-erl-border-default bg-erl-surface text-erl-text-muted cursor-pointer hover:bg-white/[0.06] hover:text-erl-text-secondary transition-all duration-200">
+                {isFullscreen ? '✕ Exit Fullscreen' : '⛶ Fullscreen'}
+              </button>
+            </div>
+            <div className="bg-erl-surface rounded-xl border border-erl-border-subtle mb-4">
+              <AdminEmailMarketing />
             </div>
           </div>
         )}

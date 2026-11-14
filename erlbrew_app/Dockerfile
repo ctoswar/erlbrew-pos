@@ -29,9 +29,20 @@ RUN flutter build web --release --no-tree-shake-icons --dart-define=POS_API_URL=
 # even after the origin was fixed). Stamp references with a content hash of
 # main.dart.js: identical build -> identical URL (cache-friendly), any change ->
 # a URL no cache has ever seen (always fresh, no purge needed).
+#
+# Same story for the icon font: FontManifest.json is the engine's only source
+# for the font URL, and both it and the font are REBUILT IN PLACE under the
+# same name. A stale cached manifest kept pinning the old font URL, and the
+# old immutable-cached font subset was missing the reward glyphs — icons
+# stayed blank after deploys even with the new main.dart.js. Stamp the font
+# path inside the manifest (nginx serves the query suffix harmlessly) so the
+# font URL is unique per build and immutable caching becomes correct.
 RUN STAMP=$(md5sum build/web/main.dart.js | cut -c1-10) && \
     sed -i "s/main\.dart\.js/main.dart.js?v=$STAMP/g" build/web/flutter_bootstrap.js && \
-    sed -i "s/flutter_bootstrap\.js/flutter_bootstrap.js?v=$STAMP/g" build/web/index.html
+    sed -i "s/flutter_bootstrap\.js/flutter_bootstrap.js?v=$STAMP/g" build/web/index.html && \
+    sed -i -e "s|fonts/MaterialIcons-Regular.otf|fonts/MaterialIcons-Regular.otf?v=$STAMP|" \
+           -e "s|packages/cupertino_icons/assets/CupertinoIcons.ttf|packages/cupertino_icons/assets/CupertinoIcons.ttf?v=$STAMP|" \
+           build/web/assets/FontManifest.json
 
 # Stage 2: Serve statically
 FROM nginx:alpine

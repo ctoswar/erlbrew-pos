@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme/app_theme.dart';
 
-/// Bundled reward icons (see `assets/icons/` in pubspec.yaml).
-const String _latteIcon = 'assets/icons/erlbrew_latte_icon.svg';
-const String _matchaIcon = 'assets/icons/erlbrew_matcha_icon.svg';
-const String _coldBrewIcon = 'assets/icons/erlbrew_coldbrew_icon.svg';
-const String _pastryIcon = 'assets/icons/erlbrew_pastry_icon.svg';
-
-/// Resolves the custom SVG icon for a reward from its category or name
+/// Resolves the Flutter built-in icon for a reward from its category or name
 /// (case-insensitive contains-match). The rewards API has no dedicated
 /// category field yet, so [description] is matched too — e.g. "Free Matcha
 /// Latte" / "coffee" both resolve this way.
@@ -21,19 +14,19 @@ const String _pastryIcon = 'assets/icons/erlbrew_pastry_icon.svg';
 /// More specific drinks are checked before the generic coffee match so
 /// "iced matcha latte" maps to matcha, not the latte icon.
 ///
-/// Returns the SVG asset path, or `null` when nothing matches so callers
+/// Returns the matching [IconData], or `null` when nothing matches so callers
 /// can fall back to the reward's emoji.
-String? rewardIconFor({
+IconData? rewardIconFor({
   String? category,
   String? title,
   String? description,
   String? iconKey,
 }) {
   final key = (iconKey ?? '').trim().toLowerCase();
-  if (key == 'latte') return _latteIcon;
-  if (key == 'matcha') return _matchaIcon;
-  if (key == 'coldbrew') return _coldBrewIcon;
-  if (key == 'pastry') return _pastryIcon;
+  if (key == 'latte') return Icons.local_cafe;
+  if (key == 'matcha') return Icons.emoji_food_beverage;
+  if (key == 'coldbrew') return Icons.local_drink;
+  if (key == 'pastry') return Icons.bakery_dining;
 
   final text = [
     category,
@@ -41,29 +34,29 @@ String? rewardIconFor({
     description,
   ].whereType<String>().join(' ').toLowerCase();
 
-  if (text.contains('matcha')) return _matchaIcon;
+  if (text.contains('matcha')) return Icons.emoji_food_beverage;
   if (text.contains('cold brew') || text.contains('coldbrew') || text.contains('iced')) {
-    return _coldBrewIcon;
+    return Icons.local_drink;
   }
   if (text.contains('pastry') ||
       text.contains('croissant') ||
       text.contains('bread') ||
       text.contains('cake')) {
-    return _pastryIcon;
+    return Icons.bakery_dining;
   }
   if (text.contains('latte') ||
       text.contains('coffee') ||
       text.contains('espresso') ||
       text.contains('americano') ||
       text.contains('cappuccino')) {
-    return _latteIcon;
+    return Icons.local_cafe;
   }
   return null;
 }
 
 /// Renders a reward's icon for use inside the existing beige rounded
-/// container: the [rewardIconFor] SVG when one matches, otherwise the
-/// reward's emoji.
+/// container: the [rewardIconFor] Flutter icon when one matches, otherwise
+/// the reward's emoji.
 Widget rewardIconVisual({
   String? category,
   String? title,
@@ -73,14 +66,14 @@ Widget rewardIconVisual({
   double iconSize = 30,
   double emojiFontSize = 20,
 }) {
-  final asset = rewardIconFor(
+  final icon = rewardIconFor(
     category: category,
     title: title,
     description: description,
     iconKey: iconKey,
   );
-  if (asset != null) {
-    return SvgPicture.asset(asset, width: iconSize, height: iconSize);
+  if (icon != null) {
+    return Icon(icon, size: iconSize, color: AppColors.gold);
   }
   return Text(emoji ?? '🎁', style: TextStyle(fontSize: emojiFontSize));
 }
@@ -92,27 +85,24 @@ Widget rewardIconVisual({
 class RewardIconChoice {
   final String key;
   final String label;
-  final String? asset; // null only for the auto choice
-  final String emoji; // shown when the reward has no SVG asset
+  final IconData icon; // Flutter built-in icon shown in the dropdown
 
   const RewardIconChoice({
     required this.key,
     required this.label,
-    this.asset,
-    required this.emoji,
+    required this.icon,
   });
 }
 
 /// The icon dropdown options, in display order.
 const List<RewardIconChoice> rewardIconChoices = [
-  RewardIconChoice(key: '', label: 'Auto (from name)', emoji: '✨'),
   RewardIconChoice(
-      key: 'latte', label: 'Latte / Coffee', asset: _latteIcon, emoji: '☕'),
-  RewardIconChoice(key: 'matcha', label: 'Matcha', asset: _matchaIcon, emoji: '🍵'),
+      key: '', label: 'Auto (from name)', icon: Icons.auto_awesome),
+  RewardIconChoice(key: 'latte', label: 'Latte / Coffee', icon: Icons.local_cafe),
   RewardIconChoice(
-      key: 'coldbrew', label: 'Cold Brew', asset: _coldBrewIcon, emoji: '🧋'),
-  RewardIconChoice(
-      key: 'pastry', label: 'Pastry', asset: _pastryIcon, emoji: '🥐'),
+      key: 'matcha', label: 'Matcha', icon: Icons.emoji_food_beverage),
+  RewardIconChoice(key: 'coldbrew', label: 'Cold Brew', icon: Icons.local_drink),
+  RewardIconChoice(key: 'pastry', label: 'Pastry', icon: Icons.bakery_dining),
 ];
 
 /// Maps a stored `loyalty_rewards.icon_key` back to its dropdown choice,
@@ -128,12 +118,5 @@ RewardIconChoice rewardIconChoiceFromKey(String? key) {
 /// Small preview widget for a [RewardIconChoice], used by the editor's
 /// dropdown items and selected value row.
 Widget rewardIconChoicePreview(RewardIconChoice choice, {double iconSize = 22}) {
-  final asset = choice.asset;
-  if (asset != null) {
-    return SvgPicture.asset(asset, width: iconSize, height: iconSize);
-  }
-  if (choice.key == '') {
-    return Icon(Icons.auto_awesome, size: iconSize, color: AppColors.gold);
-  }
-  return Text(choice.emoji, style: TextStyle(fontSize: iconSize - 4));
+  return Icon(choice.icon, size: iconSize, color: AppColors.gold);
 }

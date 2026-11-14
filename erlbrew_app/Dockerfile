@@ -14,9 +14,14 @@ RUN flutter pub get
 
 COPY erlbrew_app/ .
 
-# Backend URL baked into the JS bundle (PosApiService reads POS_API_URL)
+# Backend URL baked into the JS bundle (PosApiService reads POS_API_URL).
+# --no-tree-shake-icons: the icon font subsetter silently DROPPED the glyphs
+# referenced through the RewardIconChoice const-class indirection (reward
+# icons / scan FAB rendered blank on web while the rest of the app was fine).
+# Shipping the full MaterialIcons font (~1.6MB) guarantees every Icons.*
+# glyph exists; worth it for a LAN café PWA.
 ARG POS_API_URL=http://localhost:3001
-RUN flutter build web --release --dart-define=POS_API_URL=${POS_API_URL}
+RUN flutter build web --release --no-tree-shake-icons --dart-define=POS_API_URL=${POS_API_URL}
 
 # Cache-bust the entry chain. main.dart.js / flutter_bootstrap.js keep the same
 # filename on every build, so CDNs and browsers can serve a stale copy for hours

@@ -1,0 +1,69 @@
+# Erlbrew POS — GitLab CI
+#
+# Jobs:
+#   type-check      — TypeScript checks for the React/Vite frontend
+#   test:server     — Express backend unit tests (node --test, no DB required)
+#   build:frontend  — production build, dist/ kept as artifact for 1 week
+#   secret-detection— scans commits for leaked API keys / tokens
+#
+# Runs on merge requests and pushes to the default branch (duplicates suppressed).
+
+stages:
+  - test
+  - build
+
+workflow:
+  rules:
+    # Run on merge requests...
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # ...but skip branch-push pipelines when the branch already has an open MR
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    # ...and on all other branch pushes
+    - if: $CI_COMMIT_BRANCH
+
+variables:
+  GIT_DEPTH: "1"
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+
+cache:
+  key:
+    files:
+      - package-lock.json
+      - server/package-lock.json
+  paths:
+    - .npm/
+
+.node-setup:
+  image: node:22
+  before_script:
+    - npm ci --no-audit --no-fund --cache "$npm_config_cache"
+    - npm ci --no-audit --no-fund --cache "$npm_config_cache" --prefix server
+
+type-check:
+  extends: .node-setup
+  stage: test
+  script:
+    - npm run type-check
+
+test:server:
+  extends: .node-setup
+  stage: test
+  script:
+    - cd server && npm test
+
+build:frontend:
+  extends: .node-setup
+  stage: build
+  script:
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+
+# Secret detection — flags committed API keys/passwords.
+# Requires the runner to have internet access (pulls the analyzer image
+# from registry.gitlab.com). Remove this block if the instance is air-gapped.
+include:
+  - template: Jobs/Secret-Detection.gitlab-ci.yml

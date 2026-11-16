@@ -1,0 +1,16 @@
+# gitleaks configuration — extends the default rule set with known false positives.
+# Real secrets matching these files would only be skipped if they also match the
+# content regex below (e.g. a FULL jwt in the docs would still be flagged).
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+  description = "Truncated example JWT in API documentation"
+  paths = ['''docs/API-Reference\.md''']
+  regexes = ['''eyJhbGciOiJIUzI1NiIs\.\.\.''']
+
+[[allowlists]]
+  description = "Comment describing provider field semantics, not a secret"
+  paths = ['''server/src/services/integrationConfig\.js''']
+  regexes = ['''secret: encrypt\+mask''']

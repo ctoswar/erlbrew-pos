@@ -71,4 +71,4 @@ secret-scan:
     name: ghcr.io/gitleaks/gitleaks:latest
     entrypoint: [""]
   script:
-    - gitleaks detect --source . --redact --verbose --no-banner
+    - gitleaks detect --source . --config .gitleaks.toml --redact --verbose --no-banner

@@ -62,8 +62,13 @@ build:frontend:
       - dist/
     expire_in: 1 week
 
-# Secret detection — flags committed API keys/passwords.
-# Requires the runner to have internet access (pulls the analyzer image
-# from registry.gitlab.com). Remove this block if the instance is air-gapped.
-include:
-  - template: Jobs/Secret-Detection.gitlab-ci.yml
+# Secret scanning with gitleaks — flags committed API keys/passwords/tokens.
+# (GitLab CE's built-in Secret-Detection template is unavailable, so we run
+# gitleaks directly. Scans the fetched history; shallow clone = recent commits.)
+secret-scan:
+  stage: test
+  image:
+    name: ghcr.io/gitleaks/gitleaks:latest
+    entrypoint: [""]
+  script:
+    - gitleaks detect --source . --redact --verbose --no-banner

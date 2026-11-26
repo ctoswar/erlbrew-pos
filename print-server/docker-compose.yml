@@ -1,0 +1,52 @@
+# ── Erlbrew Print Server Docker Compose (Raspberry Pi 3B+) ──────────────────
+# Usage:
+#   1. Copy this entire print-server/ folder to your RPi
+#   2. Create .env from .env.example
+#   3. docker compose up -d
+#
+# This runs independently from the main POS docker-compose.yml.
+# The POS backend connects to this server via PRINT_SERVER_URL in Admin Settings.
+#
+# Note: the first build compiles the Rust binary (~5-15 min on a Pi 3B+).
+# Subsequent rebuilds reuse the dependency cache layer.
+
+services:
+  print-server:
+    build: .
+    container_name: erlbrew-print-server
+    restart: unless-stopped
+    network_mode: host
+    # Required for raw Bluetooth socket access (AF_BLUETOOTH) in container
+    cap_add:
+      - NET_RAW
+      - SYS_ADMIN
+    env_file:
+      - .env
+    # NOTE: do not set PRINT_SERVER_PORT here — `environment` overrides
+    # env_file, which would silently ignore the value in .env. The binary
+    # already defaults to 9100.
+    environment:
+      # Keep the auto-generated TLS certificate outside the container layer
+      - TLS_CERT_FILE=/app/certs/cert.pem
+      - TLS_KEY_FILE=/app/certs/key.pem
+    # Bluetooth requires host networking to access the Pi's Bluetooth adapter
+    # network_mode: host gives the container direct access to D-Bus and Bluetooth hardware
+    volumes:
+      # Mount D-Bus socket for Bluetooth communication
+      - /var/run/dbus:/var/run/dbus:ro
+      # Persist the generated TLS certificate between restarts
+      - print-server-certs:/app/certs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-kfsS", "https://localhost:9100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  print-server-certs:

@@ -159,9 +159,8 @@ server/.slop-patches/src_styles_global.css.patch
 server/.slop-patches/tailwind.config.js.patch
 server/.slop-patches/test.patch
 docker-compose.yml
-docker-compose.yml
-docker-compose.yml
 !infra/docker-compose.yml
+!print-server/docker-compose.yml
 pull-images.bat
 server/migrate-sun.js
 .github/agents/fullstack.agent.md

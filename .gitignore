@@ -41,8 +41,10 @@ infra/certs/
 convert-cert.ps1
 gen-cert.ps1
 
-# Print server (keep on Pi, not in repo)
-print-server.py
+# Print server — Rust rewrite is tracked; still keep secrets & build output out
+print-server/target/
+print-server/cert.pem
+print-server/key.pem
 
 # Misc
 *.tgz
@@ -161,10 +163,6 @@ docker-compose.yml
 docker-compose.yml
 !infra/docker-compose.yml
 pull-images.bat
-print-server/.dockerignore
-print-server/.env.example
-print-server/Dockerfile
-print-server/requirements.txt
 server/migrate-sun.js
 .github/agents/fullstack.agent.md
 erlbrew_app/lib/firebase_options.dart

@@ -52,6 +52,28 @@ test:server:
   script:
     - cd server && npm test
 
+# Rust print server (print-server/) — unit tests for ESC/POS output parity,
+# MAC parsing and config handling. No Bluetooth hardware needed: the RFCOMM
+# transport is Linux-only at runtime, but everything it depends on compiles
+# and tests fine on x86.
+test:print-server:
+  stage: test
+  image: rust:1-slim-bookworm
+  variables:
+    CARGO_HOME: "$CI_PROJECT_DIR/.cargo-home"
+  cache:
+    key:
+      files:
+        - print-server/Cargo.lock
+    paths:
+      - .cargo-home/
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends build-essential
+    - rm -rf /var/lib/apt/lists/*
+    - cd print-server
+  script:
+    - cargo test
+
 build:frontend:
   extends: .node-setup
   stage: build

@@ -1,0 +1,7 @@
+# Keep the build context tiny and secrets out of the image.
+target/
+.env
+cert.pem
+key.pem
+*.bin
+README.md

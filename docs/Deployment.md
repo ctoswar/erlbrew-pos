@@ -143,6 +143,10 @@ docker compose -f docker-compose.prod.yml up -d
 
 ## Raspberry Pi Print Server
 
+The print server is written in Rust (`print-server/`). It receives receipt
+jobs over HTTPS, keeps a persistent Bluetooth RFCOMM socket to the thermal
+printer, and exposes the same endpoints the old Python version did.
+
 ### Setup
 
 ```bash
@@ -150,15 +154,15 @@ docker compose -f docker-compose.prod.yml up -d
 git clone https://github.com/ctoswar/erlbrew-pos.git
 cd erlbrew-pos/print-server
 
-# Install dependencies
-pip install -r requirements.txt
+# Build (first build compiles the binary; needs build-essential)
+cargo build --release
 
 # Configure
 cp .env.example .env
-# Edit .env with Bluetooth printer MAC
+# Edit .env with Bluetooth printer MAC (BT_PRINTER_MAC)
 
 # Run
-python print-server.py
+./target/release/erlbrew-print-server
 ```
 
 ### Docker (Pi)
